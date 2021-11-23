@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+option go_package = "./pb";
+
+package login;
+
+// 消息号定义
+enum CmdLogin {
+	Cmd_None         = 0; // 解决"The first enum value must be zero in proto3."的报错
+	
+	// 消息号枚举值的命名规范:Cmd_MessageName,便于工具处理,生成一些辅助代码
+	Cmd_LoginReq = 1001;
+	Cmd_LoginRes = 1002;
+}
+
+// 登录请求
+message LoginReq {
+  string accountName = 1;
+  string password = 2;
+}
+
+// 登录回复
+message LoginRes {
+  string result = 1;
+  string accountName = 2;
+}

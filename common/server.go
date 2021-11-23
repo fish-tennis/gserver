@@ -1,0 +1,41 @@
+package common
+
+import (
+	"github.com/fish-tennis/gnet"
+	"os"
+	"os/signal"
+	"syscall"
+)
+
+type Server interface {
+	Init() bool
+	Run()
+}
+
+// 服务器基础流程
+type BaseServer struct {
+}
+
+// 加载配置,网络初始化等
+func (this *BaseServer) Init() bool {
+	gnet.LogDebug("BaseServer.Init")
+	return true
+}
+
+// 运行
+func (this *BaseServer) Run() {
+	gnet.LogDebug("BaseServer.Run")
+}
+
+// 等待系统关闭信号
+func (this *BaseServer) WaitExit() {
+	gnet.LogDebug("BaseServer.WaitExit")
+	killSignalChan := make(chan os.Signal, 1)
+	signal.Notify(killSignalChan, os.Interrupt, os.Kill, syscall.SIGTERM)
+	// TODO: windows系统上,加一个控制台输入,已方便调试
+	select {
+	case <-killSignalChan:
+		break
+	}
+	gnet.LogDebug("Exit")
+}
