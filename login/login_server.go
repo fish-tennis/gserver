@@ -3,15 +3,24 @@ package login
 import (
 	"github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/common"
+	"github.com/fish-tennis/gserver/db"
+	"github.com/fish-tennis/gserver/db/mongodb"
 	"github.com/fish-tennis/gserver/pb"
 	"google.golang.org/protobuf/proto"
 	"time"
+)
+
+var (
+	// singleton
+	loginServer *LoginServer
 )
 
 // 登录服
 type LoginServer struct {
 	common.BaseServer
 	config *LoginServerConfig
+	// 账号数据
+	accountDb db.Db
 }
 
 // 登录服配置
@@ -22,11 +31,17 @@ type LoginServerConfig struct {
 	clientConnConfig gnet.ConnectionConfig
 }
 
+func (this *LoginServer) GetAccountDb() db.Db {
+	return this.accountDb
+}
+
 func (this *LoginServer) Init() bool {
+	loginServer = this
 	if !this.BaseServer.Init() {
 		return false
 	}
 	this.readConfig()
+	this.initDb()
 	netMgr := gnet.GetNetMgr()
 	clientCodec := gnet.NewProtoCodec(nil)
 	clientHandler := gnet.NewDefaultConnectionHandler(clientCodec)
@@ -45,9 +60,33 @@ func (this *LoginServer) Run() {
 	this.BaseServer.WaitExit()
 }
 
+func (this *LoginServer) OnExit() {
+	gnet.LogDebug("LoginServer.OnExit")
+	if this.accountDb != nil {
+		this.accountDb.(*mongodb.MongoDb).Disconnect()
+	}
+}
+
+func (this *LoginServer) initDb() {
+	mongoDb := mongodb.NewMongoDb("mongodb://localhost:27017","testdb","account", "accountid", "accountname", "")
+	if !mongoDb.Connect() {
+		panic("connect db error")
+	}
+	this.accountDb = mongoDb
+}
+
 func (this *LoginServer) readConfig() {
 	this.config = &LoginServerConfig{
 		clientListenAddr: "127.0.0.1:10002",
+		clientConnConfig: gnet.ConnectionConfig{
+			SendPacketCacheCap: 100,
+			SendBufferSize:     1024 * 10,
+			RecvBufferSize:     1024 * 10,
+			MaxPacketSize:      1024 * 10,
+			RecvTimeout:        0,
+			HeartBeatInterval:  5,
+			WriteTimeout:       0,
+		},
 	}
 }
 
@@ -55,6 +94,7 @@ func (this *LoginServer) readConfig() {
 func (this *LoginServer) registerClientPacket(clientHandler *gnet.DefaultConnectionHandler) {
 	clientHandler.Register(gnet.PacketCommand(pb.CmdInner_Cmd_HeartBeatReq), onHeartBeatReq, func() proto.Message {return &pb.HeartBeatReq{}})
 	clientHandler.Register(gnet.PacketCommand(pb.CmdLogin_Cmd_LoginReq), onLoginReq, func() proto.Message {return &pb.LoginReq{}})
+	clientHandler.Register(gnet.PacketCommand(pb.CmdLogin_Cmd_AccountReg), onAccountReg, func() proto.Message {return &pb.AccountReg{}})
 }
 
 // 客户端心跳回复

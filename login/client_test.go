@@ -59,6 +59,14 @@ func (this *testClientHandler) OnConnected(connection gnet.Connection, success b
 
 func (this *testClientHandler) onLoginRes(connection gnet.Connection, packet *gnet.ProtoPacket) {
 	gnet.LogDebug("onLoginRes:%v", packet.Message())
-	connection.Close()
-	this.exitNotify <- struct{}{}
+	res := packet.Message().(*pb.LoginRes)
+	if res.GetResult() == "not reg" {
+		connection.Send(gnet.PacketCommand(pb.CmdLogin_Cmd_AccountReg), &pb.AccountReg{
+			AccountName: "test",
+			Password: "test",
+		})
+	} else {
+		connection.Close()
+		this.exitNotify <- struct{}{}
+	}
 }

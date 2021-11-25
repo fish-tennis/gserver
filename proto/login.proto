@@ -11,6 +11,8 @@ enum CmdLogin {
 	// 消息号枚举值的命名规范:Cmd_MessageName,便于工具处理,生成一些辅助代码
 	Cmd_LoginReq = 1001;
 	Cmd_LoginRes = 1002;
+	Cmd_AccountReg = 1003;
+	Cmd_AccountRes = 1004;
 }
 
 // 登录请求
@@ -21,6 +23,17 @@ message LoginReq {
 
 // 登录回复
 message LoginRes {
+  string result = 1;
+  string accountName = 2;
+}
+
+// 注册账号
+message AccountReg {
+  string accountName = 1;
+  string password = 2;
+}
+
+message AccountRes {
   string result = 1;
   string accountName = 2;
 }

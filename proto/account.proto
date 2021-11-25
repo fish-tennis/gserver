@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+option go_package = "./pb";
+
+package account;
+
+// 账号
+message Account {
+  int64 accountId = 1;
+  string accountName = 2;
+  string password = 3;
+}

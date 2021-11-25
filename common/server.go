@@ -10,6 +10,7 @@ import (
 type Server interface {
 	Init() bool
 	Run()
+	OnExit()
 }
 
 // 服务器基础流程
@@ -27,6 +28,10 @@ func (this *BaseServer) Run() {
 	gnet.LogDebug("BaseServer.Run")
 }
 
+func (this *BaseServer) OnExit() {
+	gnet.LogDebug("BaseServer.OnExit")
+}
+
 // 等待系统关闭信号
 func (this *BaseServer) WaitExit() {
 	gnet.LogDebug("BaseServer.WaitExit")
@@ -37,5 +42,6 @@ func (this *BaseServer) WaitExit() {
 	case <-killSignalChan:
 		break
 	}
+	this.OnExit()
 	gnet.LogDebug("Exit")
 }
