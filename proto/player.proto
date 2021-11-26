@@ -11,11 +11,18 @@ message BaseInfo {
   int32 exp = 3;
 }
 
+// 玩家的钱财数据
+message Money {
+  int32 coin = 1; // 金币
+  int32 diamond = 2; // 钻石
+}
+
 // 玩家在数据库中的保存格式
 message PlayerData {
   int64 id = 1; // 玩家id
   string name = 2; // 玩家名
   int64 accountId = 3; // 账号id
   int32 regionId = 4; // 区服id
-  bytes baseInfo = 5;
+  BaseInfo baseInfo = 5;
+  bytes money = 6;
 }

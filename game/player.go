@@ -109,5 +109,6 @@ func CreatePlayerFromData(playerData *pb.PlayerData) *Player {
 		playerData: playerData,
 	}
 	player.components = append(player.components, NewBaseInfo(player, playerData))
+	player.components = append(player.components, NewMoney(player, playerData))
 	return player
 }
