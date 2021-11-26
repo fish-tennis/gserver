@@ -16,12 +16,12 @@ type MongoDb struct {
 	uri            string
 	dbName         string
 	collectionName string
-	// 可以同时有一个string key和int key,典型的如账号表和玩家表,名字和id都是unique key
+	// 可以同时有string key和int key,典型的如账号表和玩家表,名字和id都是unique key
 	// int key的列名
 	intKeyName     string
 	// string key的列名
 	stringKeyName  string
-	// 值的列名
+	// 二进制值的列名
 	valueName      string
 }
 
@@ -148,6 +148,54 @@ func (this *MongoDb) UpdateInt64(key int64, data interface{}) error {
 		data)
 	if updateErr != nil {
 		return errors.New("update error")
+	}
+	return nil
+}
+
+func (this *MongoDb) LoadFieldInt64(key int64, fieldName string, fieldData interface{}) (bool,error) {
+	col := this.mongoDatabase.Collection(this.collectionName)
+	opts := options.FindOne().SetProjection(bson.D{{fieldName,1}})
+	result := col.FindOne(context.TODO(), bson.D{{this.intKeyName,key}}, opts)
+	if result == nil || result.Err() == mongo.ErrNoDocuments {
+		return false, nil
+	}
+	err := result.Decode(fieldData)
+	if err != nil {
+		return false, errors.New("decode data error")
+	}
+	return true,nil
+}
+
+func (this *MongoDb) SaveFieldInt64(key int64, fieldName string, fieldData interface{}) error {
+	col := this.mongoDatabase.Collection(this.collectionName)
+	_, updateErr := col.UpdateOne(context.TODO(), bson.D{{this.intKeyName, key}},
+		bson.D{{"$get", bson.D{{fieldName,fieldData}}}})
+	if updateErr != nil {
+		return errors.New("SetField error")
+	}
+	return nil
+}
+
+// 根据账号id查找玩家数据
+// 适用于一个账号在一个区服只有一个玩家角色的游戏
+func (this *MongoDb) FindPlayerByAccountId(accountId int64, regionId int32, playerData interface{}) (bool,error) {
+	col := this.mongoDatabase.Collection(this.collectionName)
+	result := col.FindOne(context.TODO(), bson.D{{"accountid",accountId},{"regionid",regionId}})
+	if result == nil || result.Err() == mongo.ErrNoDocuments {
+		return false, nil
+	}
+	err := result.Decode(playerData)
+	if err != nil {
+		return false, errors.New("decode playerData error")
+	}
+	return true,nil
+}
+
+func (this *MongoDb) InsertPlayer(playerId int64, playerData interface{}) error {
+	col := this.mongoDatabase.Collection(this.collectionName)
+	_, insertErr := col.InsertOne(context.TODO(), playerData)
+	if insertErr != nil {
+		return errors.New("insert error")
 	}
 	return nil
 }

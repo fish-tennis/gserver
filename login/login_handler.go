@@ -25,8 +25,14 @@ func onLoginReq(connection gnet.Connection, packet *gnet.ProtoPacket) {
 		}
 	}
 	connection.Send(gnet.PacketCommand(pb.CmdLogin_Cmd_LoginRes), &pb.LoginRes{
-		AccountName: req.GetAccountName(),
 		Result: result,
+		AccountName: req.GetAccountName(),
+		AccountId: account.GetId(),
+		LoginSession: "test login session",
+		GameServer: &pb.GameServerInfo{
+			ServerId: 1,
+			ClientListenAddr: "127.0.0.1:10003",
+		},
 	})
 }
 
@@ -36,11 +42,11 @@ func onAccountReg(connection gnet.Connection, packet *gnet.ProtoPacket) {
 	req := packet.Message().(*pb.AccountReg)
 	result := ""
 	account := &pb.Account{
-		AccountId: time.Now().UnixNano(),
-		AccountName: req.GetAccountName(),
+		Id: time.Now().UnixNano(),
+		Name: req.GetAccountName(),
 		Password: req.GetPassword(),
 	}
-	err := loginServer.GetAccountDb().InsertInt64(account.GetAccountId(), account)
+	err := loginServer.GetAccountDb().InsertInt64(account.GetId(), account)
 	if err != nil {
 		result = err.Error()
 	} else {

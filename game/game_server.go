@@ -1,4 +1,4 @@
-package login
+package game
 
 import (
 	"github.com/fish-tennis/gnet"
@@ -7,36 +7,48 @@ import (
 	"github.com/fish-tennis/gserver/db/mongodb"
 	"github.com/fish-tennis/gserver/pb"
 	"google.golang.org/protobuf/proto"
+	"sync"
 	"time"
 )
 
 var (
 	// singleton
-	loginServer *LoginServer
+	gameServer *GameServer
 )
 
-// 登录服
-type LoginServer struct {
+// 游戏服
+type GameServer struct {
 	common.BaseServer
-	config *LoginServerConfig
-	// 账号数据接口
-	accountDb db.Db
+	config *GameServerConfig
+	// 玩家数据接口
+	db db.Db
+	playerDb db.PlayerDb
+	// 在线玩家
+	playerMap sync.Map
 }
 
-// 登录服配置
-type LoginServerConfig struct {
+// 游戏服配置
+type GameServerConfig struct {
 	// 客户端监听地址
 	clientListenAddr string
 	// 客户端连接配置
 	clientConnConfig gnet.ConnectionConfig
 }
 
-func (this *LoginServer) GetAccountDb() db.Db {
-	return this.accountDb
+func GetServer() *GameServer {
+	return gameServer
 }
 
-func (this *LoginServer) Init() bool {
-	loginServer = this
+func (this *GameServer) GetDb() db.Db {
+	return this.db
+}
+
+func (this *GameServer) GetPlayerDb() db.PlayerDb {
+	return this.playerDb
+}
+
+func (this *GameServer) Init() bool {
+	gameServer = this
 	if !this.BaseServer.Init() {
 		return false
 	}
@@ -50,51 +62,53 @@ func (this *LoginServer) Init() bool {
 		panic("listen failed")
 		return false
 	}
-	gnet.LogDebug("LoginServer.Init")
+	gnet.LogDebug("GameServer.Init")
 	return true
 }
 
-func (this *LoginServer) Run() {
+func (this *GameServer) Run() {
 	this.BaseServer.Run()
-	gnet.LogDebug("LoginServer.Run")
+	gnet.LogDebug("GameServer.Run")
 	this.BaseServer.WaitExit()
 }
 
-func (this *LoginServer) OnExit() {
-	gnet.LogDebug("LoginServer.OnExit")
-	if this.accountDb != nil {
-		this.accountDb.(*mongodb.MongoDb).Disconnect()
+func (this *GameServer) OnExit() {
+	gnet.LogDebug("GameServer.OnExit")
+	if this.db != nil {
+		this.db.(*mongodb.MongoDb).Disconnect()
 	}
 }
 
 // 初始化数据库
-func (this *LoginServer) initDb() {
+func (this *GameServer) initDb() {
 	// 使用mongodb来演示
-	mongoDb := mongodb.NewMongoDb("mongodb://localhost:27017","testdb","account",
-		"id", "name", "")
+	mongoDb := mongodb.NewMongoDb("mongodb://localhost:27017","testdb","player",
+		"id", "name", "data")
 	if !mongoDb.Connect() {
 		panic("connect db error")
 	}
-	this.accountDb = mongoDb
+	this.db = mongoDb
+	this.playerDb = mongoDb
 }
 
-func (this *LoginServer) readConfig() {
-	this.config = &LoginServerConfig{
-		clientListenAddr: "127.0.0.1:10002",
+func (this *GameServer) readConfig() {
+	this.config = &GameServerConfig{
+		clientListenAddr: "127.0.0.1:10003",
 		clientConnConfig: gnet.ConnectionConfig{
-			SendPacketCacheCap: 8,
-			SendBufferSize:     1024 * 10,
+			SendPacketCacheCap: 64,
+			SendBufferSize:     1024 * 20,
 			RecvBufferSize:     1024 * 10,
 			MaxPacketSize:      1024 * 10,
+			RecvTimeout:        10,
 		},
 	}
 }
 
 // 注册客户端消息回调
-func (this *LoginServer) registerClientPacket(clientHandler *gnet.DefaultConnectionHandler) {
+func (this *GameServer) registerClientPacket(clientHandler *gnet.DefaultConnectionHandler) {
 	clientHandler.Register(gnet.PacketCommand(pb.CmdInner_Cmd_HeartBeatReq), onHeartBeatReq, func() proto.Message {return &pb.HeartBeatReq{}})
-	clientHandler.Register(gnet.PacketCommand(pb.CmdLogin_Cmd_LoginReq), onLoginReq, func() proto.Message {return &pb.LoginReq{}})
-	clientHandler.Register(gnet.PacketCommand(pb.CmdLogin_Cmd_AccountReg), onAccountReg, func() proto.Message {return &pb.AccountReg{}})
+	clientHandler.Register(gnet.PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameReq), onPlayerEntryGameReq, func() proto.Message {return &pb.PlayerEntryGameReq{}})
+	//clientHandler.Register(gnet.PacketCommand(pb.CmdLogin_Cmd_AccountReg), onAccountReg, func() proto.Message {return &pb.AccountReg{}})
 }
 
 // 客户端心跳回复

@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+option go_package = "./pb";
+
+package player;
+
+// 玩家基础信息
+message BaseInfo {
+  string name = 1;
+  int32 level = 2;
+  int32 exp = 3;
+}
+
+// 玩家在数据库中的保存格式
+message PlayerData {
+  int64 id = 1; // 玩家id
+  string name = 2; // 玩家名
+  int64 accountId = 3; // 账号id
+  int32 regionId = 4; // 区服id
+  BaseInfo baseInfo = 5;
+}
