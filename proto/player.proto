@@ -17,5 +17,5 @@ message PlayerData {
   string name = 2; // 玩家名
   int64 accountId = 3; // 账号id
   int32 regionId = 4; // 区服id
-  BaseInfo baseInfo = 5;
+  bytes baseInfo = 5;
 }

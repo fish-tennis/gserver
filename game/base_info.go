@@ -1,28 +1,37 @@
 package game
 
 import (
+	"github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/pb"
+	"google.golang.org/protobuf/proto"
 )
 
 // 玩家基础信息
 type BaseInfo struct {
-	BaseComponent
+	*BaseComponent
 	baseInfo *pb.BaseInfo
 }
 
 func NewBaseInfo(player *Player, playerData *pb.PlayerData) *BaseInfo {
-	if playerData.BaseInfo == nil {
-		playerData.BaseInfo = &pb.BaseInfo{
+	var baseInfo *pb.BaseInfo
+	if len(playerData.BaseInfo) == 0 {
+		baseInfo = &pb.BaseInfo{
 			Name: player.GetName(),
 			Level: 1,
 			Exp: 0,
 		}
+	} else {
+		baseInfo = &pb.BaseInfo{}
+		proto.Unmarshal(playerData.BaseInfo, baseInfo)
+		// test
+		baseInfo.Exp = baseInfo.Exp + 1
 	}
+	gnet.LogDebug("%v", baseInfo)
 	return &BaseInfo{
-		BaseComponent: BaseComponent{
+		BaseComponent: &BaseComponent{
 			Player: player,
 		},
-		baseInfo: playerData.GetBaseInfo(),
+		baseInfo: baseInfo,
 	}
 }
 
@@ -36,5 +45,10 @@ func (this *BaseInfo) GetName() string {
 
 // 需要保存的数据
 func (this *BaseInfo) DbData() interface{} {
-	return this.baseInfo
+	data,err := proto.Marshal(this.baseInfo)
+	if err != nil {
+		gnet.LogError("%v", err)
+		return nil
+	}
+	return data
 }

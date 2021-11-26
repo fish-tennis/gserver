@@ -45,27 +45,27 @@ func (this *BaseComponent) GetPlayer() *Player {
 	return this.Player
 }
 
-// 需要保存的数据
-func (this *BaseComponent) DbData() interface{} {
-	return nil
-}
+//// 需要保存的数据
+//func (this *BaseComponent) DbData() interface{} {
+//	return nil
+//}
+//
+//func (this *BaseComponent) Save() error {
+//	dbData := this.DbData()
+//	if dbData == nil {
+//		return nil
+//	}
+//	return GetServer().GetDb().SaveFieldInt64(this.Player.GetId(), this.GetName(), dbData)
+//}
 
-func (this *BaseComponent) Save() error {
-	dbData := this.DbData()
-	if dbData == nil {
-		return nil
-	}
-	return GetServer().GetDb().SaveFieldInt64(this.Player.GetId(), this.GetName(), dbData)
-}
-
-func (this *BaseComponent) Load() error {
-	dbData := this.DbData()
-	if dbData == nil {
-		return nil
-	}
-	_,err := GetServer().GetDb().LoadFieldInt64(this.Player.GetId(), this.GetName(), dbData)
-	return err
-}
+//func (this *BaseComponent) Load() error {
+//	dbData := this.DbData()
+//	if dbData == nil {
+//		return nil
+//	}
+//	_,err := GetServer().GetDb().LoadFieldInt64(this.Player.GetId(), this.GetName(), dbData)
+//	return err
+//}
 
 func (this *Player) GetId() int64 {
 	return this.id
@@ -100,13 +100,18 @@ func (this *Player) GetComponents() []entity.Component {
 	return components
 }
 
-func (this *Player) SaveComponent(component entity.Component) {
-	component.Save()
+func (this *Player) SaveComponent(component PlayerComponent) error {
+	//component.Save()
+	dbData := component.DbData()
+	if dbData == nil {
+		return nil
+	}
+	return GetServer().GetDb().SaveFieldInt64(this.GetId(), component.GetName(), dbData)
 }
 
 func (this *Player) Save() error {
 	for _,v := range this.components {
-		err := v.Save()
+		err := this.SaveComponent(v)
 		if err != nil {
 			return err
 		}

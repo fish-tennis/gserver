@@ -19,6 +19,6 @@ type Component interface {
 	// 所属的实体
 	GetEntity() Entity
 
-	Load() error
-	Save() error
+	//Load() error
+	//Save() error
 }

@@ -2,7 +2,6 @@ package mongodb
 
 import (
 	"context"
-	"errors"
 	"github.com/fish-tennis/gnet"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -95,7 +94,7 @@ func (this *MongoDb) FindString(key string, data interface{}) (bool,error) {
 	}
 	err := result.Decode(data)
 	if err != nil {
-		return false, errors.New("decode data error")
+		return false, err
 	}
 	return true,nil
 }
@@ -105,7 +104,7 @@ func (this *MongoDb) InsertString(key string, data interface{}) error {
 	_, insertErr := col.InsertOne(context.TODO(),
 		data)
 	if insertErr != nil {
-		return errors.New("insert error")
+		return insertErr
 	}
 	return nil
 }
@@ -115,7 +114,7 @@ func (this *MongoDb) UpdateString(key string, data interface{}) error {
 	_, updateErr := col.UpdateOne(context.TODO(), bson.D{{this.stringKeyName, key}},
 		data)
 	if updateErr != nil {
-		return errors.New("update error")
+		return updateErr
 	}
 	return nil
 }
@@ -128,7 +127,7 @@ func (this *MongoDb) FindInt64(key int64, data interface{}) (bool,error) {
 	}
 	err := result.Decode(data)
 	if err != nil {
-		return false, errors.New("decode data error")
+		return false, err
 	}
 	return true,nil
 }
@@ -137,7 +136,7 @@ func (this *MongoDb) InsertInt64(key int64, data interface{}) error {
 	col := this.mongoDatabase.Collection(this.collectionName)
 	_, insertErr := col.InsertOne(context.TODO(), data)
 	if insertErr != nil {
-		return errors.New("insert error")
+		return insertErr
 	}
 	return nil
 }
@@ -147,7 +146,7 @@ func (this *MongoDb) UpdateInt64(key int64, data interface{}) error {
 	_, updateErr := col.UpdateOne(context.TODO(), bson.D{{this.intKeyName, key}},
 		data)
 	if updateErr != nil {
-		return errors.New("update error")
+		return updateErr
 	}
 	return nil
 }
@@ -161,7 +160,7 @@ func (this *MongoDb) LoadFieldInt64(key int64, fieldName string, fieldData inter
 	}
 	err := result.Decode(fieldData)
 	if err != nil {
-		return false, errors.New("decode data error")
+		return false, err
 	}
 	return true,nil
 }
@@ -169,9 +168,9 @@ func (this *MongoDb) LoadFieldInt64(key int64, fieldName string, fieldData inter
 func (this *MongoDb) SaveFieldInt64(key int64, fieldName string, fieldData interface{}) error {
 	col := this.mongoDatabase.Collection(this.collectionName)
 	_, updateErr := col.UpdateOne(context.TODO(), bson.D{{this.intKeyName, key}},
-		bson.D{{"$get", bson.D{{fieldName,fieldData}}}})
+		bson.D{{"$set", bson.D{{fieldName,fieldData}}}})
 	if updateErr != nil {
-		return errors.New("SetField error")
+		return updateErr
 	}
 	return nil
 }
@@ -186,7 +185,7 @@ func (this *MongoDb) FindPlayerByAccountId(accountId int64, regionId int32, play
 	}
 	err := result.Decode(playerData)
 	if err != nil {
-		return false, errors.New("decode playerData error")
+		return false, err
 	}
 	return true,nil
 }
@@ -195,7 +194,7 @@ func (this *MongoDb) InsertPlayer(playerId int64, playerData interface{}) error 
 	col := this.mongoDatabase.Collection(this.collectionName)
 	_, insertErr := col.InsertOne(context.TODO(), playerData)
 	if insertErr != nil {
-		return errors.New("insert error")
+		return insertErr
 	}
 	return nil
 }

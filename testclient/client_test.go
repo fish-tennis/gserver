@@ -137,7 +137,7 @@ func (this *testGameHandler) onHeartBeatRes(connection gnet.Connection, packet *
 }
 
 func (this *testGameHandler) onPlayerEntryGameRes(connection gnet.Connection, packet *gnet.ProtoPacket) {
-	gnet.LogDebug("onLoginRes:%v", packet.Message())
+	gnet.LogDebug("onPlayerEntryGameRes:%v", packet.Message())
 	//res := packet.Message().(*pb.PlayerEntryGameRes)
 	this.Exit()
 }

@@ -28,12 +28,21 @@ func onPlayerEntryGameReq(connection gnet.Connection, packet *gnet.ProtoPacket) 
 		playerData.AccountId = req.GetAccountId()
 		playerData.RegionId = req.GetRegionId()
 		player = CreatePlayerFromData(playerData)
-		err = gameServer.GetPlayerDb().InsertPlayer(playerData.GetId(), player.playerData)
+		err = gameServer.GetPlayerDb().InsertPlayer(player.GetId(), player.playerData)
 		if err != nil {
 			connection.Send(gnet.PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameRes), &pb.PlayerEntryGameRes{
 				Result: err.Error(),
 			})
-			gnet.LogError(err.Error())
+			gnet.LogError("%v", err)
+			return
+		}
+		err = player.Save()
+		if err != nil {
+			connection.Send(gnet.PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameRes), &pb.PlayerEntryGameRes{
+				Result: err.Error(),
+			})
+			gnet.LogError("%v", err)
+			return
 		}
 		gnet.LogDebug("new player:%v", playerData.Id)
 	} else {
@@ -47,4 +56,10 @@ func onPlayerEntryGameReq(connection gnet.Connection, packet *gnet.ProtoPacket) 
 		PlayerId: player.GetId(),
 		RegionId: player.GetRegionId(),
 	})
+	// 下线保存
+	err = player.Save()
+	if err != nil {
+		gnet.LogError("%v", err)
+		return
+	}
 }
