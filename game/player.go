@@ -29,14 +29,6 @@ type BaseComponent struct {
 	Player *Player
 }
 
-func (this *BaseComponent) GetId() int {
-	return 0
-}
-
-func (this *BaseComponent) GetName() string {
-	return ""
-}
-
 func (this *BaseComponent) GetEntity() entity.Entity {
 	return this.Player
 }
@@ -44,28 +36,6 @@ func (this *BaseComponent) GetEntity() entity.Entity {
 func (this *BaseComponent) GetPlayer() *Player {
 	return this.Player
 }
-
-//// 需要保存的数据
-//func (this *BaseComponent) DbData() interface{} {
-//	return nil
-//}
-//
-//func (this *BaseComponent) Save() error {
-//	dbData := this.DbData()
-//	if dbData == nil {
-//		return nil
-//	}
-//	return GetServer().GetDb().SaveFieldInt64(this.Player.GetId(), this.GetName(), dbData)
-//}
-
-//func (this *BaseComponent) Load() error {
-//	dbData := this.DbData()
-//	if dbData == nil {
-//		return nil
-//	}
-//	_,err := GetServer().GetDb().LoadFieldInt64(this.Player.GetId(), this.GetName(), dbData)
-//	return err
-//}
 
 func (this *Player) GetId() int64 {
 	return this.id

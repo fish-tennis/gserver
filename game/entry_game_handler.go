@@ -56,6 +56,9 @@ func onPlayerEntryGameReq(connection gnet.Connection, packet *gnet.ProtoPacket) 
 		PlayerId: player.GetId(),
 		RegionId: player.GetRegionId(),
 	})
+	// 模拟修改玩家数据
+	baseInfo := player.GetComponent(1).(*BaseInfo)
+	baseInfo.data.Exp = baseInfo.data.Exp + 1
 	// 下线保存
 	err = player.Save()
 	if err != nil {

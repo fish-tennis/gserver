@@ -8,8 +8,8 @@ import (
 
 // 玩家基础信息
 type BaseInfo struct {
-	*BaseComponent
-	baseInfo *pb.BaseInfo
+	BaseComponent
+	data *pb.BaseInfo
 }
 
 func NewBaseInfo(player *Player, playerData *pb.PlayerData) *BaseInfo {
@@ -23,15 +23,13 @@ func NewBaseInfo(player *Player, playerData *pb.PlayerData) *BaseInfo {
 	} else {
 		baseInfo = &pb.BaseInfo{}
 		proto.Unmarshal(playerData.BaseInfo, baseInfo)
-		// test
-		baseInfo.Exp = baseInfo.Exp + 1
 	}
 	gnet.LogDebug("%v", baseInfo)
 	return &BaseInfo{
-		BaseComponent: &BaseComponent{
+		BaseComponent: BaseComponent{
 			Player: player,
 		},
-		baseInfo: baseInfo,
+		data: baseInfo,
 	}
 }
 
@@ -45,7 +43,7 @@ func (this *BaseInfo) GetName() string {
 
 // 需要保存的数据
 func (this *BaseInfo) DbData() interface{} {
-	data,err := proto.Marshal(this.baseInfo)
+	data,err := proto.Marshal(this.data)
 	if err != nil {
 		gnet.LogError("%v", err)
 		return nil
