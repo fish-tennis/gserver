@@ -18,6 +18,7 @@ message Money {
 }
 
 // 玩家在数据库中的保存格式
+// 用于一次性把玩家数据加载进来
 message PlayerData {
   int64 id = 1; // 玩家id
   string name = 2; // 玩家名

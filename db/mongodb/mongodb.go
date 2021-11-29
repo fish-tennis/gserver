@@ -198,3 +198,14 @@ func (this *MongoDb) InsertPlayer(playerId int64, playerData interface{}) error 
 	}
 	return nil
 }
+
+// 保存玩家组件(update by int playerId.componentName)
+func (this *MongoDb) SaveComponent(playerId int64, componentName string, componentData interface{}) error {
+	col := this.mongoDatabase.Collection(this.collectionName)
+	_, updateErr := col.UpdateOne(context.TODO(), bson.D{{this.intKeyName, playerId}},
+		bson.D{{"$set", bson.D{{componentName,componentData}}}})
+	if updateErr != nil {
+		return updateErr
+	}
+	return nil
+}

@@ -35,5 +35,9 @@ type PlayerDb interface {
 	// 适用于一个账号在一个区服只有一个玩家角色的游戏
 	FindPlayerByAccountId(accountId int64, regionId int32, playerData interface{}) (bool,error)
 
+	// 新建玩家
 	InsertPlayer(playerId int64, playerData interface{}) error
+
+	// 保存玩家组件(update by int playerId.componentName)
+	SaveComponent(playerId int64, componentName string, componentData interface{}) error
 }

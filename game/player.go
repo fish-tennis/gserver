@@ -7,52 +7,40 @@ import (
 
 // 玩家对象
 type Player struct {
+	// 玩家唯一id
 	id int64
+	// 玩家名(unique)
 	name string
+	// 账号id
 	accountId int64
+	// 区服id
 	regionId int32
 	//accountName string
+	// 组件表
 	components []PlayerComponent
-	playerData *pb.PlayerData
 }
 
-// 玩家组件接口
-type PlayerComponent interface {
-	entity.Component
-	GetPlayer() *Player
-	// 需要保存的数据
-	DbData() interface{}
-}
-
-// 玩家组件
-type BaseComponent struct {
-	Player *Player
-}
-
-func (this *BaseComponent) GetEntity() entity.Entity {
-	return this.Player
-}
-
-func (this *BaseComponent) GetPlayer() *Player {
-	return this.Player
-}
-
+// 玩家唯一id
 func (this *Player) GetId() int64 {
 	return this.id
 }
 
+// 玩家名(unique)
 func (this *Player) GetName() string {
 	return this.name
 }
 
+// 账号id
 func (this *Player) GetAccountId() int64 {
 	return this.accountId
 }
 
+// 区服id
 func (this *Player) GetRegionId() int32 {
 	return this.regionId
 }
 
+// 获取组件
 func (this *Player) GetComponent(componentId int) entity.Component {
 	for _,v := range this.components {
 		if v.GetId() == componentId {
@@ -62,6 +50,17 @@ func (this *Player) GetComponent(componentId int) entity.Component {
 	return nil
 }
 
+// 获取组件
+func (this *Player) GetComponentByName(componentName string) entity.Component {
+	for _,v := range this.components {
+		if v.GetName() == componentName {
+			return v
+		}
+	}
+	return nil
+}
+
+// 获取组件列表
 func (this *Player) GetComponents() []entity.Component {
 	components := make([]entity.Component, 0, len(this.components))
 	for _,v := range this.components {
@@ -70,45 +69,29 @@ func (this *Player) GetComponents() []entity.Component {
 	return components
 }
 
-func (this *Player) SaveComponent(component PlayerComponent) error {
-	//component.Save()
-	dbData := component.DbData()
-	if dbData == nil {
-		return nil
-	}
-	return GetServer().GetDb().SaveFieldInt64(this.GetId(), component.GetName(), dbData)
-}
-
+// 保存所有修改过的组件数据
 func (this *Player) Save() error {
-	for _,v := range this.components {
-		err := this.SaveComponent(v)
-		if err != nil {
-			return err
+	for _,component := range this.components {
+		if saveable,ok := component.(entity.Saveable); ok {
+			err := saveable.Save()
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil
 }
 
-//func (this *Player) InitComponent() {
-//	this.components = append(this.components, component.NewBaseInfo(this, nil))
-//	//for _,v := range this.components {
-//	//	err := v.Load()
-//	//	if err != nil {
-//	//		gnet.LogError("%s load err:%v", v.GetName(), err)
-//	//		return
-//	//	}
-//	//}
-//}
-
+// 从加载的数据构造出玩家对象
 func CreatePlayerFromData(playerData *pb.PlayerData) *Player {
 	player := &Player{
 		id: playerData.GetId(),
 		name: playerData.GetName(),
 		accountId: playerData.GetAccountId(),
 		regionId: playerData.GetRegionId(),
-		playerData: playerData,
 	}
-	player.components = append(player.components, NewBaseInfo(player, playerData))
-	player.components = append(player.components, NewMoney(player, playerData))
+	// 初始化玩家的各个模块
+	player.components = append(player.components, NewBaseInfo(player, playerData.BaseInfo))
+	player.components = append(player.components, NewMoney(player, playerData.Money))
 	return player
 }

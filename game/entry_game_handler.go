@@ -28,7 +28,7 @@ func onPlayerEntryGameReq(connection gnet.Connection, packet *gnet.ProtoPacket) 
 		playerData.AccountId = req.GetAccountId()
 		playerData.RegionId = req.GetRegionId()
 		player = CreatePlayerFromData(playerData)
-		err = gameServer.GetPlayerDb().InsertPlayer(player.GetId(), player.playerData)
+		err = gameServer.GetPlayerDb().InsertPlayer(player.GetId(), playerData)
 		if err != nil {
 			connection.Send(gnet.PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameRes), &pb.PlayerEntryGameRes{
 				Result: err.Error(),

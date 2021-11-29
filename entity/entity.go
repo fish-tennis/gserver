@@ -18,7 +18,14 @@ type Component interface {
 
 	// 所属的实体
 	GetEntity() Entity
+}
 
-	//Load() error
-	//Save() error
+// 保存数据接口
+type Saveable interface {
+	// 保存数据,保存成功后,重置dirty
+	Save() error
+	// 需要保存的数据是否修改了
+	IsDirty() bool
+	// 设置数据修改标记
+	SetDirty(dirty bool)
 }
