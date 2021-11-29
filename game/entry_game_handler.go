@@ -7,6 +7,7 @@ import (
 	"time"
 )
 
+// 玩家进游戏服
 func onPlayerEntryGameReq(connection gnet.Connection, packet *gnet.ProtoPacket) {
 	req := packet.Message().(*pb.PlayerEntryGameReq)
 	// TODO:验证LoginSession
@@ -58,9 +59,9 @@ func onPlayerEntryGameReq(connection gnet.Connection, packet *gnet.ProtoPacket) 
 	})
 	// 模拟修改玩家数据
 	baseInfo := player.GetComponent(1).(*BaseInfo)
-	baseInfo.data.Exp = baseInfo.data.Exp + 1
+	baseInfo.IncExp(1)
 	money := player.GetComponent(2).(*Money)
-	money.data.Coin = money.data.Coin + 1
+	money.IncCoin(1)
 	// 下线保存
 	err = player.Save()
 	if err != nil {

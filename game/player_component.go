@@ -62,8 +62,12 @@ func (this *DataComponent) IsDirty() bool {
 	return this.isDirty
 }
 
-func (this *DataComponent) SetDirty(dirty bool) {
-	this.isDirty = dirty
+func (this *DataComponent) SetDirty() {
+	this.isDirty = true
+}
+
+func (this *DataComponent) ResetDirty() {
+	this.isDirty = false
 }
 
 // 保存数据,保存成功后,重置dirty
@@ -73,7 +77,7 @@ func (this *DataComponent) Save() error {
 		err := GetServer().GetPlayerDb().SaveComponent(this.GetPlayerId(), this.GetName(), saveData)
 		if err == nil {
 			// 保存成功后,重置dirty
-			this.SetDirty(false)
+			this.ResetDirty()
 			return nil
 		}
 		gnet.LogError("%v %v save err:%v", this.GetPlayerId(), this.GetName(), err)

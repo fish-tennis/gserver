@@ -28,7 +28,7 @@ func NewBaseInfo(player *Player, baseInfo *pb.BaseInfo) *BaseInfo {
 			Level: 1,
 			Exp: 0,
 		}
-		component.SetDirty(true)
+		component.SetDirty()
 	}
 	gnet.LogDebug("%v", data)
 	component.data = data
@@ -42,4 +42,10 @@ func (this *BaseInfo) DbData() interface{} {
 	// 优点:便于查看,数据库语言可直接操作字段
 	// 缺点:字段名也会保存到数据库,占用空间多
 	return this.data
+}
+
+func (this *BaseInfo) IncExp(incExp int32) {
+	this.data.Exp += incExp
+	// 修改了需要保存的数据后,必须设置标记
+	this.SetDirty()
 }

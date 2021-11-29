@@ -21,7 +21,6 @@ type GameServer struct {
 	common.BaseServer
 	config *GameServerConfig
 	// 玩家数据接口
-	db db.Db
 	playerDb db.PlayerDb
 	// 在线玩家
 	playerMap sync.Map
@@ -37,10 +36,6 @@ type GameServerConfig struct {
 
 func GetServer() *GameServer {
 	return gameServer
-}
-
-func (this *GameServer) GetDb() db.Db {
-	return this.db
 }
 
 func (this *GameServer) GetPlayerDb() db.PlayerDb {
@@ -74,20 +69,20 @@ func (this *GameServer) Run() {
 
 func (this *GameServer) OnExit() {
 	gnet.LogDebug("GameServer.OnExit")
-	if this.db != nil {
-		this.db.(*mongodb.MongoDb).Disconnect()
+	if this.playerDb != nil {
+		this.playerDb.(*mongodb.MongoDb).Disconnect()
 	}
 }
 
 // 初始化数据库
 func (this *GameServer) initDb() {
 	// 使用mongodb来演示
-	mongoDb := mongodb.NewMongoDb("mongodb://localhost:27017","testdb","player",
-		"id", "name", "data")
+	mongoDb := mongodb.NewMongoDb("mongodb://localhost:27017","testdb","player")
+	mongoDb.SetAccountColumnNames("accountid","")
+	mongoDb.SetPlayerColumnNames("id", "name","regionid")
 	if !mongoDb.Connect() {
 		panic("connect db error")
 	}
-	this.db = mongoDb
 	this.playerDb = mongoDb
 }
 

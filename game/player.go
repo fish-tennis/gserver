@@ -17,6 +17,7 @@ type Player struct {
 	regionId int32
 	//accountName string
 	// 组件表
+	// TODO:用map是否更合适?
 	components []PlayerComponent
 }
 

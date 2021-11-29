@@ -27,5 +27,7 @@ type Saveable interface {
 	// 需要保存的数据是否修改了
 	IsDirty() bool
 	// 设置数据修改标记
-	SetDirty(dirty bool)
+	SetDirty()
+	// 重置标记
+	ResetDirty()
 }

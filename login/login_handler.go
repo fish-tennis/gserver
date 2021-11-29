@@ -12,7 +12,7 @@ func onLoginReq(connection gnet.Connection, packet *gnet.ProtoPacket) {
 	req := packet.Message().(*pb.LoginReq)
 	result := ""
 	account := &pb.Account{}
-	hasData,err := loginServer.GetAccountDb().FindString(req.GetAccountName(),account)
+	hasData,err := loginServer.GetAccountDb().FindAccount(req.GetAccountName(),account)
 	if err != nil {
 		result = err.Error()
 	} else {
@@ -46,7 +46,7 @@ func onAccountReg(connection gnet.Connection, packet *gnet.ProtoPacket) {
 		Name: req.GetAccountName(),
 		Password: req.GetPassword(),
 	}
-	err := loginServer.GetAccountDb().InsertInt64(account.GetId(), account)
+	err := loginServer.GetAccountDb().InsertAccount(account)
 	if err != nil {
 		result = err.Error()
 	} else {

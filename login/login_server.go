@@ -20,7 +20,7 @@ type LoginServer struct {
 	common.BaseServer
 	config *LoginServerConfig
 	// 账号数据接口
-	accountDb db.Db
+	accountDb db.AccountDb
 }
 
 // 登录服配置
@@ -31,7 +31,7 @@ type LoginServerConfig struct {
 	clientConnConfig gnet.ConnectionConfig
 }
 
-func (this *LoginServer) GetAccountDb() db.Db {
+func (this *LoginServer) GetAccountDb() db.AccountDb {
 	return this.accountDb
 }
 
@@ -70,8 +70,8 @@ func (this *LoginServer) OnExit() {
 // 初始化数据库
 func (this *LoginServer) initDb() {
 	// 使用mongodb来演示
-	mongoDb := mongodb.NewMongoDb("mongodb://localhost:27017","testdb","account",
-		"id", "name", "")
+	mongoDb := mongodb.NewMongoDb("mongodb://localhost:27017","testdb","account")
+	mongoDb.SetAccountColumnNames("id", "name")
 	if !mongoDb.Connect() {
 		panic("connect db error")
 	}

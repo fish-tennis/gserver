@@ -9,30 +9,45 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 )
 
+// AccountDb和PlayerDb的mongo实现
 type MongoDb struct {
 	mongoClient    *mongo.Client
 	mongoDatabase  *mongo.Database
+
 	uri            string
 	dbName         string
 	collectionName string
-	// 可以同时有string key和int key,典型的如账号表和玩家表,名字和id都是unique key
-	// int key的列名
-	intKeyName     string
-	// string key的列名
-	stringKeyName  string
-	// 二进制值的列名
-	valueName      string
+
+	// 账号id列名(unique index)
+	colAccountId   string
+	// 账号名列名(unique index)
+	colAccountName string
+
+	// 玩家id列名(unique index)
+	colPlayerId    string
+	// 玩家名列名(unique index)
+	colPlayerName  string
+	// 玩家区服id列名
+	colRegionId    string
 }
 
-func NewMongoDb(uri,dbName,collectionName,intKeyName,stringKeyName,valueName string) *MongoDb {
+func NewMongoDb(uri,dbName,collectionName string) *MongoDb {
 	return &MongoDb{
 		uri:            uri,
 		dbName:         dbName,
 		collectionName: collectionName,
-		intKeyName:     intKeyName,
-		stringKeyName:  stringKeyName,
-		valueName:      valueName,
 	}
+}
+
+func (this *MongoDb) SetAccountColumnNames(colAccountId, colAccountName string) {
+	this.colAccountId = colAccountId
+	this.colAccountName = colAccountName
+}
+
+func (this *MongoDb) SetPlayerColumnNames(colPlayerId, colPlayerName, colRegionId string) {
+	this.colPlayerId = colPlayerId
+	this.colPlayerName = colPlayerName
+	this.colRegionId = colRegionId
 }
 
 func (this *MongoDb) Connect() bool {
@@ -48,28 +63,25 @@ func (this *MongoDb) Connect() bool {
 	this.mongoClient = client
 	this.mongoDatabase = this.mongoClient.Database(this.dbName)
 	col := this.mongoDatabase.Collection(this.collectionName)
-	if this.stringKeyName != "" {
-		indexModel := mongo.IndexModel{
-			Keys: bson.D{
-				{this.stringKeyName, 1},
-			},
-			Options: options.Index().SetUnique(true),
-		}
-		indexName,indexErr := col.Indexes().CreateOne(context.TODO(), indexModel)
-		if indexErr == nil {
-			gnet.LogInfo("mongo stringIndexName:%v", indexName)
+	columnNames := []string{this.colAccountId, this.colAccountName, this.colPlayerId, this.colPlayerName}
+	var indexModels []mongo.IndexModel
+	for _,columnName := range columnNames {
+		if columnName != "" {
+			indexModel := mongo.IndexModel{
+				Keys: bson.D{
+					{columnName, 1},
+				},
+				Options: options.Index().SetUnique(true),
+			}
+			indexModels = append(indexModels, indexModel)
 		}
 	}
-	if this.intKeyName != "" {
-		indexModel := mongo.IndexModel{
-			Keys: bson.D{
-				{this.intKeyName, 1},
-			},
-			Options: options.Index().SetUnique(true),
-		}
-		indexName,indexErr := col.Indexes().CreateOne(context.TODO(), indexModel)
-		if indexErr == nil {
-			gnet.LogInfo("mongo intIndexName:%v", indexName)
+	if len(indexModels) > 0 {
+		indexNames,indexErr := col.Indexes().CreateMany(context.TODO(), indexModels)
+		if indexErr != nil {
+			gnet.LogError("create index err:%v", indexErr)
+		} else {
+			gnet.LogInfo("mongo index:%v", indexNames)
 		}
 	}
 	gnet.LogInfo("mongo Connected")
@@ -86,9 +98,10 @@ func (this *MongoDb) Disconnect() {
 	gnet.LogInfo("mongo Disconnected")
 }
 
-func (this *MongoDb) FindString(key string, data interface{}) (bool,error) {
+// 根据账号名查找账号数据
+func (this *MongoDb) FindAccount(accountName string, data interface{}) (bool,error) {
 	col := this.mongoDatabase.Collection(this.collectionName)
-	result := col.FindOne(context.TODO(), bson.D{{this.stringKeyName,key}})
+	result := col.FindOne(context.TODO(), bson.D{{this.colAccountName,accountName}})
 	if result == nil || result.Err() == mongo.ErrNoDocuments {
 		return false, nil
 	}
@@ -99,87 +112,34 @@ func (this *MongoDb) FindString(key string, data interface{}) (bool,error) {
 	return true,nil
 }
 
-func (this *MongoDb) InsertString(key string, data interface{}) error {
+// 新建账号(insert)
+func (this *MongoDb) InsertAccount(accountData interface{}) error {
 	col := this.mongoDatabase.Collection(this.collectionName)
-	_, insertErr := col.InsertOne(context.TODO(),
-		data)
-	if insertErr != nil {
-		return insertErr
-	}
-	return nil
+	_, err := col.InsertOne(context.TODO(), accountData)
+	return err
 }
 
-func (this *MongoDb) UpdateString(key string, data interface{}) error {
+// 保存账号数据(update account by accountId)
+func (this *MongoDb) SaveAccount(accountId int64, accountData interface{}) error {
 	col := this.mongoDatabase.Collection(this.collectionName)
-	_, updateErr := col.UpdateOne(context.TODO(), bson.D{{this.stringKeyName, key}},
-		data)
-	if updateErr != nil {
-		return updateErr
-	}
-	return nil
+	_, err := col.UpdateOne(context.TODO(), bson.D{{this.colAccountId, accountId}}, accountData)
+	return err
 }
 
-func (this *MongoDb) FindInt64(key int64, data interface{}) (bool,error) {
+// 保存账号字段(update account.fieldName by accountId)
+func (this *MongoDb) SaveAccountField(accountId int64, fieldName string, fieldData interface{}) error {
 	col := this.mongoDatabase.Collection(this.collectionName)
-	result := col.FindOne(context.TODO(), bson.D{{this.intKeyName,key}})
-	if result == nil || result.Err() == mongo.ErrNoDocuments {
-		return false, nil
-	}
-	err := result.Decode(data)
-	if err != nil {
-		return false, err
-	}
-	return true,nil
-}
-
-func (this *MongoDb) InsertInt64(key int64, data interface{}) error {
-	col := this.mongoDatabase.Collection(this.collectionName)
-	_, insertErr := col.InsertOne(context.TODO(), data)
-	if insertErr != nil {
-		return insertErr
-	}
-	return nil
-}
-
-func (this *MongoDb) UpdateInt64(key int64, data interface{}) error {
-	col := this.mongoDatabase.Collection(this.collectionName)
-	_, updateErr := col.UpdateOne(context.TODO(), bson.D{{this.intKeyName, key}},
-		data)
-	if updateErr != nil {
-		return updateErr
-	}
-	return nil
-}
-
-func (this *MongoDb) LoadFieldInt64(key int64, fieldName string, fieldData interface{}) (bool,error) {
-	col := this.mongoDatabase.Collection(this.collectionName)
-	opts := options.FindOne().SetProjection(bson.D{{fieldName,1}})
-	result := col.FindOne(context.TODO(), bson.D{{this.intKeyName,key}}, opts)
-	if result == nil || result.Err() == mongo.ErrNoDocuments {
-		return false, nil
-	}
-	err := result.Decode(fieldData)
-	if err != nil {
-		return false, err
-	}
-	return true,nil
-}
-
-func (this *MongoDb) SaveFieldInt64(key int64, fieldName string, fieldData interface{}) error {
-	col := this.mongoDatabase.Collection(this.collectionName)
-	_, updateErr := col.UpdateOne(context.TODO(), bson.D{{this.intKeyName, key}},
+	_, err := col.UpdateOne(context.TODO(), bson.D{{this.colAccountId, accountId}},
 		bson.D{{"$set", bson.D{{fieldName,fieldData}}}})
-	if updateErr != nil {
-		return updateErr
-	}
-	return nil
+	return err
 }
+
 
 // 根据账号id查找玩家数据
 // 适用于一个账号在一个区服只有一个玩家角色的游戏
 func (this *MongoDb) FindPlayerByAccountId(accountId int64, regionId int32, playerData interface{}) (bool,error) {
 	col := this.mongoDatabase.Collection(this.collectionName)
-	result := col.FindOne(context.TODO(), bson.D{{"accountid",accountId},{"regionid",regionId}})
+	result := col.FindOne(context.TODO(), bson.D{{this.colAccountId,accountId},{this.colRegionId,regionId}})
 	if result == nil || result.Err() == mongo.ErrNoDocuments {
 		return false, nil
 	}
@@ -199,10 +159,17 @@ func (this *MongoDb) InsertPlayer(playerId int64, playerData interface{}) error 
 	return nil
 }
 
+// 保存玩家数据(update player by playerId)
+func (this *MongoDb) SavePlayer(playerId int64, playerData interface{}) error {
+	col := this.mongoDatabase.Collection(this.collectionName)
+	_, err := col.UpdateOne(context.TODO(), bson.D{{this.colPlayerId, playerId}}, playerData)
+	return err
+}
+
 // 保存玩家组件(update by int playerId.componentName)
 func (this *MongoDb) SaveComponent(playerId int64, componentName string, componentData interface{}) error {
 	col := this.mongoDatabase.Collection(this.collectionName)
-	_, updateErr := col.UpdateOne(context.TODO(), bson.D{{this.intKeyName, playerId}},
+	_, updateErr := col.UpdateOne(context.TODO(), bson.D{{this.colPlayerId, playerId}},
 		bson.D{{"$set", bson.D{{componentName,componentData}}}})
 	if updateErr != nil {
 		return updateErr

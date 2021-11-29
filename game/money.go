@@ -50,3 +50,8 @@ func (this *Money) DbData() interface{} {
 	}
 	return data
 }
+
+func (this *Money) IncCoin(coin int32) {
+	this.data.Coin += coin
+	this.SetDirty()
+}
