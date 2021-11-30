@@ -2,6 +2,7 @@ package login
 
 import (
 	"github.com/fish-tennis/gnet"
+	"github.com/fish-tennis/gserver/cache"
 	"github.com/fish-tennis/gserver/common"
 	"github.com/fish-tennis/gserver/db"
 	"github.com/fish-tennis/gserver/db/mongodb"
@@ -42,6 +43,7 @@ func (this *LoginServer) Init() bool {
 	}
 	this.readConfig()
 	this.initDb()
+	this.initCache()
 	netMgr := gnet.GetNetMgr()
 	clientCodec := gnet.NewProtoCodec(nil)
 	clientHandler := gnet.NewDefaultConnectionHandler(clientCodec)
@@ -65,6 +67,9 @@ func (this *LoginServer) OnExit() {
 	if this.accountDb != nil {
 		this.accountDb.(*mongodb.MongoDb).Disconnect()
 	}
+	if cache.GetRedis() != nil {
+		cache.GetRedis().Close()
+	}
 }
 
 // 初始化数据库
@@ -76,6 +81,12 @@ func (this *LoginServer) initDb() {
 		panic("connect db error")
 	}
 	this.accountDb = mongoDb
+}
+
+// 初始化redis缓存
+func (this *LoginServer) initCache() {
+	redisAddrs := []string{"10.0.75.2:6379"}
+	cache.NewRedisClient(redisAddrs, "")
 }
 
 func (this *LoginServer) readConfig() {

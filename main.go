@@ -17,6 +17,7 @@ func main() {
 	serverType := flag.String("type", "", "server type")
 	flag.Parse()
 
+	// 根据命令行参数 创建不同的服务器实例
 	server := GetServer(*serverType)
 	if !server.Init() {
 		panic("server init error")

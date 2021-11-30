@@ -2,6 +2,7 @@ package game
 
 import (
 	"github.com/fish-tennis/gnet"
+	"github.com/fish-tennis/gserver/cache"
 	"github.com/fish-tennis/gserver/common"
 	"github.com/fish-tennis/gserver/db"
 	"github.com/fish-tennis/gserver/db/mongodb"
@@ -49,6 +50,7 @@ func (this *GameServer) Init() bool {
 	}
 	this.readConfig()
 	this.initDb()
+	this.initCache()
 	netMgr := gnet.GetNetMgr()
 	clientCodec := gnet.NewProtoCodec(nil)
 	clientHandler := gnet.NewDefaultConnectionHandler(clientCodec)
@@ -84,6 +86,12 @@ func (this *GameServer) initDb() {
 		panic("connect db error")
 	}
 	this.playerDb = mongoDb
+}
+
+// 初始化redis缓存
+func (this *GameServer) initCache() {
+	redisAddrs := []string{"10.0.75.2:6379"}
+	cache.NewRedisClient(redisAddrs, "")
 }
 
 func (this *GameServer) readConfig() {

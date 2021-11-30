@@ -3,6 +3,7 @@ package game
 import (
 	"fmt"
 	"github.com/fish-tennis/gnet"
+	"github.com/fish-tennis/gserver/cache"
 	"github.com/fish-tennis/gserver/pb"
 	"time"
 )
@@ -10,7 +11,13 @@ import (
 // 玩家进游戏服
 func onPlayerEntryGameReq(connection gnet.Connection, packet *gnet.ProtoPacket) {
 	req := packet.Message().(*pb.PlayerEntryGameReq)
-	// TODO:验证LoginSession
+	// 验证LoginSession
+	if !cache.VerifyLoginSession(req.GetAccountId(), req.GetLoginSession()) {
+		connection.Send(gnet.PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameRes), &pb.PlayerEntryGameRes{
+			Result: "session error",
+		})
+		return
+	}
 	// TODO:检查该账号是否已经有对应的在线玩家
 	playerData := &pb.PlayerData{}
 	hasData,err := gameServer.GetPlayerDb().FindPlayerByAccountId(req.GetAccountId(), req.GetRegionId(), playerData)

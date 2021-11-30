@@ -2,6 +2,7 @@ package login
 
 import (
 	"github.com/fish-tennis/gnet"
+	"github.com/fish-tennis/gserver/cache"
 	"github.com/fish-tennis/gserver/pb"
 	"time"
 )
@@ -11,6 +12,7 @@ func onLoginReq(connection gnet.Connection, packet *gnet.ProtoPacket) {
 	gnet.LogDebug("onLoginReq:%v", packet.Message())
 	req := packet.Message().(*pb.LoginReq)
 	result := ""
+	loginSession := ""
 	account := &pb.Account{}
 	hasData,err := loginServer.GetAccountDb().FindAccount(req.GetAccountName(),account)
 	if err != nil {
@@ -20,6 +22,7 @@ func onLoginReq(connection gnet.Connection, packet *gnet.ProtoPacket) {
 			result = "not reg"
 		} else if req.GetPassword() == account.GetPassword() {
 			result = "ok"
+			loginSession = cache.NewLoginSession(account)
 		} else {
 			result = "password not correct"
 		}
@@ -28,7 +31,7 @@ func onLoginReq(connection gnet.Connection, packet *gnet.ProtoPacket) {
 		Result: result,
 		AccountName: req.GetAccountName(),
 		AccountId: account.GetId(),
-		LoginSession: "test login session",
+		LoginSession: loginSession,
 		GameServer: &pb.GameServerInfo{
 			ServerId: 1,
 			ClientListenAddr: "127.0.0.1:10003",
