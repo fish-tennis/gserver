@@ -2,6 +2,7 @@ package common
 
 import (
 	"github.com/fish-tennis/gnet"
+	"github.com/fish-tennis/gserver/cache"
 	"os"
 	"os/signal"
 	"syscall"
@@ -43,5 +44,8 @@ func (this *BaseServer) WaitExit() {
 		break
 	}
 	this.OnExit()
+	if cache.GetRedis() != nil {
+		cache.GetRedis().Close()
+	}
 	gnet.LogDebug("Exit")
 }

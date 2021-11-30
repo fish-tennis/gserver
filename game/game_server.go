@@ -53,9 +53,9 @@ func (this *GameServer) Init() bool {
 	this.initCache()
 	netMgr := gnet.GetNetMgr()
 	clientCodec := gnet.NewProtoCodec(nil)
-	clientHandler := gnet.NewDefaultConnectionHandler(clientCodec)
+	clientHandler := NewClientConnectionHandler(clientCodec)
 	this.registerClientPacket(clientHandler)
-	if netMgr.NewListener(this.config.clientListenAddr, this.config.clientConnConfig, clientCodec, clientHandler, nil) == nil {
+	if netMgr.NewListener(this.config.clientListenAddr, this.config.clientConnConfig, clientCodec, clientHandler, &ClientListerHandler{}) == nil {
 		panic("listen failed")
 		return false
 	}
@@ -73,6 +73,19 @@ func (this *GameServer) OnExit() {
 	gnet.LogDebug("GameServer.OnExit")
 	if this.playerDb != nil {
 		this.playerDb.(*mongodb.MongoDb).Disconnect()
+	}
+}
+
+func (this *GameServer) readConfig() {
+	this.config = &GameServerConfig{
+		clientListenAddr: "127.0.0.1:10003",
+		clientConnConfig: gnet.ConnectionConfig{
+			SendPacketCacheCap: 64,
+			SendBufferSize:     1024 * 20,
+			RecvBufferSize:     1024 * 10,
+			MaxPacketSize:      1024 * 10,
+			RecvTimeout:        10,
+		},
 	}
 }
 
@@ -94,24 +107,12 @@ func (this *GameServer) initCache() {
 	cache.NewRedisClient(redisAddrs, "")
 }
 
-func (this *GameServer) readConfig() {
-	this.config = &GameServerConfig{
-		clientListenAddr: "127.0.0.1:10003",
-		clientConnConfig: gnet.ConnectionConfig{
-			SendPacketCacheCap: 64,
-			SendBufferSize:     1024 * 20,
-			RecvBufferSize:     1024 * 10,
-			MaxPacketSize:      1024 * 10,
-			RecvTimeout:        10,
-		},
-	}
-}
-
 // 注册客户端消息回调
-func (this *GameServer) registerClientPacket(clientHandler *gnet.DefaultConnectionHandler) {
+func (this *GameServer) registerClientPacket(clientHandler *ClientConnectionHandler) {
 	clientHandler.Register(gnet.PacketCommand(pb.CmdInner_Cmd_HeartBeatReq), onHeartBeatReq, func() proto.Message {return &pb.HeartBeatReq{}})
 	clientHandler.Register(gnet.PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameReq), onPlayerEntryGameReq, func() proto.Message {return &pb.PlayerEntryGameReq{}})
 	//clientHandler.Register(gnet.PacketCommand(pb.CmdLogin_Cmd_AccountReg), onAccountReg, func() proto.Message {return &pb.AccountReg{}})
+	clientHandler.autoRegister()
 }
 
 // 客户端心跳回复
@@ -121,4 +122,22 @@ func onHeartBeatReq(connection gnet.Connection, packet *gnet.ProtoPacket) {
 		RequestTimestamp: req.GetTimestamp(),
 		ResponseTimestamp: uint64(time.Now().UnixNano()/int64(time.Microsecond)),
 	})
+}
+
+// 添加一个在线玩家
+func (this *GameServer) AddPlayer(player *Player) {
+	this.playerMap.Store(player.GetId(), player)
+}
+
+// 删除一个在线玩家
+func (this *GameServer) RemovePlayer(player *Player) {
+	this.playerMap.Delete(player.GetId())
+}
+
+// 删除一个在线玩家
+func (this *GameServer) GetPlayer(playerId int64) *Player {
+	if v,ok := this.playerMap.Load(playerId); ok {
+		return v.(*Player)
+	}
+	return nil
 }

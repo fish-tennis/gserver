@@ -67,8 +67,17 @@ func (this *LoginServer) OnExit() {
 	if this.accountDb != nil {
 		this.accountDb.(*mongodb.MongoDb).Disconnect()
 	}
-	if cache.GetRedis() != nil {
-		cache.GetRedis().Close()
+}
+
+func (this *LoginServer) readConfig() {
+	this.config = &LoginServerConfig{
+		clientListenAddr: "127.0.0.1:10002",
+		clientConnConfig: gnet.ConnectionConfig{
+			SendPacketCacheCap: 8,
+			SendBufferSize:     1024 * 10,
+			RecvBufferSize:     1024 * 10,
+			MaxPacketSize:      1024 * 10,
+		},
 	}
 }
 
@@ -87,18 +96,6 @@ func (this *LoginServer) initDb() {
 func (this *LoginServer) initCache() {
 	redisAddrs := []string{"10.0.75.2:6379"}
 	cache.NewRedisClient(redisAddrs, "")
-}
-
-func (this *LoginServer) readConfig() {
-	this.config = &LoginServerConfig{
-		clientListenAddr: "127.0.0.1:10002",
-		clientConnConfig: gnet.ConnectionConfig{
-			SendPacketCacheCap: 8,
-			SendBufferSize:     1024 * 10,
-			RecvBufferSize:     1024 * 10,
-			MaxPacketSize:      1024 * 10,
-		},
-	}
 }
 
 // 注册客户端消息回调

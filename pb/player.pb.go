@@ -141,6 +141,7 @@ func (x *Money) GetDiamond() int32 {
 }
 
 // 玩家在数据库中的保存格式
+// 用于一次性把玩家数据加载进来
 type PlayerData struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache

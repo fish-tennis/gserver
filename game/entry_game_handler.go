@@ -11,6 +11,12 @@ import (
 // 玩家进游戏服
 func onPlayerEntryGameReq(connection gnet.Connection, packet *gnet.ProtoPacket) {
 	req := packet.Message().(*pb.PlayerEntryGameReq)
+	if connection.GetTag() != nil {
+		connection.Send(gnet.PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameRes), &pb.PlayerEntryGameRes{
+			Result: "has login",
+		})
+		return
+	}
 	// 验证LoginSession
 	if !cache.VerifyLoginSession(req.GetAccountId(), req.GetLoginSession()) {
 		connection.Send(gnet.PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameRes), &pb.PlayerEntryGameRes{
@@ -18,7 +24,6 @@ func onPlayerEntryGameReq(connection gnet.Connection, packet *gnet.ProtoPacket) 
 		})
 		return
 	}
-	// TODO:检查该账号是否已经有对应的在线玩家
 	playerData := &pb.PlayerData{}
 	hasData,err := gameServer.GetPlayerDb().FindPlayerByAccountId(req.GetAccountId(), req.GetRegionId(), playerData)
 	if err != nil {
@@ -54,9 +59,19 @@ func onPlayerEntryGameReq(connection gnet.Connection, packet *gnet.ProtoPacket) 
 		}
 		gnet.LogDebug("new player:%v", playerData.Id)
 	} else {
+		// 检查该账号是否已经有对应的在线玩家
+		existPlayer := gameServer.GetPlayer(playerData.GetId())
+		if existPlayer != nil {
+			connection.Send(gnet.PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameRes), &pb.PlayerEntryGameRes{
+				Result: "exist player",
+			})
+			return
+		}
 		player = CreatePlayerFromData(playerData)
 	}
-	// TODO:加入在线玩家表
+	// 加入在线玩家表
+	connection.SetTag(player.GetId())
+	gameServer.AddPlayer(player)
 	gnet.LogDebug("entry player:%v", player)
 	connection.Send(gnet.PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameRes), &pb.PlayerEntryGameRes{
 		Result: "ok",
@@ -64,15 +79,15 @@ func onPlayerEntryGameReq(connection gnet.Connection, packet *gnet.ProtoPacket) 
 		PlayerId: player.GetId(),
 		RegionId: player.GetRegionId(),
 	})
-	// 模拟修改玩家数据
-	baseInfo := player.GetComponent(1).(*BaseInfo)
-	baseInfo.IncExp(1)
-	money := player.GetComponent(2).(*Money)
-	money.IncCoin(1)
-	// 下线保存
-	err = player.Save()
-	if err != nil {
-		gnet.LogError("%v", err)
-		return
-	}
+	//// 模拟修改玩家数据
+	//baseInfo := player.GetComponent(1).(*BaseInfo)
+	//baseInfo.IncExp(1)
+	//money := player.GetComponent(2).(*Money)
+	//money.IncCoin(1)
+	//// 下线保存
+	//err = player.Save()
+	//if err != nil {
+	//	gnet.LogError("%v", err)
+	//	return
+	//}
 }

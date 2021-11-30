@@ -55,3 +55,17 @@ func (this *Money) IncCoin(coin int32) {
 	this.data.Coin += coin
 	this.SetDirty()
 }
+
+// 请求加coin的消息回调
+//func (this *Money) OnCoinReq(packet *gnet.ProtoPacket) {
+//	gnet.LogDebug("OnCoinReq")
+//	req := packet.Message().(*pb.CoinReq)
+//	gnet.LogDebug("req:%v", req)
+//	this.IncCoin(req.GetCoin())
+//}
+func (this *Money) OnCoinReq(req *pb.CoinReq) {
+	gnet.LogDebug("OnCoinReq")
+	//req := packet.Message().(*pb.CoinReq)
+	gnet.LogDebug("req:%v", req)
+	this.IncCoin(req.GetCoin())
+}

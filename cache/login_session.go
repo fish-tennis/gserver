@@ -13,7 +13,7 @@ func NewLoginSession(account *pb.Account) string {
 	session := fmt.Sprintf("%v", time.Now().UnixNano())
 	// 登录session存redis,供玩家登录游戏服时验证用,使登录服和游戏服可以解耦
 	_,err := GetRedis().SetEX(context.TODO(), fmt.Sprintf("ses:%v",account.GetId()), session, time.Minute*10).Result()
-	if err != nil {
+	if IsRedisError(err) {
 		gnet.LogError("session err:%v", err)
 		return ""
 	}
@@ -26,7 +26,7 @@ func VerifyLoginSession(accountId int64, session string) bool {
 		return false
 	}
 	cacheSession,err := GetRedis().Get(context.TODO(), fmt.Sprintf("ses:%v",accountId)).Result()
-	if err != nil {
+	if IsRedisError(err) {
 		return false
 	}
 	return cacheSession == session

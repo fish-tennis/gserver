@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+option go_package = "./pb";
+
+package money;
+
+// 消息号定义
+enum CmdMoney {
+	Cmd_None         = 0; // 解决"The first enum value must be zero in proto3."的报错
+	
+	// 消息号枚举值的命名规范:Cmd_MessageName,便于工具处理,生成一些辅助代码
+
+	Cmd_CoinReq = 1101; // 请求加coin的测试消息
+	Cmd_CoinRes = 1102;
+}
+
+// 请求加coin的测试消息
+message CoinReq {
+  int32 coin = 1;
+}
+
+message CoinRes {
+  int32 coin = 1;
+}

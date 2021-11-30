@@ -139,5 +139,8 @@ func (this *testGameHandler) onHeartBeatRes(connection gnet.Connection, packet *
 func (this *testGameHandler) onPlayerEntryGameRes(connection gnet.Connection, packet *gnet.ProtoPacket) {
 	gnet.LogDebug("onPlayerEntryGameRes:%v", packet.Message())
 	//res := packet.Message().(*pb.PlayerEntryGameRes)
-	this.Exit()
+	//this.Exit()
+	connection.Send(gnet.PacketCommand(pb.CmdMoney_Cmd_CoinReq), &pb.CoinReq{
+		Coin: 1,
+	})
 }
