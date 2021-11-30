@@ -2,6 +2,7 @@ syntax = "proto3";
 
 option go_package = "./pb";
 
+// 每个proto文件设置package为文件名,可以防止enum命名冲突
 package inner;
 
 // 消息号定义
@@ -9,17 +10,25 @@ enum CmdInner {
 	Cmd_None         = 0; // 解决"The first enum value must be zero in proto3."的报错
 	
 	// 消息号枚举值的命名规范:Cmd_MessageName,便于工具处理,生成一些辅助代码
-	Cmd_HeartBeatReq = 1;
-	Cmd_HeartBeatRes = 2;
+	Cmd_HeartBeatReq = 1; // 心跳请求
+	Cmd_HeartBeatRes = 2; // 心跳返回
+	Cmd_ErrorRes     = 3; // 通用的错误返回消息
 }
 
 // 心跳包请求
 message HeartBeatReq {
-  fixed64 timestamp = 1;
+  fixed64 timestamp = 1; // 请求方的时间戳
 }
 
 // 心跳包回复
 message HeartBeatRes {
-  fixed64 requestTimestamp = 1;
-  fixed64 responseTimestamp = 2;
+  fixed64 requestTimestamp = 1; // 请求方的时间戳
+  fixed64 responseTimestamp = 2;// 回复方的时间戳
+}
+
+// 通用的错误返回消息
+message ErrorRes {
+  int32 command = 1; // 消息号
+  int32 resultId = 2; // 错误信息id
+  string resultStr = 3; // 错误信息内容
 }

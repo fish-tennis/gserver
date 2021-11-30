@@ -63,9 +63,10 @@ func (this *Money) IncCoin(coin int32) {
 //	gnet.LogDebug("req:%v", req)
 //	this.IncCoin(req.GetCoin())
 //}
+
+// 请求加coin的消息回调
+// 这种格式写的函数可以自动注册消息回调
 func (this *Money) OnCoinReq(req *pb.CoinReq) {
-	gnet.LogDebug("OnCoinReq")
-	//req := packet.Message().(*pb.CoinReq)
-	gnet.LogDebug("req:%v", req)
+	gnet.LogDebug("OnCoinReq:%v", req)
 	this.IncCoin(req.GetCoin())
 }

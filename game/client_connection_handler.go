@@ -43,7 +43,7 @@ func (this* ClientConnectionHandler) OnRecvPacket(connection gnet.Connection, pa
 				if handlerInfo != nil {
 					component := player.GetComponentByName(handlerInfo.componentName)
 					if component != nil {
-						// 用了反射,性能有所损耗
+						// 用了反射,性能有所损失
 						handlerInfo.method.Func.Call([]reflect.Value{reflect.ValueOf(component), reflect.ValueOf(protoPacket.Message())})
 						return
 					}
@@ -63,21 +63,20 @@ func (this* ClientConnectionHandler) RegisterMethod(command gnet.PacketCommand, 
 	gnet.LogDebug("RegisterMethod %v %v.%v", command, componentName, method.Name)
 }
 
-func (this* ClientConnectionHandler) autoRegister() {
+// 根据proto的命名规则和玩家组件里消息回调的格式,通过反射自动生成消息的注册
+func (this* ClientConnectionHandler) autoRegisterProto() {
 	playerData := &pb.PlayerData{}
 	player := CreatePlayerFromData(playerData)
 	for _,component := range player.components {
 		typ := reflect.TypeOf(component)
-		//gnet.LogDebug("component type:%v", typ)
-		//gnet.LogDebug("component typename:%v", typ.Name())
-		packageName := typ.String()[strings.LastIndex(typ.String(),".")+1:]
-		//packageName = strings.ToLower(packageName)
-		//gnet.LogDebug("component packageName:%v", packageName)
+		// 如: game.Money -> Money
+		componentStructName := typ.String()[strings.LastIndex(typ.String(),".")+1:]
 		for i := 0; i < typ.NumMethod(); i++ {
 			method := typ.Method(i)
 			if method.Type.NumIn() != 2 || !strings.HasPrefix(method.Name,"On") {
 				continue
 			}
+			// 消息回调格式: func (this *Money) OnCoinReq(req *pb.CoinReq)
 			methonArg1 := method.Type.In(1)
 			if !strings.HasPrefix(methonArg1.String(), "*pb.") {
 				continue
@@ -85,22 +84,31 @@ func (this* ClientConnectionHandler) autoRegister() {
 			//if !methonArg1.Implements(reflect.TypeOf(&proto.Message{})) {
 			//	continue
 			//}
-			//gnet.LogDebug("methonArg1:%v string:%v", methonArg1, methonArg1.String())
-			//gnet.LogDebug("PkgPath:%v", methonArg1.PkgPath())
-			// 根据规则,自动找到消息号
+			// 消息名,如: CoinReq
 			messageName := methonArg1.String()[strings.LastIndex(methonArg1.String(),".")+1:]
-			enumTypeName := fmt.Sprintf("%v.Cmd%v", strings.ToLower(packageName), packageName)
-			enumTyp,err := protoregistry.GlobalTypes.FindEnumByName(protoreflect.FullName(enumTypeName))
-			if err != nil {
-				gnet.LogDebug("err:%v", err)
+			// 函数名必须是OnCoinReq
+			if method.Name != fmt.Sprintf("On%v", messageName) {
+				gnet.LogDebug("methodName not match:%v", method.Name)
 				continue
 			}
+			// proto文件里定义的package名是组件名的小写, 如package money
+			// enum Message的全名:money.CmdMoney
+			enumTypeName := fmt.Sprintf("%v.Cmd%v", strings.ToLower(componentStructName), componentStructName)
+			enumTyp,err := protoregistry.GlobalTypes.FindEnumByName(protoreflect.FullName(enumTypeName))
+			if err != nil {
+				gnet.LogDebug("%v err:%v", enumTypeName, err)
+				continue
+			}
+			// 如: Cmd_CoinReq
 			enumIdName := fmt.Sprintf("Cmd_%v", messageName)
 			enumNumber := enumTyp.Descriptor().Values().ByName(protoreflect.Name(enumIdName)).Number()
 			//gnet.LogDebug("enum %v:%v", enumIdName, enumNumber)
 			cmd := gnet.PacketCommand(enumNumber)
+			// 注册消息回调到组件上
 			this.RegisterMethod(cmd, component.GetName(), method)
+			// 注册消息的构造函数
 			this.DefaultConnectionHandler.Register(cmd, nil, func() proto.Message {
+				// 用了反射,性能有所损失
 				return reflect.New(methonArg1.Elem()).Interface().(proto.Message)
 			})
 		}

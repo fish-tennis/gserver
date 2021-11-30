@@ -112,7 +112,7 @@ func (this *GameServer) registerClientPacket(clientHandler *ClientConnectionHand
 	clientHandler.Register(gnet.PacketCommand(pb.CmdInner_Cmd_HeartBeatReq), onHeartBeatReq, func() proto.Message {return &pb.HeartBeatReq{}})
 	clientHandler.Register(gnet.PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameReq), onPlayerEntryGameReq, func() proto.Message {return &pb.PlayerEntryGameReq{}})
 	//clientHandler.Register(gnet.PacketCommand(pb.CmdLogin_Cmd_AccountReg), onAccountReg, func() proto.Message {return &pb.AccountReg{}})
-	clientHandler.autoRegister()
+	clientHandler.autoRegisterProto()
 }
 
 // 客户端心跳回复
