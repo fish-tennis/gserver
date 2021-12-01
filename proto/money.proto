@@ -17,9 +17,9 @@ enum CmdMoney {
 
 // 请求加coin的测试消息
 message CoinReq {
-  int32 coin = 1;
+  int32 addCoin = 1; // 加多少
 }
 
 message CoinRes {
-  int32 coin = 1;
+  int32 totalCoin = 1; // 当前总值
 }

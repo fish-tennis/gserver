@@ -4,6 +4,8 @@
 // 	protoc        v3.19.1
 // source: account.proto
 
+// 每个proto文件设置package为文件名,可以防止enum命名冲突
+
 package pb
 
 import (

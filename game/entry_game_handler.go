@@ -9,7 +9,7 @@ import (
 )
 
 // 玩家进游戏服
-func onPlayerEntryGameReq(connection gnet.Connection, packet *gnet.ProtoPacket) {
+func onPlayerEntryGameReq(connection gnet.Connection, packet *ProtoPacket) {
 	req := packet.Message().(*pb.PlayerEntryGameReq)
 	if connection.GetTag() != nil {
 		connection.Send(gnet.PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameRes), &pb.PlayerEntryGameRes{
@@ -34,6 +34,7 @@ func onPlayerEntryGameReq(connection gnet.Connection, packet *gnet.ProtoPacket) 
 		return
 	}
 	var player *Player
+	isReconnect := false
 	if !hasData {
 		// 新建
 		playerData.Id = time.Now().UnixNano()
@@ -60,34 +61,42 @@ func onPlayerEntryGameReq(connection gnet.Connection, packet *gnet.ProtoPacket) 
 		gnet.LogDebug("new player:%v", playerData.Id)
 	} else {
 		// 检查该账号是否已经有对应的在线玩家
-		existPlayer := gameServer.GetPlayer(playerData.GetId())
-		if existPlayer != nil {
-			connection.Send(gnet.PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameRes), &pb.PlayerEntryGameRes{
-				Result: "exist player",
+		player = gameServer.GetPlayer(playerData.GetId())
+		if player != nil {
+			// 重连
+			isReconnect = true
+			gnet.LogDebug("reconnect %v", player.GetId())
+			//connection.Send(gnet.PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameRes), &pb.PlayerEntryGameRes{
+			//	Result: "exist player",
+			//})
+			//return
+		} else {
+			player = CreatePlayerFromData(playerData)
+		}
+	}
+	if !isReconnect {
+		// 分布式游戏服必须保证一个账号同时只在一个游戏服上登录,防止写数据覆盖
+		// 通过redis做缓存来实现账号的"独占性"
+		if !cache.AddOnlineAccount(player.GetAccountId(), player.GetId()) {
+			// 该账号已经在另一个游戏服上登录了
+			// TODO:通知那一个游戏服踢掉玩家
+			// TODO:通知客户端稍后重新登录
+			connection.Send(Cmd(pb.CmdLogin_Cmd_PlayerEntryGameRes), &pb.PlayerEntryGameRes{
+				Result: "has logon on another gameserver",
 			})
 			return
 		}
-		player = CreatePlayerFromData(playerData)
+		// 加入在线玩家表
+		gameServer.AddPlayer(player)
 	}
-	// 加入在线玩家表
+	// 玩家和连接设置关联
 	connection.SetTag(player.GetId())
-	gameServer.AddPlayer(player)
+	player.SetConnection(connection)
 	gnet.LogDebug("entry player:%v", player)
-	connection.Send(gnet.PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameRes), &pb.PlayerEntryGameRes{
+	player.SendPlayerEntryGameRes(&pb.PlayerEntryGameRes{
 		Result: "ok",
 		AccountId: player.GetAccountId(),
 		PlayerId: player.GetId(),
 		RegionId: player.GetRegionId(),
 	})
-	//// 模拟修改玩家数据
-	//baseInfo := player.GetComponent(1).(*BaseInfo)
-	//baseInfo.IncExp(1)
-	//money := player.GetComponent(2).(*Money)
-	//money.IncCoin(1)
-	//// 下线保存
-	//err = player.Save()
-	//if err != nil {
-	//	gnet.LogError("%v", err)
-	//	return
-	//}
 }

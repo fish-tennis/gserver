@@ -14,7 +14,7 @@ func TestAutoRegister(t *testing.T) {
 
 	println(pb.CmdMoney_Cmd_CoinReq.Descriptor().FullName())
 
-	connectionHandler.autoRegisterProto()
+	connectionHandler.autoRegisterPlayerComponentProto()
 
 	//packet := gnet.NewProtoPacket(gnet.PacketCommand(pb.CmdMoney_Cmd_CoinReq),&pb.CoinReq{
 	//	Coin: 3,

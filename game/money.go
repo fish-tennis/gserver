@@ -68,5 +68,8 @@ func (this *Money) IncCoin(coin int32) {
 // 这种格式写的函数可以自动注册消息回调
 func (this *Money) OnCoinReq(req *pb.CoinReq) {
 	gnet.LogDebug("OnCoinReq:%v", req)
-	this.IncCoin(req.GetCoin())
+	this.IncCoin(req.GetAddCoin())
+	this.GetPlayer().SendCoinRes(&pb.CoinRes{
+		TotalCoin: this.data.GetCoin(),
+	})
 }

@@ -52,8 +52,6 @@ type DataComponent struct {
 	BaseComponent
 	// 保存数据的修改标记
 	isDirty bool
-	// 保存接口
-	//saveFun func() error
 	// 保存数据接口
 	dataFun func() interface{}
 }

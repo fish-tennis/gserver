@@ -3,6 +3,7 @@ package game
 import (
 	"github.com/fish-tennis/gserver/entity"
 	"github.com/fish-tennis/gserver/pb"
+	"google.golang.org/protobuf/proto"
 )
 
 // 玩家对象
@@ -19,6 +20,8 @@ type Player struct {
 	// 组件表
 	// TODO:用map是否更合适?
 	components []PlayerComponent
+	// 关联的连接
+	connection Connection
 }
 
 // 玩家唯一id
@@ -81,6 +84,28 @@ func (this *Player) Save() error {
 		}
 	}
 	return nil
+}
+
+// 设置关联的连接
+func (this *Player) SetConnection(connection Connection) {
+	// 取消之前的连接和该玩家的关联
+	if this.connection != nil && this.connection != connection {
+		this.connection.SetTag(nil)
+	}
+	this.connection = connection
+}
+
+func (this *Player) GetConnection() Connection {
+	return this.connection
+}
+
+// 发包(protobuf)
+// NOTE:调用Send(command,message)之后,不要再对message进行读写!
+func (this *Player) Send(command Cmd, message proto.Message) bool {
+	if this.connection != nil {
+		return this.connection.Send(command, message)
+	}
+	return false
 }
 
 // 从加载的数据构造出玩家对象

@@ -4,6 +4,8 @@
 // 	protoc        v3.19.1
 // source: inner.proto
 
+// 每个proto文件设置package为文件名,可以防止enum命名冲突
+
 package pb
 
 import (
@@ -26,8 +28,9 @@ type CmdInner int32
 const (
 	CmdInner_Cmd_None CmdInner = 0 // 解决"The first enum value must be zero in proto3."的报错
 	// 消息号枚举值的命名规范:Cmd_MessageName,便于工具处理,生成一些辅助代码
-	CmdInner_Cmd_HeartBeatReq CmdInner = 1
-	CmdInner_Cmd_HeartBeatRes CmdInner = 2
+	CmdInner_Cmd_HeartBeatReq CmdInner = 1 // 心跳请求
+	CmdInner_Cmd_HeartBeatRes CmdInner = 2 // 心跳返回
+	CmdInner_Cmd_ErrorRes     CmdInner = 3 // 通用的错误返回消息
 )
 
 // Enum value maps for CmdInner.
@@ -36,11 +39,13 @@ var (
 		0: "Cmd_None",
 		1: "Cmd_HeartBeatReq",
 		2: "Cmd_HeartBeatRes",
+		3: "Cmd_ErrorRes",
 	}
 	CmdInner_value = map[string]int32{
 		"Cmd_None":         0,
 		"Cmd_HeartBeatReq": 1,
 		"Cmd_HeartBeatRes": 2,
+		"Cmd_ErrorRes":     3,
 	}
 )
 
@@ -77,7 +82,7 @@ type HeartBeatReq struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Timestamp uint64 `protobuf:"fixed64,1,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	Timestamp uint64 `protobuf:"fixed64,1,opt,name=timestamp,proto3" json:"timestamp,omitempty"` // 请求方的时间戳
 }
 
 func (x *HeartBeatReq) Reset() {
@@ -125,8 +130,8 @@ type HeartBeatRes struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	RequestTimestamp  uint64 `protobuf:"fixed64,1,opt,name=requestTimestamp,proto3" json:"requestTimestamp,omitempty"`
-	ResponseTimestamp uint64 `protobuf:"fixed64,2,opt,name=responseTimestamp,proto3" json:"responseTimestamp,omitempty"`
+	RequestTimestamp  uint64 `protobuf:"fixed64,1,opt,name=requestTimestamp,proto3" json:"requestTimestamp,omitempty"`   // 请求方的时间戳
+	ResponseTimestamp uint64 `protobuf:"fixed64,2,opt,name=responseTimestamp,proto3" json:"responseTimestamp,omitempty"` // 回复方的时间戳
 }
 
 func (x *HeartBeatRes) Reset() {
@@ -175,6 +180,70 @@ func (x *HeartBeatRes) GetResponseTimestamp() uint64 {
 	return 0
 }
 
+// 通用的错误返回消息
+type ErrorRes struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Command   int32  `protobuf:"varint,1,opt,name=command,proto3" json:"command,omitempty"`    // 消息号
+	ResultId  int32  `protobuf:"varint,2,opt,name=resultId,proto3" json:"resultId,omitempty"`  // 错误信息id
+	ResultStr string `protobuf:"bytes,3,opt,name=resultStr,proto3" json:"resultStr,omitempty"` // 错误信息内容
+}
+
+func (x *ErrorRes) Reset() {
+	*x = ErrorRes{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_inner_proto_msgTypes[2]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *ErrorRes) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ErrorRes) ProtoMessage() {}
+
+func (x *ErrorRes) ProtoReflect() protoreflect.Message {
+	mi := &file_inner_proto_msgTypes[2]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ErrorRes.ProtoReflect.Descriptor instead.
+func (*ErrorRes) Descriptor() ([]byte, []int) {
+	return file_inner_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *ErrorRes) GetCommand() int32 {
+	if x != nil {
+		return x.Command
+	}
+	return 0
+}
+
+func (x *ErrorRes) GetResultId() int32 {
+	if x != nil {
+		return x.ResultId
+	}
+	return 0
+}
+
+func (x *ErrorRes) GetResultStr() string {
+	if x != nil {
+		return x.ResultStr
+	}
+	return ""
+}
+
 var File_inner_proto protoreflect.FileDescriptor
 
 var file_inner_proto_rawDesc = []byte{
@@ -188,13 +257,20 @@ var file_inner_proto_rawDesc = []byte{
 	0x71, 0x75, 0x65, 0x73, 0x74, 0x54, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0x12, 0x2c,
 	0x0a, 0x11, 0x72, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x54, 0x69, 0x6d, 0x65, 0x73, 0x74,
 	0x61, 0x6d, 0x70, 0x18, 0x02, 0x20, 0x01, 0x28, 0x06, 0x52, 0x11, 0x72, 0x65, 0x73, 0x70, 0x6f,
-	0x6e, 0x73, 0x65, 0x54, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0x2a, 0x44, 0x0a, 0x08,
+	0x6e, 0x73, 0x65, 0x54, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0x22, 0x5e, 0x0a, 0x08,
+	0x45, 0x72, 0x72, 0x6f, 0x72, 0x52, 0x65, 0x73, 0x12, 0x18, 0x0a, 0x07, 0x63, 0x6f, 0x6d, 0x6d,
+	0x61, 0x6e, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x05, 0x52, 0x07, 0x63, 0x6f, 0x6d, 0x6d, 0x61,
+	0x6e, 0x64, 0x12, 0x1a, 0x0a, 0x08, 0x72, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x49, 0x64, 0x18, 0x02,
+	0x20, 0x01, 0x28, 0x05, 0x52, 0x08, 0x72, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x49, 0x64, 0x12, 0x1c,
+	0x0a, 0x09, 0x72, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x53, 0x74, 0x72, 0x18, 0x03, 0x20, 0x01, 0x28,
+	0x09, 0x52, 0x09, 0x72, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x53, 0x74, 0x72, 0x2a, 0x56, 0x0a, 0x08,
 	0x43, 0x6d, 0x64, 0x49, 0x6e, 0x6e, 0x65, 0x72, 0x12, 0x0c, 0x0a, 0x08, 0x43, 0x6d, 0x64, 0x5f,
 	0x4e, 0x6f, 0x6e, 0x65, 0x10, 0x00, 0x12, 0x14, 0x0a, 0x10, 0x43, 0x6d, 0x64, 0x5f, 0x48, 0x65,
 	0x61, 0x72, 0x74, 0x42, 0x65, 0x61, 0x74, 0x52, 0x65, 0x71, 0x10, 0x01, 0x12, 0x14, 0x0a, 0x10,
 	0x43, 0x6d, 0x64, 0x5f, 0x48, 0x65, 0x61, 0x72, 0x74, 0x42, 0x65, 0x61, 0x74, 0x52, 0x65, 0x73,
-	0x10, 0x02, 0x42, 0x06, 0x5a, 0x04, 0x2e, 0x2f, 0x70, 0x62, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74,
-	0x6f, 0x33,
+	0x10, 0x02, 0x12, 0x10, 0x0a, 0x0c, 0x43, 0x6d, 0x64, 0x5f, 0x45, 0x72, 0x72, 0x6f, 0x72, 0x52,
+	0x65, 0x73, 0x10, 0x03, 0x42, 0x06, 0x5a, 0x04, 0x2e, 0x2f, 0x70, 0x62, 0x62, 0x06, 0x70, 0x72,
+	0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -210,11 +286,12 @@ func file_inner_proto_rawDescGZIP() []byte {
 }
 
 var file_inner_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_inner_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_inner_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_inner_proto_goTypes = []interface{}{
 	(CmdInner)(0),        // 0: inner.CmdInner
 	(*HeartBeatReq)(nil), // 1: inner.HeartBeatReq
 	(*HeartBeatRes)(nil), // 2: inner.HeartBeatRes
+	(*ErrorRes)(nil),     // 3: inner.ErrorRes
 }
 var file_inner_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type
@@ -254,6 +331,18 @@ func file_inner_proto_init() {
 				return nil
 			}
 		}
+		file_inner_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*ErrorRes); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -261,7 +350,7 @@ func file_inner_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_inner_proto_rawDesc,
 			NumEnums:      1,
-			NumMessages:   2,
+			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

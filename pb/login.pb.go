@@ -4,6 +4,8 @@
 // 	protoc        v3.19.1
 // source: login.proto
 
+// 每个proto文件设置package为文件名,可以防止enum命名冲突
+
 package pb
 
 import (
@@ -24,8 +26,7 @@ const (
 type CmdLogin int32
 
 const (
-	CmdLogin_Cmd_None CmdLogin = 0 // 解决"The first enum value must be zero in proto3."的报错
-	// 消息号枚举值的命名规范:Cmd_MessageName,便于工具处理,生成一些辅助代码
+	CmdLogin_Cmd_None               CmdLogin = 0 // 解决"The first enum value must be zero in proto3."的报错
 	CmdLogin_Cmd_LoginReq           CmdLogin = 1001
 	CmdLogin_Cmd_LoginRes           CmdLogin = 1002
 	CmdLogin_Cmd_AccountReg         CmdLogin = 1003

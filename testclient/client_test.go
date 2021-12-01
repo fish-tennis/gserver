@@ -141,6 +141,6 @@ func (this *testGameHandler) onPlayerEntryGameRes(connection gnet.Connection, pa
 	//res := packet.Message().(*pb.PlayerEntryGameRes)
 	//this.Exit()
 	connection.Send(gnet.PacketCommand(pb.CmdMoney_Cmd_CoinReq), &pb.CoinReq{
-		Coin: 1,
+		AddCoin: 1,
 	})
 }

@@ -11,14 +11,14 @@ import (
 	"strings"
 )
 
-type PlayerPacketHandler func(player Player, connection gnet.Connection, packet *gnet.ProtoPacket)
+type PlayerPacketHandler func(player Player, connection Connection, packet *ProtoPacket)
 
-type PlayerComponentPacketHandler func(component PlayerComponent, connection gnet.Connection, packet *gnet.ProtoPacket)
+type PlayerComponentPacketHandler func(component PlayerComponent, connection Connection, packet *ProtoPacket)
 
 // 客户端连接的handler
 type ClientConnectionHandler struct {
 	gnet.DefaultConnectionHandler
-	playerPacketHandlers map[gnet.PacketCommand]*packetHandlerInfo
+	playerPacketHandlers map[Cmd]*packetHandlerInfo
 }
 
 type packetHandlerInfo struct {
@@ -33,7 +33,7 @@ func NewClientConnectionHandler(protoCodec *gnet.ProtoCodec) *ClientConnectionHa
 	}
 }
 
-func (this* ClientConnectionHandler) OnRecvPacket(connection gnet.Connection, packet gnet.Packet) {
+func (this* ClientConnectionHandler) OnRecvPacket(connection Connection, packet gnet.Packet) {
 	if connection.GetTag() != nil {
 		// 在线玩家的消息,自动路由到对应的玩家组件上
 		player := gameServer.GetPlayer(connection.GetTag().(int64))
@@ -55,7 +55,7 @@ func (this* ClientConnectionHandler) OnRecvPacket(connection gnet.Connection, pa
 	this.DefaultConnectionHandler.OnRecvPacket(connection, packet)
 }
 
-func (this* ClientConnectionHandler) RegisterMethod(command gnet.PacketCommand, componentName string, method reflect.Method) {
+func (this* ClientConnectionHandler) RegisterMethod(command Cmd, componentName string, method reflect.Method) {
 	this.playerPacketHandlers[command] = &packetHandlerInfo{
 		componentName: componentName,
 		method: method,
@@ -64,7 +64,7 @@ func (this* ClientConnectionHandler) RegisterMethod(command gnet.PacketCommand, 
 }
 
 // 根据proto的命名规则和玩家组件里消息回调的格式,通过反射自动生成消息的注册
-func (this* ClientConnectionHandler) autoRegisterProto() {
+func (this* ClientConnectionHandler) autoRegisterPlayerComponentProto() {
 	playerData := &pb.PlayerData{}
 	player := CreatePlayerFromData(playerData)
 	for _,component := range player.components {

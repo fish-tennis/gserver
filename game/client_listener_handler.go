@@ -7,10 +7,11 @@ type ClientListerHandler struct {
 	
 }
 
-func (this *ClientListerHandler) OnConnectionConnected(listener gnet.Listener, acceptedConnection gnet.Connection) {
+func (this *ClientListerHandler) OnConnectionConnected(listener gnet.Listener, acceptedConnection Connection) {
 }
 
-func (this *ClientListerHandler) OnConnectionDisconnect(listener gnet.Listener, connection gnet.Connection) {
+// 客户端断开连接
+func (this *ClientListerHandler) OnConnectionDisconnect(listener gnet.Listener, connection Connection) {
 	if connection.GetTag() == nil {
 		return
 	}
@@ -19,7 +20,10 @@ func (this *ClientListerHandler) OnConnectionDisconnect(listener gnet.Listener, 
 	if player == nil {
 		return
 	}
-	player.Save()
-	gameServer.RemovePlayer(player)
+	if player.GetConnection() == connection {
+		player.SetConnection(nil)
+		player.Save()
+		gameServer.RemovePlayer(player)
+	}
 	gnet.LogDebug("player %v exit", player.GetId())
 }

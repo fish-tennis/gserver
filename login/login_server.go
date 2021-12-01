@@ -1,6 +1,7 @@
 package login
 
 import (
+	"context"
 	"github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
 	"github.com/fish-tennis/gserver/common"
@@ -26,10 +27,14 @@ type LoginServer struct {
 
 // 登录服配置
 type LoginServerConfig struct {
+	// 服务器id
+	serverId int32
 	// 客户端监听地址
 	clientListenAddr string
 	// 客户端连接配置
 	clientConnConfig gnet.ConnectionConfig
+	// mongodb地址
+	mongoUri string
 }
 
 func (this *LoginServer) GetAccountDb() db.AccountDb {
@@ -71,6 +76,7 @@ func (this *LoginServer) OnExit() {
 
 func (this *LoginServer) readConfig() {
 	this.config = &LoginServerConfig{
+		serverId:         1,
 		clientListenAddr: "127.0.0.1:10002",
 		clientConnConfig: gnet.ConnectionConfig{
 			SendPacketCacheCap: 8,
@@ -78,13 +84,15 @@ func (this *LoginServer) readConfig() {
 			RecvBufferSize:     1024 * 10,
 			MaxPacketSize:      1024 * 10,
 		},
+		mongoUri: "mongodb://localhost:27017",
 	}
+	this.BaseServer.ServerId = this.config.serverId
 }
 
 // 初始化数据库
 func (this *LoginServer) initDb() {
 	// 使用mongodb来演示
-	mongoDb := mongodb.NewMongoDb("mongodb://localhost:27017","testdb","account")
+	mongoDb := mongodb.NewMongoDb(this.config.mongoUri,"testdb","account")
 	mongoDb.SetAccountColumnNames("id", "name")
 	if !mongoDb.Connect() {
 		panic("connect db error")
@@ -96,6 +104,10 @@ func (this *LoginServer) initDb() {
 func (this *LoginServer) initCache() {
 	redisAddrs := []string{"10.0.75.2:6379"}
 	cache.NewRedisClient(redisAddrs, "")
+	pong,err := cache.GetRedis().Ping(context.TODO()).Result()
+	if err != nil || pong == "" {
+		panic("redis connect error")
+	}
 }
 
 // 注册客户端消息回调

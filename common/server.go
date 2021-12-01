@@ -16,6 +16,7 @@ type Server interface {
 
 // 服务器基础流程
 type BaseServer struct {
+	ServerId int32
 }
 
 // 加载配置,网络初始化等
