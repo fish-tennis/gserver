@@ -32,3 +32,12 @@ message ErrorRes {
   int32 resultId = 2; // 错误信息id
   string resultStr = 3; // 错误信息内容
 }
+
+// 服务器信息
+message ServerInfo {
+  int32 serverId = 1;
+  string serverType = 2;
+  string serverListenAddr = 3;
+  string clientListenAddr = 4;
+  int64 lastActiveTime = 5;
+}
