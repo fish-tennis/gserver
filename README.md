@@ -2,6 +2,7 @@
 使用[gnet](https://github.com/fish-tennis/gnet)开发的分布式游戏服务器框架
 
 ## 设计思路
+- 网络库使用[gnet](https://github.com/fish-tennis/gnet)
 - 玩家数据的存储接口可替换(mongodb,mysql,redis)
 - 使用redis做缓存服务
 - 使用protobuf做通讯协议
