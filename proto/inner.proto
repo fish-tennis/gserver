@@ -13,6 +13,7 @@ enum CmdInner {
 	Cmd_HeartBeatReq = 1; // 心跳请求
 	Cmd_HeartBeatRes = 2; // 心跳返回
 	Cmd_ErrorRes     = 3; // 通用的错误返回消息
+	Cmd_KickPlayer   = 4; // 踢玩家下线
 }
 
 // 心跳包请求
@@ -40,4 +41,9 @@ message ServerInfo {
   string serverListenAddr = 3; // 监听服务器地址
   string clientListenAddr = 4; // 监听客户端地址
   int64 lastActiveTime = 5; // 最近上传信息的时间戳(毫秒)
+}
+
+// 踢玩家下线
+message KickPlayer {
+  int64 playerId = 1; // 玩家id
 }

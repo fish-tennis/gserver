@@ -18,31 +18,36 @@ type ServerList struct {
 	fetchServerTypes []string
 	// 需要连接的服务器类型
 	connectServerTypes []string
+	// 服务器多少毫秒没上传自己的信息,就判断为不活跃了
+	activeTimeout int32
 	// 缓存的服务器列表信息
-	serverInfosMutex sync.RWMutex
 	serverInfos map[int32]*pb.ServerInfo // serverId-*pb.ServerInfo
+	serverInfosMutex sync.RWMutex
+	// 按照服务器类型分组的服务器列表信息
+	serverInfoTypeMap map[string][]*pb.ServerInfo
+	serverInfoTypeMapMutex sync.RWMutex
 	// 自己的服务器信息
 	localServerInfo *pb.ServerInfo
 	// 已连接的服务器
-	connectedServersMutex sync.RWMutex
-	connectedServers map[int32]uint32 // serverId-connectionId
+	connectedServerConnectors      map[int32]gnet.Connection // serverId-Connection
+	connectedServerConnectorsMutex sync.RWMutex
 	// 服务器连接创建函数,供外部扩展
 	serverConnectorFunc func(info *pb.ServerInfo) gnet.Connection
 }
 
 func NewServerList() *ServerList {
 	serverList := &ServerList{
-		serverInfos: make(map[int32]*pb.ServerInfo),
-		connectedServers: make(map[int32]uint32),
+		activeTimeout:             3 * 1000, // 默认3秒
+		serverInfos:               make(map[int32]*pb.ServerInfo),
+		connectedServerConnectors: make(map[int32]gnet.Connection),
+		serverInfoTypeMap:         make(map[string][]*pb.ServerInfo),
 	}
-	//// 服务器之间使用默认的编码
-	//serverConnectorHandler := NewServerConnectorHandler(gnet.NewProtoCodec(nil), serverList)
-	//serverList.serverConnectorHandler = serverConnectorHandler
 	return serverList
 }
 
 // 读取服务器列表信息,并连接这些服务器
 func (this *ServerList) FetchAndConnectServers() {
+	serverInfoMapUpdated := false
 	infoMap := make(map[int32]*pb.ServerInfo)
 	for _,serverType := range this.fetchServerTypes {
 		serverInfoDatas, err := cache.GetRedis().HVals(context.TODO(), fmt.Sprintf("servers:%v",serverType)).Result()
@@ -57,18 +62,49 @@ func (this *ServerList) FetchAndConnectServers() {
 				gnet.LogError("%v", decodeErr)
 				continue
 			}
+			// 目标服务器已经处于"不活跃"状态了
+			if util.GetCurrentMS() - serverInfo.LastActiveTime > int64(this.activeTimeout) {
+				continue
+			}
+			// 这里不用加锁,因为其他协程不会修改serverInfos
+			if _,ok := this.serverInfos[serverInfo.GetServerId()]; !ok {
+				serverInfoMapUpdated = true
+			}
 			infoMap[serverInfo.GetServerId()] = serverInfo
 		}
 	}
-	this.serverInfosMutex.Lock()
-	this.serverInfos = infoMap
-	this.serverInfosMutex.Unlock()
+	if len(this.serverInfos) != len(infoMap) {
+		serverInfoMapUpdated = true
+	}
+	// 服务器列表有更新,才更新服务器列表和类型分组信息
+	if serverInfoMapUpdated {
+		this.serverInfosMutex.Lock()
+		this.serverInfos = infoMap
+		this.serverInfosMutex.Unlock()
+		serverInfoTypeMap := make(map[string][]*pb.ServerInfo)
+		for _,info := range infoMap {
+			infoSlice,ok := serverInfoTypeMap[info.GetServerType()]
+			if !ok {
+				infoSlice = make([]*pb.ServerInfo, 0)
+				serverInfoTypeMap[info.GetServerType()] = infoSlice
+			}
+			infoSlice = append(infoSlice, info)
+			serverInfoTypeMap[info.GetServerType()] = infoSlice
+		}
+		this.serverInfoTypeMapMutex.Lock()
+		this.serverInfoTypeMap = serverInfoTypeMap
+		this.serverInfoTypeMapMutex.Unlock()
+	}
 
 	for _,info := range infoMap {
 		if util.HasString(this.connectServerTypes, info.GetServerType()) {
 			if this.localServerInfo.GetServerId() == info.GetServerId() {
 				continue
 			}
+			//// 目标服务器已经处于"不活跃"状态了
+			//if util.GetCurrentMS() - info.LastActiveTime > int64(this.activeTimeout) {
+			//	continue
+			//}
 			this.ConnectServer(info)
 		}
 	}
@@ -79,18 +115,18 @@ func (this *ServerList) ConnectServer(info *pb.ServerInfo) {
 	if info == nil || this.serverConnectorFunc == nil {
 		return
 	}
-	this.connectedServersMutex.RLock()
-	_,ok := this.connectedServers[info.GetServerId()]
-	this.connectedServersMutex.RUnlock()
+	this.connectedServerConnectorsMutex.RLock()
+	_,ok := this.connectedServerConnectors[info.GetServerId()]
+	this.connectedServerConnectorsMutex.RUnlock()
 	if ok {
 		return
 	}
 	serverConn := this.serverConnectorFunc(info)
 	if serverConn != nil {
 		serverConn.SetTag(info.GetServerId())
-		this.connectedServersMutex.Lock()
-		this.connectedServers[info.GetServerId()] = serverConn.GetConnectionId()
-		this.connectedServersMutex.Unlock()
+		this.connectedServerConnectorsMutex.Lock()
+		this.connectedServerConnectors[info.GetServerId()] = serverConn
+		this.connectedServerConnectorsMutex.Unlock()
 		gnet.LogDebug("ConnectServer %v, %v", info.GetServerId(), info.ServerListenAddr)
 	} else {
 		gnet.LogDebug("ConnectServerError %v, %v", info.GetServerId(), info.ServerListenAddr)
@@ -114,9 +150,9 @@ func (this *ServerList) GetServerInfo(serverId int32) *pb.ServerInfo {
 
 // 服务器连接断开了
 func (this *ServerList) OnServerConnectorDisconnect(serverId int32) {
-	this.connectedServersMutex.Lock()
-	delete(this.connectedServers, serverId)
-	this.connectedServersMutex.Unlock()
+	this.connectedServerConnectorsMutex.Lock()
+	delete(this.connectedServerConnectors, serverId)
+	this.connectedServerConnectorsMutex.Unlock()
 	gnet.LogDebug("DisconnectServer %v", serverId)
 }
 
@@ -131,4 +167,20 @@ func (this *ServerList) SetFetchAndConnectServerTypes( serverTypes ...string) {
 	this.fetchServerTypes = append(this.fetchServerTypes, serverTypes...)
 	this.connectServerTypes = append(this.connectServerTypes, serverTypes...)
 	gnet.LogDebug("fetch connect:%v", serverTypes)
+}
+
+// 获取某类服务器的信息列表
+func (this *ServerList) GetServersByType(serverType string) []*pb.ServerInfo {
+	this.serverInfoTypeMapMutex.RLock()
+	infoList,_ := this.serverInfoTypeMap[serverType]
+	this.serverInfoTypeMapMutex.RUnlock()
+	return infoList
+}
+
+// 获取服务器的连接
+func (this *ServerList) GetServerConnector(serverId int32 ) gnet.Connection {
+	this.connectedServerConnectorsMutex.RLock()
+	connection,_ := this.connectedServerConnectors[serverId]
+	this.connectedServerConnectorsMutex.RUnlock()
+	return connection
 }

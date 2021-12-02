@@ -31,6 +31,7 @@ const (
 	CmdInner_Cmd_HeartBeatReq CmdInner = 1 // 心跳请求
 	CmdInner_Cmd_HeartBeatRes CmdInner = 2 // 心跳返回
 	CmdInner_Cmd_ErrorRes     CmdInner = 3 // 通用的错误返回消息
+	CmdInner_Cmd_KickPlayer   CmdInner = 4 // 踢玩家下线
 )
 
 // Enum value maps for CmdInner.
@@ -40,12 +41,14 @@ var (
 		1: "Cmd_HeartBeatReq",
 		2: "Cmd_HeartBeatRes",
 		3: "Cmd_ErrorRes",
+		4: "Cmd_KickPlayer",
 	}
 	CmdInner_value = map[string]int32{
 		"Cmd_None":         0,
 		"Cmd_HeartBeatReq": 1,
 		"Cmd_HeartBeatRes": 2,
 		"Cmd_ErrorRes":     3,
+		"Cmd_KickPlayer":   4,
 	}
 )
 
@@ -250,11 +253,11 @@ type ServerInfo struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	ServerId         int32  `protobuf:"varint,1,opt,name=serverId,proto3" json:"serverId,omitempty"`
-	ServerType       string `protobuf:"bytes,2,opt,name=serverType,proto3" json:"serverType,omitempty"`
-	ServerListenAddr string `protobuf:"bytes,3,opt,name=serverListenAddr,proto3" json:"serverListenAddr,omitempty"`
-	ClientListenAddr string `protobuf:"bytes,4,opt,name=clientListenAddr,proto3" json:"clientListenAddr,omitempty"`
-	LastActiveTime   int64  `protobuf:"varint,5,opt,name=lastActiveTime,proto3" json:"lastActiveTime,omitempty"`
+	ServerId         int32  `protobuf:"varint,1,opt,name=serverId,proto3" json:"serverId,omitempty"`                // 服务器id
+	ServerType       string `protobuf:"bytes,2,opt,name=serverType,proto3" json:"serverType,omitempty"`             // 服务器类型
+	ServerListenAddr string `protobuf:"bytes,3,opt,name=serverListenAddr,proto3" json:"serverListenAddr,omitempty"` // 监听服务器地址
+	ClientListenAddr string `protobuf:"bytes,4,opt,name=clientListenAddr,proto3" json:"clientListenAddr,omitempty"` // 监听客户端地址
+	LastActiveTime   int64  `protobuf:"varint,5,opt,name=lastActiveTime,proto3" json:"lastActiveTime,omitempty"`    // 最近上传信息的时间戳(毫秒)
 }
 
 func (x *ServerInfo) Reset() {
@@ -324,6 +327,54 @@ func (x *ServerInfo) GetLastActiveTime() int64 {
 	return 0
 }
 
+// 踢玩家下线
+type KickPlayer struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	PlayerId int64 `protobuf:"varint,1,opt,name=playerId,proto3" json:"playerId,omitempty"` // 玩家id
+}
+
+func (x *KickPlayer) Reset() {
+	*x = KickPlayer{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_inner_proto_msgTypes[4]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *KickPlayer) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*KickPlayer) ProtoMessage() {}
+
+func (x *KickPlayer) ProtoReflect() protoreflect.Message {
+	mi := &file_inner_proto_msgTypes[4]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use KickPlayer.ProtoReflect.Descriptor instead.
+func (*KickPlayer) Descriptor() ([]byte, []int) {
+	return file_inner_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *KickPlayer) GetPlayerId() int64 {
+	if x != nil {
+		return x.PlayerId
+	}
+	return 0
+}
+
 var File_inner_proto protoreflect.FileDescriptor
 
 var file_inner_proto_rawDesc = []byte{
@@ -356,13 +407,17 @@ var file_inner_proto_rawDesc = []byte{
 	0x6c, 0x69, 0x65, 0x6e, 0x74, 0x4c, 0x69, 0x73, 0x74, 0x65, 0x6e, 0x41, 0x64, 0x64, 0x72, 0x12,
 	0x26, 0x0a, 0x0e, 0x6c, 0x61, 0x73, 0x74, 0x41, 0x63, 0x74, 0x69, 0x76, 0x65, 0x54, 0x69, 0x6d,
 	0x65, 0x18, 0x05, 0x20, 0x01, 0x28, 0x03, 0x52, 0x0e, 0x6c, 0x61, 0x73, 0x74, 0x41, 0x63, 0x74,
-	0x69, 0x76, 0x65, 0x54, 0x69, 0x6d, 0x65, 0x2a, 0x56, 0x0a, 0x08, 0x43, 0x6d, 0x64, 0x49, 0x6e,
-	0x6e, 0x65, 0x72, 0x12, 0x0c, 0x0a, 0x08, 0x43, 0x6d, 0x64, 0x5f, 0x4e, 0x6f, 0x6e, 0x65, 0x10,
-	0x00, 0x12, 0x14, 0x0a, 0x10, 0x43, 0x6d, 0x64, 0x5f, 0x48, 0x65, 0x61, 0x72, 0x74, 0x42, 0x65,
-	0x61, 0x74, 0x52, 0x65, 0x71, 0x10, 0x01, 0x12, 0x14, 0x0a, 0x10, 0x43, 0x6d, 0x64, 0x5f, 0x48,
-	0x65, 0x61, 0x72, 0x74, 0x42, 0x65, 0x61, 0x74, 0x52, 0x65, 0x73, 0x10, 0x02, 0x12, 0x10, 0x0a,
-	0x0c, 0x43, 0x6d, 0x64, 0x5f, 0x45, 0x72, 0x72, 0x6f, 0x72, 0x52, 0x65, 0x73, 0x10, 0x03, 0x42,
-	0x06, 0x5a, 0x04, 0x2e, 0x2f, 0x70, 0x62, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x69, 0x76, 0x65, 0x54, 0x69, 0x6d, 0x65, 0x22, 0x28, 0x0a, 0x0a, 0x4b, 0x69, 0x63, 0x6b, 0x50,
+	0x6c, 0x61, 0x79, 0x65, 0x72, 0x12, 0x1a, 0x0a, 0x08, 0x70, 0x6c, 0x61, 0x79, 0x65, 0x72, 0x49,
+	0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x03, 0x52, 0x08, 0x70, 0x6c, 0x61, 0x79, 0x65, 0x72, 0x49,
+	0x64, 0x2a, 0x6a, 0x0a, 0x08, 0x43, 0x6d, 0x64, 0x49, 0x6e, 0x6e, 0x65, 0x72, 0x12, 0x0c, 0x0a,
+	0x08, 0x43, 0x6d, 0x64, 0x5f, 0x4e, 0x6f, 0x6e, 0x65, 0x10, 0x00, 0x12, 0x14, 0x0a, 0x10, 0x43,
+	0x6d, 0x64, 0x5f, 0x48, 0x65, 0x61, 0x72, 0x74, 0x42, 0x65, 0x61, 0x74, 0x52, 0x65, 0x71, 0x10,
+	0x01, 0x12, 0x14, 0x0a, 0x10, 0x43, 0x6d, 0x64, 0x5f, 0x48, 0x65, 0x61, 0x72, 0x74, 0x42, 0x65,
+	0x61, 0x74, 0x52, 0x65, 0x73, 0x10, 0x02, 0x12, 0x10, 0x0a, 0x0c, 0x43, 0x6d, 0x64, 0x5f, 0x45,
+	0x72, 0x72, 0x6f, 0x72, 0x52, 0x65, 0x73, 0x10, 0x03, 0x12, 0x12, 0x0a, 0x0e, 0x43, 0x6d, 0x64,
+	0x5f, 0x4b, 0x69, 0x63, 0x6b, 0x50, 0x6c, 0x61, 0x79, 0x65, 0x72, 0x10, 0x04, 0x42, 0x06, 0x5a,
+	0x04, 0x2e, 0x2f, 0x70, 0x62, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -378,13 +433,14 @@ func file_inner_proto_rawDescGZIP() []byte {
 }
 
 var file_inner_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_inner_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_inner_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_inner_proto_goTypes = []interface{}{
 	(CmdInner)(0),        // 0: inner.CmdInner
 	(*HeartBeatReq)(nil), // 1: inner.HeartBeatReq
 	(*HeartBeatRes)(nil), // 2: inner.HeartBeatRes
 	(*ErrorRes)(nil),     // 3: inner.ErrorRes
 	(*ServerInfo)(nil),   // 4: inner.ServerInfo
+	(*KickPlayer)(nil),   // 5: inner.KickPlayer
 }
 var file_inner_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type
@@ -448,6 +504,18 @@ func file_inner_proto_init() {
 				return nil
 			}
 		}
+		file_inner_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*KickPlayer); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -455,7 +523,7 @@ func file_inner_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_inner_proto_rawDesc,
 			NumEnums:      1,
-			NumMessages:   4,
+			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

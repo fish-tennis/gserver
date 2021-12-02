@@ -79,10 +79,16 @@ func onPlayerEntryGameReq(connection gnet.Connection, packet *ProtoPacket) {
 		// 通过redis做缓存来实现账号的"独占性"
 		if !cache.AddOnlineAccount(player.GetAccountId(), player.GetId()) {
 			// 该账号已经在另一个游戏服上登录了
-			// TODO:通知那一个游戏服踢掉玩家
-			// TODO:通知客户端稍后重新登录
+			gameServerId := cache.GetOnlinePlayerGameServerId(player.GetId())
+			if gameServerId > 0 {
+				// 通知目标游戏服踢掉玩家
+				gameServer.SendToServer(gameServerId, Cmd(pb.CmdInner_Cmd_KickPlayer), &pb.KickPlayer{
+					PlayerId: player.GetId(),
+				})
+			}
+			// 通知客户端稍后重新登录
 			connection.Send(Cmd(pb.CmdLogin_Cmd_PlayerEntryGameRes), &pb.PlayerEntryGameRes{
-				Result: "has logon on another gameserver",
+				Result: "try later",
 			})
 			return
 		}

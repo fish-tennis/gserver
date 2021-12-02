@@ -31,6 +31,8 @@ var (
 type GameServer struct {
 	common.BaseServer
 	config *GameServerConfig
+	// 服务器listener
+	serverListener gnet.Listener
 	// 玩家数据接口
 	playerDb db.PlayerDb
 	// 在线玩家
@@ -64,7 +66,8 @@ func (this *GameServer) Init(configFile string) bool {
 	clientCodec := gnet.NewProtoCodec(nil)
 	clientHandler := NewClientConnectionHandler(clientCodec)
 	this.registerClientPacket(clientHandler)
-	if netMgr.NewListener(this.config.ClientListenAddr, this.config.ClientConnConfig, clientCodec, clientHandler, &ClientListerHandler{}) == nil {
+	if netMgr.NewListener(this.config.ClientListenAddr, this.config.ClientConnConfig, clientCodec,
+		clientHandler, &ClientListerHandler{}) == nil {
 		panic("listen client failed")
 		return false
 	}
@@ -73,7 +76,9 @@ func (this *GameServer) Init(configFile string) bool {
 	serverCodec := gnet.NewProtoCodec(nil)
 	serverHandler := gnet.NewDefaultConnectionHandler(serverCodec)
 	this.registerServerPacket(serverHandler)
-	if netMgr.NewListener(this.config.ServerListenAddr, this.config.ServerConnConfig, serverCodec, serverHandler, &ClientListerHandler{}) == nil {
+	this.serverListener = netMgr.NewListener(this.config.ServerListenAddr, this.config.ServerConnConfig, serverCodec,
+		serverHandler, nil)
+	if this.serverListener == nil {
 		panic("listen server failed")
 		return false
 	}
@@ -155,7 +160,8 @@ func onHeartBeatReq(connection gnet.Connection, packet *gnet.ProtoPacket) {
 
 // 注册服务器消息回调
 func (this *GameServer) registerServerPacket(serverHandler *gnet.DefaultConnectionHandler) {
-	serverHandler.Register(Cmd(pb.CmdInner_Cmd_HeartBeatReq), onHeartBeatReq, func() proto.Message {return &pb.HeartBeatReq{}})
+	serverHandler.Register(Cmd(pb.CmdInner_Cmd_HeartBeatReq), onHeartBeatReq, func() proto.Message {return new(pb.HeartBeatReq)})
+	serverHandler.Register(Cmd(pb.CmdInner_Cmd_KickPlayer), this.OnKickPlayer, func() proto.Message {return new(pb.KickPlayer)})
 	//serverHandler.autoRegisterPlayerComponentProto()
 }
 
@@ -178,4 +184,23 @@ func (this *GameServer) GetPlayer(playerId int64) *Player {
 		return v.(*Player)
 	}
 	return nil
+}
+
+// 发消息给另一个服务器
+func (this *GameServer) SendToServer(serverId int32, cmd Cmd, message proto.Message) {
+	connection := this.GetServerList().GetServerConnector(serverId)
+	if connection != nil && connection.IsConnected() {
+		connection.Send(cmd, message)
+	}
+}
+
+// 踢玩家下线
+func (this *GameServer) OnKickPlayer(connection gnet.Connection, packet *ProtoPacket) {
+	req := packet.Message().(*pb.KickPlayer)
+	player := this.GetPlayer(req.GetPlayerId())
+	if player != nil {
+		player.SetConnection(nil)
+		player.Save()
+		this.RemovePlayer(player)
+	}
 }

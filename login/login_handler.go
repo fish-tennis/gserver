@@ -4,6 +4,7 @@ import (
 	"github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
 	"github.com/fish-tennis/gserver/pb"
+	"math/rand"
 	"time"
 )
 
@@ -27,16 +28,34 @@ func onLoginReq(connection gnet.Connection, packet *gnet.ProtoPacket) {
 			result = "password not correct"
 		}
 	}
-	connection.Send(gnet.PacketCommand(pb.CmdLogin_Cmd_LoginRes), &pb.LoginRes{
+	loginRes := &pb.LoginRes{
 		Result: result,
 		AccountName: req.GetAccountName(),
 		AccountId: account.GetId(),
 		LoginSession: loginSession,
-		GameServer: &pb.GameServerInfo{
-			ServerId: 1,
-			ClientListenAddr: "127.0.0.1:10003",
-		},
-	})
+	}
+	if result == "ok" {
+		// 分配一个游戏服给客户端连接
+		gameServerInfo := selectGameServer(account)
+		loginRes.GameServer = &pb.GameServerInfo{
+			ServerId: gameServerInfo.GetServerId(),
+			ClientListenAddr: gameServerInfo.GetClientListenAddr(),
+		}
+		gnet.LogDebug("%v -> %v", account.Name, loginRes.GameServer)
+	}
+	connection.Send(gnet.PacketCommand(pb.CmdLogin_Cmd_LoginRes), loginRes)
+}
+
+// 选择一个游戏服给登录成功的客户端
+// NOTE:可以在这里做游戏服的负载均衡
+func selectGameServer(account *pb.Account) *pb.ServerInfo {
+	gameServerInfos := loginServer.GetServerList().GetServersByType("game")
+	if len(gameServerInfos) > 0 {
+		// 作为演示,这里随机一个
+		selectGameServerInfo := gameServerInfos[rand.Intn(len(gameServerInfos))]
+		return selectGameServerInfo
+	}
+	return nil
 }
 
 // 注册账号

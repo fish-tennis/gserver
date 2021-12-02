@@ -156,6 +156,9 @@ func (this *BaseServer) SetDefaultServerConnectorConfig(config gnet.ConnectionCo
 	this.defaultServerConnectorCodec = gnet.NewProtoCodec(nil)
 	handler := gnet.NewDefaultConnectionHandler(this.defaultServerConnectorCodec)
 	handler.SetOnDisconnectedFunc(func(connection gnet.Connection) {
+		if connection.GetTag() == nil {
+			return
+		}
 		serverId := connection.GetTag().(int32)
 		this.serverList.OnServerConnectorDisconnect(serverId)
 	})
@@ -164,10 +167,15 @@ func (this *BaseServer) SetDefaultServerConnectorConfig(config gnet.ConnectionCo
 			Timestamp: uint64(util.GetCurrentMS()),
 		}
 	})
+	handler.Register(gnet.PacketCommand(pb.CmdInner_Cmd_HeartBeatRes), func(connection gnet.Connection, packet *gnet.ProtoPacket) {
+	}, func() proto.Message {
+		return new(pb.HeartBeatRes)
+	})
 	this.defaultServerConnectorHandler = handler
 }
 
 // 默认的服务器连接接口
 func (this *BaseServer) DefaultServerConnectorFunc(info *pb.ServerInfo) gnet.Connection {
-	return gnet.NewTcpConnector(this.serverConnectorConfig, this.defaultServerConnectorCodec, this.defaultServerConnectorHandler)
+	return gnet.GetNetMgr().NewConnector(info.GetServerListenAddr(), this.serverConnectorConfig,
+		this.defaultServerConnectorCodec, this.defaultServerConnectorHandler)
 }

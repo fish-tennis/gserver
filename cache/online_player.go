@@ -23,3 +23,12 @@ func RemoveOnlinePlayer(playerId int64) bool {
 	}
 	return true
 }
+
+// 获取一个在线玩家当前所在的游戏服id
+func GetOnlinePlayerGameServerId(playerId int64) int32 {
+	gameServerId,err := GetRedis().Get(context.TODO(), fmt.Sprintf("onlineplayer:%v", playerId)).Int()
+	if IsRedisError(err) {
+		return 0
+	}
+	return int32(gameServerId)
+}
