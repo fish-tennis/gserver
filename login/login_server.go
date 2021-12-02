@@ -2,6 +2,7 @@ package login
 
 import (
 	"context"
+	"encoding/json"
 	"github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
 	"github.com/fish-tennis/gserver/common"
@@ -9,6 +10,7 @@ import (
 	"github.com/fish-tennis/gserver/db/mongodb"
 	"github.com/fish-tennis/gserver/pb"
 	"google.golang.org/protobuf/proto"
+	"os"
 	"time"
 )
 
@@ -27,23 +29,26 @@ type LoginServer struct {
 
 // 登录服配置
 type LoginServerConfig struct {
-	// 服务器id
-	serverId int32
-	// 客户端监听地址
-	clientListenAddr string
-	// 客户端连接配置
-	clientConnConfig gnet.ConnectionConfig
-	// mongodb地址
-	mongoUri string
+	common.BaseServerConfig
+	//// 服务器id
+	//ServerId int32
+	//// 客户端监听地址
+	//ClientListenAddr string
+	//// 客户端连接配置
+	//ClientConnConfig gnet.ConnectionConfig
+	//// mongodb地址
+	//MongoUri string
+	//// redis地址
+	//RedisUri string
 }
 
 func (this *LoginServer) GetAccountDb() db.AccountDb {
 	return this.accountDb
 }
 
-func (this *LoginServer) Init() bool {
+func (this *LoginServer) Init(configFile string) bool {
 	loginServer = this
-	if !this.BaseServer.Init() {
+	if !this.BaseServer.Init(configFile) {
 		return false
 	}
 	this.readConfig()
@@ -53,7 +58,7 @@ func (this *LoginServer) Init() bool {
 	clientCodec := gnet.NewProtoCodec(nil)
 	clientHandler := gnet.NewDefaultConnectionHandler(clientCodec)
 	this.registerClientPacket(clientHandler)
-	if netMgr.NewListener(this.config.clientListenAddr, this.config.clientConnConfig, clientCodec, clientHandler, nil) == nil {
+	if netMgr.NewListener(this.config.ClientListenAddr, this.config.ClientConnConfig, clientCodec, clientHandler, nil) == nil {
 		panic("listen failed")
 		return false
 	}
@@ -75,24 +80,27 @@ func (this *LoginServer) OnExit() {
 }
 
 func (this *LoginServer) readConfig() {
-	this.config = &LoginServerConfig{
-		serverId:         1,
-		clientListenAddr: "127.0.0.1:10002",
-		clientConnConfig: gnet.ConnectionConfig{
-			SendPacketCacheCap: 8,
-			SendBufferSize:     1024 * 10,
-			RecvBufferSize:     1024 * 10,
-			MaxPacketSize:      1024 * 10,
-		},
-		mongoUri: "mongodb://localhost:27017",
+	fileData,err := os.ReadFile(this.GetConfigFile())
+	if err != nil {
+		panic("read config file err")
 	}
-	this.BaseServer.ServerId = this.config.serverId
+	this.config = new(LoginServerConfig)
+	err = json.Unmarshal(fileData, this.config)
+	if err != nil {
+		panic("decode config file err")
+	}
+	gnet.LogDebug("%v", this.config)
+	this.BaseServer.GetServerInfo().ServerId = this.config.ServerId
+	this.BaseServer.GetServerInfo().ServerType = "login"
+	this.BaseServer.GetServerInfo().ClientListenAddr = this.config.ClientListenAddr
+	// 登录服只需要获取到游戏服的信息,不需要连接游戏服
+	this.BaseServer.GetServerList().SetFetchServerTypes("game")
 }
 
 // 初始化数据库
 func (this *LoginServer) initDb() {
 	// 使用mongodb来演示
-	mongoDb := mongodb.NewMongoDb(this.config.mongoUri,"testdb","account")
+	mongoDb := mongodb.NewMongoDb(this.config.MongoUri,"testdb","account")
 	mongoDb.SetAccountColumnNames("id", "name")
 	if !mongoDb.Connect() {
 		panic("connect db error")
@@ -102,8 +110,7 @@ func (this *LoginServer) initDb() {
 
 // 初始化redis缓存
 func (this *LoginServer) initCache() {
-	redisAddrs := []string{"10.0.75.2:6379"}
-	cache.NewRedisClient(redisAddrs, "")
+	cache.NewRedisClient(this.config.RedisUri, this.config.RedisPassword)
 	pong,err := cache.GetRedis().Ping(context.TODO()).Result()
 	if err != nil || pong == "" {
 		panic("redis connect error")

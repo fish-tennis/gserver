@@ -1,0 +1,13 @@
+{
+  "ServerId": 1,
+  "ClientListenAddr": "127.0.0.1:10002",
+  "ClientConnConfig": {
+    "SendPacketCacheCap": 8,
+    "SendBufferSize": 10240,
+    "RecvBufferSize": 10240,
+    "MaxPacketSize": 10240,
+    "RecvTimeout": 20
+  },
+  "MongoUri": "mongodb://localhost:27017",
+  "RedisUri": ["10.0.75.2:6379"]
+}

@@ -26,10 +26,8 @@ type ServerList struct {
 	// 已连接的服务器
 	connectedServersMutex sync.RWMutex
 	connectedServers map[int32]uint32 // serverId-connectionId
-	// 服务器连接配置
-	serverConnectionConfig gnet.ConnectionConfig
-	// 服务器handler
-	serverConnectorHandler gnet.ConnectionHandler
+	// 服务器连接创建函数,供外部扩展
+	serverConnectorFunc func(info *pb.ServerInfo) gnet.Connection
 }
 
 func NewServerList() *ServerList {
@@ -37,14 +35,14 @@ func NewServerList() *ServerList {
 		serverInfos: make(map[int32]*pb.ServerInfo),
 		connectedServers: make(map[int32]uint32),
 	}
-	// 服务器之间使用默认的编码
-	serverConnectorHandler := NewServerConnectorHandler(gnet.NewProtoCodec(nil), serverList)
-	serverList.serverConnectorHandler = serverConnectorHandler
+	//// 服务器之间使用默认的编码
+	//serverConnectorHandler := NewServerConnectorHandler(gnet.NewProtoCodec(nil), serverList)
+	//serverList.serverConnectorHandler = serverConnectorHandler
 	return serverList
 }
 
-// 读取服务器列表信息
-func (this *ServerList) FetchServerInfos() {
+// 读取服务器列表信息,并连接这些服务器
+func (this *ServerList) FetchAndConnectServers() {
 	infoMap := make(map[int32]*pb.ServerInfo)
 	for _,serverType := range this.fetchServerTypes {
 		serverInfoDatas, err := cache.GetRedis().HVals(context.TODO(), fmt.Sprintf("servers:%v",serverType)).Result()
@@ -76,8 +74,9 @@ func (this *ServerList) FetchServerInfos() {
 	}
 }
 
+// 连接其他服务器
 func (this *ServerList) ConnectServer(info *pb.ServerInfo) {
-	if info == nil {
+	if info == nil || this.serverConnectorFunc == nil {
 		return
 	}
 	this.connectedServersMutex.RLock()
@@ -86,8 +85,7 @@ func (this *ServerList) ConnectServer(info *pb.ServerInfo) {
 	if ok {
 		return
 	}
-	serverConn := gnet.GetNetMgr().NewConnector(info.ServerListenAddr, this.serverConnectionConfig,
-		gnet.NewDefaultCodec(), this.serverConnectorHandler)
+	serverConn := this.serverConnectorFunc(info)
 	if serverConn != nil {
 		serverConn.SetTag(info.GetServerId())
 		this.connectedServersMutex.Lock()
@@ -114,8 +112,23 @@ func (this *ServerList) GetServerInfo(serverId int32) *pb.ServerInfo {
 	return info
 }
 
+// 服务器连接断开了
 func (this *ServerList) OnServerConnectorDisconnect(serverId int32) {
 	this.connectedServersMutex.Lock()
 	delete(this.connectedServers, serverId)
 	this.connectedServersMutex.Unlock()
+	gnet.LogDebug("DisconnectServer %v", serverId)
+}
+
+// 设置要获取的服务器类型
+func (this *ServerList) SetFetchServerTypes( serverTypes ...string) {
+	this.fetchServerTypes = append(this.fetchServerTypes, serverTypes...)
+	gnet.LogDebug("fetch:%v", serverTypes)
+}
+
+// 设置要获取并连接的服务器类型
+func (this *ServerList) SetFetchAndConnectServerTypes( serverTypes ...string) {
+	this.fetchServerTypes = append(this.fetchServerTypes, serverTypes...)
+	this.connectServerTypes = append(this.connectServerTypes, serverTypes...)
+	gnet.LogDebug("fetch connect:%v", serverTypes)
 }

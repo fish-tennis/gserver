@@ -3,6 +3,7 @@ package testclient
 import (
 	"github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/pb"
+	"github.com/fish-tennis/gserver/util"
 	"google.golang.org/protobuf/proto"
 	"testing"
 )
@@ -30,7 +31,9 @@ func TestClient(t *testing.T)  {
 		exitNotify: exitNotify,
 	}
 	clientHandler.RegisterHeartBeat(gnet.PacketCommand(pb.CmdInner_Cmd_HeartBeatReq), func() proto.Message {
-		return &pb.HeartBeatReq{}
+		return &pb.HeartBeatReq{
+			Timestamp: uint64(util.GetCurrentMS()),
+		}
 	})
 	clientHandler.Register(gnet.PacketCommand(pb.CmdLogin_Cmd_LoginRes), clientHandler.onLoginRes, func() proto.Message {
 		return &pb.LoginRes{}
@@ -111,7 +114,11 @@ type testGameHandler struct {
 }
 
 func (this *testGameHandler) RegisterPacket() {
-	this.RegisterHeartBeat(gnet.PacketCommand(pb.CmdInner_Cmd_HeartBeatReq), func() proto.Message {return &pb.HeartBeatReq{}})
+	this.RegisterHeartBeat(gnet.PacketCommand(pb.CmdInner_Cmd_HeartBeatReq), func() proto.Message {
+		return &pb.HeartBeatReq{
+			Timestamp: uint64(util.GetCurrentMS()),
+		}
+	})
 	this.Register(gnet.PacketCommand(pb.CmdInner_Cmd_HeartBeatRes), this.onHeartBeatRes, func() proto.Message {return &pb.HeartBeatRes{}})
 	this.Register(gnet.PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameRes), this.onPlayerEntryGameRes, func() proto.Message {return &pb.PlayerEntryGameRes{}})
 }

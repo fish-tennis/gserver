@@ -5,6 +5,8 @@ import (
 	"github.com/fish-tennis/gserver/common"
 	"github.com/fish-tennis/gserver/game"
 	"github.com/fish-tennis/gserver/login"
+	"path/filepath"
+	"strings"
 )
 
 func main() {
@@ -14,27 +16,33 @@ func main() {
 		}
 	}()
 
-	serverType := flag.String("type", "", "server type")
+	// 配置文件名格式: serverType_serverId.json
+	configFile := flag.String("config", "", "server's config file")
 	flag.Parse()
 
 	// 根据命令行参数 创建不同的服务器实例
-	server := GetServer(*serverType)
-	if !server.Init() {
+	serverType := getServerTypeFromConfigFile(*configFile)
+	server := createServer(serverType)
+	if !server.Init(*configFile) {
 		panic("server init error")
 	}
 	server.Run()
 }
 
-func GetServer(serverType string) common.Server {
+// 从配置文件名解析出服务器类型
+func getServerTypeFromConfigFile(configFile string) string {
+	baseFileName := filepath.Base(configFile) // login_1.json
+	idx := strings.Index(baseFileName, "_")
+	return baseFileName[0:idx]
+}
+
+// 创建相应类型的服务器
+func createServer(serverType string) common.Server {
 	switch serverType {
 	case "login":
-		server := &login.LoginServer{
-		}
-		return server
+		return new(login.LoginServer)
 	case "game":
-		server := &game.GameServer{
-		}
-		return server
+		return new(game.GameServer)
 	}
 	panic("err server type")
 }
