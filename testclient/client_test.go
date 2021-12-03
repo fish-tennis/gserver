@@ -6,6 +6,7 @@ import (
 	"github.com/fish-tennis/gserver/util"
 	"google.golang.org/protobuf/proto"
 	"testing"
+	"time"
 )
 
 var (
@@ -119,8 +120,9 @@ func (this *testGameHandler) RegisterPacket() {
 			Timestamp: uint64(util.GetCurrentMS()),
 		}
 	})
-	this.Register(gnet.PacketCommand(pb.CmdInner_Cmd_HeartBeatRes), this.onHeartBeatRes, func() proto.Message {return &pb.HeartBeatRes{}})
-	this.Register(gnet.PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameRes), this.onPlayerEntryGameRes, func() proto.Message {return &pb.PlayerEntryGameRes{}})
+	this.Register(gnet.PacketCommand(pb.CmdInner_Cmd_HeartBeatRes), this.onHeartBeatRes, func() proto.Message {return new(pb.HeartBeatRes)})
+	this.Register(gnet.PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameRes), this.onPlayerEntryGameRes, func() proto.Message {return new(pb.PlayerEntryGameRes)})
+	this.Register(gnet.PacketCommand(pb.CmdMoney_Cmd_CoinRes), this.onCoinRes, func() proto.Message {return new(pb.CoinRes)})
 }
 
 func (this *testGameHandler) Exit() {
@@ -145,9 +147,27 @@ func (this *testGameHandler) onHeartBeatRes(connection gnet.Connection, packet *
 
 func (this *testGameHandler) onPlayerEntryGameRes(connection gnet.Connection, packet *gnet.ProtoPacket) {
 	gnet.LogDebug("onPlayerEntryGameRes:%v", packet.Message())
-	//res := packet.Message().(*pb.PlayerEntryGameRes)
-	//this.Exit()
-	connection.Send(gnet.PacketCommand(pb.CmdMoney_Cmd_CoinReq), &pb.CoinReq{
-		AddCoin: 1,
-	})
+	res := packet.Message().(*pb.PlayerEntryGameRes)
+	if res.GetResult() == "ok" {
+		// 玩家登录游戏服成功,模拟一个交互消息
+		connection.Send(gnet.PacketCommand(pb.CmdMoney_Cmd_CoinReq), &pb.CoinReq{
+			AddCoin: 1,
+		})
+		return
+	}
+	// 登录遇到问题,服务器提示客户端稍后重试
+	if res.GetResult() == "try later" {
+		// 延迟重试
+		time.AfterFunc(time.Second, func() {
+			connection.Send(gnet.PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameReq), &pb.PlayerEntryGameReq{
+				AccountId: this.loginRes.GetAccountId(),
+				LoginSession: this.loginRes.GetLoginSession(),
+				RegionId: 1,
+			})
+		})
+	}
+}
+
+func (this *testGameHandler) onCoinRes(connection gnet.Connection, packet *gnet.ProtoPacket) {
+	gnet.LogDebug("onCoinRes:%v", packet.Message())
 }
