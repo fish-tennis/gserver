@@ -13,6 +13,8 @@ import (
 
 // 服务器列表管理
 // 每个服务器定时上传自己的信息到redis,其他服务器定时从redis获取整个服务器集群的信息
+// 属于服务注册和发现的功能,zookeeper的临时节点更适合来实现这类需求
+// 这里用redis来实现,pb.ServerInfo.LastActiveTime记录服务器最后上传信息的时间,达到类似"心跳包检测"的效果
 type ServerList struct {
 	// 需要获取信息的服务器类型
 	fetchServerTypes []string
@@ -45,8 +47,8 @@ func NewServerList() *ServerList {
 	return serverList
 }
 
-// 读取服务器列表信息,并连接这些服务器
-func (this *ServerList) FetchAndConnectServers() {
+// 服务发现: 读取服务器列表信息,并连接这些服务器
+func (this *ServerList) FindAndConnectServers() {
 	serverInfoMapUpdated := false
 	infoMap := make(map[int32]*pb.ServerInfo)
 	for _,serverType := range this.fetchServerTypes {
@@ -133,8 +135,8 @@ func (this *ServerList) ConnectServer(info *pb.ServerInfo) {
 	}
 }
 
-// 上传某个服务器的信息
-func (this *ServerList) UploadServerInfo(info *pb.ServerInfo) {
+// 服务注册:上传本地服务器的信息
+func (this *ServerList) Register(info *pb.ServerInfo) {
 	data,_ := proto.Marshal(info)
 	cache.GetRedis().HSet(context.TODO(), fmt.Sprintf("servers:%v",info.GetServerType()),
 		info.GetServerId(), data)
@@ -183,4 +185,13 @@ func (this *ServerList) GetServerConnector(serverId int32 ) gnet.Connection {
 	connection,_ := this.connectedServerConnectors[serverId]
 	this.connectedServerConnectorsMutex.RUnlock()
 	return connection
+}
+
+// 发消息给另一个服务器
+func (this *ServerList) SendToServer(serverId int32, cmd Cmd, message proto.Message) bool {
+	connection := this.GetServerConnector(serverId)
+	if connection != nil && connection.IsConnected() {
+		return connection.Send(cmd, message)
+	}
+	return false
 }

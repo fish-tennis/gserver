@@ -28,7 +28,7 @@ func NewMoney(player *Player, bytes []byte) *Money {
 		DataComponent: DataComponent{
 			BaseComponent:BaseComponent{
 				Player: player,
-				id: 2,
+				//id: 2,
 				name: "money",
 			},
 		},
@@ -51,13 +51,26 @@ func (this *Money) DbData() interface{} {
 	return data
 }
 
+// 事件接口
+func (this *Money) OnEvent(event interface{}) {
+	switch v := event.(type) {
+	case *EventPlayerEntryGame:
+		this.OnPlayerEntryGame(v)
+	}
+}
+
+// 事件处理
+func (this *Money) OnPlayerEntryGame( eventPlayerEntryGame *EventPlayerEntryGame) {
+	gnet.LogDebug("OnEvent:%v", eventPlayerEntryGame)
+}
+
 func (this *Money) IncCoin(coin int32) {
 	this.data.Coin += coin
 	this.SetDirty()
 }
 
 // 请求加coin的消息回调
-//func (this *Money) OnCoinReq(packet *gnet.ProtoPacket) {
+//func (this *Money) OnCoinReq(packet *ProtoPacket) {
 //	gnet.LogDebug("OnCoinReq")
 //	req := packet.Message().(*pb.CoinReq)
 //	gnet.LogDebug("req:%v", req)

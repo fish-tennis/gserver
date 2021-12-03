@@ -44,18 +44,18 @@ func (this *Player) GetRegionId() int32 {
 	return this.regionId
 }
 
-// 获取组件
-func (this *Player) GetComponent(componentId int) entity.Component {
-	for _,v := range this.components {
-		if v.GetId() == componentId {
-			return v
-		}
-	}
-	return nil
-}
+//// 获取组件
+//func (this *Player) GetComponent(componentId int) entity.Component {
+//	for _,v := range this.components {
+//		if v.GetId() == componentId {
+//			return v
+//		}
+//	}
+//	return nil
+//}
 
 // 获取组件
-func (this *Player) GetComponentByName(componentName string) entity.Component {
+func (this *Player) GetComponent(componentName string) entity.Component {
 	for _,v := range this.components {
 		if v.GetName() == componentName {
 			return v
@@ -106,6 +106,15 @@ func (this *Player) Send(command Cmd, message proto.Message) bool {
 		return this.connection.Send(command, message)
 	}
 	return false
+}
+
+// 分发事件给组件
+func (this *Player) FireEvent(event interface{}) {
+	for _,component := range this.components {
+		if eventReceiver,ok := component.(EventReceiver); ok {
+			eventReceiver.OnEvent(event)
+		}
+	}
 }
 
 // 从加载的数据构造出玩家对象

@@ -41,7 +41,7 @@ func (this* ClientConnectionHandler) OnRecvPacket(connection Connection, packet 
 			if protoPacket,ok := packet.(*gnet.ProtoPacket); ok {
 				handlerInfo := this.playerPacketHandlers[protoPacket.Command()]
 				if handlerInfo != nil {
-					component := player.GetComponentByName(handlerInfo.componentName)
+					component := player.GetComponent(handlerInfo.componentName)
 					if component != nil {
 						// 用了反射,性能有所损失
 						handlerInfo.method.Func.Call([]reflect.Value{reflect.ValueOf(component), reflect.ValueOf(protoPacket.Message())})

@@ -140,7 +140,7 @@ func (this *testGameHandler) OnConnected(connection gnet.Connection, success boo
 }
 
 func (this *testGameHandler) onHeartBeatRes(connection gnet.Connection, packet *gnet.ProtoPacket) {
-	gnet.LogDebug("onHeartBeatRes:%v", packet.Message())
+	//gnet.LogDebug("onHeartBeatRes:%v", packet.Message())
 }
 
 func (this *testGameHandler) onPlayerEntryGameRes(connection gnet.Connection, packet *gnet.ProtoPacket) {

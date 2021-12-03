@@ -22,3 +22,13 @@ func RemoveOnlineAccount(accountId int64) bool {
 	}
 	return true
 }
+
+// 获取在线账号对应的玩家id
+// 返回0表示账号不在线
+func GetOnlineAccount(accountId int64) int64 {
+	playerId,err := GetRedis().Get(context.TODO(), fmt.Sprintf("onlineaccount:%v", accountId)).Int64()
+	if IsRedisError(err) {
+		return 0
+	}
+	return playerId
+}

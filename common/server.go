@@ -101,8 +101,8 @@ func (this *BaseServer) OnUpdate(updateCount int64) {
 	//gnet.LogDebug("BaseServer.OnUpdate")
 	// 定时上传本地服务器的信息
 	this.serverInfo.LastActiveTime = util.GetCurrentMS()
-	this.GetServerList().UploadServerInfo(this.serverInfo)
-	this.GetServerList().FetchAndConnectServers()
+	this.GetServerList().Register(this.serverInfo)
+	this.GetServerList().FindAndConnectServers()
 }
 
 func (this *BaseServer) OnExit() {

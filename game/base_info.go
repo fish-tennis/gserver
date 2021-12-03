@@ -16,7 +16,7 @@ func NewBaseInfo(player *Player, baseInfo *pb.BaseInfo) *BaseInfo {
 		DataComponent: DataComponent{
 			BaseComponent:BaseComponent{
 				Player: player,
-				id: 1,
+				//id: 1,
 				name: "baseinfo",
 			},
 		},

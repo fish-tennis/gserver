@@ -15,16 +15,16 @@ type PlayerComponent interface {
 // 玩家组件
 type BaseComponent struct {
 	Player *Player
-	// 组件id
-	id int
+	//// 组件id
+	//id int
 	// 组件名
 	name string
 }
 
-// 组件id
-func (this *BaseComponent) GetId() int {
-	return this.id
-}
+//// 组件id
+//func (this *BaseComponent) GetId() int {
+//	return this.id
+//}
 
 // 组件名
 func (this *BaseComponent) GetName() string {

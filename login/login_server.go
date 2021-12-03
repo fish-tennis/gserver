@@ -62,6 +62,10 @@ func (this *LoginServer) Init(configFile string) bool {
 		panic("listen failed")
 		return false
 	}
+
+	// 连接其他服务器
+	this.BaseServer.SetDefaultServerConnectorConfig(this.config.ServerConnConfig)
+	this.BaseServer.GetServerList().SetFetchAndConnectServerTypes("game")
 	gnet.LogDebug("LoginServer.Init")
 	return true
 }
@@ -93,8 +97,6 @@ func (this *LoginServer) readConfig() {
 	this.BaseServer.GetServerInfo().ServerId = this.config.ServerId
 	this.BaseServer.GetServerInfo().ServerType = "login"
 	this.BaseServer.GetServerInfo().ClientListenAddr = this.config.ClientListenAddr
-	// 登录服只需要获取到游戏服的信息,不需要连接游戏服
-	this.BaseServer.GetServerList().SetFetchServerTypes("game")
 }
 
 // 初始化数据库
@@ -131,4 +133,9 @@ func onHeartBeatReq(connection gnet.Connection, packet *gnet.ProtoPacket) {
 		RequestTimestamp: req.GetTimestamp(),
 		ResponseTimestamp: uint64(time.Now().UnixNano()/int64(time.Microsecond)),
 	})
+}
+
+// 发消息给另一个服务器
+func (this *LoginServer) SendToServer(serverId int32, cmd Cmd, message proto.Message) bool {
+	return this.GetServerList().SendToServer(serverId, cmd, message)
 }

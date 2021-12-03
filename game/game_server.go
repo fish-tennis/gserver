@@ -15,14 +15,7 @@ import (
 	"time"
 )
 
-// 简化类名
-type ProtoPacket = gnet.ProtoPacket
-type Cmd = gnet.PacketCommand
-type Connection = gnet.Connection
 var (
-	LogDebug = gnet.LogDebug
-	LogError = gnet.LogError
-
 	// singleton
 	gameServer *GameServer
 )
@@ -187,11 +180,8 @@ func (this *GameServer) GetPlayer(playerId int64) *Player {
 }
 
 // 发消息给另一个服务器
-func (this *GameServer) SendToServer(serverId int32, cmd Cmd, message proto.Message) {
-	connection := this.GetServerList().GetServerConnector(serverId)
-	if connection != nil && connection.IsConnected() {
-		connection.Send(cmd, message)
-	}
+func (this *GameServer) SendToServer(serverId int32, cmd Cmd, message proto.Message) bool {
+	return this.GetServerList().SendToServer(serverId, cmd, message)
 }
 
 // 踢玩家下线
@@ -202,5 +192,16 @@ func (this *GameServer) OnKickPlayer(connection gnet.Connection, packet *ProtoPa
 		player.SetConnection(nil)
 		player.Save()
 		this.RemovePlayer(player)
+	} else {
+		// 有一种特殊情况: 玩家进入游戏服A,游戏服A宕机了,这时候redis缓存里面,依然记录着玩家还在游戏服A上
+		// 游戏服A重启后,当玩家重新登录时,登录服会通知游戏服A踢掉该玩家,但通过this.GetPlayer无法获取到玩家对象
+		// 所以这里判断如果缓存里面还是记录着玩家在这台服务器,就直接清理缓存
+		gameServerId := cache.GetOnlinePlayerGameServerId(req.GetPlayerId())
+		if gameServerId == this.GetServerId() {
+			cache.RemoveOnlineAccount(req.GetAccountId())
+			cache.RemoveOnlinePlayer(req.GetPlayerId())
+			LogError("kick player account:%v playerId:%v gameServerId:%v",
+				req.GetAccountId(), req.GetPlayerId(), this.GetServerId())
+		}
 	}
 }

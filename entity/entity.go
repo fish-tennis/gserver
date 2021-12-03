@@ -3,7 +3,7 @@ package entity
 // 实体接口
 type Entity interface {
 	// 查找某个组件
-	GetComponent(componentId int) Component
+	GetComponent(componentName string) Component
 
 	// 组件列表
 	GetComponents() []Component
@@ -11,9 +11,9 @@ type Entity interface {
 
 // 实体组件接口
 type Component interface {
+	//GetId() int
 
-	GetId() int
-
+	// 组件名
 	GetName() string
 
 	// 所属的实体
@@ -30,4 +30,9 @@ type Saveable interface {
 	SetDirty()
 	// 重置标记
 	ResetDirty()
+}
+
+// 事件接口
+type EventReceiver interface {
+	OnEvent(event interface{})
 }

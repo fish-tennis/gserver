@@ -80,9 +80,12 @@ func onPlayerEntryGameReq(connection gnet.Connection, packet *ProtoPacket) {
 		if !cache.AddOnlineAccount(player.GetAccountId(), player.GetId()) {
 			// 该账号已经在另一个游戏服上登录了
 			gameServerId := cache.GetOnlinePlayerGameServerId(player.GetId())
+			LogError("exist online account:%v playerId:%v gameServerId:%v",
+				player.GetAccountId(), player.GetId(), gameServerId)
 			if gameServerId > 0 {
 				// 通知目标游戏服踢掉玩家
 				gameServer.SendToServer(gameServerId, Cmd(pb.CmdInner_Cmd_KickPlayer), &pb.KickPlayer{
+					AccountId: player.GetAccountId(),
 					PlayerId: player.GetId(),
 				})
 			}
@@ -105,4 +108,6 @@ func onPlayerEntryGameReq(connection gnet.Connection, packet *ProtoPacket) {
 		PlayerId: player.GetId(),
 		RegionId: player.GetRegionId(),
 	})
+	// 分发事件
+	player.FireEvent(&EventPlayerEntryGame{isReconnect: isReconnect})
 }
