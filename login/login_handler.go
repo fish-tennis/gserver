@@ -35,20 +35,19 @@ func onLoginReq(connection gnet.Connection, packet *gnet.ProtoPacket) {
 		LoginSession: loginSession,
 	}
 	if result == "ok" {
-		onlinePlayerId := cache.GetOnlineAccount(account.GetId())
+		onlinePlayerId,gameServerId := cache.GetOnlineAccount(account.GetId())
 		if onlinePlayerId > 0 {
 			// 如果该账号还在游戏中,则需要先将其清理下线
-			gameServerId := cache.GetOnlinePlayerGameServerId(onlinePlayerId)
 			LogError("exist online account:%v playerId:%v gameServerId:%v",
 				account.GetId(), onlinePlayerId, gameServerId)
 			if gameServerId > 0 {
-				// 有可能那台游戏服宕机了,就直接清理缓存,防止"卡号"
-				if loginServer.GetServerList().GetServerInfo(gameServerId) == nil {
-					cache.RemoveOnlinePlayer(onlinePlayerId)
-					cache.RemoveOnlineAccount(account.GetId())
-					LogError("RemoveOnlinePlayer account:%v playerId:%v gameServerId:%v",
-						account.GetId(), onlinePlayerId, gameServerId)
-				}
+				//// 有可能那台游戏服宕机了,就直接清理缓存,防止"卡号"
+				//if loginServer.GetServerList().GetServerInfo(gameServerId) == nil {
+				//	cache.RemoveOnlinePlayer(onlinePlayerId, gameServerId)
+				//	cache.RemoveOnlineAccount(account.GetId())
+				//	LogError("RemoveOnlinePlayer account:%v playerId:%v gameServerId:%v",
+				//		account.GetId(), onlinePlayerId, gameServerId)
+				//}
 				loginServer.SendToServer(gameServerId, Cmd(pb.CmdInner_Cmd_KickPlayer), &pb.KickPlayer{
 					AccountId: account.GetId(),
 					PlayerId: onlinePlayerId,
@@ -61,7 +60,7 @@ func onLoginReq(connection gnet.Connection, packet *gnet.ProtoPacket) {
 			ServerId: gameServerInfo.GetServerId(),
 			ClientListenAddr: gameServerInfo.GetClientListenAddr(),
 		}
-		gnet.LogDebug("%v -> %v", account.Name, loginRes.GameServer)
+		gnet.LogDebug("%v(%v) -> %v", account.Name, account.Id, loginRes.GameServer)
 	}
 	connection.Send(gnet.PacketCommand(pb.CmdLogin_Cmd_LoginRes), loginRes)
 }

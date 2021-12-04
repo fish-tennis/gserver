@@ -77,9 +77,9 @@ func onPlayerEntryGameReq(connection gnet.Connection, packet *ProtoPacket) {
 	if !isReconnect {
 		// 分布式游戏服必须保证一个账号同时只在一个游戏服上登录,防止写数据覆盖
 		// 通过redis做缓存来实现账号的"独占性"
-		if !cache.AddOnlineAccount(player.GetAccountId(), player.GetId()) {
+		if !cache.AddOnlineAccount(player.GetAccountId(), player.GetId(), gameServer.GetServerId()) {
 			// 该账号已经在另一个游戏服上登录了
-			gameServerId := cache.GetOnlinePlayerGameServerId(player.GetId())
+			_,gameServerId := cache.GetOnlinePlayer(player.GetId())
 			LogError("exist online account:%v playerId:%v gameServerId:%v",
 				player.GetAccountId(), player.GetId(), gameServerId)
 			if gameServerId > 0 {

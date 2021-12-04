@@ -1,16 +1,13 @@
 package testclient
 
 import (
+	"context"
 	"github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/pb"
 	"github.com/fish-tennis/gserver/util"
 	"google.golang.org/protobuf/proto"
 	"testing"
 	"time"
-)
-
-var (
-	exitNotify chan struct{}
 )
 
 // 模拟一个客户端
@@ -24,12 +21,14 @@ func TestClient(t *testing.T)  {
 		HeartBeatInterval:  5,
 		WriteTimeout:       0,
 	}
-	exitNotify = make(chan struct{}, 1)
+	ctx,cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	netMgr := gnet.GetNetMgr()
 	clientCodec := gnet.NewProtoCodec(nil)
 	clientHandler := &testLoginHandler{
 		DefaultConnectionHandler: *gnet.NewDefaultConnectionHandler(clientCodec),
-		exitNotify: exitNotify,
+		ctx: ctx,
 	}
 	clientHandler.RegisterHeartBeat(gnet.PacketCommand(pb.CmdInner_Cmd_HeartBeatReq), func() proto.Message {
 		return &pb.HeartBeatReq{
@@ -39,30 +38,49 @@ func TestClient(t *testing.T)  {
 	clientHandler.Register(gnet.PacketCommand(pb.CmdLogin_Cmd_LoginRes), clientHandler.onLoginRes, func() proto.Message {
 		return &pb.LoginRes{}
 	})
-	if netMgr.NewConnector("127.0.0.1:10002", connectionConfig, clientCodec, clientHandler) == nil {
+	if netMgr.NewConnector(ctx,"127.0.0.1:10002", connectionConfig, clientCodec, clientHandler) == nil {
 		panic("connect error")
 	}
 
-	select {
-	case <-exitNotify:
-		gnet.LogDebug("testClient exit")
-		break
-	}
+	//// 监听系统的kill信号
+	//signalKillNotify := make(chan os.Signal, 1)
+	//signal.Notify(signalKillNotify, os.Interrupt, os.Kill, syscall.SIGTERM)
+	////// windows系统上,加一个控制台输入,以方便调试
+	////if runtime.GOOS == "windows" {
+	////	go func() {
+	////		consoleReader := bufio.NewReader(os.Stdin)
+	////		for {
+	////			lineBytes, _, _ := consoleReader.ReadLine()
+	////			line := strings.ToLower(string(lineBytes))
+	////			//gnet.LogDebug("line:%v", line)
+	////			if line == "close" || line == "exit" {
+	////				gnet.LogDebug("kill by console input")
+	////				// 在windows系统模拟一个kill信号,以方便测试服务器退出流程
+	////				signalKillNotify <- os.Kill
+	////			}
+	////		}
+	////	}()
+	////}
+	//// 阻塞等待系统关闭信号
+	//gnet.LogDebug("wait for kill signal")
+	//select {
+	//case <-signalKillNotify:
+	//	gnet.LogDebug("signalKillNotify, cancel ctx")
+	//	// 通知所有协程关闭,所有监听<-ctx.Done()的地方会收到通知
+	//	cancel()
+	//	break
+	//}
+	netMgr.Shutdown(true)
 }
 
 // 账号登录连接
 type testLoginHandler struct {
 	gnet.DefaultConnectionHandler
-	exitNotify chan struct{}
-}
-
-func (this *testLoginHandler) Exit() {
-	this.exitNotify <- struct{}{}
+	ctx context.Context
 }
 
 func (this *testLoginHandler) OnConnected(connection gnet.Connection, success bool) {
 	if !success {
-		this.Exit()
 		return
 	}
 	connection.Send(gnet.PacketCommand(pb.CmdLogin_Cmd_LoginReq), &pb.LoginReq{
@@ -95,15 +113,14 @@ func (this *testLoginHandler) onLoginRes(connection gnet.Connection, packet *gne
 		clientHandler := &testGameHandler{
 			DefaultConnectionHandler: *gnet.NewDefaultConnectionHandler(clientCodec),
 			loginRes: res,
-			exitNotify: exitNotify,
+			ctx: this.ctx,
 		}
 		clientHandler.RegisterPacket()
-		if gnet.GetNetMgr().NewConnector(res.GetGameServer().GetClientListenAddr(), connectionConfig, clientCodec, clientHandler) == nil {
+		if gnet.GetNetMgr().NewConnector(this.ctx, res.GetGameServer().GetClientListenAddr(), connectionConfig, clientCodec, clientHandler) == nil {
 			panic("connect error")
 		}
 	} else {
 		connection.Close()
-		this.Exit()
 	}
 }
 
@@ -111,7 +128,7 @@ func (this *testLoginHandler) onLoginRes(connection gnet.Connection, packet *gne
 type testGameHandler struct {
 	gnet.DefaultConnectionHandler
 	loginRes *pb.LoginRes
-	exitNotify chan struct{}
+	ctx context.Context
 }
 
 func (this *testGameHandler) RegisterPacket() {
@@ -125,13 +142,8 @@ func (this *testGameHandler) RegisterPacket() {
 	this.Register(gnet.PacketCommand(pb.CmdMoney_Cmd_CoinRes), this.onCoinRes, func() proto.Message {return new(pb.CoinRes)})
 }
 
-func (this *testGameHandler) Exit() {
-	this.exitNotify <- struct{}{}
-}
-
 func (this *testGameHandler) OnConnected(connection gnet.Connection, success bool) {
 	if !success {
-		this.Exit()
 		return
 	}
 	connection.Send(gnet.PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameReq), &pb.PlayerEntryGameReq{

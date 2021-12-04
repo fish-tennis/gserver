@@ -32,10 +32,12 @@ type LoginServerConfig struct {
 	common.BaseServerConfig
 }
 
+// 账号db接口
 func (this *LoginServer) GetAccountDb() db.AccountDb {
 	return this.accountDb
 }
 
+// 初始化
 func (this *LoginServer) Init(ctx context.Context, configFile string) bool {
 	loginServer = this
 	if !this.BaseServer.Init(ctx, configFile) {
@@ -60,11 +62,13 @@ func (this *LoginServer) Init(ctx context.Context, configFile string) bool {
 	return true
 }
 
+// 运行
 func (this *LoginServer) Run(ctx context.Context) {
 	this.BaseServer.Run(ctx)
 	gnet.LogDebug("LoginServer.Run")
 }
 
+// 退出
 func (this *LoginServer) Exit() {
 	this.BaseServer.Exit()
 	gnet.LogDebug("LoginServer.Exit")
@@ -73,6 +77,7 @@ func (this *LoginServer) Exit() {
 	}
 }
 
+// 读取配置文件
 func (this *LoginServer) readConfig() {
 	fileData,err := os.ReadFile(this.GetConfigFile())
 	if err != nil {
@@ -123,9 +128,4 @@ func onHeartBeatReq(connection gnet.Connection, packet *gnet.ProtoPacket) {
 		RequestTimestamp: req.GetTimestamp(),
 		ResponseTimestamp: uint64(time.Now().UnixNano()/int64(time.Microsecond)),
 	})
-}
-
-// 发消息给另一个服务器
-func (this *LoginServer) SendToServer(serverId int32, cmd Cmd, message proto.Message) bool {
-	return this.GetServerList().SendToServer(serverId, cmd, message)
 }

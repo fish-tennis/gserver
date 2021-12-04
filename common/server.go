@@ -79,7 +79,7 @@ func (this *BaseServer) GetServerList() *ServerList {
 	return this.serverList
 }
 
-// 加载配置,网络初始化等
+// 加载配置文件
 func (this *BaseServer) Init(ctx context.Context, configFile string) bool {
 	gnet.LogDebug("BaseServer.Init")
 	this.configFile = configFile
@@ -167,4 +167,9 @@ func (this *BaseServer) SetDefaultServerConnectorConfig(config gnet.ConnectionCo
 func (this *BaseServer) DefaultServerConnectorFunc(ctx context.Context, info *pb.ServerInfo) gnet.Connection {
 	return gnet.GetNetMgr().NewConnector(ctx, info.GetServerListenAddr(), this.serverConnectorConfig,
 		this.defaultServerConnectorCodec, this.defaultServerConnectorHandler)
+}
+
+// 发消息给另一个服务器
+func (this *BaseServer) SendToServer(serverId int32, cmd Cmd, message proto.Message) bool {
+	return this.serverList.SendToServer(serverId, cmd, message)
 }
