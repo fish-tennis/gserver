@@ -34,7 +34,7 @@ type ServerList struct {
 	connectedServerConnectors      map[int32]gnet.Connection // serverId-Connection
 	connectedServerConnectorsMutex sync.RWMutex
 	// 服务器连接创建函数,供外部扩展
-	serverConnectorFunc func(info *pb.ServerInfo) gnet.Connection
+	serverConnectorFunc func(ctx context.Context, info *pb.ServerInfo) gnet.Connection
 }
 
 func NewServerList() *ServerList {
@@ -48,7 +48,7 @@ func NewServerList() *ServerList {
 }
 
 // 服务发现: 读取服务器列表信息,并连接这些服务器
-func (this *ServerList) FindAndConnectServers() {
+func (this *ServerList) FindAndConnectServers(ctx context.Context) {
 	serverInfoMapUpdated := false
 	infoMap := make(map[int32]*pb.ServerInfo)
 	for _,serverType := range this.fetchServerTypes {
@@ -107,13 +107,13 @@ func (this *ServerList) FindAndConnectServers() {
 			//if util.GetCurrentMS() - info.LastActiveTime > int64(this.activeTimeout) {
 			//	continue
 			//}
-			this.ConnectServer(info)
+			this.ConnectServer(ctx, info)
 		}
 	}
 }
 
 // 连接其他服务器
-func (this *ServerList) ConnectServer(info *pb.ServerInfo) {
+func (this *ServerList) ConnectServer(ctx context.Context, info *pb.ServerInfo) {
 	if info == nil || this.serverConnectorFunc == nil {
 		return
 	}
@@ -123,7 +123,7 @@ func (this *ServerList) ConnectServer(info *pb.ServerInfo) {
 	if ok {
 		return
 	}
-	serverConn := this.serverConnectorFunc(info)
+	serverConn := this.serverConnectorFunc(ctx, info)
 	if serverConn != nil {
 		serverConn.SetTag(info.GetServerId())
 		this.connectedServerConnectorsMutex.Lock()

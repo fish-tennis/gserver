@@ -30,25 +30,15 @@ type LoginServer struct {
 // 登录服配置
 type LoginServerConfig struct {
 	common.BaseServerConfig
-	//// 服务器id
-	//ServerId int32
-	//// 客户端监听地址
-	//ClientListenAddr string
-	//// 客户端连接配置
-	//ClientConnConfig gnet.ConnectionConfig
-	//// mongodb地址
-	//MongoUri string
-	//// redis地址
-	//RedisUri string
 }
 
 func (this *LoginServer) GetAccountDb() db.AccountDb {
 	return this.accountDb
 }
 
-func (this *LoginServer) Init(configFile string) bool {
+func (this *LoginServer) Init(ctx context.Context, configFile string) bool {
 	loginServer = this
-	if !this.BaseServer.Init(configFile) {
+	if !this.BaseServer.Init(ctx, configFile) {
 		return false
 	}
 	this.readConfig()
@@ -58,7 +48,7 @@ func (this *LoginServer) Init(configFile string) bool {
 	clientCodec := gnet.NewProtoCodec(nil)
 	clientHandler := gnet.NewDefaultConnectionHandler(clientCodec)
 	this.registerClientPacket(clientHandler)
-	if netMgr.NewListener(this.config.ClientListenAddr, this.config.ClientConnConfig, clientCodec, clientHandler, nil) == nil {
+	if netMgr.NewListener(ctx, this.config.ClientListenAddr, this.config.ClientConnConfig, clientCodec, clientHandler, nil) == nil {
 		panic("listen failed")
 		return false
 	}
@@ -70,14 +60,14 @@ func (this *LoginServer) Init(configFile string) bool {
 	return true
 }
 
-func (this *LoginServer) Run() {
-	this.BaseServer.Run()
+func (this *LoginServer) Run(ctx context.Context) {
+	this.BaseServer.Run(ctx)
 	gnet.LogDebug("LoginServer.Run")
-	this.BaseServer.WaitExit()
 }
 
-func (this *LoginServer) OnExit() {
-	gnet.LogDebug("LoginServer.OnExit")
+func (this *LoginServer) Exit() {
+	this.BaseServer.Exit()
+	gnet.LogDebug("LoginServer.Exit")
 	if this.accountDb != nil {
 		this.accountDb.(*mongodb.MongoDb).Disconnect()
 	}

@@ -7,7 +7,7 @@ import (
 
 // 添加一个在线账号
 func AddOnlineAccount(accountId int64, playerId int64) bool {
-	ok, err := GetRedis().SetNX(context.TODO(), fmt.Sprintf("onlineaccount:%v", accountId), playerId, 0).Result()
+	ok, err := GetRedis().SetNX(context.Background(), fmt.Sprintf("onlineaccount:%v", accountId), playerId, 0).Result()
 	if IsRedisError(err) {
 		return false
 	}
@@ -16,7 +16,7 @@ func AddOnlineAccount(accountId int64, playerId int64) bool {
 
 // 移除一个在线账号
 func RemoveOnlineAccount(accountId int64) bool {
-	_,err := GetRedis().Del(context.TODO(), fmt.Sprintf("onlineaccount:%v", accountId)).Result()
+	_,err := GetRedis().Del(context.Background(), fmt.Sprintf("onlineaccount:%v", accountId)).Result()
 	if IsRedisError(err) {
 		return false
 	}
@@ -26,7 +26,7 @@ func RemoveOnlineAccount(accountId int64) bool {
 // 获取在线账号对应的玩家id
 // 返回0表示账号不在线
 func GetOnlineAccount(accountId int64) int64 {
-	playerId,err := GetRedis().Get(context.TODO(), fmt.Sprintf("onlineaccount:%v", accountId)).Int64()
+	playerId,err := GetRedis().Get(context.Background(), fmt.Sprintf("onlineaccount:%v", accountId)).Int64()
 	if IsRedisError(err) {
 		return 0
 	}

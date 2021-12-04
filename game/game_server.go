@@ -45,9 +45,9 @@ func (this *GameServer) GetPlayerDb() db.PlayerDb {
 	return this.playerDb
 }
 
-func (this *GameServer) Init(configFile string) bool {
+func (this *GameServer) Init(ctx context.Context, configFile string) bool {
 	gameServer = this
-	if !this.BaseServer.Init(configFile) {
+	if !this.BaseServer.Init(ctx, configFile) {
 		return false
 	}
 	this.readConfig()
@@ -59,7 +59,7 @@ func (this *GameServer) Init(configFile string) bool {
 	clientCodec := gnet.NewProtoCodec(nil)
 	clientHandler := NewClientConnectionHandler(clientCodec)
 	this.registerClientPacket(clientHandler)
-	if netMgr.NewListener(this.config.ClientListenAddr, this.config.ClientConnConfig, clientCodec,
+	if netMgr.NewListener(ctx, this.config.ClientListenAddr, this.config.ClientConnConfig, clientCodec,
 		clientHandler, &ClientListerHandler{}) == nil {
 		panic("listen client failed")
 		return false
@@ -69,7 +69,7 @@ func (this *GameServer) Init(configFile string) bool {
 	serverCodec := gnet.NewProtoCodec(nil)
 	serverHandler := gnet.NewDefaultConnectionHandler(serverCodec)
 	this.registerServerPacket(serverHandler)
-	this.serverListener = netMgr.NewListener(this.config.ServerListenAddr, this.config.ServerConnConfig, serverCodec,
+	this.serverListener = netMgr.NewListener(ctx, this.config.ServerListenAddr, this.config.ServerConnConfig, serverCodec,
 		serverHandler, nil)
 	if this.serverListener == nil {
 		panic("listen server failed")
@@ -84,14 +84,14 @@ func (this *GameServer) Init(configFile string) bool {
 	return true
 }
 
-func (this *GameServer) Run() {
-	this.BaseServer.Run()
+func (this *GameServer) Run(ctx context.Context) {
+	this.BaseServer.Run(ctx)
 	LogDebug("GameServer.Run")
-	this.BaseServer.WaitExit()
 }
 
-func (this *GameServer) OnExit() {
-	LogDebug("GameServer.OnExit")
+func (this *GameServer) Exit() {
+	this.BaseServer.Exit()
+	LogDebug("GameServer.Exit")
 	if this.playerDb != nil {
 		this.playerDb.(*mongodb.MongoDb).Disconnect()
 	}

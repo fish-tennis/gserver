@@ -1,23 +1,28 @@
 package common
 
 import (
+	"context"
 	"github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
 	"github.com/fish-tennis/gserver/pb"
 	"github.com/fish-tennis/gserver/util"
 	"google.golang.org/protobuf/proto"
-	"os"
-	"os/signal"
-	"syscall"
 	"time"
 )
 
 // 服务器接口
 type Server interface {
-	Init(configFile string) bool
-	Run()
-	OnUpdate(updateCount int64)
-	OnExit()
+	// 初始化
+	Init(ctx context.Context, configFile string) bool
+
+	// 运行
+	Run(ctx context.Context)
+
+	// 定时更新
+	OnUpdate(ctx context.Context, updateCount int64)
+
+	// 退出
+	Exit()
 }
 
 type BaseServerConfig struct {
@@ -50,8 +55,6 @@ type BaseServer struct {
 	updateInterval time.Duration
 	// 更新次数
 	updateCount int64
-	// 退出通知
-	exitNotify chan os.Signal
 	// 服务器连接配置
 	serverConnectorConfig gnet.ConnectionConfig
 	// 默认的服务器连接接口
@@ -77,7 +80,7 @@ func (this *BaseServer) GetServerList() *ServerList {
 }
 
 // 加载配置,网络初始化等
-func (this *BaseServer) Init(configFile string) bool {
+func (this *BaseServer) Init(ctx context.Context, configFile string) bool {
 	gnet.LogDebug("BaseServer.Init")
 	this.configFile = configFile
 	this.serverInfo = new(pb.ServerInfo)
@@ -85,69 +88,55 @@ func (this *BaseServer) Init(configFile string) bool {
 	this.serverList.localServerInfo = this.serverInfo
 	this.serverList.serverConnectorFunc = this.DefaultServerConnectorFunc
 	this.updateInterval = time.Second
-	this.exitNotify = make(chan os.Signal, 1)
 	return true
 }
 
 // 运行
-func (this *BaseServer) Run() {
+func (this *BaseServer) Run(ctx context.Context) {
 	gnet.LogDebug("BaseServer.Run")
-	go func() {
-		this.updateLoop()
-	}()
+	go func(ctx context.Context) {
+		this.updateLoop(ctx)
+	}(ctx)
 }
 
-func (this *BaseServer) OnUpdate(updateCount int64) {
+func (this *BaseServer) OnUpdate(ctx context.Context, updateCount int64) {
 	//gnet.LogDebug("BaseServer.OnUpdate")
 	// 定时上传本地服务器的信息
 	this.serverInfo.LastActiveTime = util.GetCurrentMS()
 	this.GetServerList().Register(this.serverInfo)
-	this.GetServerList().FindAndConnectServers()
+	this.GetServerList().FindAndConnectServers(ctx)
 }
 
-func (this *BaseServer) OnExit() {
-	gnet.LogDebug("BaseServer.OnExit")
-}
-
-// 等待系统关闭信号
-func (this *BaseServer) WaitExit() {
-	gnet.LogDebug("BaseServer.WaitExit")
-	signal.Notify(this.exitNotify, os.Interrupt, os.Kill, syscall.SIGTERM)
-	// TODO: windows系统上,加一个控制台输入,以方便调试
-	select {
-	case <-this.exitNotify:
-		gnet.LogDebug("exitNotify")
-		break
-	}
-	// 业务关闭处理
-	this.OnExit()
+func (this *BaseServer) Exit() {
+	LogDebug("BaseServer.Exit")
 	// 网络关闭
 	gnet.GetNetMgr().Shutdown(true)
 	// 缓存关闭
 	if cache.GetRedis() != nil {
 		cache.GetRedis().Close()
 	}
-	gnet.LogDebug("Exit")
 }
 
 // 定时更新接口
-func (this *BaseServer) updateLoop() {
-	gnet.LogDebug("updateLoop begin")
+func (this *BaseServer) updateLoop(ctx context.Context) {
+	LogDebug("updateLoop begin")
 	// 暂定更新间隔1秒
-	updateTimer := time.NewTimer(this.updateInterval)
-	defer updateTimer.Stop()
+	updateTicker := time.NewTicker(this.updateInterval)
+	defer func() {
+		updateTicker.Stop()
+		LogDebug("updateLoop end")
+	}()
 	for {
 		select {
-		case <-this.exitNotify:
+		// 系统关闭通知
+		case <-ctx.Done():
 			gnet.LogDebug("exitNotify")
-			break
-		case <-updateTimer.C:
-			this.OnUpdate(this.updateCount)
+			return
+		case <-updateTicker.C:
+			this.OnUpdate(ctx, this.updateCount)
 			this.updateCount++
-			updateTimer.Reset(this.updateInterval)
 		}
 	}
-	gnet.LogDebug("updateLoop end")
 }
 
 // 设置默认的服务器间的编解码和回调接口
@@ -175,7 +164,7 @@ func (this *BaseServer) SetDefaultServerConnectorConfig(config gnet.ConnectionCo
 }
 
 // 默认的服务器连接接口
-func (this *BaseServer) DefaultServerConnectorFunc(info *pb.ServerInfo) gnet.Connection {
-	return gnet.GetNetMgr().NewConnector(info.GetServerListenAddr(), this.serverConnectorConfig,
+func (this *BaseServer) DefaultServerConnectorFunc(ctx context.Context, info *pb.ServerInfo) gnet.Connection {
+	return gnet.GetNetMgr().NewConnector(ctx, info.GetServerListenAddr(), this.serverConnectorConfig,
 		this.defaultServerConnectorCodec, this.defaultServerConnectorHandler)
 }
