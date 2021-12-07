@@ -4,9 +4,8 @@ import (
 	"fmt"
 	"github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/pb"
+	"github.com/fish-tennis/gserver/util"
 	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/reflect/protoreflect"
-	"google.golang.org/protobuf/reflect/protoregistry"
 	"reflect"
 	"strings"
 )
@@ -45,6 +44,8 @@ func (this* ClientConnectionHandler) OnRecvPacket(connection Connection, packet 
 					if component != nil {
 						// 用了反射,性能有所损失
 						handlerInfo.method.Func.Call([]reflect.Value{reflect.ValueOf(component), reflect.ValueOf(protoPacket.Message())})
+						// 如果有需要保存的数据修改了,即时保存数据库
+						player.Save()
 						return
 					}
 				}
@@ -91,19 +92,23 @@ func (this* ClientConnectionHandler) autoRegisterPlayerComponentProto() {
 				gnet.LogDebug("methodName not match:%v", method.Name)
 				continue
 			}
-			// proto文件里定义的package名是组件名的小写, 如package money
-			// enum Message的全名:money.CmdMoney
-			enumTypeName := fmt.Sprintf("%v.Cmd%v", strings.ToLower(componentStructName), componentStructName)
-			enumTyp,err := protoregistry.GlobalTypes.FindEnumByName(protoreflect.FullName(enumTypeName))
-			if err != nil {
-				gnet.LogDebug("%v err:%v", enumTypeName, err)
+			//// proto文件里定义的package名是组件名的小写, 如package money
+			//// enum Message的全名:money.CmdMoney
+			//enumTypeName := fmt.Sprintf("%v.Cmd%v", strings.ToLower(componentStructName), componentStructName)
+			//enumTyp,err := protoregistry.GlobalTypes.FindEnumByName(protoreflect.FullName(enumTypeName))
+			//if err != nil {
+			//	gnet.LogDebug("%v err:%v", enumTypeName, err)
+			//	continue
+			//}
+			//// 如: Cmd_CoinReq
+			//enumIdName := fmt.Sprintf("Cmd_%v", messageName)
+			//enumNumber := enumTyp.Descriptor().Values().ByName(protoreflect.Name(enumIdName)).Number()
+			//gnet.LogDebug("enum %v:%v", enumIdName, enumNumber)
+			messageId := util.GetMessageIdByMessageName(componentStructName, messageName)
+			if messageId == 0 {
 				continue
 			}
-			// 如: Cmd_CoinReq
-			enumIdName := fmt.Sprintf("Cmd_%v", messageName)
-			enumNumber := enumTyp.Descriptor().Values().ByName(protoreflect.Name(enumIdName)).Number()
-			//gnet.LogDebug("enum %v:%v", enumIdName, enumNumber)
-			cmd := gnet.PacketCommand(enumNumber)
+			cmd := gnet.PacketCommand(messageId)
 			// 注册消息回调到组件上
 			this.RegisterMethod(cmd, component.GetName(), method)
 			// 注册消息的构造函数

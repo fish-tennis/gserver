@@ -65,6 +65,7 @@ message PlayerEntryGameReq {
 }
 
 // 玩家登录游戏服回复
+// @Player
 message PlayerEntryGameRes {
   string result = 1;
   int64 accountId = 2;

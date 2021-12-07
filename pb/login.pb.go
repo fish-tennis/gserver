@@ -461,6 +461,7 @@ func (x *PlayerEntryGameReq) GetRegionId() int32 {
 }
 
 // 玩家登录游戏服回复
+// @Player
 type PlayerEntryGameRes struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache

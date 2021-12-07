@@ -2,7 +2,7 @@ package cache
 
 import "github.com/go-redis/redis/v8"
 
-// 缓存直接使用redis,没有抽象一层cache的interface,因为游戏项目现在基本上都用redis来做缓存服务了
+// 缓存直接使用redis,没有抽象一层cache的interface,因为游戏项目一般都是用redis来做缓存服务
 var (
 	// singleton
 	redisClient *redis.ClusterClient
@@ -13,6 +13,7 @@ func GetRedis() *redis.ClusterClient {
 }
 
 // 初始化redis集群
+// 集群不支持事务,但是可以用lua script实现同节点上的原子操作,达到类似事务的效果
 func NewRedisClient(addrs []string, password string) *redis.ClusterClient {
 	redisClient = redis.NewClusterClient(&redis.ClusterOptions{
 		Addrs:addrs,

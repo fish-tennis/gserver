@@ -328,6 +328,8 @@ func (x *ServerInfo) GetLastActiveTime() int64 {
 }
 
 // 踢玩家下线
+// @Server表示是服务器用的普通消息,工具会生成相应的辅助代码
+// @Server
 type KickPlayer struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache

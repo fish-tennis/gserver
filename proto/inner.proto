@@ -44,6 +44,8 @@ message ServerInfo {
 }
 
 // 踢玩家下线
+// @Server表示是服务器用的普通消息,工具会生成相应的辅助代码
+// @Server
 message KickPlayer {
   int64 accountId = 1; // 账号id
   int64 playerId = 2; // 玩家id

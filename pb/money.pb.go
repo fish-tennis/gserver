@@ -73,6 +73,8 @@ func (CmdMoney) EnumDescriptor() ([]byte, []int) {
 }
 
 // 请求加coin的测试消息
+// @Client表示是客户端发的消息,工具也可以考虑为客户端生成相应的辅助代码(c#或lua)
+// @Client
 type CoinReq struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -120,11 +122,15 @@ func (x *CoinReq) GetAddCoin() int32 {
 	return 0
 }
 
+// 请求加coin的返回结果
+// @Player表示是服务器上的玩家对象发给客户端的消息,工具会生成相应的辅助代码
+// @Player
 type CoinRes struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	//@inject_tag: send:"Player"
 	TotalCoin int32 `protobuf:"varint,1,opt,name=totalCoin,proto3" json:"totalCoin,omitempty"` // 当前总值
 }
 
