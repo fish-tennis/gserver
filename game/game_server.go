@@ -148,9 +148,13 @@ func (this *GameServer) repairCache() {
 
 // 注册客户端消息回调
 func (this *GameServer) registerClientPacket(clientHandler *ClientConnectionHandler) {
+	// 手动注册消息回调
 	clientHandler.Register(gnet.PacketCommand(pb.CmdInner_Cmd_HeartBeatReq), onHeartBeatReq, func() proto.Message {return &pb.HeartBeatReq{}})
 	clientHandler.Register(gnet.PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameReq), onPlayerEntryGameReq, func() proto.Message {return &pb.PlayerEntryGameReq{}})
+	// 通过反射自动注册消息回调
 	clientHandler.autoRegisterPlayerComponentProto()
+	// proto_code_gen工具生成的回调函数
+	player_component_handler_auto_register(clientHandler)
 }
 
 // 心跳回复

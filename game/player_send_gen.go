@@ -20,3 +20,7 @@ func (this *Player) SendPlayerEntryGameRes(packet *pb.PlayerEntryGameRes) bool {
 func (this *Player) SendCoinRes(packet *pb.CoinRes) bool {
 	return this.Send(Cmd(pb.CmdMoney_Cmd_CoinRes), packet)
 }
+
+//func (this *Player) Send{MessageName}(packet *pb.{MessageName}) bool {
+//	return this.Send(Cmd(pb.Cmd{ProtoName}_Cmd_{MessageName}), packet)
+//}

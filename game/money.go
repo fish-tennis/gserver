@@ -86,3 +86,13 @@ func (this *Money) OnCoinReq(req *pb.CoinReq) {
 		TotalCoin: this.data.GetCoin(),
 	})
 }
+
+// 请求加coin的消息回调
+// 这种格式写的函数可以被proto_code_gen工具自动注册消息回调
+func OnCoinReq(this *Money, req *pb.CoinReq) {
+	gnet.LogDebug("OnCoinReq:%v", req)
+	this.IncCoin(req.GetAddCoin())
+	this.GetPlayer().SendCoinRes(&pb.CoinRes{
+		TotalCoin: this.data.GetCoin(),
+	})
+}

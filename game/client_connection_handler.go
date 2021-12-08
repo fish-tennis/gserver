@@ -34,12 +34,13 @@ func NewClientConnectionHandler(protoCodec *gnet.ProtoCodec) *ClientConnectionHa
 
 func (this* ClientConnectionHandler) OnRecvPacket(connection Connection, packet gnet.Packet) {
 	if connection.GetTag() != nil {
-		// 在线玩家的消息,自动路由到对应的玩家组件上
+		// 在线玩家的消息,先检查通过反射注册的回调函数
 		player := gameServer.GetPlayer(connection.GetTag().(int64))
 		if player != nil {
 			if protoPacket,ok := packet.(*gnet.ProtoPacket); ok {
 				handlerInfo := this.playerPacketHandlers[protoPacket.Command()]
 				if handlerInfo != nil {
+					// 在线玩家的消息,自动路由到对应的玩家组件上
 					component := player.GetComponent(handlerInfo.componentName)
 					if component != nil {
 						// 用了反射,性能有所损失
@@ -53,18 +54,21 @@ func (this* ClientConnectionHandler) OnRecvPacket(connection Connection, packet 
 		}
 	}
 	// 未登录的玩家消息和未注册的消息,走默认处理
+	// proto_code_gen工具生成的代码,会在这里执行
 	this.DefaultConnectionHandler.OnRecvPacket(connection, packet)
 }
 
-func (this* ClientConnectionHandler) RegisterMethod(command Cmd, componentName string, method reflect.Method) {
+func (this* ClientConnectionHandler) registerMethod(command Cmd, componentName string, method reflect.Method) {
 	this.playerPacketHandlers[command] = &packetHandlerInfo{
 		componentName: componentName,
 		method: method,
 	}
-	gnet.LogDebug("RegisterMethod %v %v.%v", command, componentName, method.Name)
+	gnet.LogDebug("registerMethod %v %v.%v", command, componentName, method.Name)
 }
 
 // 根据proto的命名规则和玩家组件里消息回调的格式,通过反射自动生成消息的注册
+// 用了反射,性能有所损失
+// 也可以用proto_code_gen工具来生成代码,可以避免用反射所带来的性能损失
 func (this* ClientConnectionHandler) autoRegisterPlayerComponentProto() {
 	playerData := &pb.PlayerData{}
 	player := CreatePlayerFromData(playerData)
@@ -92,25 +96,13 @@ func (this* ClientConnectionHandler) autoRegisterPlayerComponentProto() {
 				gnet.LogDebug("methodName not match:%v", method.Name)
 				continue
 			}
-			//// proto文件里定义的package名是组件名的小写, 如package money
-			//// enum Message的全名:money.CmdMoney
-			//enumTypeName := fmt.Sprintf("%v.Cmd%v", strings.ToLower(componentStructName), componentStructName)
-			//enumTyp,err := protoregistry.GlobalTypes.FindEnumByName(protoreflect.FullName(enumTypeName))
-			//if err != nil {
-			//	gnet.LogDebug("%v err:%v", enumTypeName, err)
-			//	continue
-			//}
-			//// 如: Cmd_CoinReq
-			//enumIdName := fmt.Sprintf("Cmd_%v", messageName)
-			//enumNumber := enumTyp.Descriptor().Values().ByName(protoreflect.Name(enumIdName)).Number()
-			//gnet.LogDebug("enum %v:%v", enumIdName, enumNumber)
 			messageId := util.GetMessageIdByMessageName(componentStructName, messageName)
 			if messageId == 0 {
 				continue
 			}
 			cmd := gnet.PacketCommand(messageId)
 			// 注册消息回调到组件上
-			this.RegisterMethod(cmd, component.GetName(), method)
+			this.registerMethod(cmd, component.GetName(), method)
 			// 注册消息的构造函数
 			this.DefaultConnectionHandler.Register(cmd, nil, func() proto.Message {
 				// 用了反射,性能有所损失
@@ -118,4 +110,22 @@ func (this* ClientConnectionHandler) autoRegisterPlayerComponentProto() {
 			})
 		}
 	}
+}
+
+// 用于proto_code_gen工具自动生成的消息注册代码
+func (this* ClientConnectionHandler) RegisterProtoCodeGen(componentName string, cmd Cmd, creator gnet.ProtoMessageCreator, handler func(c Component, m proto.Message)) {
+	this.Register(cmd, func(connection gnet.Connection, packet *gnet.ProtoPacket) {
+		if connection.GetTag() != nil {
+			player := gameServer.GetPlayer(connection.GetTag().(int64))
+			if player != nil {
+				// 在线玩家的消息,自动路由到对应的玩家组件上
+				component := player.GetComponent(componentName)
+				if component != nil {
+					handler(component, packet.Message())
+					player.Save()
+					return
+				}
+			}
+		}
+	}, creator)
 }

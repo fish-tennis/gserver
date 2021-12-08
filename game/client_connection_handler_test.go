@@ -10,7 +10,7 @@ func TestAutoRegister(t *testing.T) {
 	//money := &Money{}
 	//moneyTyp := reflect.TypeOf(money)
 	//method,_ := moneyTyp.MethodByName("OnCoinReq")
-	//connectionHandler.RegisterMethod(gnet.PacketCommand(pb.CmdMoney_Cmd_CoinReq),"money", method)
+	//connectionHandler.registerMethod(gnet.PacketCommand(pb.CmdMoney_Cmd_CoinReq),"money", method)
 
 	println(pb.CmdMoney_Cmd_CoinReq.Descriptor().FullName())
 
