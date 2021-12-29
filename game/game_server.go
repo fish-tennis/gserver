@@ -8,6 +8,7 @@ import (
 	"github.com/fish-tennis/gserver/common"
 	"github.com/fish-tennis/gserver/db"
 	"github.com/fish-tennis/gserver/db/mongodb"
+	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 	"google.golang.org/protobuf/proto"
 	"os"
@@ -82,20 +83,20 @@ func (this *GameServer) Init(ctx context.Context, configFile string) bool {
 	this.BaseServer.SetDefaultServerConnectorConfig(this.config.ServerConnConfig)
 	this.BaseServer.GetServerList().SetFetchAndConnectServerTypes("game")
 
-	gnet.LogDebug("GameServer.Init")
+	logger.Debug("GameServer.Init")
 	return true
 }
 
 // 运行
 func (this *GameServer) Run(ctx context.Context) {
 	this.BaseServer.Run(ctx)
-	LogDebug("GameServer.Run")
+	logger.Debug("GameServer.Run")
 }
 
 // 退出
 func (this *GameServer) Exit() {
 	this.BaseServer.Exit()
-	LogDebug("GameServer.Exit")
+	logger.Debug("GameServer.Exit")
 	if this.playerDb != nil {
 		this.playerDb.(*mongodb.MongoDb).Disconnect()
 	}
@@ -112,7 +113,7 @@ func (this *GameServer) readConfig() {
 	if err != nil {
 		panic("decode config file err")
 	}
-	gnet.LogDebug("%v", this.config)
+	logger.Debug("%v", this.config)
 	this.BaseServer.GetServerInfo().ServerId = this.config.ServerId
 	this.BaseServer.GetServerInfo().ServerType = "game"
 	this.BaseServer.GetServerInfo().ClientListenAddr = this.config.ClientListenAddr
@@ -203,7 +204,7 @@ func (this *GameServer) OnKickPlayer(connection gnet.Connection, packet *ProtoPa
 		player.Save()
 		this.RemovePlayer(player)
 	} else {
-		LogError("kick player failed account:%v playerId:%v gameServerId:%v",
+		logger.Error("kick player failed account:%v playerId:%v gameServerId:%v",
 			req.GetAccountId(), req.GetPlayerId(), this.GetServerId())
 		//// 有一种特殊情况: 玩家进入游戏服A,游戏服A宕机了,这时候redis缓存里面,依然记录着玩家还在游戏服A上
 		//// 游戏服A重启后,当玩家重新登录时,登录服会通知游戏服A踢掉该玩家,但通过this.GetPlayer无法获取到玩家对象

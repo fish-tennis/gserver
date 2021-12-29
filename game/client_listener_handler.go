@@ -1,6 +1,9 @@
 package game
 
-import "github.com/fish-tennis/gnet"
+import (
+	"github.com/fish-tennis/gnet"
+	"github.com/fish-tennis/gserver/logger"
+)
 
 // 客户端listener handler
 type ClientListerHandler struct {
@@ -25,5 +28,5 @@ func (this *ClientListerHandler) OnConnectionDisconnect(listener gnet.Listener, 
 		player.Save()
 		gameServer.RemovePlayer(player)
 	}
-	gnet.LogDebug("player %v exit", player.GetId())
+	logger.Debug("player %v exit", player.GetId())
 }

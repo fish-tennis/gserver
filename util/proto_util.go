@@ -2,7 +2,7 @@ package util
 
 import (
 	"fmt"
-	"github.com/fish-tennis/gnet"
+	"github.com/fish-tennis/gserver/logger"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/reflect/protoregistry"
 	"strings"
@@ -15,7 +15,7 @@ func GetMessageIdByMessageName(componentStructName, messageName string) int32 {
 	enumTypeName := fmt.Sprintf("%v.Cmd%v", strings.ToLower(componentStructName), componentStructName)
 	enumTyp,err := protoregistry.GlobalTypes.FindEnumByName(protoreflect.FullName(enumTypeName))
 	if err != nil {
-		gnet.LogDebug("%v err:%v", enumTypeName, err)
+		logger.Debug("%v err:%v", enumTypeName, err)
 		return 0
 	}
 	// 如: Cmd_CoinReq

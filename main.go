@@ -7,6 +7,7 @@ import (
 	"github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/common"
 	"github.com/fish-tennis/gserver/game"
+	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/login"
 	"os"
 	"os/signal"
@@ -26,6 +27,8 @@ func main() {
 	// 配置文件名格式: serverType_serverId.json
 	configFile := flag.String("config", "", "server's config file")
 	flag.Parse()
+
+	gnet.SetLogLevel(gnet.DebugLevel)
 
 	// 根据命令行参数 创建不同的服务器实例
 	serverType := getServerTypeFromConfigFile(*configFile)
@@ -50,9 +53,9 @@ func main() {
 			for {
 				lineBytes, _, _ := consoleReader.ReadLine()
 				line := strings.ToLower(string(lineBytes))
-				gnet.LogDebug("line:%v", line)
+				logger.Debug("line:%v", line)
 				if line == "close" || line == "exit" {
-					gnet.LogDebug("kill by console input")
+					logger.Debug("kill by console input")
 					// 在windows系统模拟一个kill信号,以方便测试服务器退出流程
 					signalKillNotify <- os.Kill
 				}
@@ -60,10 +63,10 @@ func main() {
 		}()
 	}
 	// 阻塞等待系统关闭信号
-	gnet.LogDebug("wait for kill signal")
+	logger.Debug("wait for kill signal")
 	select {
 	case <-signalKillNotify:
-		gnet.LogDebug("signalKillNotify, cancel ctx")
+		logger.Debug("signalKillNotify, cancel ctx")
 		// 通知所有协程关闭,所有监听<-ctx.Done()的地方会收到通知
 		cancel()
 		break

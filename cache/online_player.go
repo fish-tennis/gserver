@@ -3,6 +3,7 @@ package cache
 import (
 	"context"
 	"fmt"
+	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/util"
 	"strings"
 )
@@ -29,7 +30,7 @@ func AddOnlinePlayer(playerId,accountId int64, gameServerId int32) bool {
 	// 这里算是一个BigKey,假设一个游戏服进程最多承载5000个在线玩家,那么整个key的大小:5000*sizeof(int64)=40K,还是可以接受的
 	_,err = GetRedis().SAdd(context.Background(), keyGameServerPlayer(gameServerId), playerId).Result()
 	if IsRedisError(err) {
-		LogError("%v", err)
+		logger.Error("%v", err)
 	}
 	return ok
 }
@@ -42,7 +43,7 @@ func RemoveOnlinePlayer(playerId int64, gameServerId int32) bool {
 	}
 	_,err = GetRedis().SRem(context.Background(), keyGameServerPlayer(gameServerId), playerId).Result()
 	if IsRedisError(err) {
-		LogError("%v", err)
+		logger.Error("%v", err)
 	}
 	return true
 }
@@ -62,7 +63,7 @@ func ResetOnlinePlayer(gameServerId int32) {
 			accountId,_ := GetOnlinePlayer(playerId)
 			GetRedis().Del(context.Background(), keyOnlinePlayer(playerId))
 			RemoveOnlineAccount(accountId)
-			LogDebug("repair:%v %v %v", playerId, accountId, gameServerId)
+			logger.Debug("repair:%v %v %v", playerId, accountId, gameServerId)
 		}
 	}
 }

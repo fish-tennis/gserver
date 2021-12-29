@@ -1,8 +1,8 @@
 package game
 
 import (
-	"github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/entity"
+	"github.com/fish-tennis/gserver/logger"
 )
 
 // 玩家组件接口
@@ -78,7 +78,7 @@ func (this *DataComponent) Save() error {
 			this.ResetDirty()
 			return nil
 		}
-		gnet.LogError("%v %v save err:%v", this.GetPlayerId(), this.GetName(), err)
+		logger.Error("%v %v save err:%v", this.GetPlayerId(), this.GetName(), err)
 		return err
 	}
 	return nil

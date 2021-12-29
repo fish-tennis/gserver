@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
+	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 	"github.com/fish-tennis/gserver/util"
 	"google.golang.org/protobuf/proto"
@@ -54,14 +55,14 @@ func (this *ServerList) FindAndConnectServers(ctx context.Context) {
 	for _,serverType := range this.fetchServerTypes {
 		serverInfoDatas, err := cache.GetRedis().HVals(context.TODO(), fmt.Sprintf("servers:%v",serverType)).Result()
 		if cache.IsRedisError(err) {
-			gnet.LogError("%v", err)
+			logger.Error("%v", err)
 			continue
 		}
 		for _,serverInfoData := range serverInfoDatas {
 			serverInfo := new(pb.ServerInfo)
 			decodeErr := proto.Unmarshal([]byte(serverInfoData), serverInfo)
 			if decodeErr != nil {
-				gnet.LogError("%v", decodeErr)
+				logger.Error("%v", decodeErr)
 				continue
 			}
 			// 目标服务器已经处于"不活跃"状态了
@@ -129,9 +130,9 @@ func (this *ServerList) ConnectServer(ctx context.Context, info *pb.ServerInfo) 
 		this.connectedServerConnectorsMutex.Lock()
 		this.connectedServerConnectors[info.GetServerId()] = serverConn
 		this.connectedServerConnectorsMutex.Unlock()
-		gnet.LogDebug("ConnectServer %v, %v", info.GetServerId(), info.ServerListenAddr)
+		logger.Debug("ConnectServer %v, %v", info.GetServerId(), info.ServerListenAddr)
 	} else {
-		gnet.LogDebug("ConnectServerError %v, %v", info.GetServerId(), info.ServerListenAddr)
+		logger.Debug("ConnectServerError %v, %v", info.GetServerId(), info.ServerListenAddr)
 	}
 }
 
@@ -155,20 +156,20 @@ func (this *ServerList) OnServerConnectorDisconnect(serverId int32) {
 	this.connectedServerConnectorsMutex.Lock()
 	delete(this.connectedServerConnectors, serverId)
 	this.connectedServerConnectorsMutex.Unlock()
-	gnet.LogDebug("DisconnectServer %v", serverId)
+	logger.Debug("DisconnectServer %v", serverId)
 }
 
 // 设置要获取的服务器类型
 func (this *ServerList) SetFetchServerTypes( serverTypes ...string) {
 	this.fetchServerTypes = append(this.fetchServerTypes, serverTypes...)
-	gnet.LogDebug("fetch:%v", serverTypes)
+	logger.Debug("fetch:%v", serverTypes)
 }
 
 // 设置要获取并连接的服务器类型
 func (this *ServerList) SetFetchAndConnectServerTypes( serverTypes ...string) {
 	this.fetchServerTypes = append(this.fetchServerTypes, serverTypes...)
 	this.connectServerTypes = append(this.connectServerTypes, serverTypes...)
-	gnet.LogDebug("fetch connect:%v", serverTypes)
+	logger.Debug("fetch connect:%v", serverTypes)
 }
 
 // 获取某类服务器的信息列表

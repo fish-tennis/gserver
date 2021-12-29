@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
+	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 	"github.com/fish-tennis/gserver/util"
 	"google.golang.org/protobuf/proto"
@@ -81,7 +82,7 @@ func (this *BaseServer) GetServerList() *ServerList {
 
 // 加载配置文件
 func (this *BaseServer) Init(ctx context.Context, configFile string) bool {
-	gnet.LogDebug("BaseServer.Init")
+	logger.Debug("BaseServer.Init")
 	this.configFile = configFile
 	this.serverInfo = new(pb.ServerInfo)
 	this.serverList = NewServerList()
@@ -93,7 +94,7 @@ func (this *BaseServer) Init(ctx context.Context, configFile string) bool {
 
 // 运行
 func (this *BaseServer) Run(ctx context.Context) {
-	gnet.LogDebug("BaseServer.Run")
+	logger.Debug("BaseServer.Run")
 	go func(ctx context.Context) {
 		this.updateLoop(ctx)
 	}(ctx)
@@ -108,7 +109,7 @@ func (this *BaseServer) OnUpdate(ctx context.Context, updateCount int64) {
 }
 
 func (this *BaseServer) Exit() {
-	LogDebug("BaseServer.Exit")
+	logger.Debug("BaseServer.Exit")
 	// 网络关闭
 	gnet.GetNetMgr().Shutdown(true)
 	// 缓存关闭
@@ -119,18 +120,18 @@ func (this *BaseServer) Exit() {
 
 // 定时更新接口
 func (this *BaseServer) updateLoop(ctx context.Context) {
-	LogDebug("updateLoop begin")
+	logger.Debug("updateLoop begin")
 	// 暂定更新间隔1秒
 	updateTicker := time.NewTicker(this.updateInterval)
 	defer func() {
 		updateTicker.Stop()
-		LogDebug("updateLoop end")
+		logger.Debug("updateLoop end")
 	}()
 	for {
 		select {
 		// 系统关闭通知
 		case <-ctx.Done():
-			gnet.LogDebug("exitNotify")
+			logger.Debug("exitNotify")
 			return
 		case <-updateTicker.C:
 			this.OnUpdate(ctx, this.updateCount)
@@ -166,7 +167,7 @@ func (this *BaseServer) SetDefaultServerConnectorConfig(config gnet.ConnectionCo
 // 默认的服务器连接接口
 func (this *BaseServer) DefaultServerConnectorFunc(ctx context.Context, info *pb.ServerInfo) gnet.Connection {
 	return gnet.GetNetMgr().NewConnector(ctx, info.GetServerListenAddr(), this.serverConnectorConfig,
-		this.defaultServerConnectorCodec, this.defaultServerConnectorHandler)
+		this.defaultServerConnectorCodec, this.defaultServerConnectorHandler, nil)
 }
 
 // 发消息给另一个服务器

@@ -3,6 +3,7 @@ package testclient
 import (
 	"context"
 	"github.com/fish-tennis/gnet"
+	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 	"github.com/fish-tennis/gserver/util"
 	"google.golang.org/protobuf/proto"
@@ -38,7 +39,7 @@ func TestClient(t *testing.T)  {
 	clientHandler.Register(gnet.PacketCommand(pb.CmdLogin_Cmd_LoginRes), clientHandler.onLoginRes, func() proto.Message {
 		return &pb.LoginRes{}
 	})
-	if netMgr.NewConnector(ctx,"127.0.0.1:10002", connectionConfig, clientCodec, clientHandler) == nil {
+	if netMgr.NewConnector(ctx,"127.0.0.1:10002", connectionConfig, clientCodec, clientHandler, nil) == nil {
 		panic("connect error")
 	}
 
@@ -90,7 +91,7 @@ func (this *testLoginHandler) OnConnected(connection gnet.Connection, success bo
 }
 
 func (this *testLoginHandler) onLoginRes(connection gnet.Connection, packet *gnet.ProtoPacket) {
-	gnet.LogDebug("onLoginRes:%v", packet.Message())
+	logger.Debug("onLoginRes:%v", packet.Message())
 	res := packet.Message().(*pb.LoginRes)
 	if res.GetResult() == "not reg" {
 		connection.Send(gnet.PacketCommand(pb.CmdLogin_Cmd_AccountReg), &pb.AccountReg{
@@ -116,7 +117,7 @@ func (this *testLoginHandler) onLoginRes(connection gnet.Connection, packet *gne
 			ctx: this.ctx,
 		}
 		clientHandler.RegisterPacket()
-		if gnet.GetNetMgr().NewConnector(this.ctx, res.GetGameServer().GetClientListenAddr(), connectionConfig, clientCodec, clientHandler) == nil {
+		if gnet.GetNetMgr().NewConnector(this.ctx, res.GetGameServer().GetClientListenAddr(), connectionConfig, clientCodec, clientHandler, nil) == nil {
 			panic("connect error")
 		}
 	} else {
@@ -158,7 +159,7 @@ func (this *testGameHandler) onHeartBeatRes(connection gnet.Connection, packet *
 }
 
 func (this *testGameHandler) onPlayerEntryGameRes(connection gnet.Connection, packet *gnet.ProtoPacket) {
-	gnet.LogDebug("onPlayerEntryGameRes:%v", packet.Message())
+	logger.Debug("onPlayerEntryGameRes:%v", packet.Message())
 	res := packet.Message().(*pb.PlayerEntryGameRes)
 	if res.GetResult() == "ok" {
 		// 玩家登录游戏服成功,模拟一个交互消息
@@ -181,5 +182,5 @@ func (this *testGameHandler) onPlayerEntryGameRes(connection gnet.Connection, pa
 }
 
 func (this *testGameHandler) onCoinRes(connection gnet.Connection, packet *gnet.ProtoPacket) {
-	gnet.LogDebug("onCoinRes:%v", packet.Message())
+	logger.Debug("onCoinRes:%v", packet.Message())
 }

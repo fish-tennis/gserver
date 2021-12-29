@@ -3,6 +3,7 @@ package game
 import (
 	"fmt"
 	"github.com/fish-tennis/gnet"
+	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 	"github.com/fish-tennis/gserver/util"
 	"google.golang.org/protobuf/proto"
@@ -63,7 +64,7 @@ func (this* ClientConnectionHandler) registerMethod(command Cmd, componentName s
 		componentName: componentName,
 		method: method,
 	}
-	gnet.LogDebug("registerMethod %v %v.%v", command, componentName, method.Name)
+	logger.Debug("registerMethod %v %v.%v", command, componentName, method.Name)
 }
 
 // 根据proto的命名规则和玩家组件里消息回调的格式,通过反射自动生成消息的注册
@@ -93,7 +94,7 @@ func (this* ClientConnectionHandler) autoRegisterPlayerComponentProto() {
 			messageName := methonArg1.String()[strings.LastIndex(methonArg1.String(),".")+1:]
 			// 函数名必须是OnCoinReq
 			if method.Name != fmt.Sprintf("On%v", messageName) {
-				gnet.LogDebug("methodName not match:%v", method.Name)
+				logger.Debug("methodName not match:%v", method.Name)
 				continue
 			}
 			messageId := util.GetMessageIdByMessageName(componentStructName, messageName)

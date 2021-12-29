@@ -2,7 +2,7 @@ package mongodb
 
 import (
 	"context"
-	"github.com/fish-tennis/gnet"
+	"github.com/fish-tennis/gserver/logger"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -57,7 +57,7 @@ func (this *MongoDb) Connect() bool {
 	}
 	// Ping the primary
 	if err := client.Ping(context.TODO(), readpref.Primary()); err != nil {
-		gnet.LogError(err.Error())
+		logger.Error(err.Error())
 		return false
 	}
 	this.mongoClient = client
@@ -79,12 +79,12 @@ func (this *MongoDb) Connect() bool {
 	if len(indexModels) > 0 {
 		indexNames,indexErr := col.Indexes().CreateMany(context.TODO(), indexModels)
 		if indexErr != nil {
-			gnet.LogError("create index err:%v", indexErr)
+			logger.Error("create index err:%v", indexErr)
 		} else {
-			gnet.LogInfo("mongo index:%v", indexNames)
+			logger.Info("mongo index:%v", indexNames)
 		}
 	}
-	gnet.LogInfo("mongo Connected")
+	logger.Info("mongo Connected")
 	return true
 }
 
@@ -93,9 +93,9 @@ func (this *MongoDb) Disconnect() {
 		return
 	}
 	if err := this.mongoClient.Disconnect(context.TODO()); err != nil {
-		gnet.LogError(err.Error())
+		logger.Error(err.Error())
 	}
-	gnet.LogInfo("mongo Disconnected")
+	logger.Info("mongo Disconnected")
 }
 
 // 根据账号名查找账号数据

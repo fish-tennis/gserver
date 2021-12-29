@@ -5,8 +5,8 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f h1:lO4WD4F/rVNCu3HqELle0jiPLLBs70cWOduZpkS1E78=
 github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f/go.mod h1:cuUVRXasLTGF7a8hSLbxyZXjz+1KgoB3wDUb6vlszIc=
-github.com/fish-tennis/gnet v0.0.10-beta h1:d0xusOv7qeI79GUWNCFh/z5SxFgaBb+KFFjafYhO5aw=
-github.com/fish-tennis/gnet v0.0.10-beta/go.mod h1:aSOXFjpv0T3yWwhP110zk5BcKzCRHtNHDlOwJc6uqQA=
+github.com/fish-tennis/gnet v0.0.12 h1:EZhBcrxQ02n8f82N936vjlLzm9JFcZTL0yvmNlC/9Ws=
+github.com/fish-tennis/gnet v0.0.12/go.mod h1:aSOXFjpv0T3yWwhP110zk5BcKzCRHtNHDlOwJc6uqQA=
 github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMoQvtojpjFo=
 github.com/fsnotify/fsnotify v1.4.9 h1:hsms1Qyu0jgnwNXIxa+/V/PDsU6CfLf6CNO8H7IWoS4=
 github.com/fsnotify/fsnotify v1.4.9/go.mod h1:znqG4EE+3YCdAaPaxE2ZRY/06pZUdp0tY4IgpuI1SZQ=

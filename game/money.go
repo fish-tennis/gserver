@@ -1,7 +1,7 @@
 package game
 
 import (
-	"github.com/fish-tennis/gnet"
+	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 	"google.golang.org/protobuf/proto"
 )
@@ -23,7 +23,7 @@ func NewMoney(player *Player, bytes []byte) *Money {
 		data = &pb.Money{}
 		proto.Unmarshal(bytes, data)
 	}
-	gnet.LogDebug("%v", data)
+	logger.Debug("%v", data)
 	component := &Money{
 		DataComponent: DataComponent{
 			BaseComponent:BaseComponent{
@@ -45,7 +45,7 @@ func (this *Money) DbData() interface{} {
 	// 缺点:数据库语言无法直接操作字段
 	data,err := proto.Marshal(this.data)
 	if err != nil {
-		gnet.LogError("%v", err)
+		logger.Error("%v", err)
 		return nil
 	}
 	return data
@@ -61,7 +61,7 @@ func (this *Money) OnEvent(event interface{}) {
 
 // 事件处理
 func (this *Money) OnPlayerEntryGame( eventPlayerEntryGame *EventPlayerEntryGame) {
-	gnet.LogDebug("OnEvent:%v", eventPlayerEntryGame)
+	logger.Debug("OnEvent:%v", eventPlayerEntryGame)
 }
 
 func (this *Money) IncCoin(coin int32) {
@@ -80,7 +80,7 @@ func (this *Money) IncCoin(coin int32) {
 // 请求加coin的消息回调
 // 这种格式写的函数可以自动注册消息回调
 func (this *Money) OnCoinReq(req *pb.CoinReq) {
-	gnet.LogDebug("OnCoinReq:%v", req)
+	logger.Debug("OnCoinReq:%v", req)
 	this.IncCoin(req.GetAddCoin())
 	this.GetPlayer().SendCoinRes(&pb.CoinRes{
 		TotalCoin: this.data.GetCoin(),
@@ -90,7 +90,7 @@ func (this *Money) OnCoinReq(req *pb.CoinReq) {
 // 请求加coin的消息回调
 // 这种格式写的函数可以被proto_code_gen工具自动注册消息回调
 func OnCoinReq(this *Money, req *pb.CoinReq) {
-	gnet.LogDebug("OnCoinReq:%v", req)
+	logger.Debug("OnCoinReq:%v", req)
 	this.IncCoin(req.GetAddCoin())
 	this.GetPlayer().SendCoinRes(&pb.CoinRes{
 		TotalCoin: this.data.GetCoin(),

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
+	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 	"time"
 )
@@ -30,7 +31,7 @@ func onPlayerEntryGameReq(connection gnet.Connection, packet *ProtoPacket) {
 		connection.Send(gnet.PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameRes), &pb.PlayerEntryGameRes{
 			Result: err.Error(),
 		})
-		gnet.LogError(err.Error())
+		logger.Error(err.Error())
 		return
 	}
 	var player *Player
@@ -47,7 +48,7 @@ func onPlayerEntryGameReq(connection gnet.Connection, packet *ProtoPacket) {
 			connection.Send(gnet.PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameRes), &pb.PlayerEntryGameRes{
 				Result: err.Error(),
 			})
-			gnet.LogError("%v", err)
+			logger.Error("%v", err)
 			return
 		}
 		err = player.Save()
@@ -55,17 +56,17 @@ func onPlayerEntryGameReq(connection gnet.Connection, packet *ProtoPacket) {
 			connection.Send(gnet.PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameRes), &pb.PlayerEntryGameRes{
 				Result: err.Error(),
 			})
-			gnet.LogError("%v", err)
+			logger.Error("%v", err)
 			return
 		}
-		gnet.LogDebug("new player:%v", playerData.Id)
+		logger.Debug("new player:%v", playerData.Id)
 	} else {
 		// 检查该账号是否已经有对应的在线玩家
 		player = gameServer.GetPlayer(playerData.GetId())
 		if player != nil {
 			// 重连
 			isReconnect = true
-			gnet.LogDebug("reconnect %v", player.GetId())
+			logger.Debug("reconnect %v", player.GetId())
 			//connection.Send(gnet.PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameRes), &pb.PlayerEntryGameRes{
 			//	Result: "exist player",
 			//})
@@ -80,7 +81,7 @@ func onPlayerEntryGameReq(connection gnet.Connection, packet *ProtoPacket) {
 		if !cache.AddOnlineAccount(player.GetAccountId(), player.GetId(), gameServer.GetServerId()) {
 			// 该账号已经在另一个游戏服上登录了
 			_,gameServerId := cache.GetOnlinePlayer(player.GetId())
-			LogError("exist online account:%v playerId:%v gameServerId:%v",
+			logger.Error("exist online account:%v playerId:%v gameServerId:%v",
 				player.GetAccountId(), player.GetId(), gameServerId)
 			if gameServerId > 0 {
 				// 通知目标游戏服踢掉玩家
@@ -101,7 +102,7 @@ func onPlayerEntryGameReq(connection gnet.Connection, packet *ProtoPacket) {
 	// 玩家和连接设置关联
 	connection.SetTag(player.GetId())
 	player.SetConnection(connection)
-	gnet.LogDebug("entry player:%v", player)
+	logger.Debug("entry player:%v", player)
 	player.SendPlayerEntryGameRes(&pb.PlayerEntryGameRes{
 		Result: "ok",
 		AccountId: player.GetAccountId(),

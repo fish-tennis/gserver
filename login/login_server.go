@@ -8,6 +8,7 @@ import (
 	"github.com/fish-tennis/gserver/common"
 	"github.com/fish-tennis/gserver/db"
 	"github.com/fish-tennis/gserver/db/mongodb"
+	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 	"google.golang.org/protobuf/proto"
 	"os"
@@ -58,20 +59,20 @@ func (this *LoginServer) Init(ctx context.Context, configFile string) bool {
 	// 连接其他服务器
 	this.BaseServer.SetDefaultServerConnectorConfig(this.config.ServerConnConfig)
 	this.BaseServer.GetServerList().SetFetchAndConnectServerTypes("game")
-	gnet.LogDebug("LoginServer.Init")
+	logger.Debug("LoginServer.Init")
 	return true
 }
 
 // 运行
 func (this *LoginServer) Run(ctx context.Context) {
 	this.BaseServer.Run(ctx)
-	gnet.LogDebug("LoginServer.Run")
+	logger.Debug("LoginServer.Run")
 }
 
 // 退出
 func (this *LoginServer) Exit() {
 	this.BaseServer.Exit()
-	gnet.LogDebug("LoginServer.Exit")
+	logger.Debug("LoginServer.Exit")
 	if this.accountDb != nil {
 		this.accountDb.(*mongodb.MongoDb).Disconnect()
 	}
@@ -88,7 +89,7 @@ func (this *LoginServer) readConfig() {
 	if err != nil {
 		panic("decode config file err")
 	}
-	gnet.LogDebug("%v", this.config)
+	logger.Debug("%v", this.config)
 	this.BaseServer.GetServerInfo().ServerId = this.config.ServerId
 	this.BaseServer.GetServerInfo().ServerType = "login"
 	this.BaseServer.GetServerInfo().ClientListenAddr = this.config.ClientListenAddr

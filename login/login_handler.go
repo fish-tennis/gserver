@@ -3,6 +3,7 @@ package login
 import (
 	"github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
+	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 	"math/rand"
 	"time"
@@ -10,7 +11,7 @@ import (
 
 // 客户端账号登录
 func onLoginReq(connection gnet.Connection, packet *gnet.ProtoPacket) {
-	gnet.LogDebug("onLoginReq:%v", packet.Message())
+	logger.Debug("onLoginReq:%v", packet.Message())
 	req := packet.Message().(*pb.LoginReq)
 	result := ""
 	loginSession := ""
@@ -38,7 +39,7 @@ func onLoginReq(connection gnet.Connection, packet *gnet.ProtoPacket) {
 		onlinePlayerId,gameServerId := cache.GetOnlineAccount(account.GetId())
 		if onlinePlayerId > 0 {
 			// 如果该账号还在游戏中,则需要先将其清理下线
-			LogError("exist online account:%v playerId:%v gameServerId:%v",
+			logger.Error("exist online account:%v playerId:%v gameServerId:%v",
 				account.GetId(), onlinePlayerId, gameServerId)
 			if gameServerId > 0 {
 				//// 有可能那台游戏服宕机了,就直接清理缓存,防止"卡号"
@@ -60,7 +61,7 @@ func onLoginReq(connection gnet.Connection, packet *gnet.ProtoPacket) {
 			ServerId: gameServerInfo.GetServerId(),
 			ClientListenAddr: gameServerInfo.GetClientListenAddr(),
 		}
-		gnet.LogDebug("%v(%v) -> %v", account.Name, account.Id, loginRes.GameServer)
+		logger.Debug("%v(%v) -> %v", account.Name, account.Id, loginRes.GameServer)
 	}
 	connection.Send(gnet.PacketCommand(pb.CmdLogin_Cmd_LoginRes), loginRes)
 }
@@ -79,7 +80,7 @@ func selectGameServer(account *pb.Account) *pb.ServerInfo {
 
 // 注册账号
 func onAccountReg(connection gnet.Connection, packet *gnet.ProtoPacket) {
-	gnet.LogDebug("onAccountReg:%v", packet.Message())
+	logger.Debug("onAccountReg:%v", packet.Message())
 	req := packet.Message().(*pb.AccountReg)
 	result := ""
 	account := &pb.Account{

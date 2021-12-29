@@ -1,7 +1,7 @@
 package game
 
 import (
-	"github.com/fish-tennis/gnet"
+	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 )
 
@@ -30,7 +30,7 @@ func NewBaseInfo(player *Player, baseInfo *pb.BaseInfo) *BaseInfo {
 		}
 		component.SetDirty()
 	}
-	gnet.LogDebug("%v", data)
+	logger.Debug("%v", data)
 	component.data = data
 	component.dataFun = component.DbData
 	return component

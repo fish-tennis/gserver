@@ -13,8 +13,3 @@ type Connection = gnet.Connection
 type Component = entity.Component
 type Entity = entity.Entity
 type EventReceiver = entity.EventReceiver
-
-var (
-	LogDebug = gnet.LogDebug
-	LogError = gnet.LogError
-)
