@@ -4,12 +4,14 @@ import (
 	"bufio"
 	"context"
 	"flag"
+	"fmt"
 	"github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/common"
 	"github.com/fish-tennis/gserver/game"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/login"
 	"os"
+	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"runtime"
@@ -24,20 +26,28 @@ func main() {
 		}
 	}()
 
+	isDaemon := false
+	configFile := ""
 	// 配置文件名格式: serverType_serverId.json
-	configFile := flag.String("config", "", "server's config file")
+	flag.StringVar(&configFile, "conf", "", "server's config file")
+	flag.BoolVar(&isDaemon, "d", false, "daemon mode")
 	flag.Parse()
+
+	if isDaemon {
+		daemon()
+		return
+	}
 
 	gnet.SetLogLevel(gnet.DebugLevel)
 
 	// 根据命令行参数 创建不同的服务器实例
-	serverType := getServerTypeFromConfigFile(*configFile)
+	serverType := getServerTypeFromConfigFile(configFile)
 	server := createServer(serverType)
 
 	// context实现优雅的协程关闭通知
 	ctx,cancel := context.WithCancel(context.Background())
 	// 服务器初始化
-	if !server.Init(ctx, *configFile) {
+	if !server.Init(ctx, configFile) {
 		panic("server init error")
 	}
 	// 服务器运行
@@ -73,6 +83,20 @@ func main() {
 	}
 	// 清理
 	server.Exit()
+}
+
+func daemon() {
+	args := os.Args[1:]
+	for i := 0; i < len(args); i++ {
+		if args[i] == "-d=true" {
+			args[i] = "-d=false"
+			break
+		}
+	}
+	cmd := exec.Command(os.Args[0], args...)
+	cmd.Start()
+	fmt.Println("[PID]", cmd.Process.Pid)
+	os.Exit(0)
 }
 
 // 从配置文件名解析出服务器类型
