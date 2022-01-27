@@ -21,6 +21,6 @@ func GetMessageIdByMessageName(componentStructName, messageName string) int32 {
 	// 如: Cmd_CoinReq
 	enumIdName := fmt.Sprintf("Cmd_%v", messageName)
 	enumNumber := enumTyp.Descriptor().Values().ByName(protoreflect.Name(enumIdName)).Number()
-	//gnet.LogDebug("enum %v:%v", enumIdName, enumNumber)
+	//logger.Debug("enum %v:%v", enumIdName, enumNumber)
 	return int32(enumNumber)
 }

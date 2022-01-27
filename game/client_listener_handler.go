@@ -18,15 +18,17 @@ func (this *ClientListerHandler) OnConnectionDisconnect(listener gnet.Listener, 
 	if connection.GetTag() == nil {
 		return
 	}
-	playerId := connection.GetTag().(int64)
-	player := gameServer.GetPlayer(playerId)
-	if player == nil {
-		return
+	if playerId,ok := connection.GetTag().(int64); ok {
+		player := gameServer.GetPlayer(playerId)
+		if player == nil {
+			return
+		}
+		//if atomic.CompareAndSwapPointer((*unsafe.Pointer)(unsafe.Pointer(&player.connection)), unsafe.Pointer(&connection), nil) {
+		if player.GetConnection() == connection {
+			player.SetConnection(nil)
+			player.SaveDb(true)
+			gameServer.RemovePlayer(player)
+		}
+		logger.Debug("player %v exit", player.GetId())
 	}
-	if player.GetConnection() == connection {
-		player.SetConnection(nil)
-		player.Save()
-		gameServer.RemovePlayer(player)
-	}
-	logger.Debug("player %v exit", player.GetId())
 }

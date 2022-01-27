@@ -29,8 +29,11 @@ type PlayerDb interface {
 	// 保存玩家数据(update player by playerId)
 	SavePlayer(playerId int64, playerData interface{}) error
 
-	// 保存玩家组件(update playerId.componentName)
+	// 保存玩家1个组件(update player's component)
 	SaveComponent(playerId int64, componentName string, componentData interface{}) error
+
+	// 批量保存玩家组件(update player's components...)
+	SaveComponents(playerId int64, components map[string]interface{}) error
 }
 
 // Kv数据接口

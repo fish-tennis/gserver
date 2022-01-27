@@ -1,7 +1,10 @@
 package game
 
 import (
+	"context"
+	"github.com/fish-tennis/gserver/cache"
 	"github.com/fish-tennis/gserver/entity"
+	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 	"google.golang.org/protobuf/proto"
 )
@@ -18,7 +21,6 @@ type Player struct {
 	regionId int32
 	//accountName string
 	// 组件表
-	// TODO:用map是否更合适?
 	components []PlayerComponent
 	// 关联的连接
 	connection Connection
@@ -56,10 +58,9 @@ func (this *Player) GetRegionId() int32 {
 
 // 获取组件
 func (this *Player) GetComponent(componentName string) entity.Component {
-	for _,v := range this.components {
-		if v.GetName() == componentName {
-			return v
-		}
+	index := GetComponentIndex(componentName)
+	if index >= 0 {
+		return this.components[index]
 	}
 	return nil
 }
@@ -73,17 +74,50 @@ func (this *Player) GetComponents() []entity.Component {
 	return components
 }
 
-// 保存所有修改过的组件数据
-func (this *Player) Save() error {
+// 保存所有修改过的组件数据到缓存
+func (this *Player) SaveCache() error {
 	for _,component := range this.components {
 		if saveable,ok := component.(entity.Saveable); ok {
-			err := saveable.Save()
-			if err != nil {
-				return err
+			if !saveable.IsDirty() {
+				continue
 			}
+			cacheData := saveable.Serialize(true)
+			if cacheData == nil {
+				continue
+			}
+			cacheKeyName := GetComponentCacheKey(this.id, component.GetName())
+			_,cacheErr := cache.Get().Set(context.Background(), cacheKeyName, cacheData, 0).Result()
+			if cacheErr != nil {
+				logger.Error("%v %v cache err:%v", this.id, component.GetNameLower(), cacheErr.Error())
+				continue
+			}
+			logger.Debug("SaveCache %v %v", this.id, component.GetNameLower())
 		}
 	}
 	return nil
+}
+
+// 玩家数据保存数据库
+func (this *Player) SaveDb(removeCacheAfterSaveDb bool) error {
+	componentDatas := make(map[string]interface{})
+	for _,component := range this.components {
+		if saveable,ok := component.(entity.Saveable); ok {
+			// 使用protobuf存mongodb时,mongodb默认会把字段名转成小写,因为protobuf没设置bson tag
+			componentDatas[component.GetNameLower()] = saveable.Serialize(false)
+			logger.Debug("SaveDb %v %v", this.id, component.GetName())
+		}
+	}
+	saveDbErr := GetServer().GetPlayerDb().SaveComponents(this.id, componentDatas)
+	logger.Debug("SaveDb %v err:%v", this.id, saveDbErr)
+	if saveDbErr == nil && removeCacheAfterSaveDb {
+		// 保存数据库成功后,删除缓存
+		for k,_ := range componentDatas {
+			cacheKeyName := GetComponentCacheKey(this.id, k)
+			cache.Get().Del(context.Background(), cacheKeyName)
+			logger.Debug("RemoveCache %v %v", this.id, cacheKeyName)
+		}
+	}
+	return saveDbErr
 }
 
 // 设置关联的连接
@@ -117,16 +151,27 @@ func (this *Player) FireEvent(event interface{}) {
 	}
 }
 
+// 添加玩家组件
+func (this *Player)addComponent(component PlayerComponent) {
+	this.components = append(this.components, component)
+}
+
 // 从加载的数据构造出玩家对象
 func CreatePlayerFromData(playerData *pb.PlayerData) *Player {
 	player := &Player{
-		id: playerData.GetId(),
-		name: playerData.GetName(),
-		accountId: playerData.GetAccountId(),
-		regionId: playerData.GetRegionId(),
+		id: playerData.Id,
+		name: playerData.Name,
+		accountId: playerData.AccountId,
+		regionId: playerData.RegionId,
 	}
 	// 初始化玩家的各个模块
-	player.components = append(player.components, NewBaseInfo(player, playerData.BaseInfo))
-	player.components = append(player.components, NewMoney(player, playerData.Money))
+	player.addComponent(NewBaseInfo(player, playerData.BaseInfo))
+	player.addComponent(NewMoney(player, playerData.Money))
+	return player
+}
+
+func createTempPlayer() *Player {
+	playerData := &pb.PlayerData{}
+	player := CreatePlayerFromData(playerData)
 	return player
 }

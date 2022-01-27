@@ -8,7 +8,12 @@ var (
 	redisClient *redis.ClusterClient
 )
 
-func GetRedis() *redis.ClusterClient {
+func GetRedis() redis.Cmdable {
+	return redisClient
+}
+
+// 提供一个更简洁的接口
+func Get() redis.Cmdable {
 	return redisClient
 }
 

@@ -51,7 +51,7 @@ func onPlayerEntryGameReq(connection gnet.Connection, packet *ProtoPacket) {
 			logger.Error("%v", err)
 			return
 		}
-		err = player.Save()
+		err = player.SaveDb(false)
 		if err != nil {
 			connection.Send(gnet.PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameRes), &pb.PlayerEntryGameRes{
 				Result: err.Error(),
@@ -62,7 +62,7 @@ func onPlayerEntryGameReq(connection gnet.Connection, packet *ProtoPacket) {
 		logger.Debug("new player:%v", playerData.Id)
 	} else {
 		// 检查该账号是否已经有对应的在线玩家
-		player = gameServer.GetPlayer(playerData.GetId())
+		player = gameServer.GetPlayer(playerData.Id)
 		if player != nil {
 			// 重连
 			isReconnect = true

@@ -14,7 +14,7 @@ func player_component_handler_auto_register(handler *ClientConnectionHandler) {
 	//			component := player.GetComponent("money")
 	//			if component != nil {
 	//				OnCoinReqEx(player, component.(*Money), packet.Message().(*pb.CoinReq))// 如果有需要保存的数据修改了,即时保存数据库
-	//				player.Save()
+	//				player.SaveDb()
 	//				return
 	//			}
 	//		}
@@ -22,7 +22,7 @@ func player_component_handler_auto_register(handler *ClientConnectionHandler) {
 	//}, func() proto.Message {
 	//	return new(pb.CoinReq)
 	//})
-	handler.RegisterProtoCodeGen("money", Cmd(pb.CmdMoney_Cmd_CoinReq), func() proto.Message {return new(pb.CoinReq)}, func(c Component, m proto.Message) {
+	handler.RegisterProtoCodeGen("Money", Cmd(pb.CmdMoney_Cmd_CoinReq), func() proto.Message {return new(pb.CoinReq)}, func(c Component, m proto.Message) {
 		OnCoinReq(c.(*Money), m.(*pb.CoinReq))
 	})
 	//handler.RegisterProtoCodeGen("{protoName}", Cmd(pb.Cmd{ProtoName}_Cmd_{MessageName}), func() proto.Message {return new(pb.{MessageName})}, func(c Component, m proto.Message) {

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/logger"
-	"github.com/fish-tennis/gserver/pb"
 	"github.com/fish-tennis/gserver/util"
 	"google.golang.org/protobuf/proto"
 	"reflect"
@@ -47,7 +46,7 @@ func (this* ClientConnectionHandler) OnRecvPacket(connection Connection, packet 
 						// 用了反射,性能有所损失
 						handlerInfo.method.Func.Call([]reflect.Value{reflect.ValueOf(component), reflect.ValueOf(protoPacket.Message())})
 						// 如果有需要保存的数据修改了,即时保存数据库
-						player.Save()
+						player.SaveCache()
 						return
 					}
 				}
@@ -71,8 +70,7 @@ func (this* ClientConnectionHandler) registerMethod(command Cmd, componentName s
 // 用了反射,性能有所损失
 // 也可以用proto_code_gen工具来生成代码,可以避免用反射所带来的性能损失
 func (this* ClientConnectionHandler) autoRegisterPlayerComponentProto() {
-	playerData := &pb.PlayerData{}
-	player := CreatePlayerFromData(playerData)
+	player := createTempPlayer()
 	for _,component := range player.components {
 		typ := reflect.TypeOf(component)
 		// 如: game.Money -> Money
@@ -123,7 +121,7 @@ func (this* ClientConnectionHandler) RegisterProtoCodeGen(componentName string, 
 				component := player.GetComponent(componentName)
 				if component != nil {
 					handler(component, packet.Message())
-					player.Save()
+					player.SaveCache()
 					return
 				}
 			}

@@ -13,33 +13,30 @@ type Money struct {
 }
 
 func NewMoney(player *Player, bytes []byte) *Money {
+	component := &Money{
+		DataComponent: DataComponent{
+			BaseComponent:BaseComponent{
+				Player: player,
+				name: "Money",
+			},
+		},
+	}
 	var data *pb.Money
 	if len(bytes) == 0 {
 		data = &pb.Money{
 			Coin: 0,
 			Diamond: 0,
 		}
+		component.data = data
 	} else {
-		data = &pb.Money{}
-		proto.Unmarshal(bytes, data)
+		component.Deserialize(bytes)
 	}
-	logger.Debug("%v", data)
-	component := &Money{
-		DataComponent: DataComponent{
-			BaseComponent:BaseComponent{
-				Player: player,
-				//id: 2,
-				name: "money",
-			},
-		},
-		data: data,
-	}
-	component.dataFun = component.DbData
+	logger.Debug("%v coin:%v diamond:%v", component.GetPlayerId(), component.data.Coin, component.data.Diamond)
 	return component
 }
 
 // 需要保存的数据
-func (this *Money) DbData() interface{} {
+func (this *Money) Serialize(forCache bool) interface{} {
 	// 演示proto序列化后存储到数据库
 	// 优点:占用空间少,读取数据快,游戏模块大多采用这种方式
 	// 缺点:数据库语言无法直接操作字段
@@ -49,6 +46,13 @@ func (this *Money) DbData() interface{} {
 		return nil
 	}
 	return data
+}
+
+func (this *Money) Deserialize(bytes []byte) error {
+	data := &pb.Money{}
+	proto.Unmarshal(bytes, data)
+	this.data = data
+	return nil
 }
 
 // 事件接口

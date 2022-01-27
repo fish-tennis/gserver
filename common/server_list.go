@@ -53,7 +53,7 @@ func (this *ServerList) FindAndConnectServers(ctx context.Context) {
 	serverInfoMapUpdated := false
 	infoMap := make(map[int32]*pb.ServerInfo)
 	for _,serverType := range this.fetchServerTypes {
-		serverInfoDatas, err := cache.GetRedis().HVals(context.TODO(), fmt.Sprintf("servers:%v",serverType)).Result()
+		serverInfoDatas, err := cache.Get().HVals(context.TODO(), fmt.Sprintf("servers:%v",serverType)).Result()
 		if cache.IsRedisError(err) {
 			logger.Error("%v", err)
 			continue
@@ -139,7 +139,7 @@ func (this *ServerList) ConnectServer(ctx context.Context, info *pb.ServerInfo) 
 // 服务注册:上传本地服务器的信息
 func (this *ServerList) Register(info *pb.ServerInfo) {
 	data,_ := proto.Marshal(info)
-	cache.GetRedis().HSet(context.TODO(), fmt.Sprintf("servers:%v",info.GetServerType()),
+	cache.Get().HSet(context.TODO(), fmt.Sprintf("servers:%v",info.GetServerType()),
 		info.GetServerId(), data)
 }
 
@@ -176,8 +176,12 @@ func (this *ServerList) SetFetchAndConnectServerTypes( serverTypes ...string) {
 func (this *ServerList) GetServersByType(serverType string) []*pb.ServerInfo {
 	this.serverInfoTypeMapMutex.RLock()
 	infoList,_ := this.serverInfoTypeMap[serverType]
+	copyInfoList := make([]*pb.ServerInfo, len(infoList), len(infoList))
+	for idx,info := range infoList {
+		copyInfoList[idx] = info
+	}
 	this.serverInfoTypeMapMutex.RUnlock()
-	return infoList
+	return copyInfoList
 }
 
 // 获取服务器的连接

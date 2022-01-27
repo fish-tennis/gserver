@@ -49,8 +49,8 @@ func RemoveOnlinePlayer(playerId int64, gameServerId int32) bool {
 }
 
 // 重置一个服务器上的在线玩家缓存
-func ResetOnlinePlayer(gameServerId int32) {
-	for i := 0; i < 100; i++ {
+func ResetOnlinePlayer(gameServerId int32,repairFunc func(playerId,accountId int64) error) {
+	for {
 		playerIds,err := GetRedis().SPopN(context.Background(), keyGameServerPlayer(gameServerId), 128).Result()
 		if IsRedisError(err) {
 			break
@@ -61,6 +61,9 @@ func ResetOnlinePlayer(gameServerId int32) {
 		for _,v := range playerIds {
 			playerId := util.Atoi64(v)
 			accountId,_ := GetOnlinePlayer(playerId)
+			if repairFunc != nil {
+				repairFunc(playerId, accountId)
+			}
 			GetRedis().Del(context.Background(), keyOnlinePlayer(playerId))
 			RemoveOnlineAccount(accountId)
 			logger.Debug("repair:%v %v %v", playerId, accountId, gameServerId)

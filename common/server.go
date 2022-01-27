@@ -8,6 +8,7 @@ import (
 	"github.com/fish-tennis/gserver/pb"
 	"github.com/fish-tennis/gserver/util"
 	"google.golang.org/protobuf/proto"
+	"io"
 	"time"
 )
 
@@ -113,8 +114,11 @@ func (this *BaseServer) Exit() {
 	// 网络关闭
 	gnet.GetNetMgr().Shutdown(true)
 	// 缓存关闭
-	if cache.GetRedis() != nil {
-		cache.GetRedis().Close()
+	if cache.Get() != nil {
+		if closer,ok := cache.Get().(io.Closer); ok {
+			closer.Close()
+			logger.Info("close redis")
+		}
 	}
 }
 

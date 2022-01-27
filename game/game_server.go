@@ -8,10 +8,13 @@ import (
 	"github.com/fish-tennis/gserver/common"
 	"github.com/fish-tennis/gserver/db"
 	"github.com/fish-tennis/gserver/db/mongodb"
+	"github.com/fish-tennis/gserver/entity"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
+	"github.com/go-redis/redis/v8"
 	"google.golang.org/protobuf/proto"
 	"os"
+	"reflect"
 	"sync"
 	"time"
 )
@@ -54,6 +57,7 @@ func (this *GameServer) Init(ctx context.Context, configFile string) bool {
 		return false
 	}
 	this.readConfig()
+	InitPlayerComponentMap()
 	this.initDb()
 	this.initCache()
 
@@ -135,7 +139,7 @@ func (this *GameServer) initDb() {
 // 初始化redis缓存
 func (this *GameServer) initCache() {
 	cache.NewRedisClient(this.config.RedisUri, this.config.RedisPassword)
-	pong,err := cache.GetRedis().Ping(context.TODO()).Result()
+	pong,err := cache.Get().Ping(context.TODO()).Result()
 	if err != nil || pong == "" {
 		panic("redis connect error")
 	}
@@ -144,7 +148,77 @@ func (this *GameServer) initCache() {
 
 // 修复缓存,游戏服异常宕机重启后进行修复操作
 func (this *GameServer) repairCache() {
-	cache.ResetOnlinePlayer(this.GetServerId())
+	cache.ResetOnlinePlayer(this.GetServerId(), this.repairPlayerCache)
+}
+
+// 缓存中的玩家数据保存到数据库
+// 服务器crash时,缓存数据没来得及保存到数据库,服务器重启后进行自动修复,防止玩家数据回档
+func (this *GameServer) repairPlayerCache(playerId,accountId int64) error {
+	player := createTempPlayer()
+	player.id = playerId
+	player.accountId = accountId
+	//componentDataMap := make(map[string]string)
+	for componentName,_ := range playerComponentNameMap {
+		cacheKey := GetComponentCacheKey(playerId, componentName)
+		componentData,err := cache.Get().Get(context.Background(), cacheKey).Result()
+		// 不存在的key或者空数据,直接跳过,防止错误的覆盖
+		if err == redis.Nil || len(componentData) == 0 {
+			continue
+		}
+		if cache.IsRedisError(err) {
+			logger.Error("GetPlayerCache %v err:%v", cacheKey, err.Error())
+			continue
+		}
+		//componentDataMap[componentName] = componentData
+		componentTemplate := player.GetComponent(componentName)
+		if componentTemplate == nil {
+			logger.Error("%v GetComponent nil %v", playerId, componentName)
+			continue
+		}
+		newComponent := reflect.New(reflect.TypeOf(componentTemplate).Elem()).Interface().(entity.Saveable)
+		err = newComponent.Deserialize([]byte(componentData))
+		if err != nil {
+			logger.Error("%v Deserialize %v err %v", playerId, componentName, err.Error())
+			continue
+		}
+		saveData := newComponent.Serialize(false)
+		saveDbErr := GetServer().GetPlayerDb().SaveComponent(playerId, componentTemplate.GetNameLower(), saveData)
+		if saveDbErr != nil {
+			logger.Error("%v SaveDb %v err %v", playerId, componentTemplate.GetNameLower(), saveDbErr.Error())
+			continue
+		}
+		logger.Info("%v SaveDb %v", playerId, componentTemplate.GetNameLower())
+		cacheKeyName := GetComponentCacheKey(playerId, componentName)
+		cache.Get().Del(context.Background(), cacheKeyName)
+		logger.Debug("RemoveCache %v %v", playerId, cacheKeyName)
+	}
+	//player := createTempPlayer()
+	//player.id = playerId
+	//player.accountId = accountId
+	//for componentName,componentData := range componentDataMap {
+	//	componentTemplate := player.GetComponent(componentName)
+	//	if componentTemplate == nil {
+	//		logger.Error("%v GetComponent nil %v", playerId, componentName)
+	//		continue
+	//	}
+	//	newComponent := reflect.New(reflect.TypeOf(componentTemplate).Elem()).Interface().(entity.Saveable)
+	//	err := newComponent.Deserialize([]byte(componentData))
+	//	if err != nil {
+	//		logger.Error("%v Deserialize %v err %v", playerId, componentName, err.Error())
+	//		continue
+	//	}
+	//	saveData := newComponent.Serialize(false)
+	//	saveDbErr := GetServer().GetPlayerDb().SaveComponent(playerId, componentTemplate.GetNameLower(), saveData)
+	//	if saveDbErr != nil {
+	//		logger.Error("%v SaveDb %v err %v", playerId, componentTemplate.GetNameLower(), saveDbErr.Error())
+	//		continue
+	//	}
+	//	logger.Info("%v SaveDb %v", playerId, componentTemplate.GetNameLower())
+	//	cacheKeyName := GetComponentCacheKey(playerId, componentName)
+	//	cache.Get().Del(context.Background(), cacheKeyName)
+	//	logger.Debug("RemoveCache %v %v", playerId, cacheKeyName)
+	//}
+	return nil
 }
 
 // 注册客户端消息回调
@@ -201,7 +275,7 @@ func (this *GameServer) OnKickPlayer(connection gnet.Connection, packet *ProtoPa
 	player := this.GetPlayer(req.GetPlayerId())
 	if player != nil {
 		player.SetConnection(nil)
-		player.Save()
+		player.SaveDb(true)
 		this.RemovePlayer(player)
 	} else {
 		logger.Error("kick player failed account:%v playerId:%v gameServerId:%v",
@@ -218,3 +292,32 @@ func (this *GameServer) OnKickPlayer(connection gnet.Connection, packet *ProtoPa
 		//}
 	}
 }
+//
+//func generatePlayerDataFromComponentDataMap(playerId,accountId int64, componentDataMap map[string]string) {
+//	player := createTempPlayer()
+//	player.id = playerId
+//	player.accountId = accountId
+//	for componentName,componentData := range componentDataMap {
+//		componentTemplate := player.GetComponent(componentName)
+//		if componentTemplate == nil {
+//			logger.Error("%v GetComponent nil %v", playerId, componentName)
+//			continue
+//		}
+//		newComponent := reflect.New(reflect.TypeOf(componentTemplate).Elem()).Interface().(entity.Saveable)
+//		err := newComponent.Deserialize([]byte(componentData))
+//		if err != nil {
+//			logger.Error("%v Deserialize %v err %v", playerId, componentName, err.Error())
+//			continue
+//		}
+//		saveData := newComponent.Serialize(false)
+//		saveDbErr := GetServer().GetPlayerDb().SaveComponent(playerId, componentTemplate.GetNameLower(), saveData)
+//		if saveDbErr != nil {
+//			logger.Error("%v SaveDb %v err %v", playerId, componentTemplate.GetNameLower(), saveDbErr.Error())
+//			continue
+//		}
+//		logger.Info("%v SaveDb %v", playerId, componentTemplate.GetNameLower())
+//		cacheKeyName := GetComponentCacheKey(playerId, componentName)
+//		cache.Get().Del(context.Background(), cacheKeyName)
+//		logger.Debug("RemoveCache %v %v", playerId, cacheKeyName)
+//	}
+//}

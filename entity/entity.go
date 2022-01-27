@@ -15,6 +15,7 @@ type Component interface {
 
 	// 组件名
 	GetName() string
+	GetNameLower() string
 
 	// 所属的实体
 	GetEntity() Entity
@@ -22,8 +23,10 @@ type Component interface {
 
 // 保存数据接口
 type Saveable interface {
-	// 保存数据,保存成功后,重置dirty
-	Save() error
+	// 序列化
+	Serialize(forCache bool) interface{}
+	// 反序列化
+	Deserialize(bytes []byte) error
 	// 需要保存的数据是否修改了
 	IsDirty() bool
 	// 设置数据修改标记
