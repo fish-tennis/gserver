@@ -1,35 +1,34 @@
 package game
 
 import (
-	"fmt"
 	"github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
-	"time"
+	"github.com/fish-tennis/gserver/util"
 )
 
 // 玩家进游戏服
 func onPlayerEntryGameReq(connection gnet.Connection, packet *ProtoPacket) {
 	req := packet.Message().(*pb.PlayerEntryGameReq)
 	if connection.GetTag() != nil {
-		connection.Send(gnet.PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameRes), &pb.PlayerEntryGameRes{
-			Result: "has login",
+		connection.Send(Cmd(pb.CmdLogin_Cmd_PlayerEntryGameRes), &pb.PlayerEntryGameRes{
+			Result: "HasLogin",
 		})
 		return
 	}
 	// 验证LoginSession
 	if !cache.VerifyLoginSession(req.GetAccountId(), req.GetLoginSession()) {
-		connection.Send(gnet.PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameRes), &pb.PlayerEntryGameRes{
-			Result: "session error",
+		connection.Send(Cmd(pb.CmdLogin_Cmd_PlayerEntryGameRes), &pb.PlayerEntryGameRes{
+			Result: "SessionError",
 		})
 		return
 	}
 	playerData := &pb.PlayerData{}
 	hasData,err := gameServer.GetPlayerDb().FindPlayerByAccountId(req.GetAccountId(), req.GetRegionId(), playerData)
 	if err != nil {
-		connection.Send(gnet.PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameRes), &pb.PlayerEntryGameRes{
-			Result: err.Error(),
+		connection.Send(Cmd(pb.CmdLogin_Cmd_PlayerEntryGameRes), &pb.PlayerEntryGameRes{
+			Result: "DbError",
 		})
 		logger.Error(err.Error())
 		return
@@ -37,40 +36,19 @@ func onPlayerEntryGameReq(connection gnet.Connection, packet *ProtoPacket) {
 	var player *Player
 	isReconnect := false
 	if !hasData {
-		// 新建
-		playerData.Id = time.Now().UnixNano()
-		playerData.Name = fmt.Sprintf("player%v", playerData.Id) // test
-		playerData.AccountId = req.GetAccountId()
-		playerData.RegionId = req.GetRegionId()
-		player = CreatePlayerFromData(playerData)
-		err = gameServer.GetPlayerDb().InsertPlayer(player.GetId(), playerData)
-		if err != nil {
-			connection.Send(gnet.PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameRes), &pb.PlayerEntryGameRes{
-				Result: err.Error(),
-			})
-			logger.Error("%v", err)
-			return
-		}
-		err = player.SaveDb(false)
-		if err != nil {
-			connection.Send(gnet.PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameRes), &pb.PlayerEntryGameRes{
-				Result: err.Error(),
-			})
-			logger.Error("%v", err)
-			return
-		}
-		logger.Debug("new player:%v", playerData.Id)
+		connection.Send(Cmd(pb.CmdLogin_Cmd_PlayerEntryGameRes), &pb.PlayerEntryGameRes{
+			Result: "NoPlayer",
+			AccountId: req.GetAccountId(),
+			RegionId: req.GetRegionId(),
+		})
+		return
 	} else {
 		// 检查该账号是否已经有对应的在线玩家
 		player = gameServer.GetPlayer(playerData.Id)
 		if player != nil {
 			// 重连
 			isReconnect = true
-			logger.Debug("reconnect %v", player.GetId())
-			//connection.Send(gnet.PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameRes), &pb.PlayerEntryGameRes{
-			//	Result: "exist player",
-			//})
-			//return
+			logger.Debug("reconnect %v %v", player.GetId(), player.GetName())
 		} else {
 			player = CreatePlayerFromData(playerData)
 		}
@@ -92,7 +70,7 @@ func onPlayerEntryGameReq(connection gnet.Connection, packet *ProtoPacket) {
 			}
 			// 通知客户端稍后重新登录
 			connection.Send(Cmd(pb.CmdLogin_Cmd_PlayerEntryGameRes), &pb.PlayerEntryGameRes{
-				Result: "try later",
+				Result: "TryLater",
 			})
 			return
 		}
@@ -102,7 +80,7 @@ func onPlayerEntryGameReq(connection gnet.Connection, packet *ProtoPacket) {
 	// 玩家和连接设置关联
 	connection.SetTag(player.GetId())
 	player.SetConnection(connection)
-	logger.Debug("entry player:%v", player)
+	logger.Debug("entry player:%v %v", player.GetId(), player.GetName())
 	player.SendPlayerEntryGameRes(&pb.PlayerEntryGameRes{
 		Result: "ok",
 		AccountId: player.GetAccountId(),
@@ -111,4 +89,52 @@ func onPlayerEntryGameReq(connection gnet.Connection, packet *ProtoPacket) {
 	})
 	// 分发事件
 	player.FireEvent(&EventPlayerEntryGame{isReconnect: isReconnect})
+}
+
+// 创建角色
+func onCreatePlayerReq(connection gnet.Connection, packet *ProtoPacket) {
+	req := packet.Message().(*pb.CreatePlayerReq)
+	if connection.GetTag() != nil {
+		connection.Send(Cmd(pb.CmdLogin_Cmd_CreatePlayerRes), &pb.CreatePlayerRes{
+			Result: "HasLogin",
+		})
+		return
+	}
+	// 验证LoginSession
+	if !cache.VerifyLoginSession(req.GetAccountId(), req.GetLoginSession()) {
+		connection.Send(Cmd(pb.CmdLogin_Cmd_CreatePlayerRes), &pb.CreatePlayerRes{
+			Result: "SessionError",
+		})
+		return
+	}
+	playerData := &pb.PlayerData{
+		Id: util.GenUniqueId(),
+		Name: req.Name,
+		AccountId: req.AccountId,
+		RegionId: req.RegionId,
+		BaseInfo: &pb.BaseInfo{
+			Gender: req.Gender,
+			Level: 1,
+			Exp: 0,
+		},
+	}
+	err,isDuplicateKey := gameServer.GetPlayerDb().InsertPlayer(playerData.Id, playerData)
+	if err != nil {
+		result := "DbError"
+		if isDuplicateKey {
+			result = "DuplicateName"
+		}
+		connection.Send(Cmd(pb.CmdLogin_Cmd_CreatePlayerRes), &pb.CreatePlayerRes{
+			Result: result,
+		})
+		logger.Error("CreatePlayer result:%v err:%v", result, err)
+		return
+	}
+	logger.Debug("CreatePlayer:%v %v", playerData.Id, playerData.Name)
+	connection.Send(Cmd(pb.CmdLogin_Cmd_CreatePlayerRes), &pb.CreatePlayerRes{
+		Result: "ok",
+		AccountId: req.AccountId,
+		RegionId: req.RegionId,
+		Name: req.Name,
+	})
 }

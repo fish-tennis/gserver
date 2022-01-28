@@ -226,6 +226,7 @@ func (this *GameServer) registerClientPacket(clientHandler *ClientConnectionHand
 	// 手动注册消息回调
 	clientHandler.Register(gnet.PacketCommand(pb.CmdInner_Cmd_HeartBeatReq), onHeartBeatReq, func() proto.Message {return &pb.HeartBeatReq{}})
 	clientHandler.Register(gnet.PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameReq), onPlayerEntryGameReq, func() proto.Message {return &pb.PlayerEntryGameReq{}})
+	clientHandler.Register(gnet.PacketCommand(pb.CmdLogin_Cmd_CreatePlayerReq), onCreatePlayerReq, func() proto.Message {return &pb.CreatePlayerReq{}})
 	// 通过反射自动注册消息回调
 	clientHandler.autoRegisterPlayerComponentProto()
 	// proto_code_gen工具生成的回调函数

@@ -10,6 +10,7 @@ import (
 	"github.com/fish-tennis/gserver/game"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/login"
+	"math/rand"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -17,6 +18,7 @@ import (
 	"runtime"
 	"strings"
 	"syscall"
+	"time"
 )
 
 func main() {
@@ -38,7 +40,9 @@ func main() {
 		return
 	}
 
+	runtime.GOMAXPROCS(runtime.NumCPU())
 	gnet.SetLogLevel(gnet.DebugLevel)
+	rand.Seed(time.Now().UnixNano())
 
 	// 根据命令行参数 创建不同的服务器实例
 	serverType := getServerTypeFromConfigFile(configFile)

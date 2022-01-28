@@ -24,7 +24,6 @@ func NewBaseInfo(player *Player, baseInfo *pb.BaseInfo) *BaseInfo {
 	data := baseInfo
 	if data == nil {
 		data = &pb.BaseInfo{
-			Name: player.GetName(),
 			Level: 1,
 			Exp: 0,
 		}

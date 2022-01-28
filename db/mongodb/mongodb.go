@@ -113,10 +113,26 @@ func (this *MongoDb) FindAccount(accountName string, data interface{}) (bool,err
 }
 
 // 新建账号(insert)
-func (this *MongoDb) InsertAccount(accountData interface{}) error {
+func (this *MongoDb) InsertAccount(accountData interface{}) (err error, isDuplicateKey bool) {
 	col := this.mongoDatabase.Collection(this.collectionName)
-	_, err := col.InsertOne(context.Background(), accountData)
-	return err
+	_, err = col.InsertOne(context.Background(), accountData)
+	if err != nil {
+		isDuplicateKey = this.IsDuplicateKeyError(err)
+	}
+	return
+}
+
+// 检查是否是key重复错误
+func (this *MongoDb) IsDuplicateKeyError(err error) bool {
+	switch e := err.(type) {
+		case mongo.WriteException:
+			for _,writeErr := range e.WriteErrors {
+				if writeErr.Code == 11000 {
+					return true
+				}
+			}
+	}
+	return false
 }
 
 // 保存账号数据(update account by accountId)
@@ -150,13 +166,13 @@ func (this *MongoDb) FindPlayerByAccountId(accountId int64, regionId int32, play
 	return true,nil
 }
 
-func (this *MongoDb) InsertPlayer(playerId int64, playerData interface{}) error {
+func (this *MongoDb) InsertPlayer(playerId int64, playerData interface{}) (err error, isDuplicateKey bool) {
 	col := this.mongoDatabase.Collection(this.collectionName)
-	_, insertErr := col.InsertOne(context.Background(), playerData)
-	if insertErr != nil {
-		return insertErr
+	_, err = col.InsertOne(context.Background(), playerData)
+	if err != nil {
+		isDuplicateKey = this.IsDuplicateKeyError(err)
 	}
-	return nil
+	return
 }
 
 // 保存玩家数据(update player by playerId)

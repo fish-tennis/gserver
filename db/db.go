@@ -7,7 +7,7 @@ type AccountDb interface {
 	FindAccount(accountName string, data interface{}) (bool,error)
 
 	// 新建账号(insert)
-	InsertAccount(accountData interface{}) error
+	InsertAccount(accountData interface{}) (err error, isDuplicateKey bool)
 
 	// 保存账号数据(update account by accountId)
 	SaveAccount(accountId int64, accountData interface{}) error
@@ -24,7 +24,7 @@ type PlayerDb interface {
 	FindPlayerByAccountId(accountId int64, regionId int32, playerData interface{}) (bool,error)
 
 	// 新建玩家(insert)
-	InsertPlayer(playerId int64, playerData interface{}) error
+	InsertPlayer(playerId int64, playerData interface{}) (err error, isDuplicateKey bool)
 
 	// 保存玩家数据(update player by playerId)
 	SavePlayer(playerId int64, playerData interface{}) error

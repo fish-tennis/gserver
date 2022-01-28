@@ -39,38 +39,12 @@ func TestClient(t *testing.T)  {
 	clientHandler.Register(gnet.PacketCommand(pb.CmdLogin_Cmd_LoginRes), clientHandler.onLoginRes, func() proto.Message {
 		return &pb.LoginRes{}
 	})
+	clientHandler.Register(gnet.PacketCommand(pb.CmdLogin_Cmd_AccountRes), clientHandler.onAccountRes, func() proto.Message {
+		return &pb.AccountRes{}
+	})
 	if netMgr.NewConnector(ctx,"127.0.0.1:10002", connectionConfig, clientCodec, clientHandler, nil) == nil {
 		panic("connect error")
 	}
-
-	//// 监听系统的kill信号
-	//signalKillNotify := make(chan os.Signal, 1)
-	//signal.Notify(signalKillNotify, os.Interrupt, os.Kill, syscall.SIGTERM)
-	////// windows系统上,加一个控制台输入,以方便调试
-	////if runtime.GOOS == "windows" {
-	////	go func() {
-	////		consoleReader := bufio.NewReader(os.Stdin)
-	////		for {
-	////			lineBytes, _, _ := consoleReader.ReadLine()
-	////			line := strings.ToLower(string(lineBytes))
-	////			//gnet.LogDebug("line:%v", line)
-	////			if line == "close" || line == "exit" {
-	////				gnet.LogDebug("kill by console input")
-	////				// 在windows系统模拟一个kill信号,以方便测试服务器退出流程
-	////				signalKillNotify <- os.Kill
-	////			}
-	////		}
-	////	}()
-	////}
-	//// 阻塞等待系统关闭信号
-	//gnet.LogDebug("wait for kill signal")
-	//select {
-	//case <-signalKillNotify:
-	//	gnet.LogDebug("signalKillNotify, cancel ctx")
-	//	// 通知所有协程关闭,所有监听<-ctx.Done()的地方会收到通知
-	//	cancel()
-	//	break
-	//}
 	netMgr.Shutdown(true)
 }
 
@@ -90,10 +64,11 @@ func (this *testLoginHandler) OnConnected(connection gnet.Connection, success bo
 	})
 }
 
+// 账号登录回调
 func (this *testLoginHandler) onLoginRes(connection gnet.Connection, packet *gnet.ProtoPacket) {
 	logger.Debug("onLoginRes:%v", packet.Message())
 	res := packet.Message().(*pb.LoginRes)
-	if res.GetResult() == "not reg" {
+	if res.GetResult() == "NotReg" {
 		connection.Send(gnet.PacketCommand(pb.CmdLogin_Cmd_AccountReg), &pb.AccountReg{
 			AccountName: "test",
 			Password: "test",
@@ -125,6 +100,19 @@ func (this *testLoginHandler) onLoginRes(connection gnet.Connection, packet *gne
 	}
 }
 
+// 注册账号回调
+func (this *testLoginHandler) onAccountRes(connection gnet.Connection, packet *gnet.ProtoPacket) {
+	logger.Debug("onAccountRes:%v", packet.Message())
+	res := packet.Message().(*pb.AccountRes)
+	if res.Result == "ok" {
+		connection.Send(gnet.PacketCommand(pb.CmdLogin_Cmd_LoginReq), &pb.LoginReq{
+			AccountName: "test",
+			Password: "test",
+		})
+	}
+}
+
+
 // 游戏服连接
 type testGameHandler struct {
 	gnet.DefaultConnectionHandler
@@ -140,6 +128,7 @@ func (this *testGameHandler) RegisterPacket() {
 	})
 	this.Register(gnet.PacketCommand(pb.CmdInner_Cmd_HeartBeatRes), this.onHeartBeatRes, func() proto.Message {return new(pb.HeartBeatRes)})
 	this.Register(gnet.PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameRes), this.onPlayerEntryGameRes, func() proto.Message {return new(pb.PlayerEntryGameRes)})
+	this.Register(gnet.PacketCommand(pb.CmdLogin_Cmd_CreatePlayerRes), this.onCreatePlayerRes, func() proto.Message {return new(pb.CreatePlayerRes)})
 	this.Register(gnet.PacketCommand(pb.CmdMoney_Cmd_CoinRes), this.onCoinRes, func() proto.Message {return new(pb.CoinRes)})
 }
 
@@ -155,9 +144,10 @@ func (this *testGameHandler) OnConnected(connection gnet.Connection, success boo
 }
 
 func (this *testGameHandler) onHeartBeatRes(connection gnet.Connection, packet *gnet.ProtoPacket) {
-	//gnet.LogDebug("onHeartBeatRes:%v", packet.Message())
+	//logger.Debug("onHeartBeatRes:%v", packet.Message())
 }
 
+// 登录游戏服回调
 func (this *testGameHandler) onPlayerEntryGameRes(connection gnet.Connection, packet *gnet.ProtoPacket) {
 	logger.Debug("onPlayerEntryGameRes:%v", packet.Message())
 	res := packet.Message().(*pb.PlayerEntryGameRes)
@@ -168,8 +158,19 @@ func (this *testGameHandler) onPlayerEntryGameRes(connection gnet.Connection, pa
 		})
 		return
 	}
+	// 还没角色,则创建新角色
+	if res.GetResult() == "NoPlayer" {
+		connection.Send(gnet.PacketCommand(pb.CmdLogin_Cmd_CreatePlayerReq), &pb.CreatePlayerReq{
+			AccountId: this.loginRes.GetAccountId(),
+			LoginSession: this.loginRes.GetLoginSession(),
+			RegionId: 1,
+			Name: "TestClient",
+			Gender: 1,
+		})
+		return
+	}
 	// 登录遇到问题,服务器提示客户端稍后重试
-	if res.GetResult() == "try later" {
+	if res.GetResult() == "TryLater" {
 		// 延迟重试
 		time.AfterFunc(time.Second, func() {
 			connection.Send(gnet.PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameReq), &pb.PlayerEntryGameReq{
@@ -181,6 +182,20 @@ func (this *testGameHandler) onPlayerEntryGameRes(connection gnet.Connection, pa
 	}
 }
 
+// 创建角色回调
+func (this *testGameHandler) onCreatePlayerRes(connection gnet.Connection, packet *gnet.ProtoPacket) {
+	logger.Debug("onCreatePlayerRes:%v", packet.Message())
+	res := packet.Message().(*pb.CreatePlayerRes)
+	if res.Result == "ok" {
+		connection.Send(gnet.PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameReq), &pb.PlayerEntryGameReq{
+			AccountId: this.loginRes.GetAccountId(),
+			LoginSession: this.loginRes.GetLoginSession(),
+			RegionId: 1,
+		})
+	}
+}
+
+// 逻辑消息回调
 func (this *testGameHandler) onCoinRes(connection gnet.Connection, packet *gnet.ProtoPacket) {
 	logger.Debug("onCoinRes:%v", packet.Message())
 }

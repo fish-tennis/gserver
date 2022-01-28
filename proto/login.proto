@@ -21,6 +21,8 @@ enum CmdLogin {
 	Cmd_AccountRes = 1004;
 	Cmd_PlayerEntryGameReq = 1005;
 	Cmd_PlayerEntryGameRes = 1006;
+	Cmd_CreatePlayerReq = 1007;
+	Cmd_CreatePlayerRes = 1008;
 }
 
 // 账号登录请求
@@ -71,4 +73,21 @@ message PlayerEntryGameRes {
   int64 accountId = 2;
   int64 playerId = 3;
   int32 regionId = 4; // 区服id
+}
+
+// 创建角色
+message CreatePlayerReq {
+  int64 accountId = 1;
+  string loginSession = 2; // 账号验证成功后的缓存session
+  int32 regionId = 3; // 区服id
+  string name = 4; // 玩家名
+  int32 gender = 5; // 性别
+}
+
+// 创建角色
+message CreatePlayerRes {
+  string result = 1;
+  int64 accountId = 2;
+  int32 regionId = 3; // 区服id
+  string name = 4; // 玩家名
 }
