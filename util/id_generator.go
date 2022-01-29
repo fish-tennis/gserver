@@ -1,14 +1,17 @@
 package util
 
-import "time"
+import (
+	"github.com/fish-tennis/snowflake"
+)
 
 // 雪花算法
-type SnowFlake struct {
+var snowFlake *snowflake.SnowFlake
 
+func InitIdGenerator(workerId uint16) {
+	snowFlake = snowflake.NewSnowFlake(workerId)
 }
 
 // 生成唯一id
 func GenUniqueId() int64 {
-	// TODO:雪花算法实现
-	return time.Now().UnixNano()
+	return int64(snowFlake.NextId())
 }

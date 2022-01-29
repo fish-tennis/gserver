@@ -90,6 +90,8 @@ func (this *BaseServer) Init(ctx context.Context, configFile string) bool {
 	this.serverList.localServerInfo = this.serverInfo
 	this.serverList.serverConnectorFunc = this.DefaultServerConnectorFunc
 	this.updateInterval = time.Second
+	// 初始化id生成器
+	util.InitIdGenerator(uint16(this.serverInfo.ServerId))
 	return true
 }
 
