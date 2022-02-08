@@ -1,6 +1,7 @@
-package game
+package player
 
 import (
+	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 	"google.golang.org/protobuf/proto"
@@ -15,15 +16,14 @@ type Money struct {
 func NewMoney(player *Player, bytes []byte) *Money {
 	component := &Money{
 		DataComponent: DataComponent{
-			BaseComponent:BaseComponent{
+			BaseComponent: BaseComponent{
 				Player: player,
-				name: "Money",
+				Name:   "Money",
 			},
 		},
 	}
-	var data *pb.Money
 	if len(bytes) == 0 {
-		data = &pb.Money{
+		data := &pb.Money{
 			Coin: 0,
 			Diamond: 0,
 		}
@@ -50,7 +50,11 @@ func (this *Money) Serialize(forCache bool) interface{} {
 
 func (this *Money) Deserialize(bytes []byte) error {
 	data := &pb.Money{}
-	proto.Unmarshal(bytes, data)
+	err := proto.Unmarshal(bytes, data)
+	if err != nil {
+		logger.Error("%v", err)
+		return err
+	}
 	this.data = data
 	return nil
 }
@@ -58,13 +62,13 @@ func (this *Money) Deserialize(bytes []byte) error {
 // 事件接口
 func (this *Money) OnEvent(event interface{}) {
 	switch v := event.(type) {
-	case *EventPlayerEntryGame:
+	case *internal.EventPlayerEntryGame:
 		this.OnPlayerEntryGame(v)
 	}
 }
 
 // 事件处理
-func (this *Money) OnPlayerEntryGame( eventPlayerEntryGame *EventPlayerEntryGame) {
+func (this *Money) OnPlayerEntryGame( eventPlayerEntryGame *internal.EventPlayerEntryGame) {
 	logger.Debug("OnEvent:%v", eventPlayerEntryGame)
 }
 

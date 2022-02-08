@@ -1,4 +1,4 @@
-package game
+package player
 
 import (
 	"github.com/fish-tennis/gserver/logger"
@@ -15,9 +15,9 @@ type BaseInfo struct {
 func NewBaseInfo(player *Player, baseInfo *pb.BaseInfo) *BaseInfo {
 	component := &BaseInfo{
 		DataComponent: DataComponent{
-			BaseComponent:BaseComponent{
+			BaseComponent: BaseComponent{
 				Player: player,
-				name: "BaseInfo",
+				Name:   "BaseInfo",
 			},
 		},
 	}

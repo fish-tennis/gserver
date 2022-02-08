@@ -1,9 +1,9 @@
-package common
+package internal
 
 import (
 	"context"
 	"fmt"
-	"github.com/fish-tennis/gnet"
+	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
@@ -32,17 +32,17 @@ type ServerList struct {
 	// 自己的服务器信息
 	localServerInfo *pb.ServerInfo
 	// 已连接的服务器
-	connectedServerConnectors      map[int32]gnet.Connection // serverId-Connection
+	connectedServerConnectors      map[int32]Connection // serverId-Connection
 	connectedServerConnectorsMutex sync.RWMutex
 	// 服务器连接创建函数,供外部扩展
-	serverConnectorFunc func(ctx context.Context, info *pb.ServerInfo) gnet.Connection
+	serverConnectorFunc func(ctx context.Context, info *pb.ServerInfo) Connection
 }
 
 func NewServerList() *ServerList {
 	serverList := &ServerList{
 		activeTimeout:             3 * 1000, // 默认3秒
 		serverInfos:               make(map[int32]*pb.ServerInfo),
-		connectedServerConnectors: make(map[int32]gnet.Connection),
+		connectedServerConnectors: make(map[int32]Connection),
 		serverInfoTypeMap:         make(map[string][]*pb.ServerInfo),
 	}
 	return serverList
@@ -185,7 +185,7 @@ func (this *ServerList) GetServersByType(serverType string) []*pb.ServerInfo {
 }
 
 // 获取服务器的连接
-func (this *ServerList) GetServerConnector(serverId int32 ) gnet.Connection {
+func (this *ServerList) GetServerConnector(serverId int32 ) Connection {
 	this.connectedServerConnectorsMutex.RLock()
 	connection,_ := this.connectedServerConnectors[serverId]
 	this.connectedServerConnectorsMutex.RUnlock()
@@ -193,7 +193,7 @@ func (this *ServerList) GetServerConnector(serverId int32 ) gnet.Connection {
 }
 
 // 发消息给另一个服务器
-func (this *ServerList) SendToServer(serverId int32, cmd Cmd, message proto.Message) bool {
+func (this *ServerList) SendToServer(serverId int32, cmd PacketCommand, message proto.Message) bool {
 	connection := this.GetServerConnector(serverId)
 	if connection != nil && connection.IsConnected() {
 		return connection.Send(cmd, message)

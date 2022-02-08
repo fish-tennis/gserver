@@ -6,7 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/fish-tennis/gnet"
-	"github.com/fish-tennis/gserver/common"
+	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/game"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/login"
@@ -111,7 +111,7 @@ func getServerTypeFromConfigFile(configFile string) string {
 }
 
 // 创建相应类型的服务器
-func createServer(serverType string) common.Server {
+func createServer(serverType string) internal.Server {
 	switch serverType {
 	case "login":
 		return new(login.LoginServer)

@@ -2,22 +2,24 @@ package game
 
 import (
 	"fmt"
-	"github.com/fish-tennis/gnet"
+	. "github.com/fish-tennis/gnet"
+	. "github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
+	"github.com/fish-tennis/gserver/player"
 	"github.com/fish-tennis/gserver/util"
 	"google.golang.org/protobuf/proto"
 	"reflect"
 	"strings"
 )
 
-type PlayerPacketHandler func(player Player, connection Connection, packet *ProtoPacket)
+type PlayerPacketHandler func(player player.Player, connection Connection, packet *ProtoPacket)
 
-type PlayerComponentPacketHandler func(component PlayerComponent, connection Connection, packet *ProtoPacket)
+type PlayerComponentPacketHandler func(component player.PlayerComponent, connection Connection, packet *ProtoPacket)
 
 // 客户端连接的handler
 type ClientConnectionHandler struct {
-	gnet.DefaultConnectionHandler
-	playerPacketHandlers map[Cmd]*packetHandlerInfo
+	DefaultConnectionHandler
+	playerPacketHandlers map[PacketCommand]*packetHandlerInfo
 }
 
 type packetHandlerInfo struct {
@@ -25,19 +27,19 @@ type packetHandlerInfo struct {
 	method reflect.Method
 }
 
-func NewClientConnectionHandler(protoCodec *gnet.ProtoCodec) *ClientConnectionHandler {
+func NewClientConnectionHandler(protoCodec *ProtoCodec) *ClientConnectionHandler {
 	return &ClientConnectionHandler{
-		DefaultConnectionHandler: *gnet.NewDefaultConnectionHandler(protoCodec),
-		playerPacketHandlers:     make(map[gnet.PacketCommand]*packetHandlerInfo),
+		DefaultConnectionHandler: *NewDefaultConnectionHandler(protoCodec),
+		playerPacketHandlers:     make(map[PacketCommand]*packetHandlerInfo),
 	}
 }
 
-func (this* ClientConnectionHandler) OnRecvPacket(connection Connection, packet gnet.Packet) {
+func (this*ClientConnectionHandler) OnRecvPacket(connection Connection, packet Packet) {
 	if connection.GetTag() != nil {
 		// 在线玩家的消息,先检查通过反射注册的回调函数
-		player := gameServer.GetPlayer(connection.GetTag().(int64))
+		player := _gameServer.GetPlayer(connection.GetTag().(int64))
 		if player != nil {
-			if protoPacket,ok := packet.(*gnet.ProtoPacket); ok {
+			if protoPacket,ok := packet.(*ProtoPacket); ok {
 				handlerInfo := this.playerPacketHandlers[protoPacket.Command()]
 				if handlerInfo != nil {
 					// 在线玩家的消息,自动路由到对应的玩家组件上
@@ -58,7 +60,7 @@ func (this* ClientConnectionHandler) OnRecvPacket(connection Connection, packet 
 	this.DefaultConnectionHandler.OnRecvPacket(connection, packet)
 }
 
-func (this* ClientConnectionHandler) registerMethod(command Cmd, componentName string, method reflect.Method) {
+func (this*ClientConnectionHandler) registerMethod(command PacketCommand, componentName string, method reflect.Method) {
 	this.playerPacketHandlers[command] = &packetHandlerInfo{
 		componentName: componentName,
 		method: method,
@@ -69,9 +71,9 @@ func (this* ClientConnectionHandler) registerMethod(command Cmd, componentName s
 // 根据proto的命名规则和玩家组件里消息回调的格式,通过反射自动生成消息的注册
 // 用了反射,性能有所损失
 // 也可以用proto_code_gen工具来生成代码,可以避免用反射所带来的性能损失
-func (this* ClientConnectionHandler) autoRegisterPlayerComponentProto() {
-	player := createTempPlayer()
-	for _,component := range player.components {
+func (this*ClientConnectionHandler) autoRegisterPlayerComponentProto() {
+	player := player.CreateTempPlayer(0,0)
+	for _,component := range player.GetComponents() {
 		typ := reflect.TypeOf(component)
 		// 如: game.Money -> Money
 		componentStructName := typ.String()[strings.LastIndex(typ.String(),".")+1:]
@@ -99,7 +101,7 @@ func (this* ClientConnectionHandler) autoRegisterPlayerComponentProto() {
 			if messageId == 0 {
 				continue
 			}
-			cmd := gnet.PacketCommand(messageId)
+			cmd := PacketCommand(messageId)
 			// 注册消息回调到组件上
 			this.registerMethod(cmd, component.GetName(), method)
 			// 注册消息的构造函数
@@ -112,10 +114,10 @@ func (this* ClientConnectionHandler) autoRegisterPlayerComponentProto() {
 }
 
 // 用于proto_code_gen工具自动生成的消息注册代码
-func (this* ClientConnectionHandler) RegisterProtoCodeGen(componentName string, cmd Cmd, creator gnet.ProtoMessageCreator, handler func(c Component, m proto.Message)) {
-	this.Register(cmd, func(connection gnet.Connection, packet *gnet.ProtoPacket) {
+func (this*ClientConnectionHandler) RegisterProtoCodeGen(componentName string, cmd PacketCommand, creator ProtoMessageCreator, handler func(c Component, m proto.Message)) {
+	this.Register(cmd, func(connection Connection, packet *ProtoPacket) {
 		if connection.GetTag() != nil {
-			player := gameServer.GetPlayer(connection.GetTag().(int64))
+			player := _gameServer.GetPlayer(connection.GetTag().(int64))
 			if player != nil {
 				// 在线玩家的消息,自动路由到对应的玩家组件上
 				component := player.GetComponent(componentName)

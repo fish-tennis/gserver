@@ -1,8 +1,8 @@
-package common
+package internal
 
 import (
 	"context"
-	"github.com/fish-tennis/gnet"
+	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
@@ -33,11 +33,11 @@ type BaseServerConfig struct {
 	// 客户端监听地址
 	ClientListenAddr string
 	// 客户端连接配置
-	ClientConnConfig gnet.ConnectionConfig
+	ClientConnConfig ConnectionConfig
 	// 服务器监听地址
 	ServerListenAddr string
 	// 服务器连接配置
-	ServerConnConfig gnet.ConnectionConfig
+	ServerConnConfig ConnectionConfig
 	// mongodb地址
 	MongoUri string
 	// redis地址
@@ -58,11 +58,11 @@ type BaseServer struct {
 	// 更新次数
 	updateCount int64
 	// 服务器连接配置
-	serverConnectorConfig gnet.ConnectionConfig
+	serverConnectorConfig ConnectionConfig
 	// 默认的服务器连接接口
-	defaultServerConnectorHandler gnet.ConnectionHandler
+	defaultServerConnectorHandler ConnectionHandler
 	// 默认的服务器之间的编解码
-	defaultServerConnectorCodec *gnet.ProtoCodec
+	defaultServerConnectorCodec *ProtoCodec
 }
 
 func (this *BaseServer) GetConfigFile() string {
@@ -104,7 +104,7 @@ func (this *BaseServer) Run(ctx context.Context) {
 }
 
 func (this *BaseServer) OnUpdate(ctx context.Context, updateCount int64) {
-	//gnet.LogDebug("BaseServer.OnUpdate")
+	//LogDebug("BaseServer.OnUpdate")
 	// 定时上传本地服务器的信息
 	this.serverInfo.LastActiveTime = util.GetCurrentMS()
 	this.GetServerList().Register(this.serverInfo)
@@ -114,7 +114,7 @@ func (this *BaseServer) OnUpdate(ctx context.Context, updateCount int64) {
 func (this *BaseServer) Exit() {
 	logger.Debug("BaseServer.Exit")
 	// 网络关闭
-	gnet.GetNetMgr().Shutdown(true)
+	GetNetMgr().Shutdown(true)
 	// 缓存关闭
 	if cache.Get() != nil {
 		if closer,ok := cache.Get().(io.Closer); ok {
@@ -147,23 +147,23 @@ func (this *BaseServer) updateLoop(ctx context.Context) {
 }
 
 // 设置默认的服务器间的编解码和回调接口
-func (this *BaseServer) SetDefaultServerConnectorConfig(config gnet.ConnectionConfig) {
+func (this *BaseServer) SetDefaultServerConnectorConfig(config ConnectionConfig) {
 	this.serverConnectorConfig = config
-	this.defaultServerConnectorCodec = gnet.NewProtoCodec(nil)
-	handler := gnet.NewDefaultConnectionHandler(this.defaultServerConnectorCodec)
-	handler.SetOnDisconnectedFunc(func(connection gnet.Connection) {
+	this.defaultServerConnectorCodec = NewProtoCodec(nil)
+	handler := NewDefaultConnectionHandler(this.defaultServerConnectorCodec)
+	handler.SetOnDisconnectedFunc(func(connection Connection) {
 		if connection.GetTag() == nil {
 			return
 		}
 		serverId := connection.GetTag().(int32)
 		this.serverList.OnServerConnectorDisconnect(serverId)
 	})
-	handler.RegisterHeartBeat(gnet.PacketCommand(pb.CmdInner_Cmd_HeartBeatReq), func() proto.Message {
+	handler.RegisterHeartBeat(PacketCommand(pb.CmdInner_Cmd_HeartBeatReq), func() proto.Message {
 		return &pb.HeartBeatReq{
 			Timestamp: uint64(util.GetCurrentMS()),
 		}
 	})
-	handler.Register(gnet.PacketCommand(pb.CmdInner_Cmd_HeartBeatRes), func(connection gnet.Connection, packet *gnet.ProtoPacket) {
+	handler.Register(PacketCommand(pb.CmdInner_Cmd_HeartBeatRes), func(connection Connection, packet *ProtoPacket) {
 	}, func() proto.Message {
 		return new(pb.HeartBeatRes)
 	})
@@ -171,12 +171,12 @@ func (this *BaseServer) SetDefaultServerConnectorConfig(config gnet.ConnectionCo
 }
 
 // 默认的服务器连接接口
-func (this *BaseServer) DefaultServerConnectorFunc(ctx context.Context, info *pb.ServerInfo) gnet.Connection {
-	return gnet.GetNetMgr().NewConnector(ctx, info.GetServerListenAddr(), this.serverConnectorConfig,
+func (this *BaseServer) DefaultServerConnectorFunc(ctx context.Context, info *pb.ServerInfo) Connection {
+	return GetNetMgr().NewConnector(ctx, info.GetServerListenAddr(), this.serverConnectorConfig,
 		this.defaultServerConnectorCodec, this.defaultServerConnectorHandler, nil)
 }
 
 // 发消息给另一个服务器
-func (this *BaseServer) SendToServer(serverId int32, cmd Cmd, message proto.Message) bool {
+func (this *BaseServer) SendToServer(serverId int32, cmd PacketCommand, message proto.Message) bool {
 	return this.serverList.SendToServer(serverId, cmd, message)
 }

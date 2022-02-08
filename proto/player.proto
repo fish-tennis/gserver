@@ -2,6 +2,8 @@ syntax = "proto3";
 
 option go_package = "./pb";
 
+import "item.proto";
+
 // 每个proto文件设置package为文件名,可以防止enum命名冲突
 package player;
 
@@ -18,6 +20,12 @@ message Money {
   int32 diamond = 2; // 钻石
 }
 
+// 背包数据
+message Bag {
+  map<int32,int32> countItems = 1;
+  map<int64,UniqueItem> uniqueItems = 2;
+}
+
 // 玩家在数据库中的保存格式
 // 用于一次性把玩家数据加载进来
 message PlayerData {
@@ -27,4 +35,5 @@ message PlayerData {
   int32 regionId = 4; // 区服id
   BaseInfo baseInfo = 5;
   bytes money = 6;
+  bytes bag = 7;
 }

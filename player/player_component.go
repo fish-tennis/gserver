@@ -1,14 +1,14 @@
-package game
+package player
 
 import (
 	"fmt"
-	"github.com/fish-tennis/gserver/entity"
+	"github.com/fish-tennis/gserver/internal"
 	"strings"
 )
 
 // 玩家组件接口
 type PlayerComponent interface {
-	entity.Component
+	internal.Component
 	// 关联的玩家对象
 	GetPlayer() *Player
 }
@@ -17,20 +17,20 @@ type PlayerComponent interface {
 type BaseComponent struct {
 	Player *Player
 	// 组件名
-	name string
+	Name string
 }
 
 // 组件名
 func (this *BaseComponent) GetName() string {
-	return this.name
+	return this.Name
 }
 
 func (this *BaseComponent) GetNameLower() string {
-	return strings.ToLower(this.name)
+	return strings.ToLower(this.Name)
 }
 
 // entity.Component.GetEntity()的实现
-func (this *BaseComponent) GetEntity() entity.Entity {
+func (this *BaseComponent) GetEntity() internal.Entity {
 	return this.Player
 }
 

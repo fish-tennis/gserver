@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+option go_package = "./pb";
+
+// 每个proto文件设置package为文件名,可以防止enum命名冲突
+package player;
+
+// 可数的普通物品(可叠加的)
+message CountItem {
+  int32 itemCfgId = 1; // 物品配置id
+  int32 itemCount = 2; // 物品数量
+}
+
+// 不可叠加的物品
+message UniqueItem {
+  int64 uniqueId = 1; // 唯一id
+  int32 itemCfgId = 2; // 物品配置id
+}

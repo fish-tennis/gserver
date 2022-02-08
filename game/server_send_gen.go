@@ -11,8 +11,11 @@
 //  }
 package game
 
-import "github.com/fish-tennis/gserver/pb"
+import (
+	"github.com/fish-tennis/gserver/pb"
+	. "github.com/fish-tennis/gnet"
+)
 
 func SendPacketKickPlayer(conn Connection, packet *pb.KickPlayer) bool {
-	return conn.Send(Cmd(pb.CmdInner_Cmd_KickPlayer), packet)
+	return conn.Send(PacketCommand(pb.CmdInner_Cmd_KickPlayer), packet)
 }

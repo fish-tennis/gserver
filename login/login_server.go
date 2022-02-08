@@ -3,9 +3,9 @@ package login
 import (
 	"context"
 	"encoding/json"
-	"github.com/fish-tennis/gnet"
+	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
-	"github.com/fish-tennis/gserver/common"
+	. "github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/db"
 	"github.com/fish-tennis/gserver/db/mongodb"
 	"github.com/fish-tennis/gserver/logger"
@@ -17,12 +17,12 @@ import (
 
 var (
 	// singleton
-	loginServer *LoginServer
+	_loginServer *LoginServer
 )
 
 // 登录服
 type LoginServer struct {
-	common.BaseServer
+	BaseServer
 	config *LoginServerConfig
 	// 账号数据接口
 	accountDb db.AccountDb
@@ -30,7 +30,7 @@ type LoginServer struct {
 
 // 登录服配置
 type LoginServerConfig struct {
-	common.BaseServerConfig
+	BaseServerConfig
 }
 
 // 账号db接口
@@ -40,16 +40,16 @@ func (this *LoginServer) GetAccountDb() db.AccountDb {
 
 // 初始化
 func (this *LoginServer) Init(ctx context.Context, configFile string) bool {
-	loginServer = this
+	_loginServer = this
 	if !this.BaseServer.Init(ctx, configFile) {
 		return false
 	}
 	this.readConfig()
 	this.initDb()
 	this.initCache()
-	netMgr := gnet.GetNetMgr()
-	clientCodec := gnet.NewProtoCodec(nil)
-	clientHandler := gnet.NewDefaultConnectionHandler(clientCodec)
+	netMgr := GetNetMgr()
+	clientCodec := NewProtoCodec(nil)
+	clientHandler := NewDefaultConnectionHandler(clientCodec)
 	this.registerClientPacket(clientHandler)
 	if netMgr.NewListener(ctx, this.config.ClientListenAddr, this.config.ClientConnConfig, clientCodec, clientHandler, nil) == nil {
 		panic("listen failed")
@@ -116,16 +116,16 @@ func (this *LoginServer) initCache() {
 }
 
 // 注册客户端消息回调
-func (this *LoginServer) registerClientPacket(clientHandler *gnet.DefaultConnectionHandler) {
-	clientHandler.Register(gnet.PacketCommand(pb.CmdInner_Cmd_HeartBeatReq), onHeartBeatReq, func() proto.Message {return &pb.HeartBeatReq{}})
-	clientHandler.Register(gnet.PacketCommand(pb.CmdLogin_Cmd_LoginReq), onLoginReq, func() proto.Message {return &pb.LoginReq{}})
-	clientHandler.Register(gnet.PacketCommand(pb.CmdLogin_Cmd_AccountReg), onAccountReg, func() proto.Message {return &pb.AccountReg{}})
+func (this *LoginServer) registerClientPacket(clientHandler *DefaultConnectionHandler) {
+	clientHandler.Register(PacketCommand(pb.CmdInner_Cmd_HeartBeatReq), onHeartBeatReq, func() proto.Message {return &pb.HeartBeatReq{}})
+	clientHandler.Register(PacketCommand(pb.CmdLogin_Cmd_LoginReq), onLoginReq, func() proto.Message {return &pb.LoginReq{}})
+	clientHandler.Register(PacketCommand(pb.CmdLogin_Cmd_AccountReg), onAccountReg, func() proto.Message {return &pb.AccountReg{}})
 }
 
 // 客户端心跳回复
-func onHeartBeatReq(connection gnet.Connection, packet *gnet.ProtoPacket) {
+func onHeartBeatReq(connection Connection, packet *ProtoPacket) {
 	req := packet.Message().(*pb.HeartBeatReq)
-	connection.Send(gnet.PacketCommand(pb.CmdInner_Cmd_HeartBeatRes), &pb.HeartBeatRes{
+	connection.Send(PacketCommand(pb.CmdInner_Cmd_HeartBeatRes), &pb.HeartBeatRes{
 		RequestTimestamp: req.GetTimestamp(),
 		ResponseTimestamp: uint64(time.Now().UnixNano()/int64(time.Microsecond)),
 	})

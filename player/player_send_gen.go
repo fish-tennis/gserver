@@ -9,16 +9,19 @@
 //  message CoinRes {
 //    int32 totalCoin = 1; // 当前总值
 //  }
-package game
+package player
 
-import "github.com/fish-tennis/gserver/pb"
+import (
+	"github.com/fish-tennis/gnet"
+	"github.com/fish-tennis/gserver/pb"
+)
 
 func (this *Player) SendPlayerEntryGameRes(packet *pb.PlayerEntryGameRes) bool {
-	return this.Send(Cmd(pb.CmdLogin_Cmd_PlayerEntryGameRes), packet)
+	return this.Send(gnet.PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameRes), packet)
 }
 
 func (this *Player) SendCoinRes(packet *pb.CoinRes) bool {
-	return this.Send(Cmd(pb.CmdMoney_Cmd_CoinRes), packet)
+	return this.Send(gnet.PacketCommand(pb.CmdMoney_Cmd_CoinRes), packet)
 }
 
 //func (this *Player) Send{MessageName}(packet *pb.{MessageName}) bool {

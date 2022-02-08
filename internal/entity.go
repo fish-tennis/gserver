@@ -1,4 +1,4 @@
-package entity
+package internal
 
 // 实体接口
 type Entity interface {
