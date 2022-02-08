@@ -27,8 +27,8 @@
 由于墙的问题,可以设置 GOPROXY=https://goproxy.cn
 
 ## 编码规范参考
-https://github.com/uber-go/guide(https://github.com/uber-go/guide)
-https://github.com/xxjwxc/uber_go_guide_cn(https://github.com/xxjwxc/uber_go_guide_cn)
+[https://github.com/uber-go/guide](https://github.com/uber-go/guide)
+[https://github.com/xxjwxc/uber_go_guide_cn](https://github.com/xxjwxc/uber_go_guide_cn)
 
 ## 使用建议
 由于游戏需求多变,且项目类型很多,不同类型的游戏项目差异也很大,设计出一个通用的游戏服务器框架是非常困难的.
