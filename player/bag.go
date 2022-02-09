@@ -5,7 +5,6 @@ import (
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 	"github.com/fish-tennis/gserver/util"
-	"google.golang.org/protobuf/proto"
 	"math"
 )
 
@@ -15,7 +14,9 @@ type Bag struct {
 	data *pb.Bag
 }
 
-func NewBag(player *Player, bytes []byte) *Bag {
+var _ internal.Saveable = (*Bag)(nil)
+
+func NewBag(player *Player) *Bag {
 	component := &Bag{
 		DataComponent: DataComponent{
 			BaseComponent: BaseComponent{
@@ -23,41 +24,21 @@ func NewBag(player *Player, bytes []byte) *Bag {
 				Name: "Bag",
 			},
 		},
-	}
-	if len(bytes) == 0 {
-		data := &pb.Bag{}
-		component.data = data
-	} else {
-		component.Deserialize(bytes)
+		data: &pb.Bag{},
 	}
 	component.checkData()
-	logger.Debug("%v itemsCount:%v uniqueItemsCount:%v", component.GetPlayerId(), len(component.data.CountItems), len(component.data.UniqueItems))
 	return component
 }
 
 // 需要保存的数据
-func (this *Bag) Serialize(forCache bool) interface{} {
-	// 演示proto序列化后存储到数据库
-	// 优点:占用空间少,读取数据快,游戏模块大多采用这种方式
-	// 缺点:数据库语言无法直接操作字段
-	data,err := proto.Marshal(this.data)
-	if err != nil {
-		logger.Error("%v", err)
-		return nil
-	}
-	return data
+func (this *Bag) Save(forCache bool) (saveData interface{}, isPlain bool) {
+	return this.data,false
 }
 
-func (this *Bag) Deserialize(bytes []byte) error {
-	data := &pb.Bag{}
-	err := proto.Unmarshal(bytes, data)
-	if err != nil {
-		logger.Error("%v", err)
-		return err
-	}
-	this.data = data
-	this.checkData()
-	return nil
+func (this *Bag) Load(data interface{}) error {
+	err := internal.LoadWithProto(data, this.data)
+	logger.Debug("%v", this.data)
+	return err
 }
 
 // 事件接口
@@ -69,7 +50,7 @@ func (this *Bag) OnEvent(event interface{}) {
 			this.AddItem(1,2)
 		}
 		if len(this.data.UniqueItems) == 0 {
-			uniqueItem := &pb.UniqueItem{UniqueId: util.GenUniqueId(), ItemCfgId: 1001}
+			uniqueItem := &pb.UniqueItem{UniqueId: util.GenUniqueId(), CfgId: 1001}
 			this.AddUniqueItem(uniqueItem)
 		}
 	}

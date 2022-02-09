@@ -4,8 +4,11 @@ import (
 	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
-	"google.golang.org/protobuf/proto"
 )
+
+// 编译期检查是否实现了Saveable接口
+// https://github.com/uber-go/guide/blob/master/style.md#verify-interface-compliance
+var _ internal.Saveable = (*Money)(nil)
 
 // 玩家的钱财组件
 type Money struct {
@@ -13,7 +16,7 @@ type Money struct {
 	data *pb.Money
 }
 
-func NewMoney(player *Player, bytes []byte) *Money {
+func NewMoney(player *Player) *Money {
 	component := &Money{
 		DataComponent: DataComponent{
 			BaseComponent: BaseComponent{
@@ -21,42 +24,26 @@ func NewMoney(player *Player, bytes []byte) *Money {
 				Name:   "Money",
 			},
 		},
-	}
-	if len(bytes) == 0 {
-		data := &pb.Money{
+		data: &pb.Money{
 			Coin: 0,
 			Diamond: 0,
-		}
-		component.data = data
-	} else {
-		component.Deserialize(bytes)
+		},
 	}
-	logger.Debug("%v coin:%v diamond:%v", component.GetPlayerId(), component.data.Coin, component.data.Diamond)
 	return component
 }
 
 // 需要保存的数据
-func (this *Money) Serialize(forCache bool) interface{} {
+func (this *Money) Save(forCache bool) (saveData interface{}, isPlain bool) {
 	// 演示proto序列化后存储到数据库
 	// 优点:占用空间少,读取数据快,游戏模块大多采用这种方式
 	// 缺点:数据库语言无法直接操作字段
-	data,err := proto.Marshal(this.data)
-	if err != nil {
-		logger.Error("%v", err)
-		return nil
-	}
-	return data
+	return this.data,false
 }
 
-func (this *Money) Deserialize(bytes []byte) error {
-	data := &pb.Money{}
-	err := proto.Unmarshal(bytes, data)
-	if err != nil {
-		logger.Error("%v", err)
-		return err
-	}
-	this.data = data
-	return nil
+func (this *Money) Load(data interface{}) error {
+	err := internal.LoadWithProto(data, this.data)
+	logger.Debug("%v", this.data)
+	return err
 }
 
 // 事件接口
@@ -76,14 +63,6 @@ func (this *Money) IncCoin(coin int32) {
 	this.data.Coin += coin
 	this.SetDirty()
 }
-
-// 请求加coin的消息回调
-//func (this *Money) OnCoinReq(packet *ProtoPacket) {
-//	gnet.LogDebug("OnCoinReq")
-//	req := packet.Message().(*pb.CoinReq)
-//	gnet.LogDebug("req:%v", req)
-//	this.IncCoin(req.GetCoin())
-//}
 
 // 请求加coin的消息回调
 // 这种格式写的函数可以自动注册消息回调

@@ -166,12 +166,16 @@ func (this *GameServer) repairPlayerCache(playerId,accountId int64) error {
 			continue
 		}
 		newComponent := reflect.New(reflect.TypeOf(componentTemplate).Elem()).Interface().(Saveable)
-		err = newComponent.Deserialize([]byte(componentData))
+		err = newComponent.Load([]byte(componentData))
 		if err != nil {
-			logger.Error("%v Deserialize %v err %v", playerId, componentName, err.Error())
+			logger.Error("%v Load %v err %v", playerId, componentName, err.Error())
 			continue
 		}
-		saveData := newComponent.Serialize(false)
+		saveData,err := SaveWithProto(newComponent, false)
+		if err != nil {
+			logger.Error("%v Save %v err %v", playerId, componentName, err.Error())
+			continue
+		}
 		saveDbErr := db.GetPlayerDb().SaveComponent(playerId, componentTemplate.GetNameLower(), saveData)
 		if saveDbErr != nil {
 			logger.Error("%v SaveDb %v err %v", playerId, componentTemplate.GetNameLower(), saveDbErr.Error())

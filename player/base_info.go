@@ -1,10 +1,14 @@
 package player
 
 import (
+	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
-	"google.golang.org/protobuf/proto"
 )
+
+// 编译期检查是否实现了Saveable接口
+// https://github.com/uber-go/guide/blob/master/style.md#verify-interface-compliance
+var _ internal.Saveable = (*BaseInfo)(nil)
 
 // 玩家基础信息组件
 type BaseInfo struct {
@@ -12,7 +16,7 @@ type BaseInfo struct {
 	data *pb.BaseInfo
 }
 
-func NewBaseInfo(player *Player, baseInfo *pb.BaseInfo) *BaseInfo {
+func NewBaseInfo(player *Player) *BaseInfo {
 	component := &BaseInfo{
 		DataComponent: DataComponent{
 			BaseComponent: BaseComponent{
@@ -20,40 +24,38 @@ func NewBaseInfo(player *Player, baseInfo *pb.BaseInfo) *BaseInfo {
 				Name:   "BaseInfo",
 			},
 		},
-	}
-	data := baseInfo
-	if data == nil {
-		data = &pb.BaseInfo{
+		data: &pb.BaseInfo{
 			Level: 1,
 			Exp: 0,
-		}
-		component.SetDirty()
+		},
 	}
-	component.data = data
-	logger.Debug("%v level:%v exp:%v",component.GetPlayerId(), component.data.Level, component.data.Exp)
 	return component
 }
 
 // 需要保存的数据
-func (this *BaseInfo) Serialize(forCache bool) interface{} {
+func (this *BaseInfo) Save(forCache bool) (saveData interface{}, isPlain bool) {
 	if forCache {
-		data,err := proto.Marshal(this.data)
-		if err != nil {
-			logger.Error("%v", err)
-			return nil
-		}
-		return data
+		// 保存到缓存时,进行序列化
+		return this.data,false
 	}
 	// 演示明文保存数据
 	// 优点:便于查看,数据库语言可直接操作字段
 	// 缺点:字段名也会保存到数据库,占用空间多
-	return this.data
+	return this.data,true
 }
 
-func (this *BaseInfo) Deserialize(bytes []byte) error {
-	data := &pb.BaseInfo{}
-	proto.Unmarshal(bytes, data)
-	this.data = data
+func (this *BaseInfo) Load(data interface{}) error {
+	switch t := data.(type) {
+	case *pb.BaseInfo:
+		// 加载明文数据
+		this.data = t
+		logger.Debug("%v", this.data)
+	case []byte:
+		// 反序列化
+		err := internal.LoadWithProto(data, this.data)
+		logger.Debug("%v", this.data)
+		return err
+	}
 	return nil
 }
 

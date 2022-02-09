@@ -5,7 +5,7 @@ import (
 	"github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
 	"github.com/fish-tennis/gserver/db"
-	"github.com/fish-tennis/gserver/internal"
+	. "github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 	"google.golang.org/protobuf/proto"
@@ -59,7 +59,7 @@ func (this *Player) GetRegionId() int32 {
 //}
 
 // 获取组件
-func (this *Player) GetComponent(componentName string) internal.Component {
+func (this *Player) GetComponent(componentName string) Component {
 	index := GetComponentIndex(componentName)
 	if index >= 0 {
 		return this.components[index]
@@ -68,8 +68,8 @@ func (this *Player) GetComponent(componentName string) internal.Component {
 }
 
 // 获取组件列表
-func (this *Player) GetComponents() []internal.Component {
-	components := make([]internal.Component, 0, len(this.components))
+func (this *Player) GetComponents() []Component {
+	components := make([]Component, 0, len(this.components))
 	for _,v := range this.components {
 		components = append(components, v)
 	}
@@ -79,12 +79,12 @@ func (this *Player) GetComponents() []internal.Component {
 // 保存所有修改过的组件数据到缓存
 func (this *Player) SaveCache() error {
 	for _,component := range this.components {
-		if saveable,ok := component.(internal.Saveable); ok {
+		if saveable,ok := component.(Saveable); ok {
 			if !saveable.IsDirty() {
 				continue
 			}
-			cacheData := saveable.Serialize(true)
-			if cacheData == nil {
+			cacheData,err := SaveWithProto(saveable, true)
+			if err != nil {
 				continue
 			}
 			cacheKeyName := GetComponentCacheKey(this.id, component.GetName())
@@ -103,9 +103,14 @@ func (this *Player) SaveCache() error {
 func (this *Player) SaveDb(removeCacheAfterSaveDb bool) error {
 	componentDatas := make(map[string]interface{})
 	for _,component := range this.components {
-		if saveable,ok := component.(internal.Saveable); ok {
+		if saveable,ok := component.(Saveable); ok {
+			saveData,err := SaveWithProto(saveable,false)
+			if err != nil {
+				logger.Error("%v Save %v err:%v", this.id, component.GetName(), err.Error())
+				continue
+			}
 			// 使用protobuf存mongodb时,mongodb默认会把字段名转成小写,因为protobuf没设置bson tag
-			componentDatas[component.GetNameLower()] = saveable.Serialize(false)
+			componentDatas[component.GetNameLower()] = saveData
 			logger.Debug("SaveDb %v %v", this.id, component.GetName())
 		}
 	}
@@ -151,14 +156,17 @@ func (this *Player) Send(command gnet.PacketCommand, message proto.Message) bool
 // 分发事件给组件
 func (this *Player) FireEvent(event interface{}) {
 	for _,component := range this.components {
-		if eventReceiver,ok := component.(internal.EventReceiver); ok {
+		if eventReceiver,ok := component.(EventReceiver); ok {
 			eventReceiver.OnEvent(event)
 		}
 	}
 }
 
 // 添加玩家组件
-func (this *Player)addComponent(component PlayerComponent) {
+func (this *Player)addComponent(component PlayerComponent, data interface{}) {
+	if saveable,ok := component.(Saveable); ok {
+		saveable.Load(data)
+	}
 	this.components = append(this.components, component)
 }
 
@@ -171,9 +179,9 @@ func CreatePlayerFromData(playerData *pb.PlayerData) *Player {
 		regionId: playerData.RegionId,
 	}
 	// 初始化玩家的各个模块
-	player.addComponent(NewBaseInfo(player, playerData.BaseInfo))
-	player.addComponent(NewMoney(player, playerData.Money))
-	player.addComponent(NewBag(player, playerData.Bag))
+	player.addComponent(NewBaseInfo(player), playerData.BaseInfo)
+	player.addComponent(NewMoney(player), playerData.Money)
+	player.addComponent(NewBag(player), playerData.Bag)
 	return player
 }
 
