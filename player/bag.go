@@ -37,6 +37,7 @@ func (this *Bag) Save(forCache bool) (saveData interface{}, isPlain bool) {
 
 func (this *Bag) Load(data interface{}) error {
 	err := internal.LoadWithProto(data, this.data)
+	this.checkData()
 	logger.Debug("%v", this.data)
 	return err
 }
