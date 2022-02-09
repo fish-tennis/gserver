@@ -19,5 +19,6 @@
     "HeartBeatInterval": 5
   },
   "MongoUri": "mongodb://localhost:27017",
-  "RedisUri": ["127.0.0.1:6379"]
+  "RedisUri": ["127.0.0.1:6379"],
+  "RedisCluster": false
 }

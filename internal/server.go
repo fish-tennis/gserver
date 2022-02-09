@@ -43,6 +43,8 @@ type BaseServerConfig struct {
 	// redis地址
 	RedisUri []string
 	RedisPassword string
+	// 是否使用redis集群模式
+	RedisCluster bool
 }
 
 // 服务器基础流程
