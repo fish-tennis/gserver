@@ -118,8 +118,8 @@ func (this *BaseServer) Exit() {
 	// 网络关闭
 	GetNetMgr().Shutdown(true)
 	// 缓存关闭
-	if cache.Get() != nil {
-		if closer,ok := cache.Get().(io.Closer); ok {
+	if cache.GetRedis() != nil {
+		if closer,ok := cache.GetRedis().(io.Closer); ok {
 			closer.Close()
 			logger.Info("close redis")
 		}

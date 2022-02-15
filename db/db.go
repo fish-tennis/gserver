@@ -34,6 +34,9 @@ type PlayerDb interface {
 
 	// 批量保存玩家组件(update player's components...)
 	SaveComponents(playerId int64, components map[string]interface{}) error
+
+	// 保存玩家1个组件的一个字段(update player's component.field)
+	SaveComponentField(playerId int64, componentName string, fieldName string, fieldData interface{}) error
 }
 
 // Kv数据接口

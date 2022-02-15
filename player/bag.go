@@ -2,19 +2,18 @@ package player
 
 import (
 	"github.com/fish-tennis/gserver/internal"
-	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 	"github.com/fish-tennis/gserver/util"
 	"math"
 )
+
+var _ internal.Saveable = (*Bag)(nil)
 
 // 一个简单的背包模块
 type Bag struct {
 	DataComponent
 	data *pb.Bag
 }
-
-var _ internal.Saveable = (*Bag)(nil)
 
 func NewBag(player *Player) *Bag {
 	component := &Bag{
@@ -30,17 +29,20 @@ func NewBag(player *Player) *Bag {
 	return component
 }
 
-// 需要保存的数据
-func (this *Bag) Save(forCache bool) (saveData interface{}, isPlain bool) {
-	return this.data,false
+func (this *Bag) DbData() (dbData interface{}, protoMarshal bool) {
+	return this.data,true
 }
 
-func (this *Bag) Load(data interface{}) error {
-	err := internal.LoadWithProto(data, this.data)
-	this.checkData()
-	logger.Debug("%v", this.data)
-	return err
+func (this *Bag) CacheData() interface{} {
+	return this.data
 }
+
+//func (this *Bag) Load(data interface{}, fromCache bool) error {
+//	err := internal.LoadWithProto(data, this.data)
+//	this.checkData()
+//	logger.Debug("%v", this.data)
+//	return err
+//}
 
 // 事件接口
 func (this *Bag) OnEvent(event interface{}) {

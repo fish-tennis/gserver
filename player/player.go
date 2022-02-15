@@ -1,7 +1,6 @@
 package player
 
 import (
-	"context"
 	"github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
 	"github.com/fish-tennis/gserver/db"
@@ -9,6 +8,7 @@ import (
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 	"google.golang.org/protobuf/proto"
+	"reflect"
 )
 
 // 玩家对象
@@ -80,20 +80,126 @@ func (this *Player) GetComponents() []Component {
 func (this *Player) SaveCache() error {
 	for _,component := range this.components {
 		if saveable,ok := component.(Saveable); ok {
-			if !saveable.IsDirty() {
+			if dirtyMark,ok2 := component.(DirtyMark); ok2 {
+				if !dirtyMark.IsDirty() {
+					continue
+				}
+				cacheData := saveable.CacheData()
+				if cacheData == nil {
+					continue
+				}
+				cacheKeyName := GetComponentCacheKey(this.id, component.GetName())
+				if reflect.ValueOf(cacheData).Kind() == reflect.Map {
+					err := cache.Get().SetMap(cacheKeyName, cacheData)
+					if err != nil {
+						logger.Error("%v %v cache err:%v", this.id, component.GetNameLower(), err.Error())
+					}
+				} else {
+					// 非map类型 必须是proto结构
+					if protoMessage,ok := cacheData.(proto.Message); ok {
+						err := cache.Get().SetProto(cacheKeyName, protoMessage, 0)
+						if err != nil {
+							logger.Error("%v %v cache err:%v", this.id, component.GetNameLower(), err.Error())
+						}
+					} else {
+						logger.Error("%v %v cache err:unsupport type", this.id, component.GetNameLower())
+					}
+				}
+				//cache.Get().Set(cacheKeyName, cacheData, 0)
+				//cacheData,err := SaveWithProto(saveable, true)
+				//if err != nil {
+				//	continue
+				//}
+				//
+				//if reflect.ValueOf(cacheData).Kind() == reflect.Map {
+				//	_,cacheErr := cache.GetRedis().HSet(context.Background(), cacheKeyName, cacheData).Result()
+				//	if cacheErr != nil {
+				//		logger.Error("%v %v cache err:%v", this.id, component.GetNameLower(), cacheErr.Error())
+				//		continue
+				//	}
+				//} else {
+				//	_,cacheErr := cache.GetRedis().Set(context.Background(), cacheKeyName, cacheData, 0).Result()
+				//	if cacheErr != nil {
+				//		logger.Error("%v %v cache err:%v", this.id, component.GetNameLower(), cacheErr.Error())
+				//		continue
+				//	}
+				//}
+				dirtyMark.ResetDirty()
+				logger.Debug("SaveCache %v %v", this.id, component.GetNameLower())
 				continue
 			}
-			cacheData,err := SaveWithProto(saveable, true)
-			if err != nil {
+			if dirtyMark,ok2 := component.(MapDirtyMark); ok2 {
+				if !dirtyMark.IsDirty() {
+					continue
+				}
+				cacheKeyName := GetComponentCacheKey(this.id, component.GetName())
+				if !dirtyMark.HasCached() {
+					// 必须把整体数据缓存一次,后面的修改才能局部更新
+					cacheData := saveable.CacheData()
+					if cacheData == nil {
+						continue
+					}
+					err := cache.Get().SetMap(cacheKeyName, cacheData)
+					if err != nil {
+						logger.Error("%v %v cache err:%v", this.id, component.GetNameLower(), err.Error())
+						continue
+					}
+					dirtyMark.SetCached()
+				} else {
+					if mapDataComponent,ok3 := component.(*MapDataComponent); ok3 {
+						setMap := make(map[string]interface{})
+						var delMap []string
+						for dirtyKey,isAddOrUpdate := range mapDataComponent.dirtyMap {
+							if isAddOrUpdate {
+								if dirtyValue,exists := dirtyMark.GetMapValue(dirtyKey); exists {
+									setMap[dirtyKey] = dirtyValue
+									//_,err := cache.Get().SetMapField(cacheKeyName, dirtyKey, dirtyValue)
+									//if err != nil {
+									//	logger.Error("%v %v cache %v err:%v", this.id, component.GetNameLower(), dirtyKey, err.Error())
+									//}
+								}
+							} else {
+								// delete
+								delMap = append(delMap, dirtyKey)
+								//_,err := cache.GetRedis().HDel(context.Background(), cacheKeyName, dirtyKey).Result()
+								//if err != nil {
+								//	logger.Error("%v %v cache %v err:%v", this.id, component.GetNameLower(), dirtyKey, err.Error())
+								//}
+							}
+						}
+						if len(setMap) > 0 {
+							err := cache.Get().SetMap(cacheKeyName, setMap)
+							if err != nil {
+								logger.Error("%v %v cache %v err:%v", this.id, component.GetNameLower(), setMap, err.Error())
+							}
+						}
+						if len(delMap) > 0 {
+							err := cache.Get().DelMapField(cacheKeyName, delMap...)
+							if err != nil {
+								logger.Error("%v %v cache %v err:%v", this.id, component.GetNameLower(), delMap, err.Error())
+							}
+						}
+					}
+				}
+				//cacheData := saveable.Data(true)
+				//if cacheData == nil {
+				//	continue
+				//}
+				//cacheKeyName := GetComponentCacheKey(this.id, component.GetName())
+				//err := cache.Get().SetMap(cacheKeyName, cacheData)
+				//if err != nil {
+				//	logger.Error("%v %v cache err:%v", this.id, component.GetNameLower(), err.Error())
+				//	continue
+				//}
+				//_,cacheErr := cache.GetRedis().HSet(context.Background(), cacheKeyName, cacheData).Result()
+				//if cacheErr != nil {
+				//	logger.Error("%v %v cache err:%v", this.id, component.GetNameLower(), cacheErr.Error())
+				//	continue
+				//}
+				dirtyMark.ResetDirty()
+				logger.Debug("SaveCache %v %v", this.id, component.GetNameLower())
 				continue
 			}
-			cacheKeyName := GetComponentCacheKey(this.id, component.GetName())
-			_,cacheErr := cache.Get().Set(context.Background(), cacheKeyName, cacheData, 0).Result()
-			if cacheErr != nil {
-				logger.Error("%v %v cache err:%v", this.id, component.GetNameLower(), cacheErr.Error())
-				continue
-			}
-			logger.Debug("SaveCache %v %v", this.id, component.GetNameLower())
 		}
 	}
 	return nil
@@ -104,15 +210,46 @@ func (this *Player) SaveDb(removeCacheAfterSaveDb bool) error {
 	componentDatas := make(map[string]interface{})
 	for _,component := range this.components {
 		if saveable,ok := component.(Saveable); ok {
-			saveData,err := SaveWithProto(saveable,false)
+			// 如果组件数据没改变过,跳过保存
+			if !saveable.IsChanged() {
+				logger.Debug("%v ignore %v", this.id, component.GetName())
+				continue
+			}
+			saveData,err := SaveWithProto(saveable)
 			if err != nil {
 				logger.Error("%v Save %v err:%v", this.id, component.GetName(), err.Error())
+				continue
+			}
+			if saveData == nil {
+				logger.Debug("%v ignore nil %v", this.id, component.GetName())
 				continue
 			}
 			// 使用protobuf存mongodb时,mongodb默认会把字段名转成小写,因为protobuf没设置bson tag
 			componentDatas[component.GetNameLower()] = saveData
 			logger.Debug("SaveDb %v %v", this.id, component.GetName())
 		}
+		//if mapSaveable,ok := component.(MapSaveable); ok {
+		//	if !mapSaveable.IsChanged() {
+		//		continue
+		//	}
+		//	mapData,saveOption := mapSaveable.Save(true)
+		//	if mapData == nil {
+		//		continue
+		//	}
+		//	if saveOption == ProtoMarshalMap {
+		//		for k,v := range mapData {
+		//			if protoMessage,ok := v.(proto.Message); ok {
+		//				bytes,err := proto.Marshal(protoMessage)
+		//				if err != nil {
+		//					logger.Error("Marshal %v %v %v err:%v", this.id, component.GetName(), k, err.Error())
+		//				}
+		//				mapData[k] = bytes
+		//			}
+		//		}
+		//	}
+		//	componentDatas[component.GetNameLower()] = mapData
+		//	logger.Debug("SaveDb %v %v", this.id, component.GetName())
+		//}
 	}
 	saveDbErr := db.GetPlayerDb().SaveComponents(this.id, componentDatas)
 	if saveDbErr != nil {
@@ -124,7 +261,7 @@ func (this *Player) SaveDb(removeCacheAfterSaveDb bool) error {
 		// 保存数据库成功后,删除缓存
 		for k,_ := range componentDatas {
 			cacheKeyName := GetComponentCacheKey(this.id, k)
-			cache.Get().Del(context.Background(), cacheKeyName)
+			cache.Get().Del(cacheKeyName)
 			logger.Debug("RemoveCache %v %v", this.id, cacheKeyName)
 		}
 	}
@@ -163,25 +300,39 @@ func (this *Player) FireEvent(event interface{}) {
 }
 
 // 添加玩家组件
-func (this *Player)addComponent(component PlayerComponent, data interface{}) {
-	if saveable,ok := component.(Saveable); ok {
-		saveable.Load(data)
+func (this *Player)addComponent(component PlayerComponent, bytes []byte) {
+	if len(bytes) > 0 {
+		if saveable,ok := component.(Saveable); ok {
+			dbData,protoMarshal := saveable.DbData()
+			if dbData != nil && protoMarshal {
+				if protoMessage,ok2 := dbData.(proto.Message); ok2 {
+					err := proto.Unmarshal(bytes, protoMessage)
+					if err != nil {
+						logger.Error("%v proto err:%v", component.GetName(), err)
+					}
+				}
+			}
+		}
 	}
+	// map[int]proto.Message格式的序列化
 	this.components = append(this.components, component)
 }
 
 // 从加载的数据构造出玩家对象
 func CreatePlayerFromData(playerData *pb.PlayerData) *Player {
 	player := &Player{
-		id: playerData.Id,
-		name: playerData.Name,
+		id:        playerData.Id,
+		name:      playerData.Name,
 		accountId: playerData.AccountId,
-		regionId: playerData.RegionId,
+		regionId:  playerData.RegionId,
 	}
 	// 初始化玩家的各个模块
-	player.addComponent(NewBaseInfo(player), playerData.BaseInfo)
+	player.addComponent(NewBaseInfo(player, playerData.BaseInfo), nil)
 	player.addComponent(NewMoney(player), playerData.Money)
-	player.addComponent(NewBag(player), playerData.Bag)
+	//player.addComponent(NewBag(player), playerData.Bag)
+	//player.addComponent(NewQuest(player), playerData.Quest)
+	player.addComponent(NewBagCountItem(player, playerData.BagCountItem), nil)
+	player.addComponent(NewBagUniqueItem(player, playerData.BagUniqueItem), nil)
 	return player
 }
 

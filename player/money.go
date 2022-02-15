@@ -32,18 +32,15 @@ func NewMoney(player *Player) *Money {
 	return component
 }
 
-// 需要保存的数据
-func (this *Money) Save(forCache bool) (saveData interface{}, isPlain bool) {
+func (this *Money) DbData() (dbData interface{}, protoMarshal bool) {
 	// 演示proto序列化后存储到数据库
 	// 优点:占用空间少,读取数据快,游戏模块大多采用这种方式
 	// 缺点:数据库语言无法直接操作字段
-	return this.data,false
+	return this.data,true
 }
 
-func (this *Money) Load(data interface{}) error {
-	err := internal.LoadWithProto(data, this.data)
-	logger.Debug("%v", this.data)
-	return err
+func (this *Money) CacheData() interface{} {
+	return this.data
 }
 
 // 事件接口

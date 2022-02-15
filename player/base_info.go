@@ -2,7 +2,6 @@ package player
 
 import (
 	"github.com/fish-tennis/gserver/internal"
-	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 )
 
@@ -16,7 +15,7 @@ type BaseInfo struct {
 	data *pb.BaseInfo
 }
 
-func NewBaseInfo(player *Player) *BaseInfo {
+func NewBaseInfo(player *Player, data *pb.BaseInfo) *BaseInfo {
 	component := &BaseInfo{
 		DataComponent: DataComponent{
 			BaseComponent: BaseComponent{
@@ -29,34 +28,21 @@ func NewBaseInfo(player *Player) *BaseInfo {
 			Exp: 0,
 		},
 	}
+	if data != nil {
+		component.data = data
+	}
 	return component
 }
 
-// 需要保存的数据
-func (this *BaseInfo) Save(forCache bool) (saveData interface{}, isPlain bool) {
-	if forCache {
-		// 保存到缓存时,进行序列化
-		return this.data,false
-	}
-	// 演示明文保存数据
+func (this *BaseInfo) DbData() (dbData interface{}, protoMarshal bool) {
+	// 演示明文保存数据库
 	// 优点:便于查看,数据库语言可直接操作字段
 	// 缺点:字段名也会保存到数据库,占用空间多
-	return this.data,true
+	return this.data,false
 }
 
-func (this *BaseInfo) Load(data interface{}) error {
-	switch t := data.(type) {
-	case *pb.BaseInfo:
-		// 加载明文数据
-		this.data = t
-		logger.Debug("%v", this.data)
-	case []byte:
-		// 反序列化
-		err := internal.LoadWithProto(data, this.data)
-		logger.Debug("%v", this.data)
-		return err
-	}
-	return nil
+func (this *BaseInfo) CacheData() interface{} {
+	return this.data
 }
 
 func (this *BaseInfo) IncExp(incExp int32) {

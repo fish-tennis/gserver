@@ -10,11 +10,10 @@ import (
 	. "github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
-	player2 "github.com/fish-tennis/gserver/player"
+	"github.com/fish-tennis/gserver/player"
 	"github.com/go-redis/redis/v8"
 	"google.golang.org/protobuf/proto"
 	"os"
-	"reflect"
 	"sync"
 	"time"
 )
@@ -50,7 +49,7 @@ func (this *GameServer) Init(ctx context.Context, configFile string) bool {
 		return false
 	}
 	this.readConfig()
-	player2.InitPlayerComponentMap()
+	player.InitPlayerComponentMap()
 	this.initDb()
 	this.initCache()
 
@@ -133,7 +132,7 @@ func (this *GameServer) initDb() {
 // 初始化redis缓存
 func (this *GameServer) initCache() {
 	cache.NewRedis(this.config.RedisUri, this.config.RedisPassword, this.config.RedisCluster)
-	pong,err := cache.Get().Ping(context.TODO()).Result()
+	pong,err := cache.GetRedis().Ping(context.Background()).Result()
 	if err != nil || pong == "" {
 		panic("redis connect error")
 	}
@@ -148,43 +147,105 @@ func (this *GameServer) repairCache() {
 // 缓存中的玩家数据保存到数据库
 // 服务器crash时,缓存数据没来得及保存到数据库,服务器重启后进行自动修复,防止玩家数据回档
 func (this *GameServer) repairPlayerCache(playerId,accountId int64) error {
-	player := player2.CreateTempPlayer(playerId,accountId)
-	for componentName,_ := range player2.GetPlayerComponentMap() {
-		cacheKey := player2.GetComponentCacheKey(playerId, componentName)
-		componentData,err := cache.Get().Get(context.Background(), cacheKey).Result()
-		// 不存在的key或者空数据,直接跳过,防止错误的覆盖
-		if err == redis.Nil || len(componentData) == 0 {
+	defer func() {
+		if err := recover(); err != nil {
+			logger.Error("repairPlayerCache %v err:%v", playerId, err.(error).Error())
+			LogStack()
+		}
+	}()
+	tmpPlayer := player.CreateTempPlayer(playerId,accountId)
+	for componentName,_ := range player.GetPlayerComponentMap() {
+		cacheKey := player.GetComponentCacheKey(playerId, componentName)
+		cacheType,err := cache.GetRedis().Type(context.Background(), cacheKey).Result()
+		if err == redis.Nil || cacheType == "" || cacheType == "none" {
 			continue
 		}
-		if cache.IsRedisError(err) {
-			logger.Error("GetPlayerCache %v err:%v", cacheKey, err.Error())
-			continue
-		}
-		componentTemplate := player.GetComponent(componentName)
+		//var sourceDate interface{}
+		//if cacheType == "string" {
+		//	// set get
+		//	componentData,err := cache.GetRedis().Get(context.Background(), cacheKey).Result()
+		//	// 不存在的key或者空数据,直接跳过,防止错误的覆盖
+		//	if err == redis.Nil || len(componentData) == 0 {
+		//		continue
+		//	}
+		//	if err != nil {
+		//		logger.Error("GetPlayerCache %v err:%v", cacheKey, err.Error())
+		//		continue
+		//	}
+		//	sourceDate = []byte(componentData)
+		//} else if cacheType == "hash" {
+		//	// HGet HSet
+		//	componentData,err := cache.GetRedis().HGetAll(context.Background(), cacheKey).Result()
+		//	// 不存在的key或者空数据,直接跳过,防止错误的覆盖
+		//	if err == redis.Nil || len(componentData) == 0 {
+		//		continue
+		//	}
+		//	if err != nil {
+		//		logger.Error("GetPlayerCache %v err:%v", cacheKey, err.Error())
+		//		continue
+		//	}
+		//	sourceDate = componentData
+		//} else {
+		//	logger.Error("GetPlayerCache %v unsupport cache type:%v", cacheKey, cacheType)
+		//	continue
+		//}
+		//componentData,err := cache.Get().Get(context.Background(), cacheKey).Result()
+		//// 不存在的key或者空数据,直接跳过,防止错误的覆盖
+		//if err == redis.Nil || len(componentData) == 0 {
+		//	continue
+		//}
+		//if cache.IsRedisError(err) {
+		//	logger.Error("GetPlayerCache %v err:%v", cacheKey, err.Error())
+		//	continue
+		//}
+		componentTemplate := tmpPlayer.GetComponent(componentName)
 		if componentTemplate == nil {
 			logger.Error("%v GetComponent nil %v", playerId, componentName)
 			continue
 		}
-		newComponent := reflect.New(reflect.TypeOf(componentTemplate).Elem()).Interface().(Saveable)
-		err = newComponent.Load([]byte(componentData))
-		if err != nil {
-			logger.Error("%v Load %v err %v", playerId, componentName, err.Error())
-			continue
+		if saveable,ok := componentTemplate.(Saveable); ok {
+			cacheData := saveable.CacheData()
+			if cacheType == "string" {
+				if protoMessage,ok := cacheData.(proto.Message); ok {
+					err = cache.Get().GetProto(cacheKey, protoMessage)
+					if err != nil {
+						logger.Error("GetProto %v %v err:%v", cacheKey, cacheType, err)
+						continue
+					}
+				} else {
+					logger.Error("%v unsupport cache type:%v", cacheKey, cacheType)
+					continue
+				}
+			} else if cacheType == "hash" {
+				err = cache.Get().GetMap(cacheKey, cacheData)
+				if err != nil {
+					logger.Error("GetMap %v %v err:%v", cacheKey, cacheType, err)
+					continue
+				}
+			} else {
+				logger.Error("%v unsupport cache type:%v", cacheKey, cacheType)
+				continue
+			}
+			//// 从缓存恢复组件数据
+			//err := saveable.Load(sourceDate, true)
+			//if err != nil {
+			//	logger.Error("%v Load %v err %v", playerId, componentName, err.Error())
+			//	continue
+			//}
+			saveData,err := SaveWithProto(saveable)
+			if err != nil {
+				logger.Error("%v Save %v err %v", playerId, componentName, err.Error())
+				continue
+			}
+			saveDbErr := db.GetPlayerDb().SaveComponent(playerId, componentTemplate.GetNameLower(), saveData)
+			if saveDbErr != nil {
+				logger.Error("%v SaveDb %v err %v", playerId, componentTemplate.GetNameLower(), saveDbErr.Error())
+				continue
+			}
+			logger.Info("%v SaveDb %v", playerId, componentTemplate.GetNameLower())
 		}
-		saveData,err := SaveWithProto(newComponent, false)
-		if err != nil {
-			logger.Error("%v Save %v err %v", playerId, componentName, err.Error())
-			continue
-		}
-		saveDbErr := db.GetPlayerDb().SaveComponent(playerId, componentTemplate.GetNameLower(), saveData)
-		if saveDbErr != nil {
-			logger.Error("%v SaveDb %v err %v", playerId, componentTemplate.GetNameLower(), saveDbErr.Error())
-			continue
-		}
-		logger.Info("%v SaveDb %v", playerId, componentTemplate.GetNameLower())
-		cacheKeyName := player2.GetComponentCacheKey(playerId, componentName)
-		cache.Get().Del(context.Background(), cacheKeyName)
-		logger.Debug("RemoveCache %v %v", playerId, cacheKeyName)
+		cache.Get().Del(cacheKey)
+		logger.Debug("RemoveCache %v %v %v", playerId, cacheKey, cacheType)
 	}
 	return nil
 }
@@ -218,13 +279,13 @@ func (this *GameServer) registerServerPacket(serverHandler *DefaultConnectionHan
 }
 
 // 添加一个在线玩家
-func (this *GameServer) AddPlayer(player *player2.Player) {
+func (this *GameServer) AddPlayer(player *player.Player) {
 	this.playerMap.Store(player.GetId(), player)
 	cache.AddOnlinePlayer(player.GetId(), player.GetAccountId(), _gameServer.GetServerId())
 }
 
 // 删除一个在线玩家
-func (this *GameServer) RemovePlayer(player *player2.Player) {
+func (this *GameServer) RemovePlayer(player *player.Player) {
 	// 先保存数据库 再移除cache
 	player.SaveDb(true)
 	this.playerMap.Delete(player.GetId())
@@ -233,9 +294,9 @@ func (this *GameServer) RemovePlayer(player *player2.Player) {
 }
 
 // 获取一个在线玩家
-func (this *GameServer) GetPlayer(playerId int64) *player2.Player {
+func (this *GameServer) GetPlayer(playerId int64) *player.Player {
 	if v,ok := this.playerMap.Load(playerId); ok {
-		return v.(*player2.Player)
+		return v.(*player.Player)
 	}
 	return nil
 }

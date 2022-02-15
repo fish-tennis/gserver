@@ -7,23 +7,28 @@ var (
 	// singleton
 	// redis.Cmdable兼容集群模式和单机模式
 	_redisClient redis.Cmdable
+	_redisCache KvCache
 )
 
+// 提供KvCache接口
+func Get() KvCache {
+	return _redisCache
+}
+
+// 提供redis接口
 func GetRedis() redis.Cmdable {
 	return _redisClient
 }
 
-// 提供一个更简洁的接口
-func Get() redis.Cmdable {
-	return _redisClient
-}
-
 func NewRedis(addrs []string, password string, isCluster bool) redis.Cmdable {
+	var redisCmdable redis.Cmdable
 	if isCluster {
-		return NewRedisClient(addrs, password)
+		redisCmdable = NewRedisClient(addrs, password)
 	} else {
-		return NewRedisSingleClient(addrs[0], password)
+		redisCmdable = NewRedisSingleClient(addrs[0], password)
 	}
+	_redisCache = NewRedisCache(redisCmdable)
+	return redisCmdable
 }
 
 // 初始化redis集群

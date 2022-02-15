@@ -109,7 +109,7 @@ func (this *LoginServer) initDb() {
 // 初始化redis缓存
 func (this *LoginServer) initCache() {
 	cache.NewRedis(this.config.RedisUri, this.config.RedisPassword, this.config.RedisCluster)
-	pong,err := cache.Get().Ping(context.TODO()).Result()
+	pong,err := cache.GetRedis().Ping(context.Background()).Result()
 	if err != nil || pong == "" {
 		panic("redis connect error")
 	}

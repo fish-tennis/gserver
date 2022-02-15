@@ -2,12 +2,17 @@ package mongodb
 
 import (
 	"context"
+	"github.com/fish-tennis/gserver/db"
 	"github.com/fish-tennis/gserver/logger"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 )
+
+// https://github.com/uber-go/guide/blob/master/style.md#verify-interface-compliance
+var _ db.AccountDb = (*MongoDb)(nil)
+var _ db.PlayerDb = (*MongoDb)(nil)
 
 // AccountDb和PlayerDb的mongo实现
 type MongoDb struct {
@@ -195,9 +200,23 @@ func (this *MongoDb) SaveComponent(playerId int64, componentName string, compone
 
 // 批量保存玩家组件(update player's components...)
 func (this *MongoDb) SaveComponents(playerId int64, components map[string]interface{}) error {
+	if len(components) == 0 {
+		return nil
+	}
 	col := this.mongoDatabase.Collection(this.collectionName)
 	_, updateErr := col.UpdateMany(context.Background(), bson.D{{this.colPlayerId, playerId}},
 		bson.D{{"$set", components}})
+	if updateErr != nil {
+		return updateErr
+	}
+	return nil
+}
+
+// 保存玩家1个组件的一个字段(update player's component.field)
+func (this *MongoDb) SaveComponentField(playerId int64, componentName string, fieldName string, fieldData interface{}) error {
+	col := this.mongoDatabase.Collection(this.collectionName)
+	_, updateErr := col.UpdateOne(context.Background(), bson.D{{this.colPlayerId, playerId}},
+		bson.D{{"$set", bson.D{{componentName+"."+fieldName,fieldData}}}})
 	if updateErr != nil {
 		return updateErr
 	}
