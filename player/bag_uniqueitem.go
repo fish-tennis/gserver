@@ -49,8 +49,6 @@ func (this *BagUniqueItem) checkData() {
 func (this *BagUniqueItem) OnEvent(event interface{}) {
 	switch event.(type) {
 	case *internal.EventPlayerEntryGame:
-		//// 玩家登录游戏时,先把当前组件数据保存到缓存
-		//internal.SaveCache(this, this.GetCacheKey())
 		// 测试代码
 		uniqueItem := &pb.UniqueItem{UniqueId: util.GenUniqueId(), CfgId: int32(rand.Intn(1000))}
 		this.AddUniqueItem(uniqueItem)

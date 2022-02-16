@@ -48,6 +48,7 @@ func (this *RedisCache) Del(key string) error {
 	return err
 }
 
+// redis hash -> map
 func (this *RedisCache) GetMap(key string, m interface{}) error {
 	if m == nil {
 		return errors.New("map must valid")
@@ -112,6 +113,7 @@ func (this *RedisCache) GetMap(key string, m interface{}) error {
 	return nil
 }
 
+// map -> redis hash
 func (this *RedisCache) SetMap(k string, m interface{}) error {
 	cacheData := make(map[string]interface{})
 	val := reflect.ValueOf(m)

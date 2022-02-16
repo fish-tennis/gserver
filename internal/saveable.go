@@ -7,22 +7,8 @@ import (
 	"reflect"
 )
 
-type SaveOption int
-
-const (
-	Plain SaveOption = iota
-	ProtoMarshal
-	PlainMap
-	ProtoMarshalMap
-)
-
 // 保存数据接口
 type Saveable interface {
-	//// 保存数据
-	//// saveData 需要保存的数据
-	//Save(forCache bool) (saveData interface{}, saveOption SaveOption)
-	////// 加载数据(反序列化)
-	////Load(data interface{}, fromCache bool) error
 	// 数据是否改变过
 	IsChanged() bool
 
@@ -39,14 +25,7 @@ type Saveable interface {
 	CacheData() interface{}
 }
 
-//type MapSaveable interface {
-//	Save(forCache bool) (mapData map[string]interface{}, saveOption SaveOption)
-//	// 加载数据(反序列化)
-//	Load(data interface{}) error
-//	// 数据是否改变过
-//	IsChanged() bool
-//}
-
+// 保存数据作为一个整体,只要一个字段修改了,整个数据都需要缓存
 type DirtyMark interface {
 	// 需要保存的数据是否修改了
 	IsDirty() bool
@@ -56,6 +35,8 @@ type DirtyMark interface {
 	ResetDirty()
 }
 
+// map格式的保存数据
+// 第一次有数据修改时,会把整体数据缓存一次,之后只保存修改过的项
 type MapDirtyMark interface {
 	// 需要保存的数据是否修改了
 	IsDirty() bool
@@ -81,14 +62,14 @@ func SaveWithProto(saveable Saveable) (interface{},error) {
 		}
 		val := reflect.ValueOf(saveData)
 		switch val.Kind() {
-		case reflect.Interface,reflect.Ptr:
-			// 保存proto格式
-			if protoMessage,ok := saveData.(proto.Message); ok {
-				return proto.Marshal(protoMessage)
-			} else {
-				logger.Error("unsupport type:%v", saveData)
-				return nil, errors.New("unsupport type")
-			}
+		//case reflect.Interface,reflect.Ptr:
+		//	// 保存proto格式
+		//	if protoMessage,ok := saveData.(proto.Message); ok {
+		//		return proto.Marshal(protoMessage)
+		//	} else {
+		//		logger.Error("unsupport type:%v", saveData)
+		//		return nil, errors.New("unsupport type")
+		//	}
 		case reflect.Map:
 			// 保存map格式
 			typ := reflect.TypeOf(saveData)
@@ -101,23 +82,53 @@ func SaveWithProto(saveable Saveable) (interface{},error) {
 					newMap := make(map[int64]interface{})
 					it := val.MapRange()
 					for it.Next() {
-						newMap[it.Key().Int()] = it.Value().Interface()
+						if protoMessage,ok := it.Value().Interface().(proto.Message); ok {
+							bytes,err := proto.Marshal(protoMessage)
+							if err != nil {
+								logger.Error("proto %v err:%v", it.Key().Int(), err.Error())
+								return nil, err
+							}
+							newMap[it.Key().Int()] = bytes
+						} else {
+							newMap[it.Key().Int()] = it.Value().Interface()
+						}
 					}
 					return newMap,nil
 				case reflect.Uint,reflect.Uint8,reflect.Uint16,reflect.Uint32,reflect.Uint64:
 					newMap := make(map[uint64]interface{})
 					it := val.MapRange()
 					for it.Next() {
-						newMap[it.Key().Uint()] = it.Value().Interface()
+						if protoMessage,ok := it.Value().Interface().(proto.Message); ok {
+							bytes,err := proto.Marshal(protoMessage)
+							if err != nil {
+								logger.Error("proto %v err:%v", it.Key().Uint(), err.Error())
+								return nil, err
+							}
+							newMap[it.Key().Uint()] = bytes
+						} else {
+							newMap[it.Key().Uint()] = it.Value().Interface()
+						}
 					}
 					return newMap,nil
 				case reflect.String:
 					newMap := make(map[string]interface{})
 					it := val.MapRange()
 					for it.Next() {
-						newMap[it.Key().String()] = it.Value().Interface()
+						if protoMessage,ok := it.Value().Interface().(proto.Message); ok {
+							bytes,err := proto.Marshal(protoMessage)
+							if err != nil {
+								logger.Error("proto %v err:%v", it.Key().String(), err.Error())
+								return nil, err
+							}
+							newMap[it.Key().String()] = bytes
+						} else {
+							newMap[it.Key().String()] = it.Value().Interface()
+						}
 					}
 					return newMap,nil
+				default:
+					logger.Error("unsupport key type:%v", keyType.Kind())
+					return nil, errors.New("unsupport key type")
 				}
 			} else {
 				return saveData,nil
@@ -126,38 +137,3 @@ func SaveWithProto(saveable Saveable) (interface{},error) {
 	}
 	return saveData,nil
 }
-
-//// 加载数据,并对proto进行反序列化处理
-//func LoadWithProto(fromData interface{}, toProtoMessage proto.Message) error {
-//	if t,ok := fromData.([]byte); ok {
-//		err := proto.Unmarshal(t, toProtoMessage)
-//		if err != nil {
-//			logger.Error("LoadWithProto err:%v", err.Error())
-//			return err
-//		}
-//	}
-//	return nil
-//}
-
-//func SaveCache(saveable Saveable, cacheKeyName string) error {
-//	cacheData,err := SaveWithProto(saveable, true)
-//	if err != nil {
-//		return err
-//	}
-//	// map类型存为redis的hash表
-//	if reflect.ValueOf(cacheData).Kind() == reflect.Map {
-//		_,cacheErr := cache.GetRedis().HSet(context.Background(), cacheKeyName, cacheData).Result()
-//		if cacheErr != nil {
-//			logger.Error("%v cache err:%v", cacheKeyName, cacheErr.Error())
-//			return cacheErr
-//		}
-//	} else {
-//		_,cacheErr := cache.GetRedis().Set(context.Background(), cacheKeyName, cacheData, 0).Result()
-//		if cacheErr != nil {
-//			logger.Error("%v cache err:%v", cacheKeyName, cacheErr.Error())
-//			return cacheErr
-//		}
-//	}
-//	logger.Debug("SaveCache %v v:%v", cacheKeyName, cacheData)
-//	return nil
-//}

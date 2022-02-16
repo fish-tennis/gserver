@@ -46,7 +46,6 @@ message PlayerData {
   int32 regionId = 4; // 区服id
   BaseInfo baseInfo = 5;
   bytes money = 6;
-  bytes bag = 7;
   Quest quest = 8;
   map<int32,int32> bagCountItem = 9;
   map<int64,UniqueItem> bagUniqueItem = 10;

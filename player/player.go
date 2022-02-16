@@ -1,7 +1,7 @@
 package player
 
 import (
-	"github.com/fish-tennis/gnet"
+	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
 	"github.com/fish-tennis/gserver/db"
 	. "github.com/fish-tennis/gserver/internal"
@@ -25,7 +25,7 @@ type Player struct {
 	// 组件表
 	components []PlayerComponent
 	// 关联的连接
-	connection gnet.Connection
+	connection Connection
 }
 
 // 玩家唯一id
@@ -80,6 +80,7 @@ func (this *Player) GetComponents() []Component {
 func (this *Player) SaveCache() error {
 	for _,component := range this.components {
 		if saveable,ok := component.(Saveable); ok {
+			// 缓存数据作为一个整体的
 			if dirtyMark,ok2 := component.(DirtyMark); ok2 {
 				if !dirtyMark.IsDirty() {
 					continue
@@ -90,44 +91,35 @@ func (this *Player) SaveCache() error {
 				}
 				cacheKeyName := GetComponentCacheKey(this.id, component.GetName())
 				if reflect.ValueOf(cacheData).Kind() == reflect.Map {
-					err := cache.Get().SetMap(cacheKeyName, cacheData)
-					if err != nil {
+					// map格式作为一个整体缓存时,需要先删除之前的数据
+					err := cache.Get().Del(cacheKeyName)
+					if cache.IsRedisError(err) {
 						logger.Error("%v %v cache err:%v", this.id, component.GetNameLower(), err.Error())
+						continue
+					}
+					err = cache.Get().SetMap(cacheKeyName, cacheData)
+					if cache.IsRedisError(err) {
+						logger.Error("%v %v cache err:%v", this.id, component.GetNameLower(), err.Error())
+						continue
 					}
 				} else {
 					// 非map类型 必须是proto结构
-					if protoMessage,ok := cacheData.(proto.Message); ok {
+					if protoMessage,ok3 := cacheData.(proto.Message); ok3 {
 						err := cache.Get().SetProto(cacheKeyName, protoMessage, 0)
-						if err != nil {
+						if cache.IsRedisError(err) {
 							logger.Error("%v %v cache err:%v", this.id, component.GetNameLower(), err.Error())
+							continue
 						}
 					} else {
 						logger.Error("%v %v cache err:unsupport type", this.id, component.GetNameLower())
+						continue
 					}
 				}
-				//cache.Get().Set(cacheKeyName, cacheData, 0)
-				//cacheData,err := SaveWithProto(saveable, true)
-				//if err != nil {
-				//	continue
-				//}
-				//
-				//if reflect.ValueOf(cacheData).Kind() == reflect.Map {
-				//	_,cacheErr := cache.GetRedis().HSet(context.Background(), cacheKeyName, cacheData).Result()
-				//	if cacheErr != nil {
-				//		logger.Error("%v %v cache err:%v", this.id, component.GetNameLower(), cacheErr.Error())
-				//		continue
-				//	}
-				//} else {
-				//	_,cacheErr := cache.GetRedis().Set(context.Background(), cacheKeyName, cacheData, 0).Result()
-				//	if cacheErr != nil {
-				//		logger.Error("%v %v cache err:%v", this.id, component.GetNameLower(), cacheErr.Error())
-				//		continue
-				//	}
-				//}
 				dirtyMark.ResetDirty()
 				logger.Debug("SaveCache %v %v", this.id, component.GetNameLower())
 				continue
 			}
+			// map格式的
 			if dirtyMark,ok2 := component.(MapDirtyMark); ok2 {
 				if !dirtyMark.IsDirty() {
 					continue
@@ -140,7 +132,7 @@ func (this *Player) SaveCache() error {
 						continue
 					}
 					err := cache.Get().SetMap(cacheKeyName, cacheData)
-					if err != nil {
+					if cache.IsRedisError(err) {
 						logger.Error("%v %v cache err:%v", this.id, component.GetNameLower(), err.Error())
 						continue
 					}
@@ -153,49 +145,30 @@ func (this *Player) SaveCache() error {
 							if isAddOrUpdate {
 								if dirtyValue,exists := dirtyMark.GetMapValue(dirtyKey); exists {
 									setMap[dirtyKey] = dirtyValue
-									//_,err := cache.Get().SetMapField(cacheKeyName, dirtyKey, dirtyValue)
-									//if err != nil {
-									//	logger.Error("%v %v cache %v err:%v", this.id, component.GetNameLower(), dirtyKey, err.Error())
-									//}
 								}
 							} else {
 								// delete
 								delMap = append(delMap, dirtyKey)
-								//_,err := cache.GetRedis().HDel(context.Background(), cacheKeyName, dirtyKey).Result()
-								//if err != nil {
-								//	logger.Error("%v %v cache %v err:%v", this.id, component.GetNameLower(), dirtyKey, err.Error())
-								//}
 							}
 						}
 						if len(setMap) > 0 {
+							// 批量更新
 							err := cache.Get().SetMap(cacheKeyName, setMap)
-							if err != nil {
+							if cache.IsRedisError(err) {
 								logger.Error("%v %v cache %v err:%v", this.id, component.GetNameLower(), setMap, err.Error())
+								continue
 							}
 						}
 						if len(delMap) > 0 {
+							// 批量删除
 							err := cache.Get().DelMapField(cacheKeyName, delMap...)
-							if err != nil {
+							if cache.IsRedisError(err) {
 								logger.Error("%v %v cache %v err:%v", this.id, component.GetNameLower(), delMap, err.Error())
+								continue
 							}
 						}
 					}
 				}
-				//cacheData := saveable.Data(true)
-				//if cacheData == nil {
-				//	continue
-				//}
-				//cacheKeyName := GetComponentCacheKey(this.id, component.GetName())
-				//err := cache.Get().SetMap(cacheKeyName, cacheData)
-				//if err != nil {
-				//	logger.Error("%v %v cache err:%v", this.id, component.GetNameLower(), err.Error())
-				//	continue
-				//}
-				//_,cacheErr := cache.GetRedis().HSet(context.Background(), cacheKeyName, cacheData).Result()
-				//if cacheErr != nil {
-				//	logger.Error("%v %v cache err:%v", this.id, component.GetNameLower(), cacheErr.Error())
-				//	continue
-				//}
 				dirtyMark.ResetDirty()
 				logger.Debug("SaveCache %v %v", this.id, component.GetNameLower())
 				continue
@@ -210,7 +183,7 @@ func (this *Player) SaveDb(removeCacheAfterSaveDb bool) error {
 	componentDatas := make(map[string]interface{})
 	for _,component := range this.components {
 		if saveable,ok := component.(Saveable); ok {
-			// 如果组件数据没改变过,跳过保存
+			// 如果某个组件数据没改变过,就无需保存
 			if !saveable.IsChanged() {
 				logger.Debug("%v ignore %v", this.id, component.GetName())
 				continue
@@ -228,28 +201,6 @@ func (this *Player) SaveDb(removeCacheAfterSaveDb bool) error {
 			componentDatas[component.GetNameLower()] = saveData
 			logger.Debug("SaveDb %v %v", this.id, component.GetName())
 		}
-		//if mapSaveable,ok := component.(MapSaveable); ok {
-		//	if !mapSaveable.IsChanged() {
-		//		continue
-		//	}
-		//	mapData,saveOption := mapSaveable.Save(true)
-		//	if mapData == nil {
-		//		continue
-		//	}
-		//	if saveOption == ProtoMarshalMap {
-		//		for k,v := range mapData {
-		//			if protoMessage,ok := v.(proto.Message); ok {
-		//				bytes,err := proto.Marshal(protoMessage)
-		//				if err != nil {
-		//					logger.Error("Marshal %v %v %v err:%v", this.id, component.GetName(), k, err.Error())
-		//				}
-		//				mapData[k] = bytes
-		//			}
-		//		}
-		//	}
-		//	componentDatas[component.GetNameLower()] = mapData
-		//	logger.Debug("SaveDb %v %v", this.id, component.GetName())
-		//}
 	}
 	saveDbErr := db.GetPlayerDb().SaveComponents(this.id, componentDatas)
 	if saveDbErr != nil {
@@ -269,7 +220,7 @@ func (this *Player) SaveDb(removeCacheAfterSaveDb bool) error {
 }
 
 // 设置关联的连接
-func (this *Player) SetConnection(connection gnet.Connection) {
+func (this *Player) SetConnection(connection Connection) {
 	// 取消之前的连接和该玩家的关联
 	if this.connection != nil && this.connection != connection {
 		this.connection.SetTag(nil)
@@ -277,13 +228,13 @@ func (this *Player) SetConnection(connection gnet.Connection) {
 	this.connection = connection
 }
 
-func (this *Player) GetConnection() gnet.Connection {
+func (this *Player) GetConnection() Connection {
 	return this.connection
 }
 
 // 发包(protobuf)
 // NOTE:调用Send(command,message)之后,不要再对message进行读写!
-func (this *Player) Send(command gnet.PacketCommand, message proto.Message) bool {
+func (this *Player) Send(command PacketCommand, message proto.Message) bool {
 	if this.connection != nil {
 		return this.connection.Send(command, message)
 	}
@@ -329,10 +280,12 @@ func CreatePlayerFromData(playerData *pb.PlayerData) *Player {
 	// 初始化玩家的各个模块
 	player.addComponent(NewBaseInfo(player, playerData.BaseInfo), nil)
 	player.addComponent(NewMoney(player), playerData.Money)
-	//player.addComponent(NewBag(player), playerData.Bag)
+	bagCountItem := NewBagCountItem(player, playerData.BagCountItem)
+	player.addComponent(bagCountItem, nil)
+	bagUniqueItem := NewBagUniqueItem(player, playerData.BagUniqueItem)
+	player.addComponent(bagUniqueItem, nil)
+	player.addComponent(NewBag(player, bagCountItem, bagUniqueItem), nil)
 	//player.addComponent(NewQuest(player), playerData.Quest)
-	player.addComponent(NewBagCountItem(player, playerData.BagCountItem), nil)
-	player.addComponent(NewBagUniqueItem(player, playerData.BagUniqueItem), nil)
 	return player
 }
 

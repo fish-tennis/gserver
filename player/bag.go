@@ -2,92 +2,32 @@ package player
 
 import (
 	"github.com/fish-tennis/gserver/internal"
-	"github.com/fish-tennis/gserver/pb"
-	"github.com/fish-tennis/gserver/util"
-	"math"
 )
 
-var _ internal.Saveable = (*Bag)(nil)
-
-// 一个简单的背包模块
+// 背包模块
+// 演示通过组合模式,整合多个不同的子背包模块,提供更高一级的背包接口
 type Bag struct {
-	DataComponent
-	data *pb.Bag
+	BaseComponent
+	bagCountItem *BagCountItem
+	bagUniqueItem *BagUniqueItem
 }
 
-func NewBag(player *Player) *Bag {
+func NewBag(player *Player, bagCountItem *BagCountItem, bagUniqueItem *BagUniqueItem) *Bag {
 	component := &Bag{
-		DataComponent: DataComponent{
-			BaseComponent: BaseComponent{
-				Player: player,
-				Name: "Bag",
-			},
+		BaseComponent: BaseComponent{
+			Player: player,
+			Name: "Bag",
 		},
-		data: &pb.Bag{},
+		bagCountItem: bagCountItem,
+		bagUniqueItem: bagUniqueItem,
 	}
-	component.checkData()
 	return component
 }
-
-func (this *Bag) DbData() (dbData interface{}, protoMarshal bool) {
-	return this.data,true
-}
-
-func (this *Bag) CacheData() interface{} {
-	return this.data
-}
-
-//func (this *Bag) Load(data interface{}, fromCache bool) error {
-//	err := internal.LoadWithProto(data, this.data)
-//	this.checkData()
-//	logger.Debug("%v", this.data)
-//	return err
-//}
 
 // 事件接口
 func (this *Bag) OnEvent(event interface{}) {
 	switch event.(type) {
 	case *internal.EventPlayerEntryGame:
 		// 测试代码
-		if len(this.data.CountItems) == 0 {
-			this.AddItem(1,2)
-		}
-		if len(this.data.UniqueItems) == 0 {
-			uniqueItem := &pb.UniqueItem{UniqueId: util.GenUniqueId(), CfgId: 1001}
-			this.AddUniqueItem(uniqueItem)
-		}
-	}
-}
-
-func (this *Bag) checkData() {
-	if this.data.CountItems == nil {
-		this.data.CountItems = make(map[int32]int32)
-	}
-	if this.data.UniqueItems == nil {
-		this.data.UniqueItems = make(map[int64]*pb.UniqueItem)
-	}
-}
-
-func (this *Bag) AddItem(itemCfgId,addCount int32) {
-	if addCount <= 0 {
-		return
-	}
-	curCount,ok := this.data.CountItems[itemCfgId]
-	if ok {
-		// 检查数值溢出
-		if int64(curCount) + int64(addCount) > math.MaxInt32 {
-			curCount = math.MaxInt32
-		}
-	} else {
-		curCount = addCount
-	}
-	this.data.CountItems[itemCfgId] = curCount
-	this.SetDirty()
-}
-
-func (this *Bag) AddUniqueItem(uniqueItem *pb.UniqueItem) {
-	if _,ok := this.data.UniqueItems[uniqueItem.UniqueId]; !ok {
-		this.data.UniqueItems[uniqueItem.UniqueId] = uniqueItem
-		this.SetDirty()
 	}
 }

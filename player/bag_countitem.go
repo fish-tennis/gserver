@@ -53,8 +53,6 @@ func (this *BagCountItem) checkData() {
 func (this *BagCountItem) OnEvent(event interface{}) {
 	switch event.(type) {
 	case *internal.EventPlayerEntryGame:
-		//// 玩家登录游戏时,先把当前组件数据保存到缓存
-		//internal.SaveCache(this, this.GetCacheKey())
 		// 测试代码
 		this.AddItem(rand.Int31n(100),rand.Int31n(100))
 	}
@@ -74,7 +72,6 @@ func (this *BagCountItem) AddItem(itemCfgId,addCount int32) {
 		curCount = addCount
 	}
 	this.items[itemCfgId] = curCount
-	//internal.CacheMapSet(this.GetCacheKey(), strconv.Itoa(int(itemCfgId)), curCount)
 	this.SetDirty(strconv.Itoa(int(itemCfgId)), true)
 	logger.Debug("AddItem cfgId:%v curCount:%v", itemCfgId, curCount)
 }
@@ -90,11 +87,9 @@ func (this *BagCountItem) DelItem(itemCfgId,delCount int32) {
 	if delCount >= curCount {
 		delete(this.items, itemCfgId)
 		this.SetDirty(strconv.Itoa(int(itemCfgId)), false)
-		//internal.CacheMapDel(this.GetCacheKey(), strconv.Itoa(int(itemCfgId)))
 	} else {
 		this.items[itemCfgId] = curCount - delCount
 		this.SetDirty(strconv.Itoa(int(itemCfgId)), true)
-		//internal.CacheMapSet(this.GetCacheKey(), strconv.Itoa(int(itemCfgId)), this.items[itemCfgId])
 	}
 	logger.Debug("DelItem cfgId:%v curCount:%v", itemCfgId, curCount)
 }

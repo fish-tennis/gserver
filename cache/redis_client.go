@@ -2,7 +2,6 @@ package cache
 
 import "github.com/go-redis/redis/v8"
 
-// 缓存直接使用redis,没有抽象一层cache的interface,因为游戏项目一般都是用redis来做缓存服务
 var (
 	// singleton
 	// redis.Cmdable兼容集群模式和单机模式
@@ -10,12 +9,13 @@ var (
 	_redisCache KvCache
 )
 
-// 提供KvCache接口
+// 提供KvCache接口,便于更换不同的缓存系统
 func Get() KvCache {
 	return _redisCache
 }
 
-// 提供redis接口
+// 提供redis接口,用于一些redis特有的接口
+// Q:其他缓存系统没有的接口,就很难抽象成通用接口了
 func GetRedis() redis.Cmdable {
 	return _redisClient
 }
