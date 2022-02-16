@@ -160,44 +160,6 @@ func (this *GameServer) repairPlayerCache(playerId,accountId int64) error {
 		if err == redis.Nil || cacheType == "" || cacheType == "none" {
 			continue
 		}
-		//var sourceDate interface{}
-		//if cacheType == "string" {
-		//	// set get
-		//	componentData,err := cache.GetRedis().Get(context.Background(), cacheKey).Result()
-		//	// 不存在的key或者空数据,直接跳过,防止错误的覆盖
-		//	if err == redis.Nil || len(componentData) == 0 {
-		//		continue
-		//	}
-		//	if err != nil {
-		//		logger.Error("GetPlayerCache %v err:%v", cacheKey, err.Error())
-		//		continue
-		//	}
-		//	sourceDate = []byte(componentData)
-		//} else if cacheType == "hash" {
-		//	// HGet HSet
-		//	componentData,err := cache.GetRedis().HGetAll(context.Background(), cacheKey).Result()
-		//	// 不存在的key或者空数据,直接跳过,防止错误的覆盖
-		//	if err == redis.Nil || len(componentData) == 0 {
-		//		continue
-		//	}
-		//	if err != nil {
-		//		logger.Error("GetPlayerCache %v err:%v", cacheKey, err.Error())
-		//		continue
-		//	}
-		//	sourceDate = componentData
-		//} else {
-		//	logger.Error("GetPlayerCache %v unsupport cache type:%v", cacheKey, cacheType)
-		//	continue
-		//}
-		//componentData,err := cache.Get().Get(context.Background(), cacheKey).Result()
-		//// 不存在的key或者空数据,直接跳过,防止错误的覆盖
-		//if err == redis.Nil || len(componentData) == 0 {
-		//	continue
-		//}
-		//if cache.IsRedisError(err) {
-		//	logger.Error("GetPlayerCache %v err:%v", cacheKey, err.Error())
-		//	continue
-		//}
 		componentTemplate := tmpPlayer.GetComponent(componentName)
 		if componentTemplate == nil {
 			logger.Error("%v GetComponent nil %v", playerId, componentName)
@@ -226,12 +188,6 @@ func (this *GameServer) repairPlayerCache(playerId,accountId int64) error {
 				logger.Error("%v unsupport cache type:%v", cacheKey, cacheType)
 				continue
 			}
-			//// 从缓存恢复组件数据
-			//err := saveable.Load(sourceDate, true)
-			//if err != nil {
-			//	logger.Error("%v Load %v err %v", playerId, componentName, err.Error())
-			//	continue
-			//}
 			saveData,err := SaveWithProto(saveable)
 			if err != nil {
 				logger.Error("%v Save %v err %v", playerId, componentName, err.Error())

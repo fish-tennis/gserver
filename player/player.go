@@ -251,21 +251,10 @@ func (this *Player) FireEvent(event interface{}) {
 }
 
 // 添加玩家组件
-func (this *Player)addComponent(component PlayerComponent, bytes []byte) {
-	if len(bytes) > 0 {
-		if saveable,ok := component.(Saveable); ok {
-			dbData,protoMarshal := saveable.DbData()
-			if dbData != nil && protoMarshal {
-				if protoMessage,ok2 := dbData.(proto.Message); ok2 {
-					err := proto.Unmarshal(bytes, protoMessage)
-					if err != nil {
-						logger.Error("%v proto err:%v", component.GetName(), err)
-					}
-				}
-			}
-		}
+func (this *Player)addComponent(component PlayerComponent, sourceData interface{}) {
+	if saveable,ok := component.(Saveable); ok {
+		LoadWithProto(saveable, sourceData)
 	}
-	// map[int]proto.Message格式的序列化
 	this.components = append(this.components, component)
 }
 
@@ -282,8 +271,8 @@ func CreatePlayerFromData(playerData *pb.PlayerData) *Player {
 	player.addComponent(NewMoney(player), playerData.Money)
 	bagCountItem := NewBagCountItem(player, playerData.BagCountItem)
 	player.addComponent(bagCountItem, nil)
-	bagUniqueItem := NewBagUniqueItem(player, playerData.BagUniqueItem)
-	player.addComponent(bagUniqueItem, nil)
+	bagUniqueItem := NewBagUniqueItem(player)
+	player.addComponent(bagUniqueItem, playerData.BagUniqueItem)
 	player.addComponent(NewBag(player, bagCountItem, bagUniqueItem), nil)
 	//player.addComponent(NewQuest(player), playerData.Quest)
 	return player

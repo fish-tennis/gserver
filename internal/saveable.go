@@ -3,6 +3,7 @@ package internal
 import (
 	"errors"
 	"github.com/fish-tennis/gserver/logger"
+	"github.com/fish-tennis/gserver/util"
 	"google.golang.org/protobuf/proto"
 	"reflect"
 )
@@ -136,4 +137,108 @@ func SaveWithProto(saveable Saveable) (interface{},error) {
 		}
 	}
 	return saveData,nil
+}
+
+func LoadWithProto(saveable Saveable, sourceData interface{}) error {
+	if util.IsNil(sourceData) {
+		return nil
+	}
+	dbData,protoMarshal := saveable.DbData()
+	if !protoMarshal || util.IsNil(dbData) {
+		return nil
+	}
+	// []byte -> proto.Message
+	if bytes,ok := sourceData.([]byte); ok {
+		if len(bytes) > 0 {
+			if protoMessage,ok2 := dbData.(proto.Message); ok2 {
+				err := proto.Unmarshal(bytes, protoMessage)
+				if err != nil {
+					logger.Error("proto err:%v", err)
+					return err
+				}
+			}
+		}
+		return nil
+	}
+	// map[int or string]int or string -> map[int or string]int or string
+	// map[int or string][]byte -> map[int or string]proto.Message
+	sourceTyp := reflect.TypeOf(sourceData)
+	if sourceTyp.Kind() == reflect.Map {
+		sourceVal := reflect.ValueOf(sourceData)
+		sourceKeyType := sourceTyp.Key()
+		sourceValType := sourceTyp.Elem()
+		typ := reflect.TypeOf(dbData)
+		if typ.Kind() == reflect.Map {
+			val := reflect.ValueOf(dbData)
+			keyType := typ.Key()
+			valType := typ.Elem()
+			sourceIt := sourceVal.MapRange()
+			for sourceIt.Next() {
+				k := convertValueToInterface(sourceKeyType, keyType, sourceIt.Key())
+				v := convertValueToInterface(sourceValType, valType, sourceIt.Value())
+				val.SetMapIndex(reflect.ValueOf(k), reflect.ValueOf(v))
+			}
+		}
+	}
+	return nil
+}
+
+func convertValueToInterface(srcType,dstType reflect.Type, v reflect.Value) interface{} {
+	switch srcType.Kind() {
+	case reflect.Int,reflect.Int8,reflect.Int16,reflect.Int32,reflect.Int64:
+		return convertInterfaceToRealType(dstType, v.Int())
+	case reflect.Uint,reflect.Uint8,reflect.Uint16,reflect.Uint32,reflect.Uint64:
+		return convertInterfaceToRealType(dstType, v.Uint())
+	case reflect.String:
+		return convertInterfaceToRealType(dstType, v.String())
+	case reflect.Interface,reflect.Ptr:
+		return convertInterfaceToRealType(dstType, v.Interface())
+	case reflect.Slice:
+		if v.Type().Elem().Kind() == reflect.Uint8 {
+			return convertInterfaceToRealType(dstType, v.Bytes())
+		}
+	}
+	return nil
+}
+
+func convertInterfaceToRealType(typ reflect.Type, v interface{}) interface{} {
+	switch typ.Kind() {
+	case reflect.Int:
+		return int(v.(int64))
+	case reflect.Int8:
+		return int8(v.(int64))
+	case reflect.Int16:
+		return int16(v.(int64))
+	case reflect.Int32:
+		return int32(v.(int64))
+	case reflect.Int64:
+		return v.(int64)
+	case reflect.Uint:
+		return uint(v.(uint64))
+	case reflect.Uint8:
+		return uint8(v.(uint64))
+	case reflect.Uint16:
+		return uint16(v.(uint64))
+	case reflect.Uint32:
+		return uint32(v.(uint64))
+	case reflect.Uint64:
+		return v.(uint64)
+	case reflect.String:
+		return v
+	case reflect.Interface,reflect.Ptr,reflect.Slice:
+		if bytes,ok := v.([]byte); ok {
+			newProto := reflect.New(typ.Elem())
+			if protoMessage,ok2 := newProto.Interface().(proto.Message); ok2 {
+				protoErr := proto.Unmarshal(bytes, protoMessage)
+				if protoErr != nil {
+					return protoErr
+				}
+				return protoMessage
+			}
+		}
+	default:
+		logger.Error("unsupport type:%v",typ.Kind())
+		return nil
+	}
+	return nil
 }

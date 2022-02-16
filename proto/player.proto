@@ -48,5 +48,5 @@ message PlayerData {
   bytes money = 6;
   Quest quest = 8;
   map<int32,int32> bagCountItem = 9;
-  map<int64,UniqueItem> bagUniqueItem = 10;
+  map<int64,bytes> bagUniqueItem = 10;
 }

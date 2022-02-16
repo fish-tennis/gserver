@@ -2,6 +2,7 @@ package player
 
 import (
 	"github.com/fish-tennis/gserver/internal"
+	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 	"github.com/fish-tennis/gserver/util"
 	"math/rand"
@@ -17,10 +18,10 @@ type BagUniqueItem struct {
 	items map[int64]*pb.UniqueItem
 }
 
-func NewBagUniqueItem(player *Player, data map[int64]*pb.UniqueItem) *BagUniqueItem {
+func NewBagUniqueItem(player *Player) *BagUniqueItem {
 	component := &BagUniqueItem{
 		MapDataComponent: *NewMapDataComponent(player, "BagUniqueItem"),
-		items: data,
+		items: make(map[int64]*pb.UniqueItem),
 	}
 	component.checkData()
 	return component
@@ -59,5 +60,6 @@ func (this *BagUniqueItem) AddUniqueItem(uniqueItem *pb.UniqueItem) {
 	if _,ok := this.items[uniqueItem.UniqueId]; !ok {
 		this.items[uniqueItem.UniqueId] = uniqueItem
 		this.SetDirty(strconv.FormatInt(uniqueItem.UniqueId,10), true)
+		logger.Debug("AddUniqueItem CfgId:%v UniqueId:%v", uniqueItem.CfgId, uniqueItem.UniqueId)
 	}
 }
