@@ -29,7 +29,7 @@ message Bag {
 // 任务数据
 message Quest {
   repeated int32 finished = 1; // 已完成的任务
-  map<int32,QuestData> quests = 2; // 进行中的任务
+  map<int32,bytes> quests = 2; // 进行中的任务
 }
 
 message QuestData {

@@ -2,15 +2,63 @@ package player
 
 import (
 	"github.com/fish-tennis/gserver/internal"
+	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
+	"github.com/fish-tennis/gserver/util"
+	"math/rand"
+	"strconv"
 )
 
-var _ internal.Saveable = (*Quest)(nil)
+var _ internal.CompositeSaveable = (*Quest)(nil)
 
 // 任务模块
 type Quest struct {
 	MapDataComponent
-	data *pb.Quest
+	//data *pb.Quest
+	finished *FinishedQuests
+	quests *CurQuests
+}
+
+type FinishedQuests struct {
+	finished []int32
+}
+
+func (f *FinishedQuests) IsChanged() bool {
+	panic("implement me")
+}
+
+func (f *FinishedQuests) DbData() (dbData interface{}, protoMarshal bool) {
+	return f.finished,false
+}
+
+func (f *FinishedQuests) CacheData() interface{} {
+	return f.finished
+}
+
+func (f *FinishedQuests) Key() string {
+	return "finished"
+}
+
+type CurQuests struct {
+	internal.BaseMapDirtyMark
+	quests map[int32]*pb.QuestData
+}
+
+func (c *CurQuests) GetMapValue(key string) (value interface{}, exists bool) {
+	value,exists = c.quests[int32(util.Atoi(key))]
+	return
+}
+
+func (c *CurQuests) DbData() (dbData interface{}, protoMarshal bool) {
+	return c.quests,true
+}
+
+func (c *CurQuests) CacheData() interface{} {
+	return c.quests
+}
+
+func (c *CurQuests) Key() string {
+	return "quests"
 }
 
 func NewQuest(player *Player) *Quest {
@@ -21,23 +69,33 @@ func NewQuest(player *Player) *Quest {
 				Name:   "Quest",
 			},
 		},
-		data: &pb.Quest{
+		finished: &FinishedQuests{
+			//finished: data.GetFinished(),
+		},
+		quests: &CurQuests{
 		},
 	}
 	component.checkData()
+	//if data != nil && data.Quests != nil {
+	//	internal.LoadSaveable(component.quests, data.Quests)
+	//}
 	return component
 }
 
-func (this *Quest) DbData() (dbData interface{}, protoMarshal bool) {
-	// 演示明文保存数据库
-	// 优点:便于查看,数据库语言可直接操作字段
-	// 缺点:字段名也会保存到数据库,占用空间多
-	return this.data,false
+func (this *Quest) SaveableChildren() []internal.SaveableChild {
+	return []internal.SaveableChild{this.quests}
 }
-
-func (this *Quest) CacheData() interface{} {
-	return this.data
-}
+//
+//func (this *Quest) DbData() (dbData interface{}, protoMarshal bool) {
+//	// 演示明文保存数据库
+//	// 优点:便于查看,数据库语言可直接操作字段
+//	// 缺点:字段名也会保存到数据库,占用空间多
+//	return this.data,false
+//}
+//
+//func (this *Quest) CacheData() interface{} {
+//	return this.data
+//}
 
 //
 //// 需要保存的数据
@@ -86,8 +144,8 @@ func (this *Quest) CacheData() interface{} {
 //}
 
 func (this *Quest) checkData() {
-	if this.data.Quests == nil {
-		this.data.Quests = make(map[int32]*pb.QuestData)
+	if this.quests.quests == nil {
+		this.quests.quests = make(map[int32]*pb.QuestData)
 	}
 }
 
@@ -95,7 +153,13 @@ func (this *Quest) checkData() {
 func (this *Quest) OnEvent(event interface{}) {
 	switch event.(type) {
 	case *internal.EventPlayerEntryGame:
-		//// 测试代码
+		// 测试代码
+		this.finished.finished = append(this.finished.finished, int32(rand.Intn(100)))
+		logger.Debug("finished:%v", this.finished.finished)
+		questData := &pb.QuestData{CfgId: int32(rand.Intn(1000)), Progress: rand.Int31n(100)}
+		this.quests.quests[questData.CfgId] = questData
+		this.quests.SetDirty(strconv.Itoa(int(questData.CfgId)), true)
+		logger.Debug("add quest:%v", questData)
 		//if len(this.data.Finished) == 0 {
 		//	this.data.Finished = append(this.data.Finished,1)
 		//	this.SetDirty("finished", this.data.Finished)

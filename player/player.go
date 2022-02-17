@@ -79,6 +79,7 @@ func (this *Player) GetComponents() []Component {
 // 保存所有修改过的组件数据到缓存
 func (this *Player) SaveCache() error {
 	for _,component := range this.components {
+		// TODO:加一个ComboSaveable,内嵌[]Saveable
 		if saveable,ok := component.(Saveable); ok {
 			// 缓存数据作为一个整体的
 			if dirtyMark,ok2 := component.(DirtyMark); ok2 {
@@ -141,7 +142,7 @@ func (this *Player) SaveCache() error {
 					if mapDataComponent,ok3 := component.(*MapDataComponent); ok3 {
 						setMap := make(map[string]interface{})
 						var delMap []string
-						for dirtyKey,isAddOrUpdate := range mapDataComponent.dirtyMap {
+						for dirtyKey,isAddOrUpdate := range mapDataComponent.GetDirtyMap() {
 							if isAddOrUpdate {
 								if dirtyValue,exists := dirtyMark.GetMapValue(dirtyKey); exists {
 									setMap[dirtyKey] = dirtyValue
@@ -201,6 +202,29 @@ func (this *Player) SaveDb(removeCacheAfterSaveDb bool) error {
 			componentDatas[component.GetNameLower()] = saveData
 			logger.Debug("SaveDb %v %v", this.id, component.GetName())
 		}
+		if compositeSaveable,ok := component.(CompositeSaveable); ok {
+			compositeData := make(map[string]interface{})
+			saveables := compositeSaveable.SaveableChildren()
+			for _,saveable := range saveables {
+				if !saveable.IsChanged() {
+					logger.Debug("%v ignore %v", this.id, component.GetName())
+					continue
+				}
+				saveData,err := SaveWithProto(saveable)
+				if err != nil {
+					logger.Error("%v Save %v err:%v", this.id, component.GetName(), err.Error())
+					continue
+				}
+				if saveData == nil {
+					logger.Debug("%v ignore nil %v", this.id, component.GetName())
+					continue
+				}
+				compositeData[saveable.Key()] = saveData
+				logger.Debug("SaveDb %v %v.%v", this.id, component.GetName(), saveable.Key())
+			}
+			componentDatas[component.GetNameLower()] = compositeData
+			logger.Debug("SaveDb %v %v", this.id, component.GetName())
+		}
 	}
 	saveDbErr := db.GetPlayerDb().SaveComponents(this.id, componentDatas)
 	if saveDbErr != nil {
@@ -253,7 +277,10 @@ func (this *Player) FireEvent(event interface{}) {
 // 添加玩家组件
 func (this *Player)addComponent(component PlayerComponent, sourceData interface{}) {
 	if saveable,ok := component.(Saveable); ok {
-		LoadWithProto(saveable, sourceData)
+		LoadSaveable(saveable, sourceData)
+	}
+	if compositeSaveable,ok := component.(CompositeSaveable); ok {
+		LoadCompositeSaveable(compositeSaveable, sourceData)
 	}
 	this.components = append(this.components, component)
 }
@@ -274,7 +301,7 @@ func CreatePlayerFromData(playerData *pb.PlayerData) *Player {
 	bagUniqueItem := NewBagUniqueItem(player)
 	player.addComponent(bagUniqueItem, playerData.BagUniqueItem)
 	player.addComponent(NewBag(player, bagCountItem, bagUniqueItem), nil)
-	//player.addComponent(NewQuest(player), playerData.Quest)
+	player.addComponent(NewQuest(player), playerData.Quest)
 	return player
 }
 

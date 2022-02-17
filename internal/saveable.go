@@ -2,16 +2,20 @@ package internal
 
 import (
 	"errors"
+	"fmt"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/util"
 	"google.golang.org/protobuf/proto"
 	"reflect"
+	"strings"
 )
 
 // 保存数据接口
 type Saveable interface {
 	// 数据是否改变过
 	IsChanged() bool
+	//
+	//KeyName() string
 
 	// 需要保存到数据库的数据
 	// 支持类型:
@@ -26,6 +30,40 @@ type Saveable interface {
 	CacheData() interface{}
 }
 
+type SaveableChild interface {
+	Saveable
+	Key() string
+}
+
+// 多个保存模块的组合
+type CompositeSaveable interface {
+	SaveableChildren() []SaveableChild
+}
+
+//type ChildSaveable struct {
+//	dbData interface{}
+//	cacheData interface{}
+//	protoMarshal bool
+//	isChanged bool
+//	key string
+//}
+//
+//func (this *ChildSaveable) Key() string {
+//	return this.key
+//}
+//
+//func (this *ChildSaveable) IsChanged() bool {
+//	return this.isChanged
+//}
+//
+//func (this *ChildSaveable) DbData() (dbData interface{}, protoMarshal bool) {
+//	return this.dbData,this.protoMarshal
+//}
+//
+//func (this *ChildSaveable) CacheData() interface{} {
+//	return this.cacheData
+//}
+
 // 保存数据作为一个整体,只要一个字段修改了,整个数据都需要缓存
 type DirtyMark interface {
 	// 需要保存的数据是否修改了
@@ -34,6 +72,29 @@ type DirtyMark interface {
 	SetDirty()
 	// 重置标记
 	ResetDirty()
+}
+
+type BaseDirtyMark struct {
+	// 数据是否修改过
+	isChanged bool
+	isDirty bool
+}
+
+// 数据是否改变过
+func (this *BaseDirtyMark) IsChanged() bool {
+	return this.isChanged
+}
+
+func (this *BaseDirtyMark) IsDirty() bool {
+	return this.isDirty
+}
+
+func (this *BaseDirtyMark) SetDirty() {
+	this.isDirty = true
+}
+
+func (this *BaseDirtyMark) ResetDirty() {
+	this.isDirty = false
 }
 
 // map格式的保存数据
@@ -51,6 +112,44 @@ type MapDirtyMark interface {
 	SetCached()
 
 	GetMapValue(key string) (value interface{}, exists bool)
+}
+
+type BaseMapDirtyMark struct {
+	isChanged bool
+	hasCached bool
+	dirtyMap map[string]bool
+}
+
+func (this *BaseMapDirtyMark) IsChanged() bool {
+	return this.isChanged
+}
+
+func (this *BaseMapDirtyMark) IsDirty() bool {
+	return len(this.dirtyMap) > 0
+}
+
+func (this *BaseMapDirtyMark) SetDirty(k string, isAddOrUpdate bool) {
+	if this.dirtyMap == nil {
+		this.dirtyMap = make(map[string]bool)
+	}
+	this.dirtyMap[k] = isAddOrUpdate
+	this.isChanged = true
+}
+
+func (this *BaseMapDirtyMark) ResetDirty() {
+	this.dirtyMap = make(map[string]bool)
+}
+
+func (this *BaseMapDirtyMark) HasCached() bool {
+	return this.hasCached
+}
+
+func (this *BaseMapDirtyMark) SetCached() {
+	this.hasCached = true
+}
+
+func (this *BaseMapDirtyMark) GetDirtyMap() map[string]bool {
+	return this.dirtyMap
 }
 
 // 保存数据,如果设置了对proto进行序列化,则进行序列化处理
@@ -139,7 +238,7 @@ func SaveWithProto(saveable Saveable) (interface{},error) {
 	return saveData,nil
 }
 
-func LoadWithProto(saveable Saveable, sourceData interface{}) error {
+func LoadSaveable(saveable Saveable, sourceData interface{}) error {
 	if util.IsNil(sourceData) {
 		return nil
 	}
@@ -147,23 +246,26 @@ func LoadWithProto(saveable Saveable, sourceData interface{}) error {
 	if !protoMarshal || util.IsNil(dbData) {
 		return nil
 	}
-	// []byte -> proto.Message
-	if bytes,ok := sourceData.([]byte); ok {
-		if len(bytes) > 0 {
-			if protoMessage,ok2 := dbData.(proto.Message); ok2 {
-				err := proto.Unmarshal(bytes, protoMessage)
-				if err != nil {
-					logger.Error("proto err:%v", err)
-					return err
+	sourceTyp := reflect.TypeOf(sourceData)
+	switch sourceTyp.Kind() {
+	case reflect.Slice:
+		// []byte -> proto.Message
+		if bytes,ok := sourceData.([]byte); ok {
+			if len(bytes) > 0 {
+				if protoMessage,ok2 := dbData.(proto.Message); ok2 {
+					err := proto.Unmarshal(bytes, protoMessage)
+					if err != nil {
+						logger.Error("proto err:%v", err)
+						return err
+					}
 				}
 			}
+			return nil
 		}
-		return nil
-	}
-	// map[int or string]int or string -> map[int or string]int or string
-	// map[int or string][]byte -> map[int or string]proto.Message
-	sourceTyp := reflect.TypeOf(sourceData)
-	if sourceTyp.Kind() == reflect.Map {
+
+	case reflect.Map:
+		// map[intORstring]intORstring -> map[intORstring]intORstring
+		// map[intORstring][]byte -> map[intORstring]proto.Message
 		sourceVal := reflect.ValueOf(sourceData)
 		sourceKeyType := sourceTyp.Key()
 		sourceValType := sourceTyp.Elem()
@@ -178,11 +280,55 @@ func LoadWithProto(saveable Saveable, sourceData interface{}) error {
 				v := convertValueToInterface(sourceValType, valType, sourceIt.Value())
 				val.SetMapIndex(reflect.ValueOf(k), reflect.ValueOf(v))
 			}
+			return nil
+		}
+	}
+	logger.Error("unsupport type:%v",sourceTyp.Kind())
+	return nil
+}
+
+func LoadCompositeSaveable(compositeSaveable CompositeSaveable, sourceData interface{}) error {
+	if util.IsNil(sourceData) {
+		return nil
+	}
+	sourceTyp := reflect.TypeOf(sourceData)
+	// 如果是proto,先转换成map
+	if sourceTyp.Kind() == reflect.Ptr {
+		protoMessage,ok := sourceData.(proto.Message)
+		if !ok {
+			logger.Error("unsupport type:%v",sourceTyp.Kind())
+			return errors.New(fmt.Sprintf("unsupport type:%v", sourceTyp.Kind()))
+		}
+		sourceData = convertProtoToMap(protoMessage)
+		sourceTyp = reflect.TypeOf(sourceData)
+	}
+	if sourceTyp.Kind() != reflect.Map {
+		logger.Error("unsupport type:%v",sourceTyp.Kind())
+		return errors.New(fmt.Sprintf("unsupport type:%v", sourceTyp.Kind()))
+	}
+	sourceVal := reflect.ValueOf(sourceData)
+	saveables := compositeSaveable.SaveableChildren()
+	for _,saveable := range saveables {
+		v := sourceVal.MapIndex(reflect.ValueOf(saveable.Key()))
+		if !v.IsValid() {
+			logger.Debug("saveable not exists:%v", saveable.Key())
+			continue
+		}
+		switch v.Kind() {
+		case reflect.Slice:
+			if v.Type().Elem().Kind() != reflect.Uint8 {
+				logger.Error("unsupport slice type:%v",v.Type().Elem().Kind())
+				return errors.New(fmt.Sprintf("unsupport slice type:%v",v.Type().Elem().Kind()))
+			}
+			LoadSaveable(saveable, v.Bytes())
+		case reflect.Interface,reflect.Ptr:
+			LoadSaveable(saveable, v.Interface())
 		}
 	}
 	return nil
 }
 
+// reflect.Value -> interface{}
 func convertValueToInterface(srcType,dstType reflect.Type, v reflect.Value) interface{} {
 	switch srcType.Kind() {
 	case reflect.Int,reflect.Int8,reflect.Int16,reflect.Int32,reflect.Int64:
@@ -198,9 +344,11 @@ func convertValueToInterface(srcType,dstType reflect.Type, v reflect.Value) inte
 			return convertInterfaceToRealType(dstType, v.Bytes())
 		}
 	}
+	logger.Error("unsupport type:%v",srcType.Kind())
 	return nil
 }
 
+// interface{} -> int or string or proto.Message
 func convertInterfaceToRealType(typ reflect.Type, v interface{}) interface{} {
 	switch typ.Kind() {
 	case reflect.Int:
@@ -236,9 +384,39 @@ func convertInterfaceToRealType(typ reflect.Type, v interface{}) interface{} {
 				return protoMessage
 			}
 		}
-	default:
-		logger.Error("unsupport type:%v",typ.Kind())
-		return nil
 	}
+	logger.Error("unsupport type:%v",typ.Kind())
 	return nil
+}
+
+// proto.Message -> map[string]interface{}
+func convertProtoToMap(protoMessage proto.Message) map[string]interface{} {
+	stringMap := make(map[string]interface{})
+	typ := reflect.TypeOf(protoMessage).Elem()
+	val := reflect.ValueOf(protoMessage).Elem()
+	for i := 0; i < typ.NumField(); i++ {
+		sf := typ.Field(i)
+		if len(sf.Tag) == 0 {
+			continue
+		}
+		var v interface{}
+		fieldVal := val.Field(i)
+		switch fieldVal.Kind() {
+		case reflect.Slice:
+			if fieldVal.Type().Elem().Kind() == reflect.Uint8 {
+				v = fieldVal.Bytes()
+			}
+		case reflect.Interface,reflect.Ptr,reflect.Map:
+			v = fieldVal.Interface()
+		}
+		if v == nil {
+			continue
+		}
+		stringMap[strings.ToLower(sf.Name)] = v
+	}
+	//protoMessage.ProtoReflect().Range(func(descriptor protoreflect.FieldDescriptor, value protoreflect.Value) bool {
+	//	stringMap[string(descriptor.Name())] = value.Interface()
+	//	return true
+	//})
+	return stringMap
 }
