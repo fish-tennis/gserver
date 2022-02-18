@@ -155,28 +155,6 @@ func (this *GameServer) repairPlayerCache(playerId,accountId int64) error {
 	tmpPlayer := player.CreateTempPlayer(playerId,accountId)
 	for _,component := range tmpPlayer.GetComponents() {
 		if saveable,ok := component.(Saveable); ok {
-			//cacheData := saveable.CacheData()
-			//if cacheType == "string" {
-			//	if protoMessage,ok := cacheData.(proto.Message); ok {
-			//		err = cache.Get().GetProto(cacheKey, protoMessage)
-			//		if err != nil {
-			//			logger.Error("GetProto %v %v err:%v", cacheKey, cacheType, err)
-			//			continue
-			//		}
-			//	} else {
-			//		logger.Error("%v unsupport cache type:%v", cacheKey, cacheType)
-			//		continue
-			//	}
-			//} else if cacheType == "hash" {
-			//	err = cache.Get().GetMap(cacheKey, cacheData)
-			//	if err != nil {
-			//		logger.Error("GetMap %v %v err:%v", cacheKey, cacheType, err)
-			//		continue
-			//	}
-			//} else {
-			//	logger.Error("%v unsupport cache type:%v", cacheKey, cacheType)
-			//	continue
-			//}
 			err := LoadFromCache(saveable)
 			if err != nil {
 				logger.Error("LoadFromCache %v error:%v", saveable.GetCacheKey(), err.Error())
@@ -218,7 +196,7 @@ func (this *GameServer) repairPlayerCache(playerId,accountId int64) error {
 					logger.Error("%v SaveDb %v.%v err %v", playerId, component.GetNameLower(), saveable.Key(), saveDbErr.Error())
 					continue
 				}
-				logger.Info("%v SaveDb %v", playerId, component.GetNameLower())
+				logger.Info("%v SaveDb %v", playerId, component.GetNameLower()+"."+saveable.Key())
 				cache.Get().Del(saveable.GetCacheKey())
 				logger.Info("RemoveCache %v %v", playerId, saveable.GetCacheKey())
 			}

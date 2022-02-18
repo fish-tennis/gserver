@@ -16,13 +16,12 @@ import (
 type Saveable interface {
 	// 数据是否改变过
 	IsChanged() bool
-	//
-	//KeyName() string
 
 	// 需要保存到数据库的数据
 	// 支持类型:
 	// proto.Message
-	// map key:int or string value:int or string or proto.Message
+	// map[intORstring]intORstring
+	// map[intORstring]proto.Message
 	DbData() (dbData interface{}, protoMarshal bool)
 
 	// 需要缓存的数据
@@ -34,39 +33,15 @@ type Saveable interface {
 	GetCacheKey() string
 }
 
-type SaveableChild interface {
+type ChildSaveable interface {
 	Saveable
 	Key() string
 }
 
 // 多个保存模块的组合
 type CompositeSaveable interface {
-	SaveableChildren() []SaveableChild
+	SaveableChildren() []ChildSaveable
 }
-
-//type ChildSaveable struct {
-//	dbData interface{}
-//	cacheData interface{}
-//	protoMarshal bool
-//	isChanged bool
-//	key string
-//}
-//
-//func (this *ChildSaveable) Key() string {
-//	return this.key
-//}
-//
-//func (this *ChildSaveable) IsChanged() bool {
-//	return this.isChanged
-//}
-//
-//func (this *ChildSaveable) DbData() (dbData interface{}, protoMarshal bool) {
-//	return this.dbData,this.protoMarshal
-//}
-//
-//func (this *ChildSaveable) CacheData() interface{} {
-//	return this.cacheData
-//}
 
 // 保存数据作为一个整体,只要一个字段修改了,整个数据都需要缓存
 type DirtyMark interface {
@@ -168,14 +143,6 @@ func SaveWithProto(saveable Saveable) (interface{},error) {
 		}
 		val := reflect.ValueOf(saveData)
 		switch val.Kind() {
-		//case reflect.Interface,reflect.Ptr:
-		//	// 保存proto格式
-		//	if protoMessage,ok := saveData.(proto.Message); ok {
-		//		return proto.Marshal(protoMessage)
-		//	} else {
-		//		logger.Error("unsupport type:%v", saveData)
-		//		return nil, errors.New("unsupport type")
-		//	}
 		case reflect.Map:
 			// 保存map格式
 			typ := reflect.TypeOf(saveData)
@@ -249,25 +216,43 @@ func LoadSaveable(saveable Saveable, sourceData interface{}) error {
 		return nil
 	}
 	dbData,protoMarshal := saveable.DbData()
-	if !protoMarshal || util.IsNil(dbData) {
+	if util.IsNil(dbData) {
 		return nil
 	}
+	typ := reflect.TypeOf(dbData)
 	sourceTyp := reflect.TypeOf(sourceData)
 	switch sourceTyp.Kind() {
 	case reflect.Slice:
-		// []byte -> proto.Message
-		if bytes,ok := sourceData.([]byte); ok {
-			if len(bytes) > 0 {
+		if !protoMarshal {
+			logger.Error("unsupport type:%v",sourceTyp.Kind())
+			return nil
+		}
+		if sourceTyp.Elem().Kind() == reflect.Uint8 {
+			if bytes,ok := sourceData.([]byte); ok {
+				if len(bytes) == 0 {
+					return nil
+				}
+				// []byte -> proto.Message
 				if protoMessage,ok2 := dbData.(proto.Message); ok2 {
 					err := proto.Unmarshal(bytes, protoMessage)
 					if err != nil {
-						logger.Error("proto err:%v", err)
+						logger.Error("%v proto err:%v", saveable.GetCacheKey(), err.Error())
 						return err
 					}
+					return nil
 				}
 			}
-			return nil
 		}
+		//// slice的操作会导致地址变化,所以这种方式不支持slice赋值
+		//// slice -> slice
+		//if typ.Kind() == reflect.Slice {
+		//	sourceVal := reflect.ValueOf(sourceData)
+		//	dstVal := reflect.ValueOf(dbData)
+		//	for i := 0; i < sourceVal.Len(); i++ {
+		//		v := convertValueToInterface(sourceTyp.Elem(), typ.Elem(), sourceVal.Index(i))
+		//		dstVal.
+		//	}
+		//}
 
 	case reflect.Map:
 		// map[intORstring]intORstring -> map[intORstring]intORstring
@@ -275,7 +260,6 @@ func LoadSaveable(saveable Saveable, sourceData interface{}) error {
 		sourceVal := reflect.ValueOf(sourceData)
 		sourceKeyType := sourceTyp.Key()
 		sourceValType := sourceTyp.Elem()
-		typ := reflect.TypeOf(dbData)
 		if typ.Kind() == reflect.Map {
 			val := reflect.ValueOf(dbData)
 			keyType := typ.Key()

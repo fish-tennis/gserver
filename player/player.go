@@ -113,11 +113,19 @@ func (this *Player) SaveDb(removeCacheAfterSaveDb bool) error {
 		if compositeSaveable,ok := component.(CompositeSaveable); ok {
 			compositeData := make(map[string]interface{})
 			saveables := compositeSaveable.SaveableChildren()
+			// 虽然分成多个子模块,但是保存数据库时,一个Component必须作为一个整体保存
+			hasChanged := false
 			for _,saveable := range saveables {
-				if !saveable.IsChanged() {
-					logger.Debug("%v ignore %v", this.id, component.GetName())
-					continue
+				if saveable.IsChanged() {
+					hasChanged = true
+					break
 				}
+			}
+			if !hasChanged {
+				logger.Debug("%v ignore %v", this.id, component.GetName())
+				continue
+			}
+			for _,saveable := range saveables {
 				saveData,err := SaveWithProto(saveable)
 				if err != nil {
 					logger.Error("%v Save %v err:%v", this.id, component.GetName(), err.Error())

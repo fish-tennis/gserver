@@ -12,20 +12,22 @@ import (
 var _ internal.CompositeSaveable = (*Quest)(nil)
 
 // 任务模块
+// 演示了一种与Bag不同的组合模块方式
+// 与Bag不同,Quest由一个Component和多个ChildSaveable组合而成
+// 不同的ChildSaveable可以有不同的数据保存方式
 type Quest struct {
 	MapDataComponent
-	//data *pb.Quest
 	finished *FinishedQuests
 	quests *CurQuests
 }
 
-type FinishedQuests struct {
-	quest *Quest
-	finished []int32
-}
+var _ internal.MapDirtyMark = (*FinishedQuests)(nil)
 
-func (f *FinishedQuests) IsChanged() bool {
-	panic("implement me")
+type FinishedQuests struct {
+	internal.BaseMapDirtyMark
+	quest *Quest
+	// 目前的方式不支持slice,所以用map代替
+	finished map[int32]int8
 }
 
 func (f *FinishedQuests) DbData() (dbData interface{}, protoMarshal bool) {
@@ -44,9 +46,21 @@ func (f *FinishedQuests) GetCacheKey() string {
 	return f.quest.GetCacheKey() + "finished"
 }
 
+func (f *FinishedQuests) GetMapValue(key string) (value interface{}, exists bool) {
+	value,exists = f.finished[int32(util.Atoi(key))]
+	return
+}
+
+func (f *FinishedQuests) Add(finishedQuestId int32) {
+	f.finished[finishedQuestId] = 1
+	f.SetDirty(strconv.Itoa(int(finishedQuestId)), true)
+}
+
+var _ internal.MapDirtyMark = (*CurQuests)(nil)
+
 type CurQuests struct {
-	quest *Quest
 	internal.BaseMapDirtyMark
+	quest *Quest
 	quests map[int32]*pb.QuestData
 }
 
@@ -80,7 +94,6 @@ func NewQuest(player *Player) *Quest {
 			},
 		},
 		finished: &FinishedQuests{
-			//finished: data.GetFinished(),
 		},
 		quests: &CurQuests{
 		},
@@ -88,74 +101,18 @@ func NewQuest(player *Player) *Quest {
 	component.finished.quest = component
 	component.quests.quest = component
 	component.checkData()
-	//if data != nil && data.Quests != nil {
-	//	internal.LoadSaveable(component.quests, data.Quests)
-	//}
 	return component
 }
 
-func (this *Quest) SaveableChildren() []internal.SaveableChild {
-	return []internal.SaveableChild{this.quests}
+// 需要保存数据的子模块
+func (this *Quest) SaveableChildren() []internal.ChildSaveable {
+	return []internal.ChildSaveable{this.finished, this.quests}
 }
-//
-//func (this *Quest) DbData() (dbData interface{}, protoMarshal bool) {
-//	// 演示明文保存数据库
-//	// 优点:便于查看,数据库语言可直接操作字段
-//	// 缺点:字段名也会保存到数据库,占用空间多
-//	return this.data,false
-//}
-//
-//func (this *Quest) CacheData() interface{} {
-//	return this.data
-//}
-
-//
-//// 需要保存的数据
-//func (this *Quest) Save(forCache bool) (saveData interface{}, saveOption internal.SaveOption) {
-//	if forCache {
-//		// 保存到缓存时,进行序列化
-//		mapData := make(map[string]interface{})
-//		mapData["finished"] = this.data.Finished
-//		mapData["quests"] = this.data.Quests
-//		return mapData,internal.ProtoMarshalMap
-//	}
-//	//if len(this.dirtyMap) == 0 {
-//	//	return nil,true
-//	//}
-//	//if _,ok := this.dirtyMap["Finished"]; ok {
-//	//	db.GetPlayerDb().SaveComponentField(this.GetPlayerId(), this.GetNameLower(), "finished", this.data.Finished)
-//	//	logger.Debug("update quest.finished")
-//	//}
-//	//if _,ok := this.dirtyMap["Quests"]; ok {
-//	//	db.GetPlayerDb().SaveComponentField(this.GetPlayerId(), this.GetNameLower(), "quests", this.data.Quests)
-//	//	logger.Debug("update quest.quests")
-//	//}
-//	//this.dirtyMap = make(map[string]struct{})
-//	//return nil,true
-//	mapData := make(map[string]interface{})
-//	mapData["finished"] = this.data.Finished
-//	mapData["quests"] = this.data.Quests
-//	return mapData,internal.Plain
-//}
-//
-//func (this *Quest) Load(data interface{}, fromCache bool) error {
-//	switch t := data.(type) {
-//	case *pb.Quest:
-//		// 加载明文数据
-//		this.data = t
-//		this.checkData()
-//		logger.Debug("%v", this.data)
-//	case []byte:
-//		// 反序列化
-//		err := internal.LoadWithProto(data, this.data)
-//		this.checkData()
-//		logger.Debug("%v", this.data)
-//		return err
-//	}
-//	return nil
-//}
 
 func (this *Quest) checkData() {
+	if this.finished.finished == nil {
+		this.finished.finished = make(map[int32]int8)
+	}
 	if this.quests.quests == nil {
 		this.quests.quests = make(map[int32]*pb.QuestData)
 	}
@@ -166,20 +123,11 @@ func (this *Quest) OnEvent(event interface{}) {
 	switch event.(type) {
 	case *internal.EventPlayerEntryGame:
 		// 测试代码
-		this.finished.finished = append(this.finished.finished, int32(rand.Intn(100)))
+		this.finished.Add(int32(rand.Intn(100)))
 		logger.Debug("finished:%v", this.finished.finished)
 		questData := &pb.QuestData{CfgId: int32(rand.Intn(1000)), Progress: rand.Int31n(100)}
 		this.quests.quests[questData.CfgId] = questData
 		this.quests.SetDirty(strconv.Itoa(int(questData.CfgId)), true)
 		logger.Debug("add quest:%v", questData)
-		//if len(this.data.Finished) == 0 {
-		//	this.data.Finished = append(this.data.Finished,1)
-		//	this.SetDirty("finished", this.data.Finished)
-		//	logger.Debug("finished:%v", this.data.Finished)
-		//}
-		//questData := &pb.QuestData{CfgId: int32(rand.Intn(1000)), Progress: rand.Int31n(100)}
-		//this.data.Quests[questData.CfgId] = questData
-		//this.SetDirty("quests", this.data.Finished)
-		//logger.Debug("add quest:%v", questData)
 	}
 }

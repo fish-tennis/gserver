@@ -69,7 +69,9 @@ func NewDataComponent(player *Player, componentName string) *DataComponent {
 
 // 获取玩家组件的缓存key
 func GetComponentCacheKey(playerId int64, componentName string) string {
-	return fmt.Sprintf("player.%v.{%v}", strings.ToLower(componentName), playerId)
+	// 使用{playerId}形式的hashtag,使同一个玩家的不同组件的数据都落在一个redis节点上
+	// https://redis.io/topics/cluster-tutorial
+	return fmt.Sprintf("p.%v.{%v}", strings.ToLower(componentName), playerId)
 }
 
 // 有保存数据的玩家组件
@@ -87,4 +89,14 @@ func NewMapDataComponent(player *Player, componentName string) *MapDataComponent
 	}
 }
 
-// TODO: MapInt32Component MapInt64Component MapStringComponent
+//type BaseChildSaveable struct {
+//	parent Component
+//}
+//
+//func (this *BaseChildSaveable) GetCacheKey() string {
+//	if playerComponent,ok := this.parent.(PlayerComponent); ok {
+//		return GetComponentCacheKey(playerComponent.GetPlayer().GetId(), playerComponent.GetName())
+//	}
+//	logger.Error("%v GetCacheKey err", this.parent.GetName())
+//	return ""
+//}
