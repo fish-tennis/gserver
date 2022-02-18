@@ -3,8 +3,10 @@ package internal
 import (
 	"errors"
 	"fmt"
+	"github.com/fish-tennis/gserver/cache"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/util"
+	"github.com/go-redis/redis/v8"
 	"google.golang.org/protobuf/proto"
 	"reflect"
 	"strings"
@@ -28,6 +30,8 @@ type Saveable interface {
 	// proto.Message
 	// map key:int or string value:int or string or proto.Message
 	CacheData() interface{}
+
+	GetCacheKey() string
 }
 
 type SaveableChild interface {
@@ -91,6 +95,7 @@ func (this *BaseDirtyMark) IsDirty() bool {
 
 func (this *BaseDirtyMark) SetDirty() {
 	this.isDirty = true
+	this.isChanged = true
 }
 
 func (this *BaseDirtyMark) ResetDirty() {
@@ -111,6 +116,7 @@ type MapDirtyMark interface {
 	HasCached() bool
 	SetCached()
 
+	GetDirtyMap() map[string]bool
 	GetMapValue(key string) (value interface{}, exists bool)
 }
 
@@ -342,6 +348,8 @@ func convertValueToInterface(srcType,dstType reflect.Type, v reflect.Value) inte
 	case reflect.Slice:
 		if v.Type().Elem().Kind() == reflect.Uint8 {
 			return convertInterfaceToRealType(dstType, v.Bytes())
+		} else {
+			return convertInterfaceToRealType(dstType, v.Interface())
 		}
 	}
 	logger.Error("unsupport type:%v",srcType.Kind())
@@ -405,18 +413,160 @@ func convertProtoToMap(protoMessage proto.Message) map[string]interface{} {
 		case reflect.Slice:
 			if fieldVal.Type().Elem().Kind() == reflect.Uint8 {
 				v = fieldVal.Bytes()
+			} else {
+				v = fieldVal.Interface()
 			}
 		case reflect.Interface,reflect.Ptr,reflect.Map:
 			v = fieldVal.Interface()
 		}
 		if v == nil {
+			logger.Debug("%v %v nil", sf.Name, fieldVal.Kind())
 			continue
 		}
+		// 兼容mongodb,字段名小写
 		stringMap[strings.ToLower(sf.Name)] = v
 	}
-	//protoMessage.ProtoReflect().Range(func(descriptor protoreflect.FieldDescriptor, value protoreflect.Value) bool {
-	//	stringMap[string(descriptor.Name())] = value.Interface()
-	//	return true
-	//})
 	return stringMap
+}
+
+func SaveDirtyCache(data interface{}, componentName string) {
+	if saveable,ok := data.(Saveable); ok {
+		// 缓存数据作为一个整体的
+		SaveSaveableDirtyCache(saveable, "")
+	}
+	if compositeSaveable,ok := data.(CompositeSaveable); ok {
+		SaveCompositeSaveableDirtyCache(compositeSaveable, componentName)
+	}
+}
+
+func SaveSaveableDirtyCache(saveable Saveable, componentName string) {
+	// 缓存数据作为一个整体的
+	if dirtyMark,ok2 := saveable.(DirtyMark); ok2 {
+		if !dirtyMark.IsDirty() {
+			return
+		}
+		cacheData := saveable.CacheData()
+		if cacheData == nil {
+			return
+		}
+		cacheKeyName := saveable.GetCacheKey()
+		if reflect.ValueOf(cacheData).Kind() == reflect.Map {
+			// map格式作为一个整体缓存时,需要先删除之前的数据
+			err := cache.Get().Del(cacheKeyName)
+			if cache.IsRedisError(err) {
+				logger.Error("%v cache err:%v", cacheKeyName, err.Error())
+				return
+			}
+			err = cache.Get().SetMap(cacheKeyName, cacheData)
+			if cache.IsRedisError(err) {
+				logger.Error("%v cache err:%v", cacheKeyName, err.Error())
+				return
+			}
+		} else {
+			// 非map类型 必须是proto结构
+			if protoMessage,ok3 := cacheData.(proto.Message); ok3 {
+				err := cache.Get().SetProto(cacheKeyName, protoMessage, 0)
+				if cache.IsRedisError(err) {
+					logger.Error("%v cache err:%v", cacheKeyName, err.Error())
+					return
+				}
+			} else {
+				logger.Error("%v cache err:unsupport type", cacheKeyName)
+				return
+			}
+		}
+		dirtyMark.ResetDirty()
+		logger.Debug("SaveCache %v", cacheKeyName)
+		return
+	}
+	// map格式的
+	if dirtyMark,ok2 := saveable.(MapDirtyMark); ok2 {
+		if !dirtyMark.IsDirty() {
+			return
+		}
+		cacheKeyName := saveable.GetCacheKey()
+		if !dirtyMark.HasCached() {
+			// 必须把整体数据缓存一次,后面的修改才能局部更新
+			cacheData := saveable.CacheData()
+			if cacheData == nil {
+				return
+			}
+			err := cache.Get().SetMap(cacheKeyName, cacheData)
+			if cache.IsRedisError(err) {
+				logger.Error("%v cache err:%v", cacheKeyName, err.Error())
+				return
+			}
+			dirtyMark.SetCached()
+		} else {
+			setMap := make(map[string]interface{})
+			var delMap []string
+			for dirtyKey,isAddOrUpdate := range dirtyMark.GetDirtyMap() {
+				if isAddOrUpdate {
+					if dirtyValue,exists := dirtyMark.GetMapValue(dirtyKey); exists {
+						setMap[dirtyKey] = dirtyValue
+					}
+				} else {
+					// delete
+					delMap = append(delMap, dirtyKey)
+				}
+			}
+			if len(setMap) > 0 {
+				// 批量更新
+				err := cache.Get().SetMap(cacheKeyName, setMap)
+				if cache.IsRedisError(err) {
+					logger.Error("%v cache %v err:%v", cacheKeyName, setMap, err.Error())
+					return
+				}
+			}
+			if len(delMap) > 0 {
+				// 批量删除
+				err := cache.Get().DelMapField(cacheKeyName, delMap...)
+				if cache.IsRedisError(err) {
+					logger.Error("%v cache %v err:%v", cacheKeyName, delMap, err.Error())
+					return
+				}
+			}
+		}
+		dirtyMark.ResetDirty()
+		logger.Debug("SaveCache %v", cacheKeyName)
+		return
+	}
+}
+
+func SaveCompositeSaveableDirtyCache(compositeSaveable CompositeSaveable, componentName string) {
+	saveables := compositeSaveable.SaveableChildren()
+	for _,saveable := range saveables {
+		SaveSaveableDirtyCache(saveable, componentName)
+	}
+}
+
+func LoadFromCache(saveable Saveable) error {
+	cacheKey := saveable.GetCacheKey()
+	cacheType,err := cache.Get().Type(cacheKey)
+	if err == redis.Nil || cacheType == "" || cacheType == "none" {
+		return nil
+	}
+	cacheData := saveable.CacheData()
+	if cacheType == "string" {
+		if protoMessage,ok := cacheData.(proto.Message); ok {
+			err = cache.Get().GetProto(cacheKey, protoMessage)
+			if cache.IsRedisError(err) {
+				logger.Error("GetProto %v %v err:%v", cacheKey, cacheType, err)
+				return err
+			}
+		} else {
+			logger.Error("%v unsupport cache type:%v", cacheKey, cacheType)
+			return errors.New("unsupport cache type")
+		}
+	} else if cacheType == "hash" {
+		err = cache.Get().GetMap(cacheKey, cacheData)
+		if cache.IsRedisError(err) {
+			logger.Error("GetMap %v %v err:%v", cacheKey, cacheType, err)
+			return err
+		}
+	} else {
+		logger.Error("%v unsupport cache type:%v", cacheKey, cacheType)
+		return errors.New("unsupport cache type")
+	}
+	return nil
 }

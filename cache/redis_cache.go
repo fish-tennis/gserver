@@ -43,9 +43,13 @@ func (this *RedisCache) Set(key string, value interface{}, expiration time.Durat
 	return err
 }
 
-func (this *RedisCache) Del(key string) error {
-	_,err := this.redisClient.Del(context.Background(), key).Result()
+func (this *RedisCache) Del(key ...string) error {
+	_,err := this.redisClient.Del(context.Background(), key...).Result()
 	return err
+}
+
+func (this *RedisCache) Type(key string) (string, error) {
+	return this.redisClient.Type(context.Background(), key).Result()
 }
 
 // redis hash -> map

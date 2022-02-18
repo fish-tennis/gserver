@@ -11,7 +11,6 @@ import (
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 	"github.com/fish-tennis/gserver/player"
-	"github.com/go-redis/redis/v8"
 	"google.golang.org/protobuf/proto"
 	"os"
 	"sync"
@@ -154,55 +153,90 @@ func (this *GameServer) repairPlayerCache(playerId,accountId int64) error {
 		}
 	}()
 	tmpPlayer := player.CreateTempPlayer(playerId,accountId)
-	for componentName,_ := range player.GetPlayerComponentMap() {
-		cacheKey := player.GetComponentCacheKey(playerId, componentName)
-		cacheType,err := cache.GetRedis().Type(context.Background(), cacheKey).Result()
-		if err == redis.Nil || cacheType == "" || cacheType == "none" {
-			continue
-		}
-		componentTemplate := tmpPlayer.GetComponent(componentName)
-		if componentTemplate == nil {
-			logger.Error("%v GetComponent nil %v", playerId, componentName)
-			continue
-		}
-		if saveable,ok := componentTemplate.(Saveable); ok {
-			cacheData := saveable.CacheData()
-			if cacheType == "string" {
-				if protoMessage,ok := cacheData.(proto.Message); ok {
-					err = cache.Get().GetProto(cacheKey, protoMessage)
-					if err != nil {
-						logger.Error("GetProto %v %v err:%v", cacheKey, cacheType, err)
-						continue
-					}
-				} else {
-					logger.Error("%v unsupport cache type:%v", cacheKey, cacheType)
-					continue
-				}
-			} else if cacheType == "hash" {
-				err = cache.Get().GetMap(cacheKey, cacheData)
-				if err != nil {
-					logger.Error("GetMap %v %v err:%v", cacheKey, cacheType, err)
-					continue
-				}
-			} else {
-				logger.Error("%v unsupport cache type:%v", cacheKey, cacheType)
+	for _,component := range tmpPlayer.GetComponents() {
+		if saveable,ok := component.(Saveable); ok {
+			//cacheData := saveable.CacheData()
+			//if cacheType == "string" {
+			//	if protoMessage,ok := cacheData.(proto.Message); ok {
+			//		err = cache.Get().GetProto(cacheKey, protoMessage)
+			//		if err != nil {
+			//			logger.Error("GetProto %v %v err:%v", cacheKey, cacheType, err)
+			//			continue
+			//		}
+			//	} else {
+			//		logger.Error("%v unsupport cache type:%v", cacheKey, cacheType)
+			//		continue
+			//	}
+			//} else if cacheType == "hash" {
+			//	err = cache.Get().GetMap(cacheKey, cacheData)
+			//	if err != nil {
+			//		logger.Error("GetMap %v %v err:%v", cacheKey, cacheType, err)
+			//		continue
+			//	}
+			//} else {
+			//	logger.Error("%v unsupport cache type:%v", cacheKey, cacheType)
+			//	continue
+			//}
+			err := LoadFromCache(saveable)
+			if err != nil {
+				logger.Error("LoadFromCache %v error:%v", saveable.GetCacheKey(), err.Error())
 				continue
 			}
 			saveData,err := SaveWithProto(saveable)
 			if err != nil {
-				logger.Error("%v Save %v err %v", playerId, componentName, err.Error())
+				logger.Error("%v Save %v err %v", playerId, component.GetName(), err.Error())
 				continue
 			}
-			saveDbErr := db.GetPlayerDb().SaveComponent(playerId, componentTemplate.GetNameLower(), saveData)
+			saveDbErr := db.GetPlayerDb().SaveComponent(playerId, component.GetNameLower(), saveData)
 			if saveDbErr != nil {
-				logger.Error("%v SaveDb %v err %v", playerId, componentTemplate.GetNameLower(), saveDbErr.Error())
+				logger.Error("%v SaveDb %v err %v", playerId, component.GetNameLower(), saveDbErr.Error())
 				continue
 			}
-			logger.Info("%v SaveDb %v", playerId, componentTemplate.GetNameLower())
+			logger.Info("%v SaveDb %v", playerId, component.GetNameLower())
+			cache.Get().Del(saveable.GetCacheKey())
+			logger.Info("RemoveCache %v %v", playerId, saveable.GetCacheKey())
 		}
-		cache.Get().Del(cacheKey)
-		logger.Debug("RemoveCache %v %v %v", playerId, cacheKey, cacheType)
+		if compositeSaveable,ok := component.(CompositeSaveable); ok {
+			saveables := compositeSaveable.SaveableChildren()
+			for _,saveable := range saveables {
+				err := LoadFromCache(saveable)
+				if err != nil {
+					logger.Error("LoadFromCache %v error:%v", saveable.GetCacheKey(), err.Error())
+					continue
+				}
+				saveData,err := SaveWithProto(saveable)
+				if err != nil {
+					logger.Error("Save %v err:%v", saveable.GetCacheKey(), err.Error())
+					continue
+				}
+				if saveData == nil {
+					logger.Info("ignore nil %v", saveable.GetCacheKey())
+					continue
+				}
+				saveDbErr := db.GetPlayerDb().SaveComponentField(playerId, component.GetNameLower(), saveable.Key(), saveData)
+				if saveDbErr != nil {
+					logger.Error("%v SaveDb %v.%v err %v", playerId, component.GetNameLower(), saveable.Key(), saveDbErr.Error())
+					continue
+				}
+				logger.Info("%v SaveDb %v", playerId, component.GetNameLower())
+				cache.Get().Del(saveable.GetCacheKey())
+				logger.Info("RemoveCache %v %v", playerId, saveable.GetCacheKey())
+			}
+		}
 	}
+	//for componentName,_ := range player.GetPlayerComponentMap() {
+	//	cacheKey := player.GetComponentCacheKey(playerId, componentName)
+	//	cacheType,err := cache.GetRedis().Type(context.Background(), cacheKey).Result()
+	//	if err == redis.Nil || cacheType == "" || cacheType == "none" {
+	//		continue
+	//	}
+	//	component := tmpPlayer.GetComponent(componentName)
+	//	if component == nil {
+	//		logger.Error("%v GetComponent nil %v", playerId, componentName)
+	//		continue
+	//	}
+	//
+	//}
 	return nil
 }
 

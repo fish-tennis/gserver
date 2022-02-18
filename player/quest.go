@@ -20,6 +20,7 @@ type Quest struct {
 }
 
 type FinishedQuests struct {
+	quest *Quest
 	finished []int32
 }
 
@@ -39,7 +40,12 @@ func (f *FinishedQuests) Key() string {
 	return "finished"
 }
 
+func (f *FinishedQuests) GetCacheKey() string {
+	return f.quest.GetCacheKey() + "finished"
+}
+
 type CurQuests struct {
+	quest *Quest
 	internal.BaseMapDirtyMark
 	quests map[int32]*pb.QuestData
 }
@@ -61,6 +67,10 @@ func (c *CurQuests) Key() string {
 	return "quests"
 }
 
+func (f *CurQuests) GetCacheKey() string {
+	return f.quest.GetCacheKey() + "quests"
+}
+
 func NewQuest(player *Player) *Quest {
 	component := &Quest{
 		MapDataComponent: MapDataComponent{
@@ -75,6 +85,8 @@ func NewQuest(player *Player) *Quest {
 		quests: &CurQuests{
 		},
 	}
+	component.finished.quest = component
+	component.quests.quest = component
 	component.checkData()
 	//if data != nil && data.Quests != nil {
 	//	internal.LoadSaveable(component.quests, data.Quests)

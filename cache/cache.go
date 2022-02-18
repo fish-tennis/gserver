@@ -10,7 +10,9 @@ type KvCache interface {
 	Get(key string) (string, error)
 	// value如果是proto.Message,会先进行序列化
 	Set(key string, value interface{}, expiration time.Duration) error
-	Del(key string) error
+	Del(key ...string) error
+
+	Type(key string) (string, error)
 
 	// 缓存数据加载到map
 	// m必须是一个类型明确有效的map,且key类型只能是int或string,value类型只能是int或string或proto.Message
