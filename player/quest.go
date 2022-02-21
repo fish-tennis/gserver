@@ -21,13 +21,18 @@ type Quest struct {
 	quests *CurQuests
 }
 
-var _ internal.MapDirtyMark = (*FinishedQuests)(nil)
+var _ internal.DirtyMark = (*FinishedQuests)(nil)
 
 type FinishedQuests struct {
-	internal.BaseMapDirtyMark
+	internal.BaseDirtyMark
 	quest *Quest
-	// 目前的方式不支持slice,所以用map代替
-	finished map[int32]int8
+	// 保存数组数据,不能直接使用[]int32
+	// SliceInt32只能和DirtyMark配合使用,不支持MapDirtyMark
+	// NOTE:使用SliceInt32作用有限,还不如用proto更方便,这里只是演示一种保存方式,实际应用的时候不推荐
+	// 暂时也没有实现SliceInt64,SliceProto之类的扩展类,因为redis里不好存储
+	finished *internal.SliceInt32
+	// 排重数组也可以使用map代替
+	//finished map[int32]int8
 }
 
 func (f *FinishedQuests) DbData() (dbData interface{}, protoMarshal bool) {
@@ -46,14 +51,16 @@ func (f *FinishedQuests) GetCacheKey() string {
 	return f.quest.GetCacheKey() + "finished"
 }
 
-func (f *FinishedQuests) GetMapValue(key string) (value interface{}, exists bool) {
-	value,exists = f.finished[int32(util.Atoi(key))]
-	return
-}
+//func (f *FinishedQuests) GetMapValue(key string) (value interface{}, exists bool) {
+//	value,exists = f.finished[int32(util.Atoi(key))]
+//	return
+//}
 
 func (f *FinishedQuests) Add(finishedQuestId int32) {
-	f.finished[finishedQuestId] = 1
-	f.SetDirty(strconv.Itoa(int(finishedQuestId)), true)
+	f.finished.Append(finishedQuestId)
+	f.SetDirty()
+	//f.finished[finishedQuestId] = 1
+	//f.SetDirty(strconv.Itoa(int(finishedQuestId)), true)
 }
 
 var _ internal.MapDirtyMark = (*CurQuests)(nil)
@@ -111,7 +118,8 @@ func (this *Quest) SaveableChildren() []internal.ChildSaveable {
 
 func (this *Quest) checkData() {
 	if this.finished.finished == nil {
-		this.finished.finished = make(map[int32]int8)
+		//this.finished.finished = make(map[int32]int8)
+		this.finished.finished = new(internal.SliceInt32)
 	}
 	if this.quests.quests == nil {
 		this.quests.quests = make(map[int32]*pb.QuestData)

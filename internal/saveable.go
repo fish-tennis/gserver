@@ -138,6 +138,7 @@ func SaveWithProto(saveable Saveable) (interface{},error) {
 	saveData,protoMarshal := saveable.DbData()
 	if protoMarshal {
 		// 对proto.Message进行序列化处理
+		// proto.Message -> []byte
 		if protoMessage,ok := saveData.(proto.Message); ok {
 			return proto.Marshal(protoMessage)
 		}
@@ -152,6 +153,8 @@ func SaveWithProto(saveable Saveable) (interface{},error) {
 				// map的value是proto格式
 				switch keyType.Kind() {
 				case reflect.Int,reflect.Int8,reflect.Int16,reflect.Int32,reflect.Int64:
+					// map[int]proto.Message -> map[int64][]byte
+					// map[int]interface{} -> map[int64]interface{}
 					newMap := make(map[int64]interface{})
 					it := val.MapRange()
 					for it.Next() {
@@ -168,6 +171,8 @@ func SaveWithProto(saveable Saveable) (interface{},error) {
 					}
 					return newMap,nil
 				case reflect.Uint,reflect.Uint8,reflect.Uint16,reflect.Uint32,reflect.Uint64:
+					// map[uint]proto.Message -> map[uint64][]byte
+					// map[uint]interface{} -> map[uint64]interface{}
 					newMap := make(map[uint64]interface{})
 					it := val.MapRange()
 					for it.Next() {
@@ -184,6 +189,8 @@ func SaveWithProto(saveable Saveable) (interface{},error) {
 					}
 					return newMap,nil
 				case reflect.String:
+					// map[string]proto.Message -> map[string][]byte
+					// map[string]interface{} -> map[string]interface{}
 					newMap := make(map[string]interface{})
 					it := val.MapRange()
 					for it.Next() {
@@ -207,6 +214,12 @@ func SaveWithProto(saveable Saveable) (interface{},error) {
 				return saveData,nil
 			}
 		}
+	} else {
+		switch realData := saveData.(type) {
+		case *SliceInt32:
+			// SliceInt32 -> []int32
+			return realData.Data(),nil
+		}
 	}
 	return saveData,nil
 }
@@ -223,29 +236,47 @@ func LoadSaveable(saveable Saveable, sourceData interface{}) error {
 	sourceTyp := reflect.TypeOf(sourceData)
 	switch sourceTyp.Kind() {
 	case reflect.Slice:
+		if protoMarshal {
+			// []byte -> proto.Message
+			if sourceTyp.Elem().Kind() == reflect.Uint8 {
+				if bytes,ok := sourceData.([]byte); ok {
+					if len(bytes) == 0 {
+						return nil
+					}
+					// []byte -> proto.Message
+					if protoMessage,ok2 := dbData.(proto.Message); ok2 {
+						err := proto.Unmarshal(bytes, protoMessage)
+						if err != nil {
+							logger.Error("%v proto err:%v", saveable.GetCacheKey(), err.Error())
+							return err
+						}
+						return nil
+					}
+				}
+			}
+		}
+		switch realData := dbData.(type) {
+		case *SliceInt32:
+			// []int -> SliceInt32
+			sourceVal := reflect.ValueOf(sourceData)
+			sourceValType := sourceTyp.Elem()
+			for i := 0; i < sourceVal.Len(); i++ {
+				realData.Append(int32(convertValueToInt(sourceValType, sourceVal.Index(i))))
+			}
+			logger.Debug("%v slice:%v", saveable.GetCacheKey(), realData.Data())
+			return nil
+		default:
+			logger.Error("unsupport type:%v",sourceTyp.Kind())
+			return nil
+		}
 		if !protoMarshal {
 			logger.Error("unsupport type:%v",sourceTyp.Kind())
 			return nil
 		}
-		if sourceTyp.Elem().Kind() == reflect.Uint8 {
-			if bytes,ok := sourceData.([]byte); ok {
-				if len(bytes) == 0 {
-					return nil
-				}
-				// []byte -> proto.Message
-				if protoMessage,ok2 := dbData.(proto.Message); ok2 {
-					err := proto.Unmarshal(bytes, protoMessage)
-					if err != nil {
-						logger.Error("%v proto err:%v", saveable.GetCacheKey(), err.Error())
-						return err
-					}
-					return nil
-				}
-			}
-		}
+
 		//// slice的操作会导致地址变化,所以这种方式不支持slice赋值
 		//// slice -> slice
-		//if typ.Kind() == reflect.Slice {
+		//if typ.Kind() == reflect.SliceInterface {
 		//	sourceVal := reflect.ValueOf(sourceData)
 		//	dstVal := reflect.ValueOf(dbData)
 		//	for i := 0; i < sourceVal.Len(); i++ {
@@ -338,6 +369,20 @@ func convertValueToInterface(srcType,dstType reflect.Type, v reflect.Value) inte
 	}
 	logger.Error("unsupport type:%v",srcType.Kind())
 	return nil
+}
+
+// reflect.Value -> int
+func convertValueToInt(srcType reflect.Type, v reflect.Value) int64 {
+	switch srcType.Kind() {
+	case reflect.Int,reflect.Int8,reflect.Int16,reflect.Int32,reflect.Int64:
+		return v.Int()
+	case reflect.Uint,reflect.Uint8,reflect.Uint16,reflect.Uint32,reflect.Uint64:
+		return int64(v.Uint())
+	case reflect.Float32,reflect.Float64:
+		return int64(v.Float())
+	}
+	logger.Error("unsupport type:%v",srcType.Kind())
+	return 0
 }
 
 // interface{} -> int or string or proto.Message
@@ -447,14 +492,22 @@ func SaveSaveableDirtyCache(saveable Saveable, componentName string) {
 				return
 			}
 		} else {
-			// 非map类型 必须是proto结构
-			if protoMessage,ok3 := cacheData.(proto.Message); ok3 {
-				err := cache.Get().SetProto(cacheKeyName, protoMessage, 0)
+			switch realData := cacheData.(type) {
+			case proto.Message:
+				// proto.Message -> []byte
+				err := cache.Get().SetProto(cacheKeyName, realData, 0)
 				if cache.IsRedisError(err) {
 					logger.Error("%v cache err:%v", cacheKeyName, err.Error())
 					return
 				}
-			} else {
+			case *SliceInt32:
+				// SliceInt32 -> string
+				err := cache.Get().Set(cacheKeyName, realData.ToString(), 0)
+				if cache.IsRedisError(err) {
+					logger.Error("%v cache err:%v", cacheKeyName, err.Error())
+					return
+				}
+			default:
 				logger.Error("%v cache err:unsupport type", cacheKeyName)
 				return
 			}
@@ -532,13 +585,21 @@ func LoadFromCache(saveable Saveable) error {
 	}
 	cacheData := saveable.CacheData()
 	if cacheType == "string" {
-		if protoMessage,ok := cacheData.(proto.Message); ok {
-			err = cache.Get().GetProto(cacheKey, protoMessage)
+		switch realData := cacheData.(type) {
+		case proto.Message:
+			err = cache.Get().GetProto(cacheKey, realData)
 			if cache.IsRedisError(err) {
 				logger.Error("GetProto %v %v err:%v", cacheKey, cacheType, err)
 				return err
 			}
-		} else {
+		case *SliceInt32:
+			strData,err := cache.Get().Get(cacheKey)
+			if cache.IsRedisError(err) {
+				logger.Error("GetProto %v %v err:%v", cacheKey, cacheType, err)
+				return err
+			}
+			realData.FromString(strData)
+		default:
 			logger.Error("%v unsupport cache type:%v", cacheKey, cacheType)
 			return errors.New("unsupport cache type")
 		}

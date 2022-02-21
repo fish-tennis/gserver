@@ -125,6 +125,7 @@ func (this *Player) SaveDb(removeCacheAfterSaveDb bool) error {
 				logger.Debug("%v ignore %v", this.id, component.GetName())
 				continue
 			}
+			// 只要有一个子模块修改了,整体都需要保存
 			for _,saveable := range saveables {
 				saveData,err := SaveWithProto(saveable)
 				if err != nil {

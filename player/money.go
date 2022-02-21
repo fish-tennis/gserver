@@ -18,12 +18,7 @@ type Money struct {
 
 func NewMoney(player *Player) *Money {
 	component := &Money{
-		DataComponent: DataComponent{
-			BaseComponent: BaseComponent{
-				Player: player,
-				Name:   "Money",
-			},
-		},
+		DataComponent: *NewDataComponent(player,"Money"),
 		data: &pb.Money{
 			Coin: 0,
 			Diamond: 0,
