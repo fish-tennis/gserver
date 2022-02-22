@@ -57,6 +57,9 @@ func (f *FinishedQuests) GetCacheKey() string {
 //}
 
 func (f *FinishedQuests) Add(finishedQuestId int32) {
+	if f.finished.Contains(finishedQuestId) {
+		return
+	}
 	f.finished.Append(finishedQuestId)
 	f.SetDirty()
 	//f.finished[finishedQuestId] = 1

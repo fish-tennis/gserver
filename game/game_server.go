@@ -160,7 +160,7 @@ func (this *GameServer) repairPlayerCache(playerId,accountId int64) error {
 				logger.Error("LoadFromCache %v error:%v", saveable.GetCacheKey(), err.Error())
 				continue
 			}
-			saveData,err := SaveWithProto(saveable)
+			saveData,err := SaveSaveable(saveable)
 			if err != nil {
 				logger.Error("%v Save %v err %v", playerId, component.GetName(), err.Error())
 				continue
@@ -182,7 +182,7 @@ func (this *GameServer) repairPlayerCache(playerId,accountId int64) error {
 					logger.Error("LoadFromCache %v error:%v", saveable.GetCacheKey(), err.Error())
 					continue
 				}
-				saveData,err := SaveWithProto(saveable)
+				saveData,err := SaveSaveable(saveable)
 				if err != nil {
 					logger.Error("Save %v err:%v", saveable.GetCacheKey(), err.Error())
 					continue

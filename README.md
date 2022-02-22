@@ -4,27 +4,28 @@
 ## 设计思路
 - 网络库使用[gnet](https://github.com/fish-tennis/gnet)
 - 玩家数据的存储接口可替换(mongodb,mysql,redis)
-- 使用redis做分布式缓存服务
+- 分布式缓存
 - 使用protobuf做通讯协议和数据序列化
-- 分布式游戏服务器,默认使用redis实现服务注册和发现
+- 服务注册和发现
 - 采用Entity-Component模式,尽可能使模块解耦
 - 工具生成辅助代码,提供更友好的调用接口
 - 能应用于商业项目
 
-## 功能
+## 演示功能
 - 服务器自动组网
-- 游戏服负载均衡,可灵活扩缩容
+- 游戏服负载均衡
 - 一个账号同时只能登录一个服务器(数据一致性前提)
-- 玩家数据修改即时缓存(redis),下线才保存到数据库(mongodb)
+- 玩家数据修改即时缓存,下线才保存到数据库
 - 游戏服宕机后重启,自动修复缓存数据,防止玩家数据回档
-- 自动消息注册
-- 玩家Entity-Component设计
+- 工具生成消息注册和发送消息代码[proto_code_gen](https://github.com/fish-tennis/proto_code_gen)
+- 采用Entity-Component设计,模块解耦
 - 玩家组件事件分发
+- 业务层和数据层分离,业务代码无需操作数据库和缓存
 
 ## 编译
 项目使用go.mod
 
-由于墙的问题,可以设置 GOPROXY=https://goproxy.cn
+国内用户,可以设置 GOPROXY=https://goproxy.cn
 
 ## 编码规范参考
 [https://github.com/uber-go/guide](https://github.com/uber-go/guide)

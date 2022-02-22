@@ -78,7 +78,7 @@ func (this *Player) GetComponents() []Component {
 // 保存所有修改过的组件数据到缓存
 func (this *Player) SaveCache() error {
 	for _,component := range this.components {
-		SaveDirtyCache(component, GetComponentCacheKey(this.id, component.GetName()))
+		SaveDirtyCache(component)
 	}
 	return nil
 }
@@ -94,7 +94,7 @@ func (this *Player) SaveDb(removeCacheAfterSaveDb bool) error {
 				logger.Debug("%v ignore %v", this.id, component.GetName())
 				continue
 			}
-			saveData,err := SaveWithProto(saveable)
+			saveData,err := SaveSaveable(saveable)
 			if err != nil {
 				logger.Error("%v Save %v err:%v", this.id, component.GetName(), err.Error())
 				continue
@@ -127,7 +127,7 @@ func (this *Player) SaveDb(removeCacheAfterSaveDb bool) error {
 			}
 			// 只要有一个子模块修改了,整体都需要保存
 			for _,saveable := range saveables {
-				saveData,err := SaveWithProto(saveable)
+				saveData,err := SaveSaveable(saveable)
 				if err != nil {
 					logger.Error("%v Save %v err:%v", this.id, component.GetName(), err.Error())
 					continue

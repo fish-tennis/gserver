@@ -15,6 +15,7 @@ import (
 // https://github.com/uber-go/guide/blob/master/style.md#verify-interface-compliance
 var _ KvCache = (*RedisCache)(nil)
 
+// KvCache的redis实现
 type RedisCache struct {
 	redisClient redis.Cmdable
 }
@@ -128,6 +129,8 @@ func convertValueToString(val reflect.Value) string {
 		return strconv.Itoa(int(val.Int()))
 	case reflect.Uint,reflect.Uint8,reflect.Uint16,reflect.Uint32,reflect.Uint64:
 		return strconv.FormatUint(val.Uint(), 10)
+	case reflect.Float32,reflect.Float64:
+		return strconv.FormatFloat(val.Float(), 'f', 2, 64)
 	case reflect.String:
 		return val.String()
 	default:
@@ -139,8 +142,9 @@ func convertValueToString(val reflect.Value) string {
 func convertValueToStringOrInterface(val reflect.Value) interface{} {
 	switch val.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
-	reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
-	reflect.String:
+		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
+		reflect.Float32, reflect.Float64,
+		reflect.String:
 		return convertValueToString(val)
 	case reflect.Interface, reflect.Ptr:
 		if !val.IsNil() {
@@ -148,13 +152,14 @@ func convertValueToStringOrInterface(val reflect.Value) interface{} {
 			if protoMessage, ok := i.(proto.Message); ok {
 				bytes, protoErr := proto.Marshal(protoMessage)
 				if protoErr != nil {
+					logger.Error("proto err:%v", protoErr.Error())
 					return protoErr
 				}
 				return bytes
 			}
 		}
 	default:
-		logger.Error("unsupport type:%v",val.Kind())
+		logger.Error("unsupport type:%v", val.Kind())
 		return nil
 	}
 	return nil
@@ -172,6 +177,22 @@ func convertStringToRealType(typ reflect.Type, v string) interface{} {
 		return int32(util.Atoi(v))
 	case reflect.Int64:
 		return util.Atoi64(v)
+	case reflect.Uint:
+		return uint(util.Atou(v))
+	case reflect.Uint8:
+		return uint8(util.Atou(v))
+	case reflect.Uint16:
+		return uint16(util.Atou(v))
+	case reflect.Uint32:
+		return uint32(util.Atou(v))
+	case reflect.Uint64:
+		return util.Atou(v)
+	case reflect.Float32:
+		f,_ := strconv.ParseFloat(v,64)
+		return float32(f)
+	case reflect.Float64:
+		f,_ := strconv.ParseFloat(v,64)
+		return f
 	case reflect.String:
 		return v
 	case reflect.Interface,reflect.Ptr:
@@ -179,13 +200,12 @@ func convertStringToRealType(typ reflect.Type, v string) interface{} {
 		if protoMessage,ok := newProto.Interface().(proto.Message); ok {
 			protoErr := proto.Unmarshal([]byte(v), protoMessage)
 			if protoErr != nil {
+				logger.Error("proto err:%v", protoErr.Error())
 				return protoErr
 			}
 			return protoMessage
 		}
-	default:
-		logger.Error("unsupport type:%v",typ.Kind())
-		return nil
 	}
+	logger.Error("unsupport type:%v",typ.Kind())
 	return nil
 }

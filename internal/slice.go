@@ -64,6 +64,15 @@ func (this *SliceInt32) Cap() int {
 	return cap(this.s)
 }
 
+func (this *SliceInt32) Contains(v int32) bool {
+	for _,elem := range this.s {
+		if elem == v {
+			return true
+		}
+	}
+	return false
+}
+
 func (this *SliceInt32) Data() []int32 {
 	return this.s
 }
@@ -94,3 +103,7 @@ func (this *SliceInt32) FromString(str string) {
 		this.s[i] = int32(util.Atoi(s))
 	}
 }
+
+// SliceInt64
+// SliceString
+// SliceProto

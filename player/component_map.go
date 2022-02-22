@@ -4,6 +4,7 @@ var(
 	// 玩家组件名和组件索引的对照表
 	// 玩家的结构是固定的,所以这个对照表可以共用
 	_playerComponentNameMap map[string]int
+	// TODO:初始化时,把部分反射信息缓存起来,运行时查表即可
 )
 
 func InitPlayerComponentMap() {

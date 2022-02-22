@@ -17,3 +17,11 @@ func Atoi64(s string) int64 {
 	}
 	return i
 }
+
+func Atou(s string) uint64 {
+	u,err := strconv.ParseUint(s, 10, 64)
+	if err != nil {
+		return 0
+	}
+	return u
+}
