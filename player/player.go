@@ -113,37 +113,30 @@ func (this *Player) SaveDb(removeCacheAfterSaveDb bool) error {
 		if compositeSaveable,ok := component.(CompositeSaveable); ok {
 			compositeData := make(map[string]interface{})
 			saveables := compositeSaveable.SaveableChildren()
-			// 虽然分成多个子模块,但是保存数据库时,一个Component必须作为一个整体保存
-			hasChanged := false
+			// 只需要保存修改过数据的子模块
 			for _,saveable := range saveables {
-				if saveable.IsChanged() {
-					hasChanged = true
-					break
+				if !saveable.IsChanged() {
+					logger.Debug("%v ignore %v", this.id, saveable.GetCacheKey())
+					continue
 				}
-			}
-			if !hasChanged {
-				logger.Debug("%v ignore %v", this.id, component.GetName())
-				continue
-			}
-			// 只要有一个子模块修改了,整体都需要保存
-			for _,saveable := range saveables {
 				saveData,err := SaveSaveable(saveable)
 				if err != nil {
-					logger.Error("%v Save %v err:%v", this.id, component.GetName(), err.Error())
+					logger.Error("%v Save %v err:%v", this.id, saveable.GetCacheKey(), err.Error())
 					continue
 				}
 				if saveData == nil {
 					logger.Debug("%v ignore nil %v", this.id, component.GetName())
 					continue
 				}
-				compositeData[saveable.Key()] = saveData
+				compositeData[component.GetNameLower()+"."+saveable.Key()] = saveData
 				if removeCacheAfterSaveDb {
 					delKeys = append(delKeys, saveable.GetCacheKey())
 				}
-				logger.Debug("SaveDb %v %v.%v", this.id, component.GetName(), saveable.Key())
+				logger.Debug("SaveDb %v %v.%v", this.id, component.GetNameLower(), saveable.Key())
 			}
-			componentDatas[component.GetNameLower()] = compositeData
-			logger.Debug("SaveDb %v %v", this.id, component.GetName())
+			if len(compositeData) > 0 {
+				logger.Debug("SaveDb %v %v child:%v", this.id, component.GetName(), len(compositeData))
+			}
 		}
 	}
 	saveDbErr := db.GetPlayerDb().SaveComponents(this.id, componentDatas)

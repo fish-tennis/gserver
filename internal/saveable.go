@@ -80,7 +80,7 @@ func (this *BaseDirtyMark) ResetDirty() {
 }
 
 // map格式的保存数据
-// 第一次有数据修改时,会把整体数据缓存一次,之后只保存修改过的项
+// 第一次有数据修改时,会把整体数据缓存一次,之后只保存修改过的项(增量更新)
 type MapDirtyMark interface {
 	// 需要保存的数据是否修改了
 	IsDirty() bool
