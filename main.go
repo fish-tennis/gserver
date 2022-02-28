@@ -77,10 +77,10 @@ func main() {
 		}()
 	}
 	// 阻塞等待系统关闭信号
-	logger.Debug("wait for kill signal")
+	logger.Info("wait for kill signal")
 	select {
 	case <-signalKillNotify:
-		logger.Debug("signalKillNotify, cancel ctx")
+		logger.Info("signalKillNotify, cancel ctx")
 		// 通知所有协程关闭,所有监听<-ctx.Done()的地方会收到通知
 		cancel()
 		break

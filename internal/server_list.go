@@ -130,9 +130,9 @@ func (this *ServerList) ConnectServer(ctx context.Context, info *pb.ServerInfo) 
 		this.connectedServerConnectorsMutex.Lock()
 		this.connectedServerConnectors[info.GetServerId()] = serverConn
 		this.connectedServerConnectorsMutex.Unlock()
-		logger.Debug("ConnectServer %v, %v", info.GetServerId(), info.ServerListenAddr)
+		logger.Info("ConnectServer %v, %v", info.GetServerId(), info.ServerListenAddr)
 	} else {
-		logger.Debug("ConnectServerError %v, %v", info.GetServerId(), info.ServerListenAddr)
+		logger.Info("ConnectServerError %v, %v", info.GetServerId(), info.ServerListenAddr)
 	}
 }
 
@@ -169,7 +169,7 @@ func (this *ServerList) SetFetchServerTypes( serverTypes ...string) {
 func (this *ServerList) SetFetchAndConnectServerTypes( serverTypes ...string) {
 	this.fetchServerTypes = append(this.fetchServerTypes, serverTypes...)
 	this.connectServerTypes = append(this.connectServerTypes, serverTypes...)
-	logger.Debug("fetch connect:%v", serverTypes)
+	logger.Info("fetch connect:%v", serverTypes)
 }
 
 // 获取某类服务器的信息列表

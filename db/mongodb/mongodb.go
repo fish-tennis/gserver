@@ -2,6 +2,7 @@ package mongodb
 
 import (
 	"context"
+	"errors"
 	"github.com/fish-tennis/gserver/db"
 	"github.com/fish-tennis/gserver/logger"
 	"go.mongodb.org/mongo-driver/bson"
@@ -11,52 +12,170 @@ import (
 )
 
 // https://github.com/uber-go/guide/blob/master/style.md#verify-interface-compliance
-var _ db.AccountDb = (*MongoDb)(nil)
-var _ db.PlayerDb = (*MongoDb)(nil)
+var _ db.PlayerDb = (*MongoCollectionPlayer)(nil)
+var _ db.EntityDb = (*MongoCollection)(nil)
 
-// AccountDb和PlayerDb的mongo实现
-type MongoDb struct {
-	mongoClient    *mongo.Client
-	mongoDatabase  *mongo.Database
+// db.EntityDb的mongo实现
+type MongoCollection struct {
+	mongoDatabase *mongo.Database
 
-	uri            string
-	dbName         string
+	// 表名
 	collectionName string
-
-	// 账号id列名(unique index)
-	colAccountId   string
-	// 账号名列名(unique index)
-	colAccountName string
-
-	// 玩家id列名(unique index)
-	colPlayerId    string
-	// 玩家名列名(unique index)
-	colPlayerName  string
-	// 玩家区服id列名
-	colRegionId    string
+	// 唯一id
+	uniqueId string
+	// 唯一name
+	uniqueName string
+	// 其他索引
+	indexNames []string
 }
 
-func NewMongoDb(uri,dbName,collectionName string) *MongoDb {
+func (this *MongoCollection) FindEntityByName(name string, data interface{}) (bool, error) {
+	if len(this.uniqueName) == 0 {
+		return false, errors.New("no uniqueName column")
+	}
+	col := this.mongoDatabase.Collection(this.collectionName)
+	result := col.FindOne(context.Background(), bson.D{{this.uniqueName, name}})
+	if result == nil || result.Err() == mongo.ErrNoDocuments {
+		return false, nil
+	}
+	err := result.Decode(data)
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+func (this *MongoCollection) InsertEntity(entityId int64, entityData interface{}) (err error, isDuplicateKey bool) {
+	col := this.mongoDatabase.Collection(this.collectionName)
+	_, err = col.InsertOne(context.Background(), entityData)
+	if err != nil {
+		isDuplicateKey = IsDuplicateKeyError(err)
+	}
+	return
+}
+
+func (this *MongoCollection) SaveEntity(entityId int64, entityData interface{}) error {
+	col := this.mongoDatabase.Collection(this.collectionName)
+	_, err := col.UpdateOne(context.Background(), bson.D{{this.uniqueId, entityId}}, entityData)
+	return err
+}
+
+func (this *MongoCollection) SaveComponent(entityId int64, componentName string, componentData interface{}) error {
+	col := this.mongoDatabase.Collection(this.collectionName)
+	_, updateErr := col.UpdateOne(context.Background(), bson.D{{this.uniqueId, entityId}},
+		bson.D{{"$set", bson.D{{componentName, componentData}}}})
+	if updateErr != nil {
+		return updateErr
+	}
+	return nil
+}
+
+func (this *MongoCollection) SaveComponents(entityId int64, components map[string]interface{}) error {
+	if len(components) == 0 {
+		return nil
+	}
+	col := this.mongoDatabase.Collection(this.collectionName)
+	_, updateErr := col.UpdateMany(context.Background(), bson.D{{this.uniqueId, entityId}},
+		bson.D{{"$set", components}})
+	if updateErr != nil {
+		return updateErr
+	}
+	return nil
+}
+
+func (this *MongoCollection) SaveComponentField(entityId int64, componentName string, fieldName string, fieldData interface{}) error {
+	col := this.mongoDatabase.Collection(this.collectionName)
+	_, updateErr := col.UpdateOne(context.Background(), bson.D{{this.uniqueId, entityId}},
+		bson.D{{"$set", bson.D{{componentName + "." + fieldName, fieldData}}}})
+	if updateErr != nil {
+		return updateErr
+	}
+	return nil
+}
+
+// db.PlayerDb的mongo实现
+type MongoCollectionPlayer struct {
+	MongoCollection
+	// 账号id列名(index)
+	colAccountId string
+	//// 账号名列名(index)
+	//colAccountName string
+	// 玩家区服id列名
+	colRegionId string
+}
+
+// 根据账号id查找玩家数据
+// 适用于一个账号在一个区服只有一个玩家角色的游戏
+func (this *MongoCollectionPlayer) FindPlayerByAccountId(accountId int64, regionId int32, playerData interface{}) (bool, error) {
+	col := this.mongoDatabase.Collection(this.collectionName)
+	result := col.FindOne(context.Background(), bson.D{{this.colAccountId, accountId}, {this.colRegionId, regionId}})
+	if result == nil || result.Err() == mongo.ErrNoDocuments {
+		return false, nil
+	}
+	err := result.Decode(playerData)
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+var _ db.DbMgr = (*MongoDb)(nil)
+
+// db.DbMgr的mongo实现
+type MongoDb struct {
+	mongoClient   *mongo.Client
+	mongoDatabase *mongo.Database
+
+	uri    string
+	dbName string
+
+	entityDbs map[string]db.EntityDb
+}
+
+func NewMongoDb(uri, dbName string) *MongoDb {
 	return &MongoDb{
-		uri:            uri,
-		dbName:         dbName,
-		collectionName: collectionName,
+		uri:       uri,
+		dbName:    dbName,
+		entityDbs: make(map[string]db.EntityDb),
 	}
 }
 
-func (this *MongoDb) SetAccountColumnNames(colAccountId, colAccountName string) {
-	this.colAccountId = colAccountId
-	this.colAccountName = colAccountName
+// 注册普通Entity对应的collection
+func (this *MongoDb) RegisterEntityDb(collectionName string, uniqueId, uniqueName string) db.EntityDb {
+	col := &MongoCollection{
+		mongoDatabase:  this.mongoDatabase,
+		collectionName: collectionName,
+		uniqueId:       uniqueId,
+		uniqueName:     uniqueName,
+	}
+	this.entityDbs[collectionName] = col
+	logger.Info("RegisterEntityDb %v %v %v", collectionName, uniqueId, uniqueName)
+	return col
 }
 
-func (this *MongoDb) SetPlayerColumnNames(colPlayerId, colPlayerName, colRegionId string) {
-	this.colPlayerId = colPlayerId
-	this.colPlayerName = colPlayerName
-	this.colRegionId = colRegionId
+// 注册玩家对应的collection
+func (this *MongoDb) RegisterPlayerPb(collectionName string, playerId, playerName, accountId, region string) db.PlayerDb {
+	col := &MongoCollectionPlayer{
+		MongoCollection: MongoCollection{
+			mongoDatabase:  this.mongoDatabase,
+			collectionName: collectionName,
+			uniqueId:       playerId,
+			uniqueName:     playerName,
+		},
+		colAccountId: accountId,
+		colRegionId:    region,
+	}
+	this.entityDbs[collectionName] = col
+	logger.Info("RegisterPlayerPb %v %v %v", collectionName, playerId, playerName)
+	return col
+}
+
+func (this *MongoDb) GetEntityDb(name string) db.EntityDb {
+	return this.entityDbs[name]
 }
 
 func (this *MongoDb) Connect() bool {
-	client,err := mongo.Connect(context.Background(), options.Client().ApplyURI(this.uri))
+	client, err := mongo.Connect(context.Background(), options.Client().ApplyURI(this.uri))
 	if err != nil {
 		return false
 	}
@@ -67,28 +186,60 @@ func (this *MongoDb) Connect() bool {
 	}
 	this.mongoClient = client
 	this.mongoDatabase = this.mongoClient.Database(this.dbName)
-	col := this.mongoDatabase.Collection(this.collectionName)
-	columnNames := []string{this.colAccountId, this.colAccountName, this.colPlayerId, this.colPlayerName}
-	var indexModels []mongo.IndexModel
-	for _,columnName := range columnNames {
-		if columnName != "" && columnName != "_id" {
-			indexModel := mongo.IndexModel{
-				Keys: bson.D{
-					{columnName, 1},
-				},
-				Options: options.Index().SetUnique(true),
+	for _, entityDb := range this.entityDbs {
+		switch mongoCollection := entityDb.(type) {
+		case *MongoCollection:
+			mongoCollection.mongoDatabase = this.mongoDatabase
+			var indexModels []mongo.IndexModel
+			columnNames := []string{mongoCollection.uniqueId, mongoCollection.uniqueName}
+			for _, columnName := range columnNames {
+				if columnName != "" && columnName != "_id" {
+					indexModel := mongo.IndexModel{
+						Keys: bson.D{
+							{columnName, 1},
+						},
+						Options: options.Index().SetUnique(true),
+					}
+					indexModels = append(indexModels, indexModel)
+				}
 			}
-			indexModels = append(indexModels, indexModel)
+			if len(indexModels) > 0 {
+				col := this.mongoDatabase.Collection(mongoCollection.collectionName)
+				indexNames, indexErr := col.Indexes().CreateMany(context.Background(), indexModels)
+				if indexErr != nil {
+					logger.Error("%v create index %v err:%v", mongoCollection.collectionName, mongoCollection.uniqueId, indexErr)
+				} else {
+					logger.Info("%v index:%v", mongoCollection.collectionName, indexNames)
+				}
+			}
+
+		case *MongoCollectionPlayer:
+			mongoCollection.mongoDatabase = this.mongoDatabase
+			var indexModels []mongo.IndexModel
+			columnNames := []string{mongoCollection.uniqueId, mongoCollection.uniqueName}
+			for _, columnName := range columnNames {
+				if columnName != "" && columnName != "_id" {
+					indexModel := mongo.IndexModel{
+						Keys: bson.D{
+							{columnName, 1},
+						},
+						Options: options.Index().SetUnique(true),
+					}
+					indexModels = append(indexModels, indexModel)
+				}
+			}
+			if len(indexModels) > 0 {
+				col := this.mongoDatabase.Collection(mongoCollection.collectionName)
+				indexNames, indexErr := col.Indexes().CreateMany(context.Background(), indexModels)
+				if indexErr != nil {
+					logger.Error("%v create index %v err:%v", mongoCollection.collectionName, mongoCollection.uniqueId, indexErr)
+				} else {
+					logger.Info("%v index:%v", mongoCollection.collectionName, indexNames)
+				}
+			}
 		}
 	}
-	if len(indexModels) > 0 {
-		indexNames,indexErr := col.Indexes().CreateMany(context.Background(), indexModels)
-		if indexErr != nil {
-			logger.Error("create index err:%v", indexErr)
-		} else {
-			logger.Info("mongo index:%v", indexNames)
-		}
-	}
+
 	logger.Info("mongo Connected")
 	return true
 }
@@ -103,122 +254,15 @@ func (this *MongoDb) Disconnect() {
 	logger.Info("mongo Disconnected")
 }
 
-// 根据账号名查找账号数据
-func (this *MongoDb) FindAccount(accountName string, data interface{}) (bool,error) {
-	col := this.mongoDatabase.Collection(this.collectionName)
-	result := col.FindOne(context.Background(), bson.D{{this.colAccountName,accountName}})
-	if result == nil || result.Err() == mongo.ErrNoDocuments {
-		return false, nil
-	}
-	err := result.Decode(data)
-	if err != nil {
-		return false, err
-	}
-	return true,nil
-}
-
-// 新建账号(insert)
-func (this *MongoDb) InsertAccount(accountData interface{}) (err error, isDuplicateKey bool) {
-	col := this.mongoDatabase.Collection(this.collectionName)
-	_, err = col.InsertOne(context.Background(), accountData)
-	if err != nil {
-		isDuplicateKey = this.IsDuplicateKeyError(err)
-	}
-	return
-}
-
 // 检查是否是key重复错误
-func (this *MongoDb) IsDuplicateKeyError(err error) bool {
+func IsDuplicateKeyError(err error) bool {
 	switch e := err.(type) {
-		case mongo.WriteException:
-			for _,writeErr := range e.WriteErrors {
-				if writeErr.Code == 11000 {
-					return true
-				}
+	case mongo.WriteException:
+		for _, writeErr := range e.WriteErrors {
+			if writeErr.Code == 11000 {
+				return true
 			}
+		}
 	}
 	return false
-}
-
-// 保存账号数据(update account by accountId)
-func (this *MongoDb) SaveAccount(accountId int64, accountData interface{}) error {
-	col := this.mongoDatabase.Collection(this.collectionName)
-	_, err := col.UpdateOne(context.Background(), bson.D{{this.colAccountId, accountId}}, accountData)
-	return err
-}
-
-// 保存账号字段(update account.fieldName by accountId)
-func (this *MongoDb) SaveAccountField(accountId int64, fieldName string, fieldData interface{}) error {
-	col := this.mongoDatabase.Collection(this.collectionName)
-	_, err := col.UpdateOne(context.Background(), bson.D{{this.colAccountId, accountId}},
-		bson.D{{"$set", bson.D{{fieldName,fieldData}}}})
-	return err
-}
-
-
-// 根据账号id查找玩家数据
-// 适用于一个账号在一个区服只有一个玩家角色的游戏
-func (this *MongoDb) FindPlayerByAccountId(accountId int64, regionId int32, playerData interface{}) (bool,error) {
-	col := this.mongoDatabase.Collection(this.collectionName)
-	result := col.FindOne(context.Background(), bson.D{{this.colAccountId,accountId},{this.colRegionId,regionId}})
-	if result == nil || result.Err() == mongo.ErrNoDocuments {
-		return false, nil
-	}
-	err := result.Decode(playerData)
-	if err != nil {
-		return false, err
-	}
-	return true,nil
-}
-
-func (this *MongoDb) InsertPlayer(playerId int64, playerData interface{}) (err error, isDuplicateKey bool) {
-	col := this.mongoDatabase.Collection(this.collectionName)
-	_, err = col.InsertOne(context.Background(), playerData)
-	if err != nil {
-		isDuplicateKey = this.IsDuplicateKeyError(err)
-	}
-	return
-}
-
-// 保存玩家数据(update player by playerId)
-func (this *MongoDb) SavePlayer(playerId int64, playerData interface{}) error {
-	col := this.mongoDatabase.Collection(this.collectionName)
-	_, err := col.UpdateOne(context.Background(), bson.D{{this.colPlayerId, playerId}}, playerData)
-	return err
-}
-
-// 保存玩家组件(update player's component)
-func (this *MongoDb) SaveComponent(playerId int64, componentName string, componentData interface{}) error {
-	col := this.mongoDatabase.Collection(this.collectionName)
-	_, updateErr := col.UpdateOne(context.Background(), bson.D{{this.colPlayerId, playerId}},
-		bson.D{{"$set", bson.D{{componentName,componentData}}}})
-	if updateErr != nil {
-		return updateErr
-	}
-	return nil
-}
-
-// 批量保存玩家组件(update player's components...)
-func (this *MongoDb) SaveComponents(playerId int64, components map[string]interface{}) error {
-	if len(components) == 0 {
-		return nil
-	}
-	col := this.mongoDatabase.Collection(this.collectionName)
-	_, updateErr := col.UpdateMany(context.Background(), bson.D{{this.colPlayerId, playerId}},
-		bson.D{{"$set", components}})
-	if updateErr != nil {
-		return updateErr
-	}
-	return nil
-}
-
-// 保存玩家1个组件的一个字段(update player's component.field)
-func (this *MongoDb) SaveComponentField(playerId int64, componentName string, fieldName string, fieldData interface{}) error {
-	col := this.mongoDatabase.Collection(this.collectionName)
-	_, updateErr := col.UpdateOne(context.Background(), bson.D{{this.colPlayerId, playerId}},
-		bson.D{{"$set", bson.D{{componentName+"."+fieldName,fieldData}}}})
-	if updateErr != nil {
-		return updateErr
-	}
-	return nil
 }

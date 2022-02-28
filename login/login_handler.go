@@ -16,7 +16,7 @@ func onLoginReq(connection Connection, packet *ProtoPacket) {
 	result := ""
 	loginSession := ""
 	account := &pb.Account{}
-	hasData,err := _loginServer.GetAccountDb().FindAccount(req.GetAccountName(),account)
+	hasData,err := _loginServer.GetAccountDb().FindEntityByName(req.GetAccountName(),account)
 	if err != nil {
 		result = err.Error()
 	} else {
@@ -88,7 +88,7 @@ func onAccountReg(connection Connection, packet *ProtoPacket) {
 		Name: req.GetAccountName(),
 		Password: req.GetPassword(),
 	}
-	err,isDuplicateKey := _loginServer.GetAccountDb().InsertAccount(account)
+	err,isDuplicateKey := _loginServer.GetAccountDb().InsertEntity(account.Id, account)
 	if err != nil {
 		account.Id = 0
 		if isDuplicateKey {

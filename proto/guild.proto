@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+option go_package = "./pb";
+
+package gserver;
+
+// 公会相关proto,某些项目可能叫帮派,联盟,俱乐部等
+
+enum CmdGuild {
+  Cmd_None         = 0; // 解决"The first enum value must be zero in proto3."的报错
+  Cmd_GuildListReq      = 2001;
+  Cmd_GuildListRes      = 2002;
+  Cmd_GuildCreateReq    = 2003;
+  Cmd_GuildCreateRes    = 2004;
+  Cmd_GuildJoinReq      = 2005;
+  Cmd_GuildJoinRes      = 2006;
+  Cmd_GuildJoinAgreeReq = 2007;
+  Cmd_GuildJoinAgreeRes = 2008;
+}
+
+enum GuildPosition {
+  Member  = 0; // 普通成员
+  Manager = 1; // 管理员
+  Leader  = 2; // 会长
+}
+
+// 公会数据
+message GuildData {
+  int64 id = 1; // 公会唯一id
+  string name = 2; // 名称
+  string intro = 3; // 介绍
+  map<int64,GuildMemberData> members = 4; // 公会成员
+}
+
+// 公会成员数据
+message GuildMemberData {
+  int64 id = 1; // 玩家id
+  string name = 2; // 玩家名称
+  int32 position = 3; // 职位
+}

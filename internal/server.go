@@ -85,7 +85,7 @@ func (this *BaseServer) GetServerList() *ServerList {
 
 // 加载配置文件
 func (this *BaseServer) Init(ctx context.Context, configFile string) bool {
-	logger.Debug("BaseServer.Init")
+	logger.Info("BaseServer.Init")
 	this.configFile = configFile
 	this.serverInfo = new(pb.ServerInfo)
 	this.serverList = NewServerList()
@@ -99,7 +99,7 @@ func (this *BaseServer) Init(ctx context.Context, configFile string) bool {
 
 // 运行
 func (this *BaseServer) Run(ctx context.Context) {
-	logger.Debug("BaseServer.Run")
+	logger.Info("BaseServer.Run")
 	go func(ctx context.Context) {
 		this.updateLoop(ctx)
 	}(ctx)
@@ -128,18 +128,18 @@ func (this *BaseServer) Exit() {
 
 // 定时更新接口
 func (this *BaseServer) updateLoop(ctx context.Context) {
-	logger.Debug("updateLoop begin")
+	logger.Info("updateLoop begin")
 	// 暂定更新间隔1秒
 	updateTicker := time.NewTicker(this.updateInterval)
 	defer func() {
 		updateTicker.Stop()
-		logger.Debug("updateLoop end")
+		logger.Info("updateLoop end")
 	}()
 	for {
 		select {
 		// 系统关闭通知
 		case <-ctx.Done():
-			logger.Debug("exitNotify")
+			logger.Info("exitNotify")
 			return
 		case <-updateTicker.C:
 			this.OnUpdate(ctx, this.updateCount)

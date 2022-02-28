@@ -4,8 +4,7 @@ option go_package = "./pb";
 
 import "item.proto";
 
-// 每个proto文件设置package为文件名,可以防止enum命名冲突
-package player;
+package gserver;
 
 // 玩家基础信息
 message BaseInfo {

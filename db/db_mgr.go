@@ -4,13 +4,18 @@ var (
 	// singleton
 	// 玩家数据接口
 	// https://github.com/uber-go/guide/blob/master/style.md#prefix-unexported-globals-with-_
-	_playerDb PlayerDb
+	_dbMgr DbMgr
 )
 
-func SetPlayerDb(playerDb PlayerDb) {
-	_playerDb = playerDb
+func SetDbMgr(dbMgr DbMgr) {
+	_dbMgr = dbMgr
 }
 
+func GetDbMgr() DbMgr {
+	return _dbMgr
+}
+
+// 玩家数据表
 func GetPlayerDb() PlayerDb {
-	return _playerDb
+	return _dbMgr.GetEntityDb("player").(PlayerDb)
 }

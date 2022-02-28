@@ -25,7 +25,7 @@ type LoginServer struct {
 	BaseServer
 	config *LoginServerConfig
 	// 账号数据接口
-	accountDb db.AccountDb
+	accountDb db.EntityDb
 }
 
 // 登录服配置
@@ -34,7 +34,7 @@ type LoginServerConfig struct {
 }
 
 // 账号db接口
-func (this *LoginServer) GetAccountDb() db.AccountDb {
+func (this *LoginServer) GetAccountDb() db.EntityDb {
 	return this.accountDb
 }
 
@@ -59,22 +59,22 @@ func (this *LoginServer) Init(ctx context.Context, configFile string) bool {
 	// 连接其他服务器
 	this.BaseServer.SetDefaultServerConnectorConfig(this.config.ServerConnConfig)
 	this.BaseServer.GetServerList().SetFetchAndConnectServerTypes("game")
-	logger.Debug("LoginServer.Init")
+	logger.Info("LoginServer.Init")
 	return true
 }
 
 // 运行
 func (this *LoginServer) Run(ctx context.Context) {
 	this.BaseServer.Run(ctx)
-	logger.Debug("LoginServer.Run")
+	logger.Info("LoginServer.Run")
 }
 
 // 退出
 func (this *LoginServer) Exit() {
 	this.BaseServer.Exit()
-	logger.Debug("LoginServer.Exit")
-	if this.accountDb != nil {
-		this.accountDb.(*mongodb.MongoDb).Disconnect()
+	logger.Info("LoginServer.Exit")
+	if db.GetDbMgr() != nil {
+		db.GetDbMgr().(*mongodb.MongoDb).Disconnect()
 	}
 }
 
@@ -98,12 +98,12 @@ func (this *LoginServer) readConfig() {
 // 初始化数据库
 func (this *LoginServer) initDb() {
 	// 使用mongodb来演示
-	mongoDb := mongodb.NewMongoDb(this.config.MongoUri,"testdb","account")
-	mongoDb.SetAccountColumnNames("id", "name")
+	mongoDb := mongodb.NewMongoDb(this.config.MongoUri,"testdb")
+	this.accountDb = mongoDb.RegisterEntityDb("account","id", "name")
 	if !mongoDb.Connect() {
 		panic("connect db error")
 	}
-	this.accountDb = mongoDb
+	db.SetDbMgr(mongoDb)
 }
 
 // 初始化redis缓存

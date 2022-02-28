@@ -78,23 +78,23 @@ func (this *GameServer) Init(ctx context.Context, configFile string) bool {
 	this.BaseServer.SetDefaultServerConnectorConfig(this.config.ServerConnConfig)
 	this.BaseServer.GetServerList().SetFetchAndConnectServerTypes("game")
 
-	logger.Debug("GameServer.Init")
+	logger.Info("GameServer.Init")
 	return true
 }
 
 // 运行
 func (this *GameServer) Run(ctx context.Context) {
 	this.BaseServer.Run(ctx)
-	logger.Debug("GameServer.Run")
+	logger.Info("GameServer.Run")
 }
 
 // 退出
 func (this *GameServer) Exit() {
 	this.BaseServer.Exit()
-	logger.Debug("GameServer.Exit")
-	playerDb := db.GetPlayerDb()
-	if playerDb != nil {
-		playerDb.(*mongodb.MongoDb).Disconnect()
+	logger.Info("GameServer.Exit")
+	dbMgr := db.GetDbMgr()
+	if dbMgr != nil {
+		dbMgr.(*mongodb.MongoDb).Disconnect()
 	}
 }
 
@@ -119,13 +119,15 @@ func (this *GameServer) readConfig() {
 // 初始化数据库
 func (this *GameServer) initDb() {
 	// 使用mongodb来演示
-	mongoDb := mongodb.NewMongoDb(this.config.MongoUri,"testdb","player")
-	mongoDb.SetAccountColumnNames("accountid","")
-	mongoDb.SetPlayerColumnNames("id", "Name","regionid")
+	mongoDb := mongodb.NewMongoDb(this.config.MongoUri,"testdb")
+	mongoDb.RegisterPlayerPb("player", "id", "name", "accountid", "regionid")
+	mongoDb.RegisterEntityDb("guild", "id", "name")
+	//mongoDb.SetAccountColumnNames("accountid","")
+	//mongoDb.SetPlayerColumnNames("id", "Name","regionid")
 	if !mongoDb.Connect() {
 		panic("connect db error")
 	}
-	db.SetPlayerDb(mongoDb)
+	db.SetDbMgr(mongoDb)
 }
 
 // 初始化redis缓存

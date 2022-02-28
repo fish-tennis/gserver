@@ -121,7 +121,7 @@ func onCreatePlayerReq(connection Connection, packet *ProtoPacket) {
 			Exp: 0,
 		},
 	}
-	err,isDuplicateKey := db.GetPlayerDb().InsertPlayer(playerData.Id, playerData)
+	err,isDuplicateKey := db.GetPlayerDb().InsertEntity(playerData.Id, playerData)
 	if err != nil {
 		result := "DbError"
 		if isDuplicateKey {

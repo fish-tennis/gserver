@@ -15,13 +15,16 @@ var _ internal.CompositeSaveable = (*Quest)(nil)
 // 与Bag不同,Quest由一个Component和多个ChildSaveable组合而成
 // 不同的ChildSaveable可以有不同的数据保存方式
 type Quest struct {
-	MapDataComponent
+	BaseComponent
+	// 已完成的任务
 	finished *FinishedQuests
+	// 当前任务列表
 	quests *CurQuests
 }
 
 var _ internal.DirtyMark = (*FinishedQuests)(nil)
 
+// 已完成的任务
 type FinishedQuests struct {
 	internal.BaseDirtyMark
 	quest *Quest
@@ -35,7 +38,7 @@ type FinishedQuests struct {
 }
 
 func (f *FinishedQuests) DbData() (dbData interface{}, protoMarshal bool) {
-	return f.finished,false
+	return f.finished, false
 }
 
 func (f *FinishedQuests) CacheData() interface{} {
@@ -67,19 +70,20 @@ func (f *FinishedQuests) Add(finishedQuestId int32) {
 
 var _ internal.MapDirtyMark = (*CurQuests)(nil)
 
+// 当前任务列表
 type CurQuests struct {
 	internal.BaseMapDirtyMark
-	quest *Quest
+	quest  *Quest
 	quests map[int32]*pb.QuestData
 }
 
 func (c *CurQuests) GetMapValue(key string) (value interface{}, exists bool) {
-	value,exists = c.quests[int32(util.Atoi(key))]
+	value, exists = c.quests[int32(util.Atoi(key))]
 	return
 }
 
 func (c *CurQuests) DbData() (dbData interface{}, protoMarshal bool) {
-	return c.quests,true
+	return c.quests, true
 }
 
 func (c *CurQuests) CacheData() interface{} {
@@ -91,7 +95,7 @@ func (c *CurQuests) Key() string {
 }
 
 func (c *CurQuests) GetCacheKey() string {
-	return c.quest.GetCacheKey() +c.Key()
+	return c.quest.GetCacheKey() + c.Key()
 }
 
 func (c *CurQuests) Add(questData *pb.QuestData) {
@@ -102,11 +106,9 @@ func (c *CurQuests) Add(questData *pb.QuestData) {
 
 func NewQuest(player *Player) *Quest {
 	component := &Quest{
-		MapDataComponent: MapDataComponent{
-			BaseComponent: BaseComponent{
-				Player: player,
-				Name:   "Quest",
-			},
+		BaseComponent: BaseComponent{
+			Player: player,
+			Name:   "Quest",
 		},
 		finished: &FinishedQuests{
 		},
@@ -126,7 +128,6 @@ func (this *Quest) SaveableChildren() []internal.ChildSaveable {
 
 func (this *Quest) checkData() {
 	if this.finished.finished == nil {
-		//this.finished.finished = make(map[int32]int8)
 		this.finished.finished = new(internal.SliceInt32)
 	}
 	if this.quests.quests == nil {
