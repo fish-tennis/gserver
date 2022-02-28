@@ -6,7 +6,6 @@ import (
 	"github.com/fish-tennis/gserver/util"
 	"math"
 	"math/rand"
-	"strconv"
 )
 
 var _ internal.Saveable = (*BagCountItem)(nil)
@@ -72,7 +71,7 @@ func (this *BagCountItem) AddItem(itemCfgId,addCount int32) {
 		curCount = addCount
 	}
 	this.items[itemCfgId] = curCount
-	this.SetDirty(strconv.Itoa(int(itemCfgId)), true)
+	this.SetDirty(itemCfgId, true)
 	logger.Debug("AddItem cfgId:%v curCount:%v", itemCfgId, curCount)
 }
 
@@ -86,10 +85,10 @@ func (this *BagCountItem) DelItem(itemCfgId,delCount int32) {
 	}
 	if delCount >= curCount {
 		delete(this.items, itemCfgId)
-		this.SetDirty(strconv.Itoa(int(itemCfgId)), false)
+		this.SetDirty(itemCfgId, false)
 	} else {
 		this.items[itemCfgId] = curCount - delCount
-		this.SetDirty(strconv.Itoa(int(itemCfgId)), true)
+		this.SetDirty(itemCfgId, true)
 	}
 	logger.Debug("DelItem cfgId:%v curCount:%v", itemCfgId, curCount)
 }

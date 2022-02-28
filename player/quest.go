@@ -6,7 +6,6 @@ import (
 	"github.com/fish-tennis/gserver/pb"
 	"github.com/fish-tennis/gserver/util"
 	"math/rand"
-	"strconv"
 )
 
 var _ internal.CompositeSaveable = (*Quest)(nil)
@@ -48,7 +47,7 @@ func (f *FinishedQuests) Key() string {
 }
 
 func (f *FinishedQuests) GetCacheKey() string {
-	return f.quest.GetCacheKey() + "finished"
+	return f.quest.GetCacheKey() + f.Key()
 }
 
 //func (f *FinishedQuests) GetMapValue(key string) (value interface{}, exists bool) {
@@ -91,8 +90,14 @@ func (c *CurQuests) Key() string {
 	return "quests"
 }
 
-func (f *CurQuests) GetCacheKey() string {
-	return f.quest.GetCacheKey() + "quests"
+func (c *CurQuests) GetCacheKey() string {
+	return c.quest.GetCacheKey() +c.Key()
+}
+
+func (c *CurQuests) Add(questData *pb.QuestData) {
+	c.quests[questData.CfgId] = questData
+	c.SetDirty(questData.CfgId, true)
+	logger.Debug("add quest:%v", questData)
 }
 
 func NewQuest(player *Player) *Quest {
@@ -134,11 +139,9 @@ func (this *Quest) OnEvent(event interface{}) {
 	switch event.(type) {
 	case *internal.EventPlayerEntryGame:
 		// 测试代码
-		this.finished.Add(int32(rand.Intn(100)))
-		logger.Debug("finished:%v", this.finished.finished)
+		//this.finished.Add(int32(rand.Intn(100)))
+		//logger.Debug("finished:%v", this.finished.finished)
 		questData := &pb.QuestData{CfgId: int32(rand.Intn(1000)), Progress: rand.Int31n(100)}
-		this.quests.quests[questData.CfgId] = questData
-		this.quests.SetDirty(strconv.Itoa(int(questData.CfgId)), true)
-		logger.Debug("add quest:%v", questData)
+		this.quests.Add(questData)
 	}
 }

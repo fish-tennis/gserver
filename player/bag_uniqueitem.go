@@ -6,7 +6,6 @@ import (
 	"github.com/fish-tennis/gserver/pb"
 	"github.com/fish-tennis/gserver/util"
 	"math/rand"
-	"strconv"
 )
 
 var _ internal.Saveable = (*BagUniqueItem)(nil)
@@ -59,7 +58,7 @@ func (this *BagUniqueItem) OnEvent(event interface{}) {
 func (this *BagUniqueItem) AddUniqueItem(uniqueItem *pb.UniqueItem) {
 	if _,ok := this.items[uniqueItem.UniqueId]; !ok {
 		this.items[uniqueItem.UniqueId] = uniqueItem
-		this.SetDirty(strconv.FormatInt(uniqueItem.UniqueId,10), true)
+		this.SetDirty(uniqueItem.UniqueId, true)
 		logger.Debug("AddUniqueItem CfgId:%v UniqueId:%v", uniqueItem.CfgId, uniqueItem.UniqueId)
 	}
 }

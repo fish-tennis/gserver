@@ -85,7 +85,7 @@ type MapDirtyMark interface {
 	// 需要保存的数据是否修改了
 	IsDirty() bool
 	// 设置数据修改标记
-	SetDirty(k string, isAddOrUpdate bool)
+	SetDirty(k interface{}, isAddOrUpdate bool)
 	// 重置标记
 	ResetDirty()
 
@@ -111,11 +111,11 @@ func (this *BaseMapDirtyMark) IsDirty() bool {
 	return len(this.dirtyMap) > 0
 }
 
-func (this *BaseMapDirtyMark) SetDirty(k string, isAddOrUpdate bool) {
+func (this *BaseMapDirtyMark) SetDirty(k interface{}, isAddOrUpdate bool) {
 	if this.dirtyMap == nil {
 		this.dirtyMap = make(map[string]bool)
 	}
-	this.dirtyMap[k] = isAddOrUpdate
+	this.dirtyMap[util.Itoa(k)] = isAddOrUpdate
 	this.isChanged = true
 }
 
