@@ -47,6 +47,7 @@ func main() {
 	// 根据命令行参数 创建不同的服务器实例
 	serverType := getServerTypeFromConfigFile(configFile)
 	server := createServer(serverType)
+	internal.SetServer(server)
 
 	// context实现优雅的协程关闭通知
 	ctx,cancel := context.WithCancel(context.Background())

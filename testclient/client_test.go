@@ -25,6 +25,7 @@ func TestClient(t *testing.T)  {
 	ctx,cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	gnet.SetLogLevel(gnet.DebugLevel)
 	netMgr := gnet.GetNetMgr()
 	clientCodec := gnet.NewProtoCodec(nil)
 	clientHandler := &testLoginHandler{
@@ -130,6 +131,8 @@ func (this *testGameHandler) RegisterPacket() {
 	this.Register(gnet.PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameRes), this.onPlayerEntryGameRes, func() proto.Message {return new(pb.PlayerEntryGameRes)})
 	this.Register(gnet.PacketCommand(pb.CmdLogin_Cmd_CreatePlayerRes), this.onCreatePlayerRes, func() proto.Message {return new(pb.CreatePlayerRes)})
 	this.Register(gnet.PacketCommand(pb.CmdMoney_Cmd_CoinRes), this.onCoinRes, func() proto.Message {return new(pb.CoinRes)})
+	this.Register(gnet.PacketCommand(pb.CmdGuild_Cmd_GuildCreateRes), this.onGuildCreateRes, func() proto.Message {return new(pb.GuildCreateRes)})
+	this.Register(gnet.PacketCommand(pb.CmdGuild_Cmd_GuildListRes), this.onGuildListRes, func() proto.Message {return new(pb.GuildListRes)})
 }
 
 func (this *testGameHandler) OnConnected(connection gnet.Connection, success bool) {
@@ -155,6 +158,13 @@ func (this *testGameHandler) onPlayerEntryGameRes(connection gnet.Connection, pa
 		// 玩家登录游戏服成功,模拟一个交互消息
 		connection.Send(gnet.PacketCommand(pb.CmdMoney_Cmd_CoinReq), &pb.CoinReq{
 			AddCoin: 1,
+		})
+		connection.Send(gnet.PacketCommand(pb.CmdGuild_Cmd_GuildCreateReq), &pb.GuildCreateReq{
+			Name: "test",
+			Intro: "empty",
+		})
+		connection.Send(gnet.PacketCommand(pb.CmdGuild_Cmd_GuildListReq), &pb.GuildListReq{
+			PageIndex: 0,
 		})
 		return
 	}
@@ -198,4 +208,12 @@ func (this *testGameHandler) onCreatePlayerRes(connection gnet.Connection, packe
 // 逻辑消息回调
 func (this *testGameHandler) onCoinRes(connection gnet.Connection, packet *gnet.ProtoPacket) {
 	logger.Debug("onCoinRes:%v", packet.Message())
+}
+
+func (this *testGameHandler) onGuildCreateRes(connection gnet.Connection, packet *gnet.ProtoPacket) {
+	logger.Debug("onGuildCreateRes:%v", packet.Message())
+}
+
+func (this *testGameHandler) onGuildListRes(connection gnet.Connection, packet *gnet.ProtoPacket) {
+	logger.Debug("onGuildListRes:%v", packet.Message())
 }

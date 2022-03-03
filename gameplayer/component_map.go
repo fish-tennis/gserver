@@ -1,4 +1,4 @@
-package player
+package gameplayer
 
 var(
 	// 玩家组件名和组件索引的对照表

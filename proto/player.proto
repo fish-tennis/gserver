@@ -36,6 +36,11 @@ message QuestData {
   int32 progress = 2; // 进度
 }
 
+// 玩家身上的公会数据
+message PlayerGuildData {
+  int64 guildId = 1; // 公会id
+}
+
 // 玩家在数据库中的保存格式
 // 用于一次性把玩家数据加载进来
 message PlayerData {
@@ -48,4 +53,5 @@ message PlayerData {
   Quest quest = 8;
   map<int32,int32> bagCountItem = 9;
   map<int64,bytes> bagUniqueItem = 10;
+  bytes guildData = 11;
 }

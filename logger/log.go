@@ -2,6 +2,7 @@ package logger
 
 import (
 	"github.com/fish-tennis/gnet"
+	"runtime"
 )
 
 var logger = gnet.NewStdLogger(3)
@@ -20,4 +21,9 @@ func Warn(format string, args ...interface{}) {
 
 func Error(format string, args ...interface{}) {
 	logger.Error(format, args...)
+}
+
+func LogStack() {
+	buf := make([]byte, 1<<12)
+	Error(string(buf[:runtime.Stack(buf, false)]))
 }

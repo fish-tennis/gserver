@@ -23,16 +23,46 @@ const (
 type CmdGuild int32
 
 const (
-	CmdGuild_Cmd_None CmdGuild = 0 // 解决"The first enum value must be zero in proto3."的报错
+	CmdGuild_Cmd_None                CmdGuild = 0 // 解决"The first enum value must be zero in proto3."的报错
+	CmdGuild_Cmd_GuildListReq        CmdGuild = 2001
+	CmdGuild_Cmd_GuildListRes        CmdGuild = 2002
+	CmdGuild_Cmd_GuildCreateReq      CmdGuild = 2003
+	CmdGuild_Cmd_GuildCreateRes      CmdGuild = 2004
+	CmdGuild_Cmd_GuildJoinReq        CmdGuild = 2005
+	CmdGuild_Cmd_GuildJoinRes        CmdGuild = 2006
+	CmdGuild_Cmd_GuildJoinAgreeReq   CmdGuild = 2007
+	CmdGuild_Cmd_GuildJoinAgreeRes   CmdGuild = 2008
+	CmdGuild_Cmd_RequestGuildDataReq CmdGuild = 2009
+	CmdGuild_Cmd_RequestGuildDataRes CmdGuild = 2010
 )
 
 // Enum value maps for CmdGuild.
 var (
 	CmdGuild_name = map[int32]string{
-		0: "Cmd_None",
+		0:    "Cmd_None",
+		2001: "Cmd_GuildListReq",
+		2002: "Cmd_GuildListRes",
+		2003: "Cmd_GuildCreateReq",
+		2004: "Cmd_GuildCreateRes",
+		2005: "Cmd_GuildJoinReq",
+		2006: "Cmd_GuildJoinRes",
+		2007: "Cmd_GuildJoinAgreeReq",
+		2008: "Cmd_GuildJoinAgreeRes",
+		2009: "Cmd_RequestGuildDataReq",
+		2010: "Cmd_RequestGuildDataRes",
 	}
 	CmdGuild_value = map[string]int32{
-		"Cmd_None": 0,
+		"Cmd_None":                0,
+		"Cmd_GuildListReq":        2001,
+		"Cmd_GuildListRes":        2002,
+		"Cmd_GuildCreateReq":      2003,
+		"Cmd_GuildCreateRes":      2004,
+		"Cmd_GuildJoinReq":        2005,
+		"Cmd_GuildJoinRes":        2006,
+		"Cmd_GuildJoinAgreeReq":   2007,
+		"Cmd_GuildJoinAgreeRes":   2008,
+		"Cmd_RequestGuildDataReq": 2009,
+		"Cmd_RequestGuildDataRes": 2010,
 	}
 )
 
@@ -118,10 +148,11 @@ type GuildData struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id      int64                      `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`                                                                                                   // 公会唯一id
-	Name    string                     `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`                                                                                                // 名称
-	Intro   string                     `protobuf:"bytes,3,opt,name=intro,proto3" json:"intro,omitempty"`                                                                                              // 介绍
-	Members map[int64]*GuildMemberData `protobuf:"bytes,4,rep,name=members,proto3" json:"members,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"` // 公会成员
+	Id           int64                       `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`                                                                                                             // 公会唯一id
+	Name         string                      `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`                                                                                                          // 名称
+	Intro        string                      `protobuf:"bytes,3,opt,name=intro,proto3" json:"intro,omitempty"`                                                                                                        // 介绍
+	Members      map[int64]*GuildMemberData  `protobuf:"bytes,4,rep,name=members,proto3" json:"members,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`           // 公会成员
+	JoinRequests map[int64]*GuildJoinRequest `protobuf:"bytes,5,rep,name=joinRequests,proto3" json:"joinRequests,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"` // 申请加入公会的请求信息
 }
 
 func (x *GuildData) Reset() {
@@ -180,6 +211,13 @@ func (x *GuildData) GetIntro() string {
 func (x *GuildData) GetMembers() map[int64]*GuildMemberData {
 	if x != nil {
 		return x.Members
+	}
+	return nil
+}
+
+func (x *GuildData) GetJoinRequests() map[int64]*GuildJoinRequest {
+	if x != nil {
+		return x.JoinRequests
 	}
 	return nil
 }
@@ -248,11 +286,711 @@ func (x *GuildMemberData) GetPosition() int32 {
 	return 0
 }
 
+// 公会信息
+type GuildInfo struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Id          int64  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`                   // 公会id
+	Name        string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`                // 名称
+	Intro       string `protobuf:"bytes,3,opt,name=intro,proto3" json:"intro,omitempty"`              // 介绍
+	MemberCount int32  `protobuf:"varint,4,opt,name=memberCount,proto3" json:"memberCount,omitempty"` // 成员数
+}
+
+func (x *GuildInfo) Reset() {
+	*x = GuildInfo{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_guild_proto_msgTypes[2]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *GuildInfo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GuildInfo) ProtoMessage() {}
+
+func (x *GuildInfo) ProtoReflect() protoreflect.Message {
+	mi := &file_guild_proto_msgTypes[2]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GuildInfo.ProtoReflect.Descriptor instead.
+func (*GuildInfo) Descriptor() ([]byte, []int) {
+	return file_guild_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *GuildInfo) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *GuildInfo) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *GuildInfo) GetIntro() string {
+	if x != nil {
+		return x.Intro
+	}
+	return ""
+}
+
+func (x *GuildInfo) GetMemberCount() int32 {
+	if x != nil {
+		return x.MemberCount
+	}
+	return 0
+}
+
+// 申请加入公会的请求信息
+type GuildJoinRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	PlayerId     int64  `protobuf:"varint,1,opt,name=playerId,proto3" json:"playerId,omitempty"` // 申请加入公会的玩家id
+	PlayerName   string `protobuf:"bytes,2,opt,name=playerName,proto3" json:"playerName,omitempty"`
+	TimestampSec int32  `protobuf:"varint,3,opt,name=timestampSec,proto3" json:"timestampSec,omitempty"` // 时间戳(秒)
+}
+
+func (x *GuildJoinRequest) Reset() {
+	*x = GuildJoinRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_guild_proto_msgTypes[3]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *GuildJoinRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GuildJoinRequest) ProtoMessage() {}
+
+func (x *GuildJoinRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_guild_proto_msgTypes[3]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GuildJoinRequest.ProtoReflect.Descriptor instead.
+func (*GuildJoinRequest) Descriptor() ([]byte, []int) {
+	return file_guild_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *GuildJoinRequest) GetPlayerId() int64 {
+	if x != nil {
+		return x.PlayerId
+	}
+	return 0
+}
+
+func (x *GuildJoinRequest) GetPlayerName() string {
+	if x != nil {
+		return x.PlayerName
+	}
+	return ""
+}
+
+func (x *GuildJoinRequest) GetTimestampSec() int32 {
+	if x != nil {
+		return x.TimestampSec
+	}
+	return 0
+}
+
+// 查看公会列表
+type GuildListReq struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	PageIndex int32 `protobuf:"varint,1,opt,name=pageIndex,proto3" json:"pageIndex,omitempty"` // 分页索引
+}
+
+func (x *GuildListReq) Reset() {
+	*x = GuildListReq{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_guild_proto_msgTypes[4]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *GuildListReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GuildListReq) ProtoMessage() {}
+
+func (x *GuildListReq) ProtoReflect() protoreflect.Message {
+	mi := &file_guild_proto_msgTypes[4]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GuildListReq.ProtoReflect.Descriptor instead.
+func (*GuildListReq) Descriptor() ([]byte, []int) {
+	return file_guild_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *GuildListReq) GetPageIndex() int32 {
+	if x != nil {
+		return x.PageIndex
+	}
+	return 0
+}
+
+// 查看公会列表返回结果
+// @Player
+type GuildListRes struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	PageIndex  int32        `protobuf:"varint,1,opt,name=pageIndex,proto3" json:"pageIndex,omitempty"`  // 分页索引
+	PageCount  int32        `protobuf:"varint,2,opt,name=pageCount,proto3" json:"pageCount,omitempty"`  // 总页数
+	GuildInfos []*GuildInfo `protobuf:"bytes,3,rep,name=guildInfos,proto3" json:"guildInfos,omitempty"` // 公会列表
+}
+
+func (x *GuildListRes) Reset() {
+	*x = GuildListRes{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_guild_proto_msgTypes[5]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *GuildListRes) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GuildListRes) ProtoMessage() {}
+
+func (x *GuildListRes) ProtoReflect() protoreflect.Message {
+	mi := &file_guild_proto_msgTypes[5]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GuildListRes.ProtoReflect.Descriptor instead.
+func (*GuildListRes) Descriptor() ([]byte, []int) {
+	return file_guild_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *GuildListRes) GetPageIndex() int32 {
+	if x != nil {
+		return x.PageIndex
+	}
+	return 0
+}
+
+func (x *GuildListRes) GetPageCount() int32 {
+	if x != nil {
+		return x.PageCount
+	}
+	return 0
+}
+
+func (x *GuildListRes) GetGuildInfos() []*GuildInfo {
+	if x != nil {
+		return x.GuildInfos
+	}
+	return nil
+}
+
+// 创建公会请求
+type GuildCreateReq struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Name  string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`   // 名称
+	Intro string `protobuf:"bytes,2,opt,name=intro,proto3" json:"intro,omitempty"` // 介绍
+}
+
+func (x *GuildCreateReq) Reset() {
+	*x = GuildCreateReq{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_guild_proto_msgTypes[6]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *GuildCreateReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GuildCreateReq) ProtoMessage() {}
+
+func (x *GuildCreateReq) ProtoReflect() protoreflect.Message {
+	mi := &file_guild_proto_msgTypes[6]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GuildCreateReq.ProtoReflect.Descriptor instead.
+func (*GuildCreateReq) Descriptor() ([]byte, []int) {
+	return file_guild_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *GuildCreateReq) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *GuildCreateReq) GetIntro() string {
+	if x != nil {
+		return x.Intro
+	}
+	return ""
+}
+
+// 创建公会请求返回结果
+// @Player
+type GuildCreateRes struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Error string `protobuf:"bytes,1,opt,name=error,proto3" json:"error,omitempty"`
+	Id    int64  `protobuf:"varint,2,opt,name=id,proto3" json:"id,omitempty"`    // 公会id
+	Name  string `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"` // 名称
+}
+
+func (x *GuildCreateRes) Reset() {
+	*x = GuildCreateRes{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_guild_proto_msgTypes[7]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *GuildCreateRes) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GuildCreateRes) ProtoMessage() {}
+
+func (x *GuildCreateRes) ProtoReflect() protoreflect.Message {
+	mi := &file_guild_proto_msgTypes[7]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GuildCreateRes.ProtoReflect.Descriptor instead.
+func (*GuildCreateRes) Descriptor() ([]byte, []int) {
+	return file_guild_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *GuildCreateRes) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
+func (x *GuildCreateRes) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *GuildCreateRes) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+// 加入公会请求
+type GuildJoinReq struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Id int64 `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"` // 公会id
+}
+
+func (x *GuildJoinReq) Reset() {
+	*x = GuildJoinReq{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_guild_proto_msgTypes[8]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *GuildJoinReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GuildJoinReq) ProtoMessage() {}
+
+func (x *GuildJoinReq) ProtoReflect() protoreflect.Message {
+	mi := &file_guild_proto_msgTypes[8]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GuildJoinReq.ProtoReflect.Descriptor instead.
+func (*GuildJoinReq) Descriptor() ([]byte, []int) {
+	return file_guild_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *GuildJoinReq) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+// 加入公会请求返回结果
+// @Player
+type GuildJoinRes struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Error string `protobuf:"bytes,1,opt,name=error,proto3" json:"error,omitempty"`
+	Id    int64  `protobuf:"varint,2,opt,name=id,proto3" json:"id,omitempty"` // 公会id
+}
+
+func (x *GuildJoinRes) Reset() {
+	*x = GuildJoinRes{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_guild_proto_msgTypes[9]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *GuildJoinRes) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GuildJoinRes) ProtoMessage() {}
+
+func (x *GuildJoinRes) ProtoReflect() protoreflect.Message {
+	mi := &file_guild_proto_msgTypes[9]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GuildJoinRes.ProtoReflect.Descriptor instead.
+func (*GuildJoinRes) Descriptor() ([]byte, []int) {
+	return file_guild_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *GuildJoinRes) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
+func (x *GuildJoinRes) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+// 同意加入公会
+type GuildJoinAgreeReq struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Id           int64 `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`                     // 公会id
+	JoinPlayerId int64 `protobuf:"varint,2,opt,name=joinPlayerId,proto3" json:"joinPlayerId,omitempty"` // 申请加入公会的玩家id
+	IsAgree      bool  `protobuf:"varint,3,opt,name=isAgree,proto3" json:"isAgree,omitempty"`           // 是否同意加入
+}
+
+func (x *GuildJoinAgreeReq) Reset() {
+	*x = GuildJoinAgreeReq{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_guild_proto_msgTypes[10]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *GuildJoinAgreeReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GuildJoinAgreeReq) ProtoMessage() {}
+
+func (x *GuildJoinAgreeReq) ProtoReflect() protoreflect.Message {
+	mi := &file_guild_proto_msgTypes[10]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GuildJoinAgreeReq.ProtoReflect.Descriptor instead.
+func (*GuildJoinAgreeReq) Descriptor() ([]byte, []int) {
+	return file_guild_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *GuildJoinAgreeReq) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *GuildJoinAgreeReq) GetJoinPlayerId() int64 {
+	if x != nil {
+		return x.JoinPlayerId
+	}
+	return 0
+}
+
+func (x *GuildJoinAgreeReq) GetIsAgree() bool {
+	if x != nil {
+		return x.IsAgree
+	}
+	return false
+}
+
+// 同意加入公会返回结果
+// @Player
+type GuildJoinAgreeRes struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Error        string `protobuf:"bytes,1,opt,name=error,proto3" json:"error,omitempty"`
+	Id           int64  `protobuf:"varint,2,opt,name=id,proto3" json:"id,omitempty"`                     // 公会id
+	JoinPlayerId int64  `protobuf:"varint,3,opt,name=joinPlayerId,proto3" json:"joinPlayerId,omitempty"` // 申请加入公会的玩家id
+	IsAgree      bool   `protobuf:"varint,4,opt,name=isAgree,proto3" json:"isAgree,omitempty"`           // 是否同意加入
+}
+
+func (x *GuildJoinAgreeRes) Reset() {
+	*x = GuildJoinAgreeRes{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_guild_proto_msgTypes[11]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *GuildJoinAgreeRes) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GuildJoinAgreeRes) ProtoMessage() {}
+
+func (x *GuildJoinAgreeRes) ProtoReflect() protoreflect.Message {
+	mi := &file_guild_proto_msgTypes[11]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GuildJoinAgreeRes.ProtoReflect.Descriptor instead.
+func (*GuildJoinAgreeRes) Descriptor() ([]byte, []int) {
+	return file_guild_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *GuildJoinAgreeRes) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
+func (x *GuildJoinAgreeRes) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *GuildJoinAgreeRes) GetJoinPlayerId() int64 {
+	if x != nil {
+		return x.JoinPlayerId
+	}
+	return 0
+}
+
+func (x *GuildJoinAgreeRes) GetIsAgree() bool {
+	if x != nil {
+		return x.IsAgree
+	}
+	return false
+}
+
+// 查看自己公会的数据
+type RequestGuildDataReq struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+}
+
+func (x *RequestGuildDataReq) Reset() {
+	*x = RequestGuildDataReq{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_guild_proto_msgTypes[12]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *RequestGuildDataReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RequestGuildDataReq) ProtoMessage() {}
+
+func (x *RequestGuildDataReq) ProtoReflect() protoreflect.Message {
+	mi := &file_guild_proto_msgTypes[12]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RequestGuildDataReq.ProtoReflect.Descriptor instead.
+func (*RequestGuildDataReq) Descriptor() ([]byte, []int) {
+	return file_guild_proto_rawDescGZIP(), []int{12}
+}
+
+// 查看公会数据返回结果
+// @Player
+type RequestGuildDataRes struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	GuildData *GuildData `protobuf:"bytes,1,opt,name=guildData,proto3" json:"guildData,omitempty"`
+}
+
+func (x *RequestGuildDataRes) Reset() {
+	*x = RequestGuildDataRes{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_guild_proto_msgTypes[13]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *RequestGuildDataRes) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RequestGuildDataRes) ProtoMessage() {}
+
+func (x *RequestGuildDataRes) ProtoReflect() protoreflect.Message {
+	mi := &file_guild_proto_msgTypes[13]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RequestGuildDataRes.ProtoReflect.Descriptor instead.
+func (*RequestGuildDataRes) Descriptor() ([]byte, []int) {
+	return file_guild_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *RequestGuildDataRes) GetGuildData() *GuildData {
+	if x != nil {
+		return x.GuildData
+	}
+	return nil
+}
+
 var File_guild_proto protoreflect.FileDescriptor
 
 var file_guild_proto_rawDesc = []byte{
 	0x0a, 0x0b, 0x67, 0x75, 0x69, 0x6c, 0x64, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x12, 0x07, 0x67,
-	0x73, 0x65, 0x72, 0x76, 0x65, 0x72, 0x22, 0xd6, 0x01, 0x0a, 0x09, 0x47, 0x75, 0x69, 0x6c, 0x64,
+	0x73, 0x65, 0x72, 0x76, 0x65, 0x72, 0x22, 0xfc, 0x02, 0x0a, 0x09, 0x47, 0x75, 0x69, 0x6c, 0x64,
 	0x44, 0x61, 0x74, 0x61, 0x12, 0x0e, 0x0a, 0x02, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x03,
 	0x52, 0x02, 0x69, 0x64, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x02, 0x20, 0x01,
 	0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x12, 0x14, 0x0a, 0x05, 0x69, 0x6e, 0x74, 0x72,
@@ -260,24 +998,108 @@ var file_guild_proto_rawDesc = []byte{
 	0x0a, 0x07, 0x6d, 0x65, 0x6d, 0x62, 0x65, 0x72, 0x73, 0x18, 0x04, 0x20, 0x03, 0x28, 0x0b, 0x32,
 	0x1f, 0x2e, 0x67, 0x73, 0x65, 0x72, 0x76, 0x65, 0x72, 0x2e, 0x47, 0x75, 0x69, 0x6c, 0x64, 0x44,
 	0x61, 0x74, 0x61, 0x2e, 0x4d, 0x65, 0x6d, 0x62, 0x65, 0x72, 0x73, 0x45, 0x6e, 0x74, 0x72, 0x79,
-	0x52, 0x07, 0x6d, 0x65, 0x6d, 0x62, 0x65, 0x72, 0x73, 0x1a, 0x54, 0x0a, 0x0c, 0x4d, 0x65, 0x6d,
-	0x62, 0x65, 0x72, 0x73, 0x45, 0x6e, 0x74, 0x72, 0x79, 0x12, 0x10, 0x0a, 0x03, 0x6b, 0x65, 0x79,
-	0x18, 0x01, 0x20, 0x01, 0x28, 0x03, 0x52, 0x03, 0x6b, 0x65, 0x79, 0x12, 0x2e, 0x0a, 0x05, 0x76,
-	0x61, 0x6c, 0x75, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x18, 0x2e, 0x67, 0x73, 0x65,
-	0x72, 0x76, 0x65, 0x72, 0x2e, 0x47, 0x75, 0x69, 0x6c, 0x64, 0x4d, 0x65, 0x6d, 0x62, 0x65, 0x72,
-	0x44, 0x61, 0x74, 0x61, 0x52, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x3a, 0x02, 0x38, 0x01, 0x22,
-	0x51, 0x0a, 0x0f, 0x47, 0x75, 0x69, 0x6c, 0x64, 0x4d, 0x65, 0x6d, 0x62, 0x65, 0x72, 0x44, 0x61,
-	0x74, 0x61, 0x12, 0x0e, 0x0a, 0x02, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x03, 0x52, 0x02,
-	0x69, 0x64, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09,
-	0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x12, 0x1a, 0x0a, 0x08, 0x70, 0x6f, 0x73, 0x69, 0x74, 0x69,
-	0x6f, 0x6e, 0x18, 0x03, 0x20, 0x01, 0x28, 0x05, 0x52, 0x08, 0x70, 0x6f, 0x73, 0x69, 0x74, 0x69,
-	0x6f, 0x6e, 0x2a, 0x18, 0x0a, 0x08, 0x43, 0x6d, 0x64, 0x47, 0x75, 0x69, 0x6c, 0x64, 0x12, 0x0c,
-	0x0a, 0x08, 0x43, 0x6d, 0x64, 0x5f, 0x4e, 0x6f, 0x6e, 0x65, 0x10, 0x00, 0x2a, 0x34, 0x0a, 0x0d,
-	0x47, 0x75, 0x69, 0x6c, 0x64, 0x50, 0x6f, 0x73, 0x69, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x0a, 0x0a,
-	0x06, 0x4d, 0x65, 0x6d, 0x62, 0x65, 0x72, 0x10, 0x00, 0x12, 0x0b, 0x0a, 0x07, 0x4d, 0x61, 0x6e,
-	0x61, 0x67, 0x65, 0x72, 0x10, 0x01, 0x12, 0x0a, 0x0a, 0x06, 0x4c, 0x65, 0x61, 0x64, 0x65, 0x72,
-	0x10, 0x02, 0x42, 0x06, 0x5a, 0x04, 0x2e, 0x2f, 0x70, 0x62, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74,
-	0x6f, 0x33,
+	0x52, 0x07, 0x6d, 0x65, 0x6d, 0x62, 0x65, 0x72, 0x73, 0x12, 0x48, 0x0a, 0x0c, 0x6a, 0x6f, 0x69,
+	0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x73, 0x18, 0x05, 0x20, 0x03, 0x28, 0x0b, 0x32,
+	0x24, 0x2e, 0x67, 0x73, 0x65, 0x72, 0x76, 0x65, 0x72, 0x2e, 0x47, 0x75, 0x69, 0x6c, 0x64, 0x44,
+	0x61, 0x74, 0x61, 0x2e, 0x4a, 0x6f, 0x69, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x73,
+	0x45, 0x6e, 0x74, 0x72, 0x79, 0x52, 0x0c, 0x6a, 0x6f, 0x69, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65,
+	0x73, 0x74, 0x73, 0x1a, 0x54, 0x0a, 0x0c, 0x4d, 0x65, 0x6d, 0x62, 0x65, 0x72, 0x73, 0x45, 0x6e,
+	0x74, 0x72, 0x79, 0x12, 0x10, 0x0a, 0x03, 0x6b, 0x65, 0x79, 0x18, 0x01, 0x20, 0x01, 0x28, 0x03,
+	0x52, 0x03, 0x6b, 0x65, 0x79, 0x12, 0x2e, 0x0a, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x18, 0x02,
+	0x20, 0x01, 0x28, 0x0b, 0x32, 0x18, 0x2e, 0x67, 0x73, 0x65, 0x72, 0x76, 0x65, 0x72, 0x2e, 0x47,
+	0x75, 0x69, 0x6c, 0x64, 0x4d, 0x65, 0x6d, 0x62, 0x65, 0x72, 0x44, 0x61, 0x74, 0x61, 0x52, 0x05,
+	0x76, 0x61, 0x6c, 0x75, 0x65, 0x3a, 0x02, 0x38, 0x01, 0x1a, 0x5a, 0x0a, 0x11, 0x4a, 0x6f, 0x69,
+	0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x73, 0x45, 0x6e, 0x74, 0x72, 0x79, 0x12, 0x10,
+	0x0a, 0x03, 0x6b, 0x65, 0x79, 0x18, 0x01, 0x20, 0x01, 0x28, 0x03, 0x52, 0x03, 0x6b, 0x65, 0x79,
+	0x12, 0x2f, 0x0a, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32,
+	0x19, 0x2e, 0x67, 0x73, 0x65, 0x72, 0x76, 0x65, 0x72, 0x2e, 0x47, 0x75, 0x69, 0x6c, 0x64, 0x4a,
+	0x6f, 0x69, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x52, 0x05, 0x76, 0x61, 0x6c, 0x75,
+	0x65, 0x3a, 0x02, 0x38, 0x01, 0x22, 0x51, 0x0a, 0x0f, 0x47, 0x75, 0x69, 0x6c, 0x64, 0x4d, 0x65,
+	0x6d, 0x62, 0x65, 0x72, 0x44, 0x61, 0x74, 0x61, 0x12, 0x0e, 0x0a, 0x02, 0x69, 0x64, 0x18, 0x01,
+	0x20, 0x01, 0x28, 0x03, 0x52, 0x02, 0x69, 0x64, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65,
+	0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x12, 0x1a, 0x0a, 0x08,
+	0x70, 0x6f, 0x73, 0x69, 0x74, 0x69, 0x6f, 0x6e, 0x18, 0x03, 0x20, 0x01, 0x28, 0x05, 0x52, 0x08,
+	0x70, 0x6f, 0x73, 0x69, 0x74, 0x69, 0x6f, 0x6e, 0x22, 0x67, 0x0a, 0x09, 0x47, 0x75, 0x69, 0x6c,
+	0x64, 0x49, 0x6e, 0x66, 0x6f, 0x12, 0x0e, 0x0a, 0x02, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28,
+	0x03, 0x52, 0x02, 0x69, 0x64, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x02, 0x20,
+	0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x12, 0x14, 0x0a, 0x05, 0x69, 0x6e, 0x74,
+	0x72, 0x6f, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x69, 0x6e, 0x74, 0x72, 0x6f, 0x12,
+	0x20, 0x0a, 0x0b, 0x6d, 0x65, 0x6d, 0x62, 0x65, 0x72, 0x43, 0x6f, 0x75, 0x6e, 0x74, 0x18, 0x04,
+	0x20, 0x01, 0x28, 0x05, 0x52, 0x0b, 0x6d, 0x65, 0x6d, 0x62, 0x65, 0x72, 0x43, 0x6f, 0x75, 0x6e,
+	0x74, 0x22, 0x72, 0x0a, 0x10, 0x47, 0x75, 0x69, 0x6c, 0x64, 0x4a, 0x6f, 0x69, 0x6e, 0x52, 0x65,
+	0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x1a, 0x0a, 0x08, 0x70, 0x6c, 0x61, 0x79, 0x65, 0x72, 0x49,
+	0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x03, 0x52, 0x08, 0x70, 0x6c, 0x61, 0x79, 0x65, 0x72, 0x49,
+	0x64, 0x12, 0x1e, 0x0a, 0x0a, 0x70, 0x6c, 0x61, 0x79, 0x65, 0x72, 0x4e, 0x61, 0x6d, 0x65, 0x18,
+	0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0a, 0x70, 0x6c, 0x61, 0x79, 0x65, 0x72, 0x4e, 0x61, 0x6d,
+	0x65, 0x12, 0x22, 0x0a, 0x0c, 0x74, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0x53, 0x65,
+	0x63, 0x18, 0x03, 0x20, 0x01, 0x28, 0x05, 0x52, 0x0c, 0x74, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61,
+	0x6d, 0x70, 0x53, 0x65, 0x63, 0x22, 0x2c, 0x0a, 0x0c, 0x47, 0x75, 0x69, 0x6c, 0x64, 0x4c, 0x69,
+	0x73, 0x74, 0x52, 0x65, 0x71, 0x12, 0x1c, 0x0a, 0x09, 0x70, 0x61, 0x67, 0x65, 0x49, 0x6e, 0x64,
+	0x65, 0x78, 0x18, 0x01, 0x20, 0x01, 0x28, 0x05, 0x52, 0x09, 0x70, 0x61, 0x67, 0x65, 0x49, 0x6e,
+	0x64, 0x65, 0x78, 0x22, 0x7e, 0x0a, 0x0c, 0x47, 0x75, 0x69, 0x6c, 0x64, 0x4c, 0x69, 0x73, 0x74,
+	0x52, 0x65, 0x73, 0x12, 0x1c, 0x0a, 0x09, 0x70, 0x61, 0x67, 0x65, 0x49, 0x6e, 0x64, 0x65, 0x78,
+	0x18, 0x01, 0x20, 0x01, 0x28, 0x05, 0x52, 0x09, 0x70, 0x61, 0x67, 0x65, 0x49, 0x6e, 0x64, 0x65,
+	0x78, 0x12, 0x1c, 0x0a, 0x09, 0x70, 0x61, 0x67, 0x65, 0x43, 0x6f, 0x75, 0x6e, 0x74, 0x18, 0x02,
+	0x20, 0x01, 0x28, 0x05, 0x52, 0x09, 0x70, 0x61, 0x67, 0x65, 0x43, 0x6f, 0x75, 0x6e, 0x74, 0x12,
+	0x32, 0x0a, 0x0a, 0x67, 0x75, 0x69, 0x6c, 0x64, 0x49, 0x6e, 0x66, 0x6f, 0x73, 0x18, 0x03, 0x20,
+	0x03, 0x28, 0x0b, 0x32, 0x12, 0x2e, 0x67, 0x73, 0x65, 0x72, 0x76, 0x65, 0x72, 0x2e, 0x47, 0x75,
+	0x69, 0x6c, 0x64, 0x49, 0x6e, 0x66, 0x6f, 0x52, 0x0a, 0x67, 0x75, 0x69, 0x6c, 0x64, 0x49, 0x6e,
+	0x66, 0x6f, 0x73, 0x22, 0x3a, 0x0a, 0x0e, 0x47, 0x75, 0x69, 0x6c, 0x64, 0x43, 0x72, 0x65, 0x61,
+	0x74, 0x65, 0x52, 0x65, 0x71, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x01, 0x20,
+	0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x12, 0x14, 0x0a, 0x05, 0x69, 0x6e, 0x74,
+	0x72, 0x6f, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x69, 0x6e, 0x74, 0x72, 0x6f, 0x22,
+	0x4a, 0x0a, 0x0e, 0x47, 0x75, 0x69, 0x6c, 0x64, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x52, 0x65,
+	0x73, 0x12, 0x14, 0x0a, 0x05, 0x65, 0x72, 0x72, 0x6f, 0x72, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09,
+	0x52, 0x05, 0x65, 0x72, 0x72, 0x6f, 0x72, 0x12, 0x0e, 0x0a, 0x02, 0x69, 0x64, 0x18, 0x02, 0x20,
+	0x01, 0x28, 0x03, 0x52, 0x02, 0x69, 0x64, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18,
+	0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x22, 0x1e, 0x0a, 0x0c, 0x47,
+	0x75, 0x69, 0x6c, 0x64, 0x4a, 0x6f, 0x69, 0x6e, 0x52, 0x65, 0x71, 0x12, 0x0e, 0x0a, 0x02, 0x69,
+	0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x03, 0x52, 0x02, 0x69, 0x64, 0x22, 0x34, 0x0a, 0x0c, 0x47,
+	0x75, 0x69, 0x6c, 0x64, 0x4a, 0x6f, 0x69, 0x6e, 0x52, 0x65, 0x73, 0x12, 0x14, 0x0a, 0x05, 0x65,
+	0x72, 0x72, 0x6f, 0x72, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x65, 0x72, 0x72, 0x6f,
+	0x72, 0x12, 0x0e, 0x0a, 0x02, 0x69, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x03, 0x52, 0x02, 0x69,
+	0x64, 0x22, 0x61, 0x0a, 0x11, 0x47, 0x75, 0x69, 0x6c, 0x64, 0x4a, 0x6f, 0x69, 0x6e, 0x41, 0x67,
+	0x72, 0x65, 0x65, 0x52, 0x65, 0x71, 0x12, 0x0e, 0x0a, 0x02, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01,
+	0x28, 0x03, 0x52, 0x02, 0x69, 0x64, 0x12, 0x22, 0x0a, 0x0c, 0x6a, 0x6f, 0x69, 0x6e, 0x50, 0x6c,
+	0x61, 0x79, 0x65, 0x72, 0x49, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x03, 0x52, 0x0c, 0x6a, 0x6f,
+	0x69, 0x6e, 0x50, 0x6c, 0x61, 0x79, 0x65, 0x72, 0x49, 0x64, 0x12, 0x18, 0x0a, 0x07, 0x69, 0x73,
+	0x41, 0x67, 0x72, 0x65, 0x65, 0x18, 0x03, 0x20, 0x01, 0x28, 0x08, 0x52, 0x07, 0x69, 0x73, 0x41,
+	0x67, 0x72, 0x65, 0x65, 0x22, 0x77, 0x0a, 0x11, 0x47, 0x75, 0x69, 0x6c, 0x64, 0x4a, 0x6f, 0x69,
+	0x6e, 0x41, 0x67, 0x72, 0x65, 0x65, 0x52, 0x65, 0x73, 0x12, 0x14, 0x0a, 0x05, 0x65, 0x72, 0x72,
+	0x6f, 0x72, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x65, 0x72, 0x72, 0x6f, 0x72, 0x12,
+	0x0e, 0x0a, 0x02, 0x69, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x03, 0x52, 0x02, 0x69, 0x64, 0x12,
+	0x22, 0x0a, 0x0c, 0x6a, 0x6f, 0x69, 0x6e, 0x50, 0x6c, 0x61, 0x79, 0x65, 0x72, 0x49, 0x64, 0x18,
+	0x03, 0x20, 0x01, 0x28, 0x03, 0x52, 0x0c, 0x6a, 0x6f, 0x69, 0x6e, 0x50, 0x6c, 0x61, 0x79, 0x65,
+	0x72, 0x49, 0x64, 0x12, 0x18, 0x0a, 0x07, 0x69, 0x73, 0x41, 0x67, 0x72, 0x65, 0x65, 0x18, 0x04,
+	0x20, 0x01, 0x28, 0x08, 0x52, 0x07, 0x69, 0x73, 0x41, 0x67, 0x72, 0x65, 0x65, 0x22, 0x15, 0x0a,
+	0x13, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x47, 0x75, 0x69, 0x6c, 0x64, 0x44, 0x61, 0x74,
+	0x61, 0x52, 0x65, 0x71, 0x22, 0x47, 0x0a, 0x13, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x47,
+	0x75, 0x69, 0x6c, 0x64, 0x44, 0x61, 0x74, 0x61, 0x52, 0x65, 0x73, 0x12, 0x30, 0x0a, 0x09, 0x67,
+	0x75, 0x69, 0x6c, 0x64, 0x44, 0x61, 0x74, 0x61, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x12,
+	0x2e, 0x67, 0x73, 0x65, 0x72, 0x76, 0x65, 0x72, 0x2e, 0x47, 0x75, 0x69, 0x6c, 0x64, 0x44, 0x61,
+	0x74, 0x61, 0x52, 0x09, 0x67, 0x75, 0x69, 0x6c, 0x64, 0x44, 0x61, 0x74, 0x61, 0x2a, 0x9a, 0x02,
+	0x0a, 0x08, 0x43, 0x6d, 0x64, 0x47, 0x75, 0x69, 0x6c, 0x64, 0x12, 0x0c, 0x0a, 0x08, 0x43, 0x6d,
+	0x64, 0x5f, 0x4e, 0x6f, 0x6e, 0x65, 0x10, 0x00, 0x12, 0x15, 0x0a, 0x10, 0x43, 0x6d, 0x64, 0x5f,
+	0x47, 0x75, 0x69, 0x6c, 0x64, 0x4c, 0x69, 0x73, 0x74, 0x52, 0x65, 0x71, 0x10, 0xd1, 0x0f, 0x12,
+	0x15, 0x0a, 0x10, 0x43, 0x6d, 0x64, 0x5f, 0x47, 0x75, 0x69, 0x6c, 0x64, 0x4c, 0x69, 0x73, 0x74,
+	0x52, 0x65, 0x73, 0x10, 0xd2, 0x0f, 0x12, 0x17, 0x0a, 0x12, 0x43, 0x6d, 0x64, 0x5f, 0x47, 0x75,
+	0x69, 0x6c, 0x64, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x52, 0x65, 0x71, 0x10, 0xd3, 0x0f, 0x12,
+	0x17, 0x0a, 0x12, 0x43, 0x6d, 0x64, 0x5f, 0x47, 0x75, 0x69, 0x6c, 0x64, 0x43, 0x72, 0x65, 0x61,
+	0x74, 0x65, 0x52, 0x65, 0x73, 0x10, 0xd4, 0x0f, 0x12, 0x15, 0x0a, 0x10, 0x43, 0x6d, 0x64, 0x5f,
+	0x47, 0x75, 0x69, 0x6c, 0x64, 0x4a, 0x6f, 0x69, 0x6e, 0x52, 0x65, 0x71, 0x10, 0xd5, 0x0f, 0x12,
+	0x15, 0x0a, 0x10, 0x43, 0x6d, 0x64, 0x5f, 0x47, 0x75, 0x69, 0x6c, 0x64, 0x4a, 0x6f, 0x69, 0x6e,
+	0x52, 0x65, 0x73, 0x10, 0xd6, 0x0f, 0x12, 0x1a, 0x0a, 0x15, 0x43, 0x6d, 0x64, 0x5f, 0x47, 0x75,
+	0x69, 0x6c, 0x64, 0x4a, 0x6f, 0x69, 0x6e, 0x41, 0x67, 0x72, 0x65, 0x65, 0x52, 0x65, 0x71, 0x10,
+	0xd7, 0x0f, 0x12, 0x1a, 0x0a, 0x15, 0x43, 0x6d, 0x64, 0x5f, 0x47, 0x75, 0x69, 0x6c, 0x64, 0x4a,
+	0x6f, 0x69, 0x6e, 0x41, 0x67, 0x72, 0x65, 0x65, 0x52, 0x65, 0x73, 0x10, 0xd8, 0x0f, 0x12, 0x1c,
+	0x0a, 0x17, 0x43, 0x6d, 0x64, 0x5f, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x47, 0x75, 0x69,
+	0x6c, 0x64, 0x44, 0x61, 0x74, 0x61, 0x52, 0x65, 0x71, 0x10, 0xd9, 0x0f, 0x12, 0x1c, 0x0a, 0x17,
+	0x43, 0x6d, 0x64, 0x5f, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x47, 0x75, 0x69, 0x6c, 0x64,
+	0x44, 0x61, 0x74, 0x61, 0x52, 0x65, 0x73, 0x10, 0xda, 0x0f, 0x2a, 0x34, 0x0a, 0x0d, 0x47, 0x75,
+	0x69, 0x6c, 0x64, 0x50, 0x6f, 0x73, 0x69, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x0a, 0x0a, 0x06, 0x4d,
+	0x65, 0x6d, 0x62, 0x65, 0x72, 0x10, 0x00, 0x12, 0x0b, 0x0a, 0x07, 0x4d, 0x61, 0x6e, 0x61, 0x67,
+	0x65, 0x72, 0x10, 0x01, 0x12, 0x0a, 0x0a, 0x06, 0x4c, 0x65, 0x61, 0x64, 0x65, 0x72, 0x10, 0x02,
+	0x42, 0x06, 0x5a, 0x04, 0x2e, 0x2f, 0x70, 0x62, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -293,22 +1115,39 @@ func file_guild_proto_rawDescGZIP() []byte {
 }
 
 var file_guild_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_guild_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_guild_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
 var file_guild_proto_goTypes = []interface{}{
-	(CmdGuild)(0),           // 0: gserver.CmdGuild
-	(GuildPosition)(0),      // 1: gserver.GuildPosition
-	(*GuildData)(nil),       // 2: gserver.GuildData
-	(*GuildMemberData)(nil), // 3: gserver.GuildMemberData
-	nil,                     // 4: gserver.GuildData.MembersEntry
+	(CmdGuild)(0),               // 0: gserver.CmdGuild
+	(GuildPosition)(0),          // 1: gserver.GuildPosition
+	(*GuildData)(nil),           // 2: gserver.GuildData
+	(*GuildMemberData)(nil),     // 3: gserver.GuildMemberData
+	(*GuildInfo)(nil),           // 4: gserver.GuildInfo
+	(*GuildJoinRequest)(nil),    // 5: gserver.GuildJoinRequest
+	(*GuildListReq)(nil),        // 6: gserver.GuildListReq
+	(*GuildListRes)(nil),        // 7: gserver.GuildListRes
+	(*GuildCreateReq)(nil),      // 8: gserver.GuildCreateReq
+	(*GuildCreateRes)(nil),      // 9: gserver.GuildCreateRes
+	(*GuildJoinReq)(nil),        // 10: gserver.GuildJoinReq
+	(*GuildJoinRes)(nil),        // 11: gserver.GuildJoinRes
+	(*GuildJoinAgreeReq)(nil),   // 12: gserver.GuildJoinAgreeReq
+	(*GuildJoinAgreeRes)(nil),   // 13: gserver.GuildJoinAgreeRes
+	(*RequestGuildDataReq)(nil), // 14: gserver.RequestGuildDataReq
+	(*RequestGuildDataRes)(nil), // 15: gserver.RequestGuildDataRes
+	nil,                         // 16: gserver.GuildData.MembersEntry
+	nil,                         // 17: gserver.GuildData.JoinRequestsEntry
 }
 var file_guild_proto_depIdxs = []int32{
-	4, // 0: gserver.GuildData.members:type_name -> gserver.GuildData.MembersEntry
-	3, // 1: gserver.GuildData.MembersEntry.value:type_name -> gserver.GuildMemberData
-	2, // [2:2] is the sub-list for method output_type
-	2, // [2:2] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	16, // 0: gserver.GuildData.members:type_name -> gserver.GuildData.MembersEntry
+	17, // 1: gserver.GuildData.joinRequests:type_name -> gserver.GuildData.JoinRequestsEntry
+	4,  // 2: gserver.GuildListRes.guildInfos:type_name -> gserver.GuildInfo
+	2,  // 3: gserver.RequestGuildDataRes.guildData:type_name -> gserver.GuildData
+	3,  // 4: gserver.GuildData.MembersEntry.value:type_name -> gserver.GuildMemberData
+	5,  // 5: gserver.GuildData.JoinRequestsEntry.value:type_name -> gserver.GuildJoinRequest
+	6,  // [6:6] is the sub-list for method output_type
+	6,  // [6:6] is the sub-list for method input_type
+	6,  // [6:6] is the sub-list for extension type_name
+	6,  // [6:6] is the sub-list for extension extendee
+	0,  // [0:6] is the sub-list for field type_name
 }
 
 func init() { file_guild_proto_init() }
@@ -341,6 +1180,150 @@ func file_guild_proto_init() {
 				return nil
 			}
 		}
+		file_guild_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*GuildInfo); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_guild_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*GuildJoinRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_guild_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*GuildListReq); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_guild_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*GuildListRes); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_guild_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*GuildCreateReq); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_guild_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*GuildCreateRes); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_guild_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*GuildJoinReq); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_guild_proto_msgTypes[9].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*GuildJoinRes); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_guild_proto_msgTypes[10].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*GuildJoinAgreeReq); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_guild_proto_msgTypes[11].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*GuildJoinAgreeRes); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_guild_proto_msgTypes[12].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*RequestGuildDataReq); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_guild_proto_msgTypes[13].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*RequestGuildDataRes); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -348,7 +1331,7 @@ func file_guild_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_guild_proto_rawDesc,
 			NumEnums:      2,
-			NumMessages:   3,
+			NumMessages:   16,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

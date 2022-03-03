@@ -10,7 +10,8 @@ import (
 	. "github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
-	"github.com/fish-tennis/gserver/player"
+	"github.com/fish-tennis/gserver/gameplayer"
+	"github.com/fish-tennis/gserver/social"
 	"google.golang.org/protobuf/proto"
 	"os"
 	"sync"
@@ -18,6 +19,7 @@ import (
 )
 
 var (
+	_ Server = (*GameServer)(nil)
 	// singleton
 	_gameServer *GameServer
 )
@@ -37,7 +39,7 @@ type GameServerConfig struct {
 	BaseServerConfig
 }
 
-func GetServer() *GameServer {
+func GetGameServer() *GameServer {
 	return _gameServer
 }
 
@@ -48,7 +50,7 @@ func (this *GameServer) Init(ctx context.Context, configFile string) bool {
 		return false
 	}
 	this.readConfig()
-	player.InitPlayerComponentMap()
+	gameplayer.InitPlayerComponentMap()
 	this.initDb()
 	this.initCache()
 
@@ -154,7 +156,7 @@ func (this *GameServer) repairPlayerCache(playerId,accountId int64) error {
 			LogStack()
 		}
 	}()
-	tmpPlayer := player.CreateTempPlayer(playerId,accountId)
+	tmpPlayer := gameplayer.CreateTempPlayer(playerId,accountId)
 	for _,component := range tmpPlayer.GetComponents() {
 		if saveable,ok := component.(Saveable); ok {
 			err := LoadFromCache(saveable)
@@ -204,8 +206,8 @@ func (this *GameServer) repairPlayerCache(playerId,accountId int64) error {
 			}
 		}
 	}
-	//for componentName,_ := range player.GetPlayerComponentMap() {
-	//	cacheKey := player.GetComponentCacheKey(playerId, componentName)
+	//for componentName,_ := range gameplayer.GetPlayerComponentMap() {
+	//	cacheKey := gameplayer.GetComponentCacheKey(playerId, componentName)
 	//	cacheType,err := cache.GetRedis().Type(context.Background(), cacheKey).Result()
 	//	if err == redis.Nil || cacheType == "" || cacheType == "none" {
 	//		continue
@@ -230,6 +232,8 @@ func (this *GameServer) registerClientPacket(clientHandler *ClientConnectionHand
 	clientHandler.autoRegisterPlayerComponentProto()
 	// proto_code_gen工具生成的回调函数
 	player_component_handler_auto_register(clientHandler)
+	// 公会相关消息
+	social.GuildHandlerAutoRegister(clientHandler, this)
 }
 
 // 心跳回复
@@ -249,13 +253,13 @@ func (this *GameServer) registerServerPacket(serverHandler *DefaultConnectionHan
 }
 
 // 添加一个在线玩家
-func (this *GameServer) AddPlayer(player *player.Player) {
+func (this *GameServer) AddPlayer(player *gameplayer.Player) {
 	this.playerMap.Store(player.GetId(), player)
 	cache.AddOnlinePlayer(player.GetId(), player.GetAccountId(), _gameServer.GetServerId())
 }
 
 // 删除一个在线玩家
-func (this *GameServer) RemovePlayer(player *player.Player) {
+func (this *GameServer) RemovePlayer(player *gameplayer.Player) {
 	// 先保存数据库 再移除cache
 	player.SaveDb(true)
 	this.playerMap.Delete(player.GetId())
@@ -264,9 +268,9 @@ func (this *GameServer) RemovePlayer(player *player.Player) {
 }
 
 // 获取一个在线玩家
-func (this *GameServer) GetPlayer(playerId int64) *player.Player {
+func (this *GameServer) GetPlayer(playerId int64) *gameplayer.Player {
 	if v,ok := this.playerMap.Load(playerId); ok {
-		return v.(*player.Player)
+		return v.(*gameplayer.Player)
 	}
 	return nil
 }

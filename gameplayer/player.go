@@ -1,4 +1,4 @@
-package player
+package gameplayer
 
 import (
 	. "github.com/fish-tennis/gnet"
@@ -69,7 +69,7 @@ func (this *Player) GetComponent(componentName string) Component {
 // 获取组件列表
 func (this *Player) GetComponents() []Component {
 	components := make([]Component, 0, len(this.components))
-	for _,v := range this.components {
+	for _, v := range this.components {
 		components = append(components, v)
 	}
 	return components
@@ -77,7 +77,7 @@ func (this *Player) GetComponents() []Component {
 
 // 保存所有修改过的组件数据到缓存
 func (this *Player) SaveCache() error {
-	for _,component := range this.components {
+	for _, component := range this.components {
 		SaveDirtyCache(component)
 	}
 	return nil
@@ -87,14 +87,14 @@ func (this *Player) SaveCache() error {
 func (this *Player) SaveDb(removeCacheAfterSaveDb bool) error {
 	componentDatas := make(map[string]interface{})
 	var delKeys []string
-	for _,component := range this.components {
-		if saveable,ok := component.(Saveable); ok {
+	for _, component := range this.components {
+		if saveable, ok := component.(Saveable); ok {
 			// 如果某个组件数据没改变过,就无需保存
 			if !saveable.IsChanged() {
 				logger.Debug("%v ignore %v", this.id, component.GetName())
 				continue
 			}
-			saveData,err := SaveSaveable(saveable)
+			saveData, err := SaveSaveable(saveable)
 			if err != nil {
 				logger.Error("%v Save %v err:%v", this.id, component.GetName(), err.Error())
 				continue
@@ -110,16 +110,16 @@ func (this *Player) SaveDb(removeCacheAfterSaveDb bool) error {
 			}
 			logger.Debug("SaveDb %v %v", this.id, component.GetName())
 		}
-		if compositeSaveable,ok := component.(CompositeSaveable); ok {
+		if compositeSaveable, ok := component.(CompositeSaveable); ok {
 			compositeData := make(map[string]interface{})
 			saveables := compositeSaveable.SaveableChildren()
 			// 只需要保存修改过数据的子模块
-			for _,saveable := range saveables {
+			for _, saveable := range saveables {
 				if !saveable.IsChanged() {
 					logger.Debug("%v ignore %v", this.id, saveable.GetCacheKey())
 					continue
 				}
-				saveData,err := SaveSaveable(saveable)
+				saveData, err := SaveSaveable(saveable)
 				if err != nil {
 					logger.Error("%v Save %v err:%v", this.id, saveable.GetCacheKey(), err.Error())
 					continue
@@ -177,22 +177,26 @@ func (this *Player) Send(command PacketCommand, message proto.Message) bool {
 
 // 分发事件给组件
 func (this *Player) FireEvent(event interface{}) {
-	for _,component := range this.components {
-		if eventReceiver,ok := component.(EventReceiver); ok {
+	for _, component := range this.components {
+		if eventReceiver, ok := component.(EventReceiver); ok {
 			eventReceiver.OnEvent(event)
 		}
 	}
 }
 
 // 添加玩家组件
-func (this *Player)addComponent(component PlayerComponent, sourceData interface{}) {
-	if saveable,ok := component.(Saveable); ok {
+func (this *Player) addComponent(component PlayerComponent, sourceData interface{}) {
+	if saveable, ok := component.(Saveable); ok {
 		LoadSaveable(saveable, sourceData)
 	}
-	if compositeSaveable,ok := component.(CompositeSaveable); ok {
+	if compositeSaveable, ok := component.(CompositeSaveable); ok {
 		LoadCompositeSaveable(compositeSaveable, sourceData)
 	}
 	this.components = append(this.components, component)
+}
+
+func (this *Player) GetGuild() *Guild {
+	return this.GetComponent("Guild").(*Guild)
 }
 
 // 从加载的数据构造出玩家对象
@@ -212,10 +216,11 @@ func CreatePlayerFromData(playerData *pb.PlayerData) *Player {
 	player.addComponent(bagUniqueItem, playerData.BagUniqueItem)
 	player.addComponent(NewBag(player, bagCountItem, bagUniqueItem), nil)
 	player.addComponent(NewQuest(player), playerData.Quest)
+	player.addComponent(NewGuild(player), playerData.GuildData)
 	return player
 }
 
-func CreateTempPlayer(playerId,accountId int64) *Player {
+func CreateTempPlayer(playerId, accountId int64) *Player {
 	playerData := &pb.PlayerData{}
 	player := CreatePlayerFromData(playerData)
 	player.id = playerId

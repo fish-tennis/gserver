@@ -2,6 +2,9 @@ package db
 
 // Entity的数据库接口
 type EntityDb interface {
+	// 根据id查找数据
+	FindEntityById(entityId int64, data interface{}) (bool, error)
+
 	// 根据名字查找数据
 	FindEntityByName(name string, data interface{}) (bool, error)
 

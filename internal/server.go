@@ -9,11 +9,24 @@ import (
 	"github.com/fish-tennis/gserver/util"
 	"google.golang.org/protobuf/proto"
 	"io"
+	"sync"
 	"time"
+)
+
+var (
+	// singleton
+	_server Server
 )
 
 // 服务器接口
 type Server interface {
+
+	GetServerId() int32
+
+	GetContext() context.Context
+
+	GetWaitGroup() *sync.WaitGroup
+
 	// 初始化
 	Init(ctx context.Context, configFile string) bool
 
@@ -25,6 +38,14 @@ type Server interface {
 
 	// 退出
 	Exit()
+}
+
+func SetServer(server Server) {
+	_server = server
+}
+
+func GetServer() Server {
+	return _server
 }
 
 type BaseServerConfig struct {
@@ -65,6 +86,8 @@ type BaseServer struct {
 	defaultServerConnectorHandler ConnectionHandler
 	// 默认的服务器之间的编解码
 	defaultServerConnectorCodec *ProtoCodec
+	ctx context.Context
+	wg sync.WaitGroup
 }
 
 func (this *BaseServer) GetConfigFile() string {
@@ -73,6 +96,14 @@ func (this *BaseServer) GetConfigFile() string {
 
 func (this *BaseServer) GetServerId() int32 {
 	return this.serverInfo.GetServerId()
+}
+
+func (this *BaseServer) GetContext() context.Context {
+	return this.ctx
+}
+
+func (this *BaseServer) GetWaitGroup() *sync.WaitGroup {
+	return &this.wg
 }
 
 func (this *BaseServer) GetServerInfo() *pb.ServerInfo {
@@ -94,6 +125,7 @@ func (this *BaseServer) Init(ctx context.Context, configFile string) bool {
 	this.updateInterval = time.Second
 	// 初始化id生成器
 	util.InitIdGenerator(uint16(this.serverInfo.ServerId))
+	this.ctx = ctx
 	return true
 }
 

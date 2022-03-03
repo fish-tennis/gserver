@@ -16,6 +16,7 @@ import (
 )
 
 var (
+	_ Server = (*LoginServer)(nil)
 	// singleton
 	_loginServer *LoginServer
 )

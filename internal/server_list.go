@@ -12,6 +12,11 @@ import (
 	"sync"
 )
 
+var (
+	// singleton
+	_serverList *ServerList
+)
+
 // 服务器列表管理
 // 每个服务器定时上传自己的信息到redis,其他服务器定时从redis获取整个服务器集群的信息
 // 属于服务注册和发现的功能,zookeeper的临时节点更适合来实现这类需求
@@ -39,13 +44,18 @@ type ServerList struct {
 }
 
 func NewServerList() *ServerList {
-	serverList := &ServerList{
+	_serverList := &ServerList{
 		activeTimeout:             3 * 1000, // 默认3秒
 		serverInfos:               make(map[int32]*pb.ServerInfo),
 		connectedServerConnectors: make(map[int32]Connection),
 		serverInfoTypeMap:         make(map[string][]*pb.ServerInfo),
 	}
-	return serverList
+	return _serverList
+}
+
+// singleton
+func GetServerList() *ServerList {
+	return _serverList
 }
 
 // 服务发现: 读取服务器列表信息,并连接这些服务器
@@ -151,6 +161,11 @@ func (this *ServerList) GetServerInfo(serverId int32) *pb.ServerInfo {
 	return info
 }
 
+// 自己的服务器信息
+func (this *ServerList) GetLocalServerInfo() *pb.ServerInfo {
+	return this.localServerInfo
+}
+
 // 服务器连接断开了
 func (this *ServerList) OnServerConnectorDisconnect(serverId int32) {
 	this.connectedServerConnectorsMutex.Lock()
@@ -175,13 +190,15 @@ func (this *ServerList) SetFetchAndConnectServerTypes( serverTypes ...string) {
 // 获取某类服务器的信息列表
 func (this *ServerList) GetServersByType(serverType string) []*pb.ServerInfo {
 	this.serverInfoTypeMapMutex.RLock()
-	infoList,_ := this.serverInfoTypeMap[serverType]
-	copyInfoList := make([]*pb.ServerInfo, len(infoList), len(infoList))
-	for idx,info := range infoList {
-		copyInfoList[idx] = info
+	defer this.serverInfoTypeMapMutex.RUnlock()
+	if infoList,ok := this.serverInfoTypeMap[serverType]; ok {
+		copyInfoList := make([]*pb.ServerInfo, len(infoList), len(infoList))
+		for idx,info := range infoList {
+			copyInfoList[idx] = info
+		}
+		return copyInfoList
 	}
-	this.serverInfoTypeMapMutex.RUnlock()
-	return copyInfoList
+	return nil
 }
 
 // 获取服务器的连接

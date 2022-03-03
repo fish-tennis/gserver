@@ -7,7 +7,7 @@ import (
 	"github.com/fish-tennis/gserver/db"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
-	"github.com/fish-tennis/gserver/player"
+	"github.com/fish-tennis/gserver/gameplayer"
 	"github.com/fish-tennis/gserver/util"
 )
 
@@ -36,7 +36,7 @@ func onPlayerEntryGameReq(connection Connection, packet *ProtoPacket) {
 		logger.Error(err.Error())
 		return
 	}
-	var entryPlayer *player.Player
+	var entryPlayer *gameplayer.Player
 	isReconnect := false
 	if !hasData {
 		connection.Send(PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameRes), &pb.PlayerEntryGameRes{
@@ -53,7 +53,7 @@ func onPlayerEntryGameReq(connection Connection, packet *ProtoPacket) {
 			isReconnect = true
 			logger.Debug("reconnect %v %v", entryPlayer.GetId(), entryPlayer.GetName())
 		} else {
-			entryPlayer = player.CreatePlayerFromData(playerData)
+			entryPlayer = gameplayer.CreatePlayerFromData(playerData)
 		}
 	}
 	if !isReconnect {

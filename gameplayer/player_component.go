@@ -1,4 +1,4 @@
-package player
+package gameplayer
 
 import (
 	"fmt"

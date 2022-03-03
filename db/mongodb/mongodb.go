@@ -29,6 +29,27 @@ type MongoCollection struct {
 	indexNames []string
 }
 
+func (this *MongoCollection) GetCollection() *mongo.Collection {
+	return this.mongoDatabase.Collection(this.collectionName)
+}
+
+// 根据id查找数据
+func (this *MongoCollection) FindEntityById(entityId int64, data interface{}) (bool, error) {
+	if len(this.uniqueId) == 0 {
+		return false, errors.New("no uniqueId column")
+	}
+	col := this.mongoDatabase.Collection(this.collectionName)
+	result := col.FindOne(context.Background(), bson.D{{this.uniqueId, entityId}})
+	if result == nil || result.Err() == mongo.ErrNoDocuments {
+		return false, nil
+	}
+	err := result.Decode(data)
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
 func (this *MongoCollection) FindEntityByName(name string, data interface{}) (bool, error) {
 	if len(this.uniqueName) == 0 {
 		return false, errors.New("no uniqueName column")
