@@ -31,7 +31,7 @@ type GameServer struct {
 	// 服务器listener
 	serverListener Listener
 	// 在线玩家
-	playerMap sync.Map // playerId-*Player
+	playerMap sync.Map // playerId-*player
 }
 
 // 游戏服配置
@@ -46,6 +46,7 @@ func GetGameServer() *GameServer {
 // 初始化
 func (this *GameServer) Init(ctx context.Context, configFile string) bool {
 	_gameServer = this
+	gameplayer.SetPlayerMgr(this)
 	if !this.BaseServer.Init(ctx, configFile) {
 		return false
 	}
@@ -125,7 +126,7 @@ func (this *GameServer) initDb() {
 	mongoDb.RegisterPlayerPb("player", "id", "name", "accountid", "regionid")
 	mongoDb.RegisterEntityDb("guild", "id", "name")
 	//mongoDb.SetAccountColumnNames("accountid","")
-	//mongoDb.SetPlayerColumnNames("id", "Name","regionid")
+	//mongoDb.SetPlayerColumnNames("id", "name","regionid")
 	if !mongoDb.Connect() {
 		panic("connect db error")
 	}
@@ -248,7 +249,8 @@ func onHeartBeatReq(connection Connection, packet *ProtoPacket) {
 // 注册服务器消息回调
 func (this *GameServer) registerServerPacket(serverHandler *DefaultConnectionHandler) {
 	serverHandler.Register(PacketCommand(pb.CmdInner_Cmd_HeartBeatReq), onHeartBeatReq, func() proto.Message {return new(pb.HeartBeatReq)})
-	serverHandler.Register(PacketCommand(pb.CmdInner_Cmd_KickPlayer), this.OnKickPlayer, func() proto.Message {return new(pb.KickPlayer)})
+	serverHandler.Register(PacketCommand(pb.CmdInner_Cmd_KickPlayer), this.onKickPlayer, func() proto.Message {return new(pb.KickPlayer)})
+	serverHandler.Register(PacketCommand(pb.CmdRoute_Cmd_RoutePlayerMessage), this.onRoutePlayerMessage, func() proto.Message {return new(pb.RoutePlayerMessage)})
 	//serverHandler.autoRegisterPlayerComponentProto()
 }
 
@@ -276,7 +278,7 @@ func (this *GameServer) GetPlayer(playerId int64) *gameplayer.Player {
 }
 
 // 踢玩家下线
-func (this *GameServer) OnKickPlayer(connection Connection, packet *ProtoPacket) {
+func (this *GameServer) onKickPlayer(connection Connection, packet *ProtoPacket) {
 	req := packet.Message().(*pb.KickPlayer)
 	player := this.GetPlayer(req.GetPlayerId())
 	if player != nil {
@@ -285,44 +287,28 @@ func (this *GameServer) OnKickPlayer(connection Connection, packet *ProtoPacket)
 	} else {
 		logger.Error("kick player failed account:%v playerId:%v gameServerId:%v",
 			req.GetAccountId(), req.GetPlayerId(), this.GetServerId())
-		//// 有一种特殊情况: 玩家进入游戏服A,游戏服A宕机了,这时候redis缓存里面,依然记录着玩家还在游戏服A上
-		//// 游戏服A重启后,当玩家重新登录时,登录服会通知游戏服A踢掉该玩家,但通过this.GetPlayer无法获取到玩家对象
-		//// 所以这里判断如果缓存里面还是记录着玩家在这台服务器,就直接清理缓存
-		//gameServerId := cache.GetOnlinePlayerGameServerId(req.GetPlayerId())
-		//if gameServerId == this.GetServerId() {
-		//	cache.RemoveOnlineAccount(req.GetAccountId())
-		//	cache.RemoveOnlinePlayer(req.GetPlayerId(), this.GetServerId())
-		//	LogError("kick player account:%v playerId:%v gameServerId:%v",
-		//		req.GetAccountId(), req.GetPlayerId(), this.GetServerId())
-		//}
 	}
 }
-//
-//func generatePlayerDataFromComponentDataMap(playerId,accountId int64, componentDataMap map[string]string) {
-//	player := createTempPlayer()
-//	player.id = playerId
-//	player.accountId = accountId
-//	for componentName,componentData := range componentDataMap {
-//		componentTemplate := player.GetComponent(componentName)
-//		if componentTemplate == nil {
-//			logger.Error("%v GetComponent nil %v", playerId, componentName)
-//			continue
-//		}
-//		newComponent := reflect.New(reflect.TypeOf(componentTemplate).Elem()).Interface().(entity.Saveable)
-//		err := newComponent.Deserialize([]byte(componentData))
-//		if err != nil {
-//			logger.Error("%v Deserialize %v err %v", playerId, componentName, err.Error())
-//			continue
-//		}
-//		saveData := newComponent.Serialize(false)
-//		saveDbErr := GetServer().GetPlayerDb().SaveComponent(playerId, componentTemplate.GetNameLower(), saveData)
-//		if saveDbErr != nil {
-//			logger.Error("%v SaveDb %v err %v", playerId, componentTemplate.GetNameLower(), saveDbErr.Error())
-//			continue
-//		}
-//		logger.Info("%v SaveDb %v", playerId, componentTemplate.GetNameLower())
-//		cacheKeyName := GetComponentCacheKey(playerId, componentName)
-//		cache.Get().Del(context.Background(), cacheKeyName)
-//		logger.Debug("RemoveCache %v %v", playerId, cacheKeyName)
-//	}
-//}
+
+// 转发玩家消息
+// otherServer -> thisServer -> client
+func (this *GameServer) onRoutePlayerMessage(connection Connection, packet *ProtoPacket) {
+	logger.Debug("onRoutePlayerMessage")
+	req := packet.Message().(*pb.RoutePlayerMessage)
+	player := this.GetPlayer(req.ToPlayerId)
+	if player == nil {
+		logger.Error("player nil %v", req.ToPlayerId)
+		return
+	}
+	message,err := req.PacketData.UnmarshalNew()
+	if err != nil {
+		logger.Error("UnmarshalNew %v err:%v", req.ToPlayerId, err)
+		return
+	}
+	err = req.PacketData.UnmarshalTo(message)
+	if err != nil {
+		logger.Error("UnmarshalTo %v err:%v", req.ToPlayerId, err)
+		return
+	}
+	player.Send(PacketCommand(uint16(req.PacketCommand)), message)
+}

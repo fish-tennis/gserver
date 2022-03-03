@@ -107,8 +107,8 @@ func (this *testLoginHandler) onAccountRes(connection gnet.Connection, packet *g
 	res := packet.Message().(*pb.AccountRes)
 	if res.Result == "ok" {
 		connection.Send(gnet.PacketCommand(pb.CmdLogin_Cmd_LoginReq), &pb.LoginReq{
-			AccountName: "test",
-			Password: "test",
+			AccountName: "test2",
+			Password: "test2",
 		})
 	}
 }
@@ -133,6 +133,7 @@ func (this *testGameHandler) RegisterPacket() {
 	this.Register(gnet.PacketCommand(pb.CmdMoney_Cmd_CoinRes), this.onCoinRes, func() proto.Message {return new(pb.CoinRes)})
 	this.Register(gnet.PacketCommand(pb.CmdGuild_Cmd_GuildCreateRes), this.onGuildCreateRes, func() proto.Message {return new(pb.GuildCreateRes)})
 	this.Register(gnet.PacketCommand(pb.CmdGuild_Cmd_GuildListRes), this.onGuildListRes, func() proto.Message {return new(pb.GuildListRes)})
+	this.Register(gnet.PacketCommand(pb.CmdGuild_Cmd_GuildJoinRes), this.onGuildJoinRes, func() proto.Message {return new(pb.GuildJoinRes)})
 }
 
 func (this *testGameHandler) OnConnected(connection gnet.Connection, success bool) {
@@ -216,4 +217,15 @@ func (this *testGameHandler) onGuildCreateRes(connection gnet.Connection, packet
 
 func (this *testGameHandler) onGuildListRes(connection gnet.Connection, packet *gnet.ProtoPacket) {
 	logger.Debug("onGuildListRes:%v", packet.Message())
+	res := packet.Message().(*pb.GuildListRes)
+	if len(res.GuildInfos) > 0 {
+		connection.Send(gnet.PacketCommand(pb.CmdGuild_Cmd_GuildJoinReq), &pb.GuildJoinReq{
+			Id: res.GuildInfos[0].Id,
+		})
+		logger.Debug("GuildJoinReq:%v", res.GuildInfos[0].Id)
+	}
+}
+
+func (this *testGameHandler) onGuildJoinRes(connection gnet.Connection, packet *gnet.ProtoPacket) {
+	logger.Debug("onGuildJoinRes:%v", packet.Message())
 }

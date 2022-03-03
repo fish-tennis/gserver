@@ -15,7 +15,7 @@ var _ internal.CompositeSaveable = (*Quest)(nil)
 // 与Bag不同,Quest由一个Component和多个ChildSaveable组合而成
 // 不同的ChildSaveable可以有不同的数据保存方式
 type Quest struct {
-	BaseComponent
+	BasePlayerComponent
 	// 已完成的任务
 	finished *FinishedQuests
 	// 当前任务列表
@@ -106,9 +106,9 @@ func (c *CurQuests) Add(questData *pb.QuestData) {
 
 func NewQuest(player *Player) *Quest {
 	component := &Quest{
-		BaseComponent: BaseComponent{
-			Player: player,
-			Name:   "Quest",
+		BasePlayerComponent: BasePlayerComponent{
+			player: player,
+			name:   "Quest",
 		},
 		finished: &FinishedQuests{
 		},

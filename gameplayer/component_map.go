@@ -10,7 +10,7 @@ var(
 func InitPlayerComponentMap() {
 	_playerComponentNameMap = make(map[string]int)
 	player := CreateTempPlayer(0,0)
-	for idx,component := range player.components {
+	for idx,component := range player.GetComponents() {
 		_playerComponentNameMap[component.GetName()] = idx
 	}
 }

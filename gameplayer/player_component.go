@@ -15,54 +15,54 @@ type PlayerComponent interface {
 }
 
 // 玩家组件
-type BaseComponent struct {
-	Player *Player
+type BasePlayerComponent struct {
+	player *Player
 	// 组件名
-	Name string
+	name string
 }
 
 // 组件名
-func (this *BaseComponent) GetName() string {
-	return this.Name
+func (this *BasePlayerComponent) GetName() string {
+	return this.name
 }
 
-func (this *BaseComponent) GetNameLower() string {
-	return strings.ToLower(this.Name)
+func (this *BasePlayerComponent) GetNameLower() string {
+	return strings.ToLower(this.name)
 }
 
 // entity.Component.GetEntity()的实现
-func (this *BaseComponent) GetEntity() Entity {
-	return this.Player
+func (this *BasePlayerComponent) GetEntity() Entity {
+	return this.player
 }
 
 // 关联的玩家对象
-func (this *BaseComponent) GetPlayer() *Player {
-	return this.Player
+func (this *BasePlayerComponent) GetPlayer() *Player {
+	return this.player
 }
 
 // 关联的玩家id
-func (this *BaseComponent) GetPlayerId() int64 {
-	if this.Player == nil {
+func (this *BasePlayerComponent) GetPlayerId() int64 {
+	if this.player == nil {
 		return 0
 	}
-	return this.Player.GetId()
+	return this.player.GetId()
 }
 
-func (this *BaseComponent) GetCacheKey() string {
+func (this *BasePlayerComponent) GetCacheKey() string {
 	return GetComponentCacheKey(this.GetPlayerId(), this.GetName())
 }
 
 // 有保存数据的玩家组件
-type DataComponent struct {
-	BaseComponent
+type PlayerDataComponent struct {
+	BasePlayerComponent
 	BaseDirtyMark
 }
 
-func NewDataComponent(player *Player, componentName string) *DataComponent {
-	return &DataComponent{
-		BaseComponent: BaseComponent{
-			Player: player,
-			Name:   componentName,
+func NewPlayerDataComponent(player *Player, componentName string) *PlayerDataComponent {
+	return &PlayerDataComponent{
+		BasePlayerComponent: BasePlayerComponent{
+			player: player,
+			name:   componentName,
 		},
 	}
 }
@@ -75,28 +75,16 @@ func GetComponentCacheKey(playerId int64, componentName string) string {
 }
 
 // 有保存数据的玩家组件
-type MapDataComponent struct {
-	BaseComponent
+type PlayerMapDataComponent struct {
+	BasePlayerComponent
 	BaseMapDirtyMark
 }
 
-func NewMapDataComponent(player *Player, componentName string) *MapDataComponent {
-	return &MapDataComponent{
-		BaseComponent: BaseComponent{
-			Player: player,
-			Name:   componentName,
+func NewPlayerMapDataComponent(player *Player, componentName string) *PlayerMapDataComponent {
+	return &PlayerMapDataComponent{
+		BasePlayerComponent: BasePlayerComponent{
+			player: player,
+			name:   componentName,
 		},
 	}
 }
-
-//type BaseChildSaveable struct {
-//	parent Component
-//}
-//
-//func (this *BaseChildSaveable) GetCacheKey() string {
-//	if playerComponent,ok := this.parent.(PlayerComponent); ok {
-//		return GetComponentCacheKey(playerComponent.GetPlayer().GetId(), playerComponent.GetName())
-//	}
-//	logger.Error("%v GetCacheKey err", this.parent.GetName())
-//	return ""
-//}

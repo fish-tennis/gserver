@@ -9,13 +9,13 @@ var _ internal.Saveable = (*Guild)(nil)
 
 // 玩家的公会模块
 type Guild struct {
-	DataComponent
+	PlayerDataComponent
 	data *pb.PlayerGuildData
 }
 
 func NewGuild(player *Player) *Guild {
 	component := &Guild{
-		DataComponent: *NewDataComponent(player,"Guild"),
+		PlayerDataComponent: *NewPlayerDataComponent(player,"Guild"),
 		data: &pb.PlayerGuildData{
 			GuildId: 0,
 		},

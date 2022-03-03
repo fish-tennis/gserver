@@ -13,14 +13,14 @@ var _ internal.MapDirtyMark = (*BagUniqueItem)(nil)
 
 // 不可叠加的物品背包
 type BagUniqueItem struct {
-	MapDataComponent
+	PlayerMapDataComponent
 	items map[int64]*pb.UniqueItem
 }
 
 func NewBagUniqueItem(player *Player) *BagUniqueItem {
 	component := &BagUniqueItem{
-		MapDataComponent: *NewMapDataComponent(player, "BagUniqueItem"),
-		items: make(map[int64]*pb.UniqueItem),
+		PlayerMapDataComponent: *NewPlayerMapDataComponent(player, "BagUniqueItem"),
+		items:                  make(map[int64]*pb.UniqueItem),
 	}
 	component.checkData()
 	return component

@@ -12,13 +12,13 @@ var _ internal.Saveable = (*Money)(nil)
 
 // 玩家的钱财组件
 type Money struct {
-	DataComponent
+	PlayerDataComponent
 	data *pb.Money
 }
 
 func NewMoney(player *Player) *Money {
 	component := &Money{
-		DataComponent: *NewDataComponent(player,"Money"),
+		PlayerDataComponent: *NewPlayerDataComponent(player,"Money"),
 		data: &pb.Money{
 			Coin: 0,
 			Diamond: 0,

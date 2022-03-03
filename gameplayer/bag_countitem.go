@@ -13,14 +13,14 @@ var _ internal.MapDirtyMark = (*BagCountItem)(nil)
 
 // 有数量的物品背包
 type BagCountItem struct {
-	MapDataComponent
+	PlayerMapDataComponent
 	items map[int32]int32
 }
 
 func NewBagCountItem(player *Player, data map[int32]int32) *BagCountItem {
 	component := &BagCountItem{
-		MapDataComponent: *NewMapDataComponent(player, "BagCountItem"),
-		items: data,
+		PlayerMapDataComponent: *NewPlayerMapDataComponent(player, "BagCountItem"),
+		items:                  data,
 	}
 	component.checkData()
 	return component

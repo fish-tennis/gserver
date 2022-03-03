@@ -29,10 +29,9 @@ enum GuildPosition {
 // 公会数据
 message GuildData {
   int64 id = 1; // 公会唯一id
-  string name = 2; // 名称
-  string intro = 3; // 介绍
-  map<int64,GuildMemberData> members = 4; // 公会成员
-  map<int64,GuildJoinRequest> joinRequests = 5; // 申请加入公会的请求信息
+  GuildInfo baseInfo = 2;
+  map<int64,GuildMemberData> members = 3; // 公会成员
+  map<int64,GuildJoinRequest> joinRequests = 4; // 申请加入公会的请求信息
 }
 
 // 公会成员数据

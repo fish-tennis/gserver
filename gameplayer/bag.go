@@ -7,16 +7,16 @@ import (
 // 背包模块
 // 演示通过组合模式,整合多个不同的子背包模块,提供更高一级的背包接口
 type Bag struct {
-	BaseComponent
+	BasePlayerComponent
 	bagCountItem *BagCountItem
 	bagUniqueItem *BagUniqueItem
 }
 
 func NewBag(player *Player, bagCountItem *BagCountItem, bagUniqueItem *BagUniqueItem) *Bag {
 	component := &Bag{
-		BaseComponent: BaseComponent{
-			Player: player,
-			Name: "Bag",
+		BasePlayerComponent: BasePlayerComponent{
+			player: player,
+			name:   "Bag",
 		},
 		bagCountItem: bagCountItem,
 		bagUniqueItem: bagUniqueItem,

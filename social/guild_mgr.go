@@ -31,8 +31,10 @@ func GetGuildById(guildId int64) *Guild {
 
 // 从数据库加载公会数据
 func LoadGuild(guildId int64) *Guild {
-	guild := NewGuild(guildId, "")
-	exist,err := GetGuildDb().FindEntityById(guildId, guild.data)
+	guildData := &pb.GuildData{
+		Id: guildId,
+	}
+	exist,err := GetGuildDb().FindEntityById(guildId, guildData)
 	if err != nil {
 		logger.Error("LoadGuild err:%v", err)
 		return nil
@@ -40,12 +42,14 @@ func LoadGuild(guildId int64) *Guild {
 	if !exist {
 		return nil
 	}
+	guild := NewGuild(guildData)
 	_guildMapLock.Lock()
 	defer _guildMapLock.Unlock()
 	if existGuild,ok := _guildMap[guildId]; ok {
 		return existGuild
 	}
 	_guildMap[guildId] = guild
+	guild.StartProcessRoutine()
 	return guild
 }
 
@@ -147,16 +151,21 @@ func OnGuildCreateReq(player *gameplayer.Player, req *pb.GuildCreateReq) {
 		})
 		return
 	}
-	newGuild := NewGuild(util.GenUniqueId(), req.Name)
-	data,err := internal.SaveSaveable(newGuild)
-	if err != nil {
-		logger.Error("OnGuildCreateReq err:%v", err)
-		player.SendGuildCreateRes(&pb.GuildCreateRes{
-			Error: "DataError",
-		})
-		return
+	newId := util.GenUniqueId()
+	newGuildData := &pb.GuildData{
+		Id: newId,
+		BaseInfo: &pb.GuildInfo{
+			Id: newId,
+			Name: req.Name,
+		},
+		Members: make(map[int64]*pb.GuildMemberData),
 	}
-	dbErr,isDuplicateName := GetGuildDb().InsertEntity(newGuild.data.Id, data)
+	newGuildData.Members[player.GetId()] = &pb.GuildMemberData{
+		Id: player.GetId(),
+		Name: player.GetName(),
+		Position: int32(pb.GuildPosition_Leader),
+	}
+	dbErr,isDuplicateName := GetGuildDb().InsertEntity(newGuildData.Id, newGuildData)
 	if dbErr != nil {
 		logger.Error("OnGuildCreateReq dbErr:%v", dbErr)
 		player.SendGuildCreateRes(&pb.GuildCreateRes{
@@ -170,10 +179,10 @@ func OnGuildCreateReq(player *gameplayer.Player, req *pb.GuildCreateReq) {
 		})
 		return
 	}
-	playerGuild.SetGuildId(newGuild.data.Id)
+	playerGuild.SetGuildId(newGuildData.Id)
 	player.SendGuildCreateRes(&pb.GuildCreateRes{
-		Id:   newGuild.data.Id,
-		Name: newGuild.data.Name,
+		Id:   newGuildData.Id,
+		Name: newGuildData.BaseInfo.Name,
 	})
-	logger.Debug("create guild:%v %v", newGuild.data.Id, newGuild.data.Name)
+	logger.Debug("create guild:%v %v", newGuildData.Id, newGuildData.BaseInfo.Name)
 }

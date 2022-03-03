@@ -44,7 +44,7 @@ type ServerList struct {
 }
 
 func NewServerList() *ServerList {
-	_serverList := &ServerList{
+	_serverList = &ServerList{
 		activeTimeout:             3 * 1000, // 默认3秒
 		serverInfos:               make(map[int32]*pb.ServerInfo),
 		connectedServerConnectors: make(map[int32]Connection),

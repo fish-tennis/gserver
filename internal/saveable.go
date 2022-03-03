@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/fish-tennis/gserver/cache"
+	"github.com/fish-tennis/gserver/db"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/util"
 	"github.com/go-redis/redis/v8"
@@ -627,4 +628,75 @@ func LoadFromCache(saveable Saveable) error {
 		return errors.New(fmt.Sprintf("%v unsupport cache type:%v", cacheKey, cacheType))
 	}
 	return nil
+}
+
+// Entity数据保存到数据库
+func SaveEntityToDb(entityDb db.EntityDb, entity Entity, removeCacheAfterSaveDb bool) error {
+	componentDatas := make(map[string]interface{})
+	var delKeys []string
+	entity.RangeComponent(func(component Component) bool {
+		if saveable, ok := component.(Saveable); ok {
+			// 如果某个组件数据没改变过,就无需保存
+			if !saveable.IsChanged() {
+				logger.Debug("%v ignore %v", entity.GetId(), component.GetName())
+				return true
+			}
+			saveData, err := SaveSaveable(saveable)
+			if err != nil {
+				logger.Error("%v Save %v err:%v", entity.GetId(), component.GetName(), err.Error())
+				return true
+			}
+			if saveData == nil {
+				logger.Debug("%v ignore nil %v", entity.GetId(), component.GetName())
+				return true
+			}
+			// 使用protobuf存mongodb时,mongodb默认会把字段名转成小写,因为protobuf没设置bson tag
+			componentDatas[component.GetNameLower()] = saveData
+			if removeCacheAfterSaveDb {
+				delKeys = append(delKeys, saveable.GetCacheKey())
+			}
+			logger.Debug("SaveDb %v %v", entity.GetId(), component.GetName())
+		}
+		if compositeSaveable, ok := component.(CompositeSaveable); ok {
+			compositeData := make(map[string]interface{})
+			saveables := compositeSaveable.SaveableChildren()
+			// 只需要保存修改过数据的子模块
+			for _, saveable := range saveables {
+				if !saveable.IsChanged() {
+					logger.Debug("%v ignore %v", entity.GetId(), saveable.GetCacheKey())
+					continue
+				}
+				saveData, err := SaveSaveable(saveable)
+				if err != nil {
+					logger.Error("%v Save %v err:%v", entity.GetId(), saveable.GetCacheKey(), err.Error())
+					continue
+				}
+				if saveData == nil {
+					logger.Debug("%v ignore nil %v", entity.GetId(), component.GetName())
+					continue
+				}
+				compositeData[component.GetNameLower()+"."+saveable.Key()] = saveData
+				if removeCacheAfterSaveDb {
+					delKeys = append(delKeys, saveable.GetCacheKey())
+				}
+				logger.Debug("SaveDb %v %v.%v", entity.GetId(), component.GetNameLower(), saveable.Key())
+			}
+			if len(compositeData) > 0 {
+				logger.Debug("SaveDb %v %v child:%v", entity.GetId(), component.GetName(), len(compositeData))
+			}
+		}
+		return true
+	})
+	saveDbErr := entityDb.SaveComponents(entity.GetId(), componentDatas)
+	if saveDbErr != nil {
+		logger.Error("SaveDb %v err:%v", entity.GetId(), saveDbErr)
+	} else {
+		logger.Debug("SaveDb %v", entity.GetId())
+	}
+	if saveDbErr == nil && len(delKeys) > 0 {
+		// 保存数据库成功后,删除缓存
+		cache.Get().Del(delKeys...)
+		logger.Debug("RemoveCache %v %v", entity.GetId(), delKeys)
+	}
+	return saveDbErr
 }

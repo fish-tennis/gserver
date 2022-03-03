@@ -1,7 +1,6 @@
 package social
 
 import (
-	"fmt"
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/gameplayer"
 	. "github.com/fish-tennis/gserver/internal"
@@ -11,13 +10,16 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-var _ Saveable = (*Guild)(nil)
+var _ Entity = (*Guild)(nil)
 
 // 公会
 type Guild struct {
-	messages chan *GuildMessage
+	BaseEntity
 	BaseDirtyMark
-	data *pb.GuildData
+	messages chan *GuildMessage
+	baseInfo *GuildBaseInfo
+	members *GuildMembers
+	joinRequests *GuildJoinRequests
 }
 
 type GuildMessage struct {
@@ -27,28 +29,30 @@ type GuildMessage struct {
 	message proto.Message
 }
 
-func NewGuild(id int64, name string) *Guild {
-	return &Guild{
+func NewGuild(guildData *pb.GuildData) *Guild {
+	guild := &Guild{
 		messages: make(chan *GuildMessage, 32),
-		data: &pb.GuildData{
-			Id: id,
-			Name: name,
-			Members: make(map[int64]*pb.GuildMemberData),
-			JoinRequests: make(map[int64]*pb.GuildJoinRequest),
-		},
 	}
+	guild.baseInfo = &GuildBaseInfo{
+		guild: guild,
+		data: guildData.BaseInfo,
+	}
+	guild.AddComponent(guild.baseInfo, guildData.BaseInfo)
+
+	guild.members = &GuildMembers{
+		guild: guild,
+		data: make(map[int64]*pb.GuildMemberData),
+	}
+	guild.AddComponent(guild.members, guildData.Members)
+	guild.AddComponent(&GuildJoinRequests{
+		guild: guild,
+		data: make(map[int64]*pb.GuildJoinRequest),
+	}, guildData.Members)
+	return guild
 }
 
-func (this *Guild) DbData() (dbData interface{}, protoMarshal bool) {
-	return this.data,false
-}
-
-func (this *Guild) CacheData() interface{} {
-	return this.data
-}
-
-func (this *Guild) GetCacheKey() string {
-	return fmt.Sprintf("guild:%v", this.data.Id)
+func (this *Guild) GetId() int64 {
+	return this.baseInfo.data.Id
 }
 
 func (this *Guild) PushMessage(guildMessage *GuildMessage) {
@@ -57,16 +61,17 @@ func (this *Guild) PushMessage(guildMessage *GuildMessage) {
 
 // 消息处理协程
 func (this *Guild) StartProcessRoutine() {
-	logger.Debug("StartProcessRoutine %v", this.data.Id)
+	logger.Debug("StartProcessRoutine %v", this.GetId())
 	ctx := GetServer().GetContext()
 	GetServer().GetWaitGroup().Add(1)
 	go func() {
 		defer func() {
+			SaveEntityToDb(GetGuildDb(), this, true)
 			GetServer().GetWaitGroup().Done()
 			if err := recover(); err != nil {
 				logger.LogStack()
 			}
-			logger.Debug("EndProcessRoutine %v", this.data.Id)
+			logger.Debug("EndProcessRoutine %v", this.GetId())
 		}()
 
 		for {
@@ -74,11 +79,13 @@ func (this *Guild) StartProcessRoutine() {
 			case <-ctx.Done():
 				logger.Info("exitNotify")
 				return
+				// TODO:也可以加个定时保存db的功能
 			case message := <- this.messages:
 				if message == nil {
 					return
 				}
 				this.processMessage(message)
+				this.SaveCache()
 			}
 		}
 	}()
@@ -95,7 +102,11 @@ func (this *Guild) processMessage(message *GuildMessage) {
 }
 
 func (this *Guild) GetMember(playerId int64) *pb.GuildMemberData {
-	return this.data.Members[playerId]
+	return this.members.data[playerId]
+}
+
+func (this *Guild) RoutePlayerPacket(guildMessage *GuildMessage, cmd PacketCommand, message proto.Message) {
+	RoutePlayerPacket(guildMessage.fromPlayerId, guildMessage.fromServerId, cmd, message)
 }
 
 // 加入公会请求
@@ -103,15 +114,18 @@ func (this *Guild) OnGuildJoinReq(message *GuildMessage, req *pb.GuildJoinReq) {
 	if this.GetMember(message.fromPlayerId) != nil {
 		return
 	}
-	if _,ok := this.data.JoinRequests[message.fromPlayerId]; ok {
+	if _,ok := this.joinRequests.data[message.fromPlayerId]; ok {
 		return
 	}
-	this.data.JoinRequests[message.fromPlayerId] = &pb.GuildJoinRequest{
+	this.joinRequests.data[message.fromPlayerId] = &pb.GuildJoinRequest{
 		PlayerId: message.fromPlayerId,
 		PlayerName: "",
 		TimestampSec: int32(util.GetCurrentTimeStamp()),
 	}
-	logger.Debug("JoinRequests %v %v", this.data.Id, message.fromPlayerId)
+	this.RoutePlayerPacket(message, PacketCommand(pb.CmdGuild_Cmd_GuildJoinRes), &pb.GuildJoinRes{
+		Id: this.GetId(),
+	})
+	logger.Debug("JoinRequests %v %v", this.GetId(), message.fromPlayerId)
 }
 
 // 同意加入公会

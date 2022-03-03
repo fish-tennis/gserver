@@ -10,8 +10,15 @@ package gserver;
 
 enum CmdRoute {
   CmdRoute_None         = 0; // 解决"The first enum value must be zero in proto3."的报错
-  Cmd_GuildRoutePlayerMessageReq = 3001;
-  Cmd_GuildRoutePlayerMessageRes = 3002;
+  Cmd_RoutePlayerMessage = 3001;
+  Cmd_GuildRoutePlayerMessageReq = 3003;
+}
+
+// 路由转发给玩家的消息
+message RoutePlayerMessage {
+  int64 toPlayerId = 1; // 玩家id
+  int32 packetCommand = 2; // 消息号
+  google.protobuf.Any packetData = 3; // 转发的消息
 }
 
 // 路由转发玩家的公会请求消息
@@ -21,11 +28,4 @@ message GuildRoutePlayerMessageReq {
   int32 fromServerId = 3; // 玩家当前所在服务器id
   int32 packetCommand = 4; // 消息号
   google.protobuf.Any packetData = 5; // 消息内容
-}
-
-// 路由转发玩家的公会返回消息
-message GuildRoutePlayerMessageRes {
-  int64 toPlayerId = 1; // 玩家id
-  int32 packetCommand = 2; // 消息号
-  google.protobuf.Any packetData = 3; // 转发的消息
 }

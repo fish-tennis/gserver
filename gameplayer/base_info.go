@@ -11,16 +11,16 @@ var _ internal.Saveable = (*BaseInfo)(nil)
 
 // 玩家基础信息组件
 type BaseInfo struct {
-	DataComponent
+	PlayerDataComponent
 	data *pb.BaseInfo
 }
 
 func NewBaseInfo(player *Player, data *pb.BaseInfo) *BaseInfo {
 	component := &BaseInfo{
-		DataComponent: DataComponent{
-			BaseComponent: BaseComponent{
-				Player: player,
-				Name:   "BaseInfo",
+		PlayerDataComponent: PlayerDataComponent{
+			BasePlayerComponent: BasePlayerComponent{
+				player: player,
+				name:   "BaseInfo",
 			},
 		},
 		data: &pb.BaseInfo{

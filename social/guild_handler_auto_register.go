@@ -48,7 +48,7 @@ func GuildHandlerAutoRegister(handler PacketHandlerRegister, playerMgr gameplaye
 			}
 		}
 	}, func() proto.Message {
-		return new(pb.GuildCreateReq)
+		return new(pb.GuildJoinReq)
 	})
 
 	handler.Register(PacketCommand(pb.CmdGuild_Cmd_RequestGuildDataReq), func(connection Connection, packet *ProtoPacket) {
