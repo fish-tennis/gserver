@@ -146,14 +146,21 @@ func (this *BaseServer) OnUpdate(ctx context.Context, updateCount int64) {
 }
 
 func (this *BaseServer) Exit() {
-	logger.Debug("BaseServer.Exit")
+	logger.Info("BaseServer.Exit")
+	// 服务器管理的协程关闭
+	logger.Info("wait server goroutine close")
+	this.wg.Wait()
+	logger.Info("all server goroutine closed")
 	// 网络关闭
+	logger.Info("wait net goroutine close")
 	GetNetMgr().Shutdown(true)
+	logger.Info("all net goroutine closed")
 	// 缓存关闭
 	if cache.GetRedis() != nil {
 		if closer,ok := cache.GetRedis().(io.Closer); ok {
+			logger.Info("wait redis close")
 			closer.Close()
-			logger.Info("close redis")
+			logger.Info("redis closed")
 		}
 	}
 }

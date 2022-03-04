@@ -1,8 +1,8 @@
 package social
 
 import (
+	"context"
 	. "github.com/fish-tennis/gnet"
-	"github.com/fish-tennis/gserver/gameplayer"
 	. "github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
@@ -15,7 +15,6 @@ var _ Entity = (*Guild)(nil)
 // 公会
 type Guild struct {
 	BaseEntity
-	BaseDirtyMark
 	messages chan *GuildMessage
 	baseInfo *GuildBaseInfo
 	members *GuildMembers
@@ -25,6 +24,7 @@ type Guild struct {
 type GuildMessage struct {
 	fromPlayerId  int64
 	fromServerId  int32
+	fromPlayerName string
 	cmd PacketCommand
 	message proto.Message
 }
@@ -33,21 +33,12 @@ func NewGuild(guildData *pb.GuildData) *Guild {
 	guild := &Guild{
 		messages: make(chan *GuildMessage, 32),
 	}
-	guild.baseInfo = &GuildBaseInfo{
-		guild: guild,
-		data: guildData.BaseInfo,
-	}
-	guild.AddComponent(guild.baseInfo, guildData.BaseInfo)
-
-	guild.members = &GuildMembers{
-		guild: guild,
-		data: make(map[int64]*pb.GuildMemberData),
-	}
-	guild.AddComponent(guild.members, guildData.Members)
-	guild.AddComponent(&GuildJoinRequests{
-		guild: guild,
-		data: make(map[int64]*pb.GuildJoinRequest),
-	}, guildData.Members)
+	guild.baseInfo = NewGuildBaseInfo(guild, guildData.BaseInfo)
+	guild.AddComponent(guild.baseInfo, nil)
+	guild.members = NewGuildMembers(guild, guildData.Members)
+	guild.AddComponent(guild.members, nil)
+	guild.joinRequests = NewGuildJoinRequests(guild, guildData.JoinRequests)
+	guild.AddComponent(guild.joinRequests, nil)
 	return guild
 }
 
@@ -62,9 +53,8 @@ func (this *Guild) PushMessage(guildMessage *GuildMessage) {
 // 消息处理协程
 func (this *Guild) StartProcessRoutine() {
 	logger.Debug("StartProcessRoutine %v", this.GetId())
-	ctx := GetServer().GetContext()
 	GetServer().GetWaitGroup().Add(1)
-	go func() {
+	go func(ctx context.Context) {
 		defer func() {
 			SaveEntityToDb(GetGuildDb(), this, true)
 			GetServer().GetWaitGroup().Done()
@@ -79,19 +69,25 @@ func (this *Guild) StartProcessRoutine() {
 			case <-ctx.Done():
 				logger.Info("exitNotify")
 				return
-				// TODO:也可以加个定时保存db的功能
 			case message := <- this.messages:
 				if message == nil {
 					return
 				}
 				this.processMessage(message)
 				this.SaveCache()
+				// 临时代码
+				SaveEntityToDb(GetGuildDb(), this, false)
 			}
 		}
-	}()
+	}(GetServer().GetContext())
 }
 
 func (this *Guild) processMessage(message *GuildMessage) {
+	defer func() {
+		if err := recover(); err != nil {
+			logger.LogStack()
+		}
+	}()
 	switch v := message.message.(type) {
 	case *pb.GuildJoinReq:
 		logger.Debug("%v", v)
@@ -102,7 +98,7 @@ func (this *Guild) processMessage(message *GuildMessage) {
 }
 
 func (this *Guild) GetMember(playerId int64) *pb.GuildMemberData {
-	return this.members.data[playerId]
+	return this.members.Get(playerId)
 }
 
 func (this *Guild) RoutePlayerPacket(guildMessage *GuildMessage, cmd PacketCommand, message proto.Message) {
@@ -114,14 +110,14 @@ func (this *Guild) OnGuildJoinReq(message *GuildMessage, req *pb.GuildJoinReq) {
 	if this.GetMember(message.fromPlayerId) != nil {
 		return
 	}
-	if _,ok := this.joinRequests.data[message.fromPlayerId]; ok {
+	if this.joinRequests.Get(message.fromPlayerId) != nil {
 		return
 	}
-	this.joinRequests.data[message.fromPlayerId] = &pb.GuildJoinRequest{
+	this.joinRequests.Add(&pb.GuildJoinRequest{
 		PlayerId: message.fromPlayerId,
-		PlayerName: "",
+		PlayerName: message.fromPlayerName,
 		TimestampSec: int32(util.GetCurrentTimeStamp()),
-	}
+	})
 	this.RoutePlayerPacket(message, PacketCommand(pb.CmdGuild_Cmd_GuildJoinRes), &pb.GuildJoinRes{
 		Id: this.GetId(),
 	})
@@ -129,11 +125,47 @@ func (this *Guild) OnGuildJoinReq(message *GuildMessage, req *pb.GuildJoinReq) {
 }
 
 // 同意加入公会
-func (this *Guild) OnGuildJoinAgreeReq(player *gameplayer.Player, req *pb.GuildJoinAgreeReq) {
-
+func (this *Guild) OnGuildJoinAgreeReq(message *GuildMessage, req *pb.GuildJoinAgreeReq) {
+	member := this.GetMember(message.fromPlayerId)
+	if member == nil {
+		return
+	}
+	if member.Position < int32(pb.GuildPosition_Manager) {
+		return
+	}
+	joinRequest := this.joinRequests.Get(req.JoinPlayerId)
+	if joinRequest == nil {
+		return
+	}
+	if req.IsAgree {
+		// TODO:检查该玩家是否已经有公会了
+		this.members.Add(&pb.GuildMemberData{
+			Id: joinRequest.PlayerId,
+			Name: joinRequest.PlayerName,
+			Position: int32(pb.GuildPosition_Member),
+		})
+		this.baseInfo.SetMemberCount(int32(len(this.members.data)))
+	} else {
+		// 略:给该玩家发一个提示信息
+	}
+	this.joinRequests.Remove(req.JoinPlayerId)
+	this.RoutePlayerPacket(message, PacketCommand(pb.CmdGuild_Cmd_GuildJoinAgreeRes), &pb.GuildJoinAgreeRes{
+		JoinPlayerId: joinRequest.PlayerId,
+		IsAgree: req.IsAgree,
+	})
 }
 
 // 查看公会数据
-func (this *Guild) OnRequestGuildDataReq(player *gameplayer.Player, req *pb.RequestGuildDataReq) {
-
+func (this *Guild) OnRequestGuildDataReq(message *GuildMessage, req *pb.RequestGuildDataReq) {
+	if this.GetMember(message.fromPlayerId) == nil {
+		return
+	}
+	this.RoutePlayerPacket(message, PacketCommand(pb.CmdGuild_Cmd_RequestGuildDataRes), &pb.RequestGuildDataRes{
+		GuildData: &pb.GuildData{
+			Id: this.GetId(),
+			BaseInfo: this.baseInfo.data,
+			Members: this.members.data,
+			JoinRequests: this.joinRequests.data,
+		},
+	})
 }

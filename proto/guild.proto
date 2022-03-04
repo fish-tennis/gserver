@@ -95,20 +95,18 @@ message GuildJoinRes {
   int64 id = 2; // 公会id
 }
 
-// 同意加入公会
+// 管理员同意请求者加入公会
 message GuildJoinAgreeReq {
-  int64 id = 1; // 公会id
-  int64 joinPlayerId = 2; // 申请加入公会的玩家id
-  bool isAgree = 3; // 是否同意加入
+  int64 joinPlayerId = 1; // 申请加入公会的玩家id
+  bool isAgree = 2; // 是否同意加入
 }
 
 // 同意加入公会返回结果
 // @Player
 message GuildJoinAgreeRes {
   string error = 1;
-  int64 id = 2; // 公会id
-  int64 joinPlayerId = 3; // 申请加入公会的玩家id
-  bool isAgree = 4; // 是否同意加入
+  int64 joinPlayerId = 2; // 申请加入公会的玩家id
+  bool isAgree = 3; // 是否同意加入
 }
 
 // 查看自己公会的数据

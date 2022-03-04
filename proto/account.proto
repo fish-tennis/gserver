@@ -2,8 +2,7 @@ syntax = "proto3";
 
 option go_package = "./pb";
 
-// 每个proto文件设置package为文件名,可以防止enum命名冲突
-package account;
+package gserver;
 
 // 账号
 message Account {

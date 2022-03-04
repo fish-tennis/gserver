@@ -53,5 +53,5 @@ message PlayerData {
   Quest quest = 8;
   map<int32,int32> bagCountItem = 9;
   map<int64,bytes> bagUniqueItem = 10;
-  bytes guildData = 11;
+  bytes guild = 11;
 }

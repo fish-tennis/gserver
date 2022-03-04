@@ -26,6 +26,7 @@ message GuildRoutePlayerMessageReq {
   int64 fromPlayerId = 1; // 玩家id
   int64 fromGuildId = 2;  // 玩家公会id
   int32 fromServerId = 3; // 玩家当前所在服务器id
-  int32 packetCommand = 4; // 消息号
-  google.protobuf.Any packetData = 5; // 消息内容
+  string fromPlayerName = 4; // 玩家名
+  int32 packetCommand = 5; // 消息号
+  google.protobuf.Any packetData = 6; // 消息内容
 }

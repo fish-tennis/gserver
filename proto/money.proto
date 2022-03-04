@@ -2,12 +2,11 @@ syntax = "proto3";
 
 option go_package = "./pb";
 
-// 每个proto文件设置package为文件名,可以防止enum命名冲突
-package money;
+package gserver;
 
 // 消息号定义
 enum CmdMoney {
-	Cmd_None         = 0; // 解决"The first enum value must be zero in proto3."的报错
+	CmdMoney_None = 0; // 解决"The first enum value must be zero in proto3."的报错
 	
 	// 消息号枚举值的命名规范:Cmd_MessageName,便于工具处理,生成一些辅助代码
 

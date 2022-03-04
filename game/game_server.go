@@ -234,7 +234,7 @@ func (this *GameServer) registerClientPacket(clientHandler *ClientConnectionHand
 	// proto_code_gen工具生成的回调函数
 	player_component_handler_auto_register(clientHandler)
 	// 公会相关消息
-	social.GuildHandlerAutoRegister(clientHandler, this)
+	social.GuildClientHandlerRegister(clientHandler, this)
 }
 
 // 心跳回复
@@ -252,6 +252,7 @@ func (this *GameServer) registerServerPacket(serverHandler *DefaultConnectionHan
 	serverHandler.Register(PacketCommand(pb.CmdInner_Cmd_KickPlayer), this.onKickPlayer, func() proto.Message {return new(pb.KickPlayer)})
 	serverHandler.Register(PacketCommand(pb.CmdRoute_Cmd_RoutePlayerMessage), this.onRoutePlayerMessage, func() proto.Message {return new(pb.RoutePlayerMessage)})
 	//serverHandler.autoRegisterPlayerComponentProto()
+	social.GuildServerHandlerRegister(serverHandler, this)
 }
 
 // 添加一个在线玩家

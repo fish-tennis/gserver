@@ -56,6 +56,11 @@ type DirtyMark interface {
 	ResetDirty()
 }
 
+type SaveableDirtyMark interface {
+	Saveable
+	DirtyMark
+}
+
 type BaseDirtyMark struct {
 	// 数据是否修改过
 	isChanged bool
@@ -96,6 +101,11 @@ type MapDirtyMark interface {
 
 	GetDirtyMap() map[string]bool
 	GetMapValue(key string) (value interface{}, exists bool)
+}
+
+type SaveableMapDirtyMark interface {
+	Saveable
+	MapDirtyMark
 }
 
 type BaseMapDirtyMark struct {
@@ -687,6 +697,10 @@ func SaveEntityToDb(entityDb db.EntityDb, entity Entity, removeCacheAfterSaveDb 
 		}
 		return true
 	})
+	if len(componentDatas) == 0 {
+		logger.Debug("ignore unchange data %v", entity.GetId())
+		return nil
+	}
 	saveDbErr := entityDb.SaveComponents(entity.GetId(), componentDatas)
 	if saveDbErr != nil {
 		logger.Error("SaveDb %v err:%v", entity.GetId(), saveDbErr)
@@ -694,7 +708,7 @@ func SaveEntityToDb(entityDb db.EntityDb, entity Entity, removeCacheAfterSaveDb 
 		logger.Debug("SaveDb %v", entity.GetId())
 	}
 	if saveDbErr == nil && len(delKeys) > 0 {
-		// 保存数据库成功后,删除缓存
+		// 保存数据库成功后,才删除缓存
 		cache.Get().Del(delKeys...)
 		logger.Debug("RemoveCache %v %v", entity.GetId(), delKeys)
 	}

@@ -103,6 +103,7 @@ func GuildRouteReqPacket(player *gameplayer.Player, guildId int64, packet *Proto
 			FromPlayerId: player.GetId(),
 			FromGuildId: guildId,
 			FromServerId: internal.GetServer().GetServerId(),
+			FromPlayerName: player.GetName(),
 			PacketCommand: int32(packet.Command()),
 			PacketData: any,
 		}
@@ -157,6 +158,8 @@ func OnGuildCreateReq(player *gameplayer.Player, req *pb.GuildCreateReq) {
 		BaseInfo: &pb.GuildInfo{
 			Id: newId,
 			Name: req.Name,
+			Intro: req.Intro,
+			MemberCount: 1,
 		},
 		Members: make(map[int64]*pb.GuildMemberData),
 	}

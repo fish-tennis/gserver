@@ -1,6 +1,9 @@
 package internal
 
-import "strings"
+import (
+	"github.com/fish-tennis/gserver/logger"
+	"strings"
+)
 
 // 实体接口
 type Entity interface {
@@ -8,10 +11,7 @@ type Entity interface {
 	GetId() int64
 
 	// 查找某个组件
-	GetComponent(componentName string) Component
-
-	// 组件列表
-	GetComponents() []Component
+	GetComponentByName(componentName string) Component
 
 	// 遍历组件
 	RangeComponent(fun func(component Component) bool)
@@ -25,6 +25,7 @@ type Component interface {
 
 	// 所属的实体
 	GetEntity() Entity
+	SetEntity(entity Entity)
 }
 
 // 事件接口
@@ -38,7 +39,7 @@ type BaseEntity struct {
 }
 
 // 获取组件
-func (this *BaseEntity) GetComponent(componentName string) Component {
+func (this *BaseEntity) GetComponentByName(componentName string) Component {
 	for _,v := range this.components {
 		if v.GetName() == componentName {
 			return v
@@ -65,6 +66,9 @@ func (this *BaseEntity) RangeComponent(fun func(component Component) bool) {
 }
 
 func (this *BaseEntity) AddComponent(component Component, sourceData interface{}) {
+	if len(component.GetName()) == 0 {
+		logger.Error("Component name empty")
+	}
 	if sourceData != nil {
 		if saveable, ok := component.(Saveable); ok {
 			LoadSaveable(saveable, sourceData)
@@ -102,6 +106,9 @@ func (this *BaseComponent) GetEntity() Entity {
 	return this.entity
 }
 
+func (this *BaseComponent) SetEntity(entity Entity) {
+	this.entity = entity
+}
 
 
 type DataComponent struct {

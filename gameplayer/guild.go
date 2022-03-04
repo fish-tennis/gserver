@@ -39,3 +39,11 @@ func (this *Guild) SetGuildId(guildId int64) {
 	this.data.GuildId = guildId
 	this.SetDirty()
 }
+
+//// 事件接口
+//func (this *Guild) OnEvent(event interface{}) {
+//	switch v := event.(type) {
+//	case *internal.EventPlayerEntryGame:
+//		this.OnPlayerEntryGame(v)
+//	}
+//}

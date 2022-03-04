@@ -11,6 +11,11 @@ import (
 	"time"
 )
 
+var (
+	accountName = "test3"
+	accountPwd = "test3"
+)
+
 // 模拟一个客户端
 func TestClient(t *testing.T)  {
 	connectionConfig := gnet.ConnectionConfig{
@@ -60,8 +65,8 @@ func (this *testLoginHandler) OnConnected(connection gnet.Connection, success bo
 		return
 	}
 	connection.Send(gnet.PacketCommand(pb.CmdLogin_Cmd_LoginReq), &pb.LoginReq{
-		AccountName: "test",
-		Password: "test",
+		AccountName: accountName,
+		Password: accountPwd,
 	})
 }
 
@@ -71,8 +76,8 @@ func (this *testLoginHandler) onLoginRes(connection gnet.Connection, packet *gne
 	res := packet.Message().(*pb.LoginRes)
 	if res.GetResult() == "NotReg" {
 		connection.Send(gnet.PacketCommand(pb.CmdLogin_Cmd_AccountReg), &pb.AccountReg{
-			AccountName: "test",
-			Password: "test",
+			AccountName: accountName,
+			Password: accountPwd,
 		})
 	} else if res.GetResult() == "ok" {
 		// 账号登录成功后,登录游戏服
@@ -107,8 +112,8 @@ func (this *testLoginHandler) onAccountRes(connection gnet.Connection, packet *g
 	res := packet.Message().(*pb.AccountRes)
 	if res.Result == "ok" {
 		connection.Send(gnet.PacketCommand(pb.CmdLogin_Cmd_LoginReq), &pb.LoginReq{
-			AccountName: "test2",
-			Password: "test2",
+			AccountName: accountName,
+			Password: accountPwd,
 		})
 	}
 }
@@ -117,8 +122,9 @@ func (this *testLoginHandler) onAccountRes(connection gnet.Connection, packet *g
 // 游戏服连接
 type testGameHandler struct {
 	gnet.DefaultConnectionHandler
-	loginRes *pb.LoginRes
 	ctx context.Context
+	loginRes *pb.LoginRes
+	entryGameRes *pb.PlayerEntryGameRes
 }
 
 func (this *testGameHandler) RegisterPacket() {
@@ -134,6 +140,7 @@ func (this *testGameHandler) RegisterPacket() {
 	this.Register(gnet.PacketCommand(pb.CmdGuild_Cmd_GuildCreateRes), this.onGuildCreateRes, func() proto.Message {return new(pb.GuildCreateRes)})
 	this.Register(gnet.PacketCommand(pb.CmdGuild_Cmd_GuildListRes), this.onGuildListRes, func() proto.Message {return new(pb.GuildListRes)})
 	this.Register(gnet.PacketCommand(pb.CmdGuild_Cmd_GuildJoinRes), this.onGuildJoinRes, func() proto.Message {return new(pb.GuildJoinRes)})
+	this.Register(gnet.PacketCommand(pb.CmdGuild_Cmd_RequestGuildDataRes), this.onRequestGuildDataRes, func() proto.Message {return new(pb.RequestGuildDataRes)})
 }
 
 func (this *testGameHandler) OnConnected(connection gnet.Connection, success bool) {
@@ -156,17 +163,19 @@ func (this *testGameHandler) onPlayerEntryGameRes(connection gnet.Connection, pa
 	logger.Debug("onPlayerEntryGameRes:%v", packet.Message())
 	res := packet.Message().(*pb.PlayerEntryGameRes)
 	if res.GetResult() == "ok" {
+		this.entryGameRes = res
 		// 玩家登录游戏服成功,模拟一个交互消息
 		connection.Send(gnet.PacketCommand(pb.CmdMoney_Cmd_CoinReq), &pb.CoinReq{
 			AddCoin: 1,
 		})
-		connection.Send(gnet.PacketCommand(pb.CmdGuild_Cmd_GuildCreateReq), &pb.GuildCreateReq{
-			Name: "test",
-			Intro: "empty",
-		})
 		connection.Send(gnet.PacketCommand(pb.CmdGuild_Cmd_GuildListReq), &pb.GuildListReq{
 			PageIndex: 0,
 		})
+		if res.GuildData.GuildId > 0 {
+			// 已有公会 获取公会数据
+			connection.Send(gnet.PacketCommand(pb.CmdGuild_Cmd_RequestGuildDataReq), &pb.RequestGuildDataReq{
+			})
+		}
 		return
 	}
 	// 还没角色,则创建新角色
@@ -175,7 +184,7 @@ func (this *testGameHandler) onPlayerEntryGameRes(connection gnet.Connection, pa
 			AccountId: this.loginRes.GetAccountId(),
 			LoginSession: this.loginRes.GetLoginSession(),
 			RegionId: 1,
-			Name: "TestClient",
+			Name: accountName,
 			Gender: 1,
 		})
 		return
@@ -219,13 +228,33 @@ func (this *testGameHandler) onGuildListRes(connection gnet.Connection, packet *
 	logger.Debug("onGuildListRes:%v", packet.Message())
 	res := packet.Message().(*pb.GuildListRes)
 	if len(res.GuildInfos) > 0 {
-		connection.Send(gnet.PacketCommand(pb.CmdGuild_Cmd_GuildJoinReq), &pb.GuildJoinReq{
-			Id: res.GuildInfos[0].Id,
+		if this.entryGameRes.GuildData.GuildId == 0 {
+			connection.Send(gnet.PacketCommand(pb.CmdGuild_Cmd_GuildJoinReq), &pb.GuildJoinReq{
+				Id: res.GuildInfos[0].Id,
+			})
+			logger.Debug("GuildJoinReq:%v", res.GuildInfos[0].Id)
+		}
+	} else {
+		// 没有公会 就创建一个
+		connection.Send(gnet.PacketCommand(pb.CmdGuild_Cmd_GuildCreateReq), &pb.GuildCreateReq{
+			Name: "test",
+			Intro: "empty",
 		})
-		logger.Debug("GuildJoinReq:%v", res.GuildInfos[0].Id)
 	}
 }
 
 func (this *testGameHandler) onGuildJoinRes(connection gnet.Connection, packet *gnet.ProtoPacket) {
 	logger.Debug("onGuildJoinRes:%v", packet.Message())
+}
+
+func (this *testGameHandler) onRequestGuildDataRes(connection gnet.Connection, packet *gnet.ProtoPacket) {
+	logger.Debug("onRequestGuildDataRes:%v", packet.Message())
+	res := packet.Message().(*pb.RequestGuildDataRes)
+	for _,v := range res.GuildData.JoinRequests {
+		// 同意入会请求
+		connection.Send(gnet.PacketCommand(pb.CmdGuild_Cmd_GuildJoinAgreeReq), &pb.GuildJoinAgreeReq{
+			JoinPlayerId: v.PlayerId,
+			IsAgree: true,
+		})
+	}
 }

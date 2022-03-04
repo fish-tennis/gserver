@@ -22,8 +22,6 @@ type Player struct {
 	// 区服id
 	regionId int32
 	//accountName string
-	//// 组件表
-	//components []PlayerComponent
 	// 关联的连接
 	connection Connection
 }
@@ -47,16 +45,6 @@ func (this *Player) GetAccountId() int64 {
 func (this *Player) GetRegionId() int32 {
 	return this.regionId
 }
-
-//// 获取组件
-//func (this *player) GetComponent(componentId int) entity.Component {
-//	for _,v := range this.components {
-//		if v.GetId() == componentId {
-//			return v
-//		}
-//	}
-//	return nil
-//}
 
 // 获取组件
 func (this *Player) GetComponent(componentName string) Component {
@@ -125,7 +113,7 @@ func CreatePlayerFromData(playerData *pb.PlayerData) *Player {
 	player.AddComponent(bagUniqueItem, playerData.BagUniqueItem)
 	player.AddComponent(NewBag(player, bagCountItem, bagUniqueItem), nil)
 	player.AddComponent(NewQuest(player), playerData.Quest)
-	player.AddComponent(NewGuild(player), playerData.GuildData)
+	player.AddComponent(NewGuild(player), playerData.Guild)
 	return player
 }
 

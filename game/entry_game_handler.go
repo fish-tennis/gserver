@@ -89,6 +89,7 @@ func onPlayerEntryGameReq(connection Connection, packet *ProtoPacket) {
 		AccountId: entryPlayer.GetAccountId(),
 		PlayerId:  entryPlayer.GetId(),
 		RegionId:  entryPlayer.GetRegionId(),
+		GuildData: entryPlayer.GetGuild().GetGuildData(),
 	})
 	// 分发事件
 	entryPlayer.FireEvent(&internal.EventPlayerEntryGame{IsReconnect: isReconnect})
@@ -96,6 +97,7 @@ func onPlayerEntryGameReq(connection Connection, packet *ProtoPacket) {
 
 // 创建角色
 func onCreatePlayerReq(connection Connection, packet *ProtoPacket) {
+	logger.Debug("onCreatePlayerReq %v", packet.Message())
 	req := packet.Message().(*pb.CreatePlayerReq)
 	if connection.GetTag() != nil {
 		connection.Send(PacketCommand(pb.CmdLogin_Cmd_CreatePlayerRes), &pb.CreatePlayerRes{
@@ -129,8 +131,9 @@ func onCreatePlayerReq(connection Connection, packet *ProtoPacket) {
 		}
 		connection.Send(PacketCommand(pb.CmdLogin_Cmd_CreatePlayerRes), &pb.CreatePlayerRes{
 			Result: result,
+			Name: playerData.Name,
 		})
-		logger.Error("CreatePlayer result:%v err:%v", result, err)
+		logger.Error("CreatePlayer result:%v err:%v playerData:%v", result, err, playerData)
 		return
 	}
 	logger.Debug("CreatePlayer:%v %v", playerData.Id, playerData.Name)
