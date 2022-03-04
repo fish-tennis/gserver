@@ -12,8 +12,8 @@ import (
 )
 
 var (
-	accountName = "test3"
-	accountPwd = "test3"
+	accountName = "test"
+	accountPwd = "test"
 )
 
 // 模拟一个客户端

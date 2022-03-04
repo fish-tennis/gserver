@@ -9,6 +9,7 @@ import (
 	"github.com/fish-tennis/gserver/pb"
 	"github.com/fish-tennis/gserver/util"
 	"google.golang.org/protobuf/proto"
+	"sort"
 	"sync"
 )
 
@@ -196,6 +197,9 @@ func (this *ServerList) GetServersByType(serverType string) []*pb.ServerInfo {
 		for idx,info := range infoList {
 			copyInfoList[idx] = info
 		}
+		sort.Slice(copyInfoList, func(i, j int) bool {
+			return copyInfoList[i].ServerId < copyInfoList[j].ServerId
+		})
 		return copyInfoList
 	}
 	return nil

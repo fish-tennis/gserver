@@ -5,7 +5,9 @@ import (
 	"github.com/fish-tennis/gserver/gameplayer"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
+	"github.com/fish-tennis/gserver/util"
 	"google.golang.org/protobuf/proto"
+	"reflect"
 )
 
 func GuildClientHandlerRegister(handler PacketHandlerRegister, playerMgr gameplayer.PlayerMgr) {
@@ -50,7 +52,29 @@ func GuildClientHandlerRegister(handler PacketHandlerRegister, playerMgr gamepla
 		return new(pb.GuildJoinReq)
 	})
 
-	handler.Register(PacketCommand(pb.CmdGuild_Cmd_RequestGuildDataReq), func(connection Connection, packet *ProtoPacket) {
+	//handler.Register(PacketCommand(pb.CmdGuild_Cmd_RequestGuildDataReq), func(connection Connection, packet *ProtoPacket) {
+	//	if connection.GetTag() != nil {
+	//		player := playerMgr.GetPlayer(connection.GetTag().(int64))
+	//		if player != nil {
+	//			guildId := player.GetGuild().GetGuildData().GuildId
+	//			if guildId == 0 {
+	//				logger.Error("no guild %v", player.GetId())
+	//				return
+	//			}
+	//			GuildRouteReqPacket(player, guildId, packet)
+	//		}
+	//	}
+	//}, func() proto.Message {
+	//	return new(pb.RequestGuildDataReq)
+	//})
+	RegisterPlayerGuildHandler(handler, playerMgr, new(pb.RequestGuildDataReq))
+	RegisterPlayerGuildHandler(handler, playerMgr, new(pb.GuildJoinAgreeReq))
+}
+
+func RegisterPlayerGuildHandler(handler PacketHandlerRegister, playerMgr gameplayer.PlayerMgr, message proto.Message) {
+	messageName := message.ProtoReflect().Descriptor().Name()
+	cmd := util.GetMessageIdByMessageName("Guild", string(messageName))
+	handler.Register(PacketCommand(uint16(cmd)), func(connection Connection, packet *ProtoPacket) {
 		if connection.GetTag() != nil {
 			player := playerMgr.GetPlayer(connection.GetTag().(int64))
 			if player != nil {
@@ -63,9 +87,7 @@ func GuildClientHandlerRegister(handler PacketHandlerRegister, playerMgr gamepla
 			}
 		}
 	}, func() proto.Message {
-		return new(pb.RequestGuildDataReq)
+		return reflect.New(reflect.TypeOf(message).Elem()).Interface().(proto.Message)
 	})
-
-
-
+	logger.Debug("RegisterPlayerGuildHandler %v->%v", cmd, messageName)
 }

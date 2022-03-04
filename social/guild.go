@@ -50,7 +50,7 @@ func (this *Guild) PushMessage(guildMessage *GuildMessage) {
 	this.messages <- guildMessage
 }
 
-// 消息处理协程
+// 开启消息处理协程
 func (this *Guild) StartProcessRoutine() {
 	logger.Debug("StartProcessRoutine %v", this.GetId())
 	GetServer().GetWaitGroup().Add(1)
@@ -74,8 +74,8 @@ func (this *Guild) StartProcessRoutine() {
 					return
 				}
 				this.processMessage(message)
-				this.SaveCache()
-				// 临时代码
+				//this.SaveCache()
+				// 演示一种直接保存数据库的用法,可以用于那些不经常修改的数据
 				SaveEntityToDb(GetGuildDb(), this, false)
 			}
 		}
@@ -89,9 +89,15 @@ func (this *Guild) processMessage(message *GuildMessage) {
 		}
 	}()
 	switch v := message.message.(type) {
+	case *pb.RequestGuildDataReq:
+		logger.Debug("%v", v)
+		this.OnRequestGuildDataReq(message, v)
 	case *pb.GuildJoinReq:
 		logger.Debug("%v", v)
 		this.OnGuildJoinReq(message, v)
+	case *pb.GuildJoinAgreeReq:
+		logger.Debug("%v", v)
+		this.OnGuildJoinAgreeReq(message, v)
 	default:
 		logger.Debug("ignore %v", proto.MessageName(v))
 	}
@@ -101,6 +107,7 @@ func (this *Guild) GetMember(playerId int64) *pb.GuildMemberData {
 	return this.members.Get(playerId)
 }
 
+// 路由玩家消息
 func (this *Guild) RoutePlayerPacket(guildMessage *GuildMessage, cmd PacketCommand, message proto.Message) {
 	RoutePlayerPacket(guildMessage.fromPlayerId, guildMessage.fromServerId, cmd, message)
 }
@@ -124,7 +131,7 @@ func (this *Guild) OnGuildJoinReq(message *GuildMessage, req *pb.GuildJoinReq) {
 	logger.Debug("JoinRequests %v %v", this.GetId(), message.fromPlayerId)
 }
 
-// 同意加入公会
+// 公会管理者同意申请人加入公会
 func (this *Guild) OnGuildJoinAgreeReq(message *GuildMessage, req *pb.GuildJoinAgreeReq) {
 	member := this.GetMember(message.fromPlayerId)
 	if member == nil {

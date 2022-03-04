@@ -2,6 +2,7 @@ package social
 
 import (
 	"fmt"
+	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 	"github.com/fish-tennis/gserver/util"
 	"strings"
@@ -85,11 +86,13 @@ func (g *GuildMembers) Get(playerId int64) *pb.GuildMemberData {
 func (g *GuildMembers) Add(member *pb.GuildMemberData) {
 	g.data[member.Id] = member
 	g.SetDirty(member.Id, true)
+	logger.Debug("Add member:%v", member)
 }
 
 func (g *GuildMembers) Remove(playerId int64) {
 	delete(g.data, playerId)
 	g.SetDirty(playerId, false)
+	logger.Debug("Remove member:%v", playerId)
 }
 
 

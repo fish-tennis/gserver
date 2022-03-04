@@ -87,6 +87,9 @@ func (this *RedisCache) SetMap(k string, m interface{}) error {
 		value := convertValueToStringOrInterface(it.Value())
 		cacheData[key] = value
 	}
+	if len(cacheData) == 0 {
+		return nil
+	}
 	_,err := this.redisClient.HSet(context.Background(), k, cacheData).Result()
 	return err
 }

@@ -123,9 +123,9 @@ func OnGuildListReq(player *gameplayer.Player, req *pb.GuildListReq) {
 		logger.Error("db err:%v", err)
 		return
 	}
-	cursor,err := col.Find(context.Background(), bson.D{}, options.Find().SetSkip(pageSize*int64(req.PageIndex)).SetLimit(pageSize))
-	if err != nil {
-		logger.Error("db err:%v", err)
+	cursor,dbErr := col.Find(context.Background(), bson.D{}, options.Find().SetSkip(pageSize*int64(req.PageIndex)).SetLimit(pageSize))
+	if dbErr != nil {
+		logger.Error("db err:%v", dbErr)
 		return
 	}
 	var guildInfos []*pb.GuildInfo

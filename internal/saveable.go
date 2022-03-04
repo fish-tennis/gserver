@@ -18,6 +18,8 @@ type Saveable interface {
 	// 数据是否改变过
 	IsChanged() bool
 
+	ResetChanged()
+
 	// 需要保存到数据库的数据
 	// 支持类型:
 	// proto.Message
@@ -72,6 +74,10 @@ func (this *BaseDirtyMark) IsChanged() bool {
 	return this.isChanged
 }
 
+func (this *BaseDirtyMark) ResetChanged() {
+	this.isChanged = false
+}
+
 func (this *BaseDirtyMark) IsDirty() bool {
 	return this.isDirty
 }
@@ -116,6 +122,10 @@ type BaseMapDirtyMark struct {
 
 func (this *BaseMapDirtyMark) IsChanged() bool {
 	return this.isChanged
+}
+
+func (this *BaseMapDirtyMark) ResetChanged() {
+	this.isChanged = false
 }
 
 func (this *BaseMapDirtyMark) IsDirty() bool {
@@ -643,6 +653,7 @@ func LoadFromCache(saveable Saveable) error {
 // Entity数据保存到数据库
 func SaveEntityToDb(entityDb db.EntityDb, entity Entity, removeCacheAfterSaveDb bool) error {
 	componentDatas := make(map[string]interface{})
+	var saved []Saveable
 	var delKeys []string
 	entity.RangeComponent(func(component Component) bool {
 		if saveable, ok := component.(Saveable); ok {
@@ -665,6 +676,7 @@ func SaveEntityToDb(entityDb db.EntityDb, entity Entity, removeCacheAfterSaveDb 
 			if removeCacheAfterSaveDb {
 				delKeys = append(delKeys, saveable.GetCacheKey())
 			}
+			saved = append(saved, saveable)
 			logger.Debug("SaveDb %v %v", entity.GetId(), component.GetName())
 		}
 		if compositeSaveable, ok := component.(CompositeSaveable); ok {
@@ -689,6 +701,7 @@ func SaveEntityToDb(entityDb db.EntityDb, entity Entity, removeCacheAfterSaveDb 
 				if removeCacheAfterSaveDb {
 					delKeys = append(delKeys, saveable.GetCacheKey())
 				}
+				saved = append(saved, saveable)
 				logger.Debug("SaveDb %v %v.%v", entity.GetId(), component.GetNameLower(), saveable.Key())
 			}
 			if len(compositeData) > 0 {
@@ -707,10 +720,15 @@ func SaveEntityToDb(entityDb db.EntityDb, entity Entity, removeCacheAfterSaveDb 
 	} else {
 		logger.Debug("SaveDb %v", entity.GetId())
 	}
-	if saveDbErr == nil && len(delKeys) > 0 {
-		// 保存数据库成功后,才删除缓存
-		cache.Get().Del(delKeys...)
-		logger.Debug("RemoveCache %v %v", entity.GetId(), delKeys)
+	if saveDbErr == nil {
+		for _,saveable := range saved {
+			saveable.ResetChanged()
+		}
+		if len(delKeys) > 0 {
+			// 保存数据库成功后,才删除缓存
+			cache.Get().Del(delKeys...)
+			logger.Debug("RemoveCache %v %v", entity.GetId(), delKeys)
+		}
 	}
 	return saveDbErr
 }
