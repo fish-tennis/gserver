@@ -35,13 +35,14 @@ type ServerList struct {
 	// 按照服务器类型分组的服务器列表信息
 	serverInfoTypeMap map[string][]*pb.ServerInfo
 	serverInfoTypeMapMutex sync.RWMutex
-	// 自己的服务器信息
+	// 本地服务器信息
 	localServerInfo *pb.ServerInfo
-	// 已连接的服务器
+	// 已连接的服务器连接
 	connectedServerConnectors      map[int32]Connection // serverId-Connection
 	connectedServerConnectorsMutex sync.RWMutex
 	// 服务器连接创建函数,供外部扩展
 	serverConnectorFunc func(ctx context.Context, info *pb.ServerInfo) Connection
+	listUpdateHooks []func(serverList map[string][]*pb.ServerInfo, oldServerList map[string][]*pb.ServerInfo)
 }
 
 func NewServerList() *ServerList {
@@ -105,9 +106,14 @@ func (this *ServerList) FindAndConnectServers(ctx context.Context) {
 			infoSlice = append(infoSlice, info)
 			serverInfoTypeMap[info.GetServerType()] = infoSlice
 		}
+		var oldList map[string][]*pb.ServerInfo
 		this.serverInfoTypeMapMutex.Lock()
+		oldList = this.serverInfoTypeMap
 		this.serverInfoTypeMap = serverInfoTypeMap
 		this.serverInfoTypeMapMutex.Unlock()
+		for _,hookFunc := range this.listUpdateHooks {
+			hookFunc(serverInfoTypeMap, oldList)
+		}
 	}
 
 	for _,info := range infoMap {
@@ -220,4 +226,9 @@ func (this *ServerList) SendToServer(serverId int32, cmd PacketCommand, message 
 		return connection.Send(cmd, message)
 	}
 	return false
+}
+
+// 添加服务器列表更新回调
+func (this *ServerList) AddListUpdateHook(onListUpdateFunc ...func(serverList map[string][]*pb.ServerInfo, oldServerList map[string][]*pb.ServerInfo)) {
+	this.listUpdateHooks = append(this.listUpdateHooks, onListUpdateFunc...)
 }

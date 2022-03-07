@@ -8,6 +8,7 @@ import (
 	"github.com/fish-tennis/gserver/pb"
 	"github.com/fish-tennis/gserver/util"
 	"google.golang.org/protobuf/proto"
+	"sync"
 )
 
 var _ Entity = (*Guild)(nil)
@@ -16,22 +17,26 @@ var _ Entity = (*Guild)(nil)
 type Guild struct {
 	BaseEntity
 	messages chan *GuildMessage
-	baseInfo *GuildBaseInfo
-	members *GuildMembers
+	stopChan chan struct{}
+	stopOnce sync.Once
+
+	baseInfo     *GuildBaseInfo
+	members      *GuildMembers
 	joinRequests *GuildJoinRequests
 }
 
 type GuildMessage struct {
-	fromPlayerId  int64
-	fromServerId  int32
+	fromPlayerId   int64
+	fromServerId   int32
 	fromPlayerName string
-	cmd PacketCommand
-	message proto.Message
+	cmd            PacketCommand
+	message        proto.Message
 }
 
 func NewGuild(guildData *pb.GuildData) *Guild {
 	guild := &Guild{
 		messages: make(chan *GuildMessage, 32),
+		stopChan: make(chan struct{}, 1),
 	}
 	guild.baseInfo = NewGuildBaseInfo(guild, guildData.BaseInfo)
 	guild.AddComponent(guild.baseInfo, nil)
@@ -51,12 +56,18 @@ func (this *Guild) PushMessage(guildMessage *GuildMessage) {
 }
 
 // 开启消息处理协程
-func (this *Guild) StartProcessRoutine() {
+func (this *Guild) StartProcessRoutine() bool {
 	logger.Debug("StartProcessRoutine %v", this.GetId())
+	// redis实现的分布式锁,保证同一个公会的逻辑处理协程只会在一个服务器上
+	if !guildServerLock(this.GetId()) {
+		return false
+	}
 	GetServer().GetWaitGroup().Add(1)
 	go func(ctx context.Context) {
 		defer func() {
-			SaveEntityToDb(GetGuildDb(), this, true)
+			// 协程结束的时候,分布式锁UnLock
+			guildServerUnlock(this.GetId())
+			//SaveEntityToDb(GetGuildDb(), this, true)
 			GetServer().GetWaitGroup().Done()
 			if err := recover(); err != nil {
 				logger.LogStack()
@@ -69,17 +80,25 @@ func (this *Guild) StartProcessRoutine() {
 			case <-ctx.Done():
 				logger.Info("exitNotify")
 				return
-			case message := <- this.messages:
-				if message == nil {
-					return
-				}
+			case <-this.stopChan:
+				logger.Debug("stop")
+				return
+			case message := <-this.messages:
 				this.processMessage(message)
 				//this.SaveCache()
-				// 演示一种直接保存数据库的用法,可以用于那些不经常修改的数据
+				// 这里演示一种直接保存数据库的用法,可以用于那些不经常修改的数据
+				// 这种方式,省去了要处理crash后从缓存恢复数据的步骤
 				SaveEntityToDb(GetGuildDb(), this, false)
 			}
 		}
 	}(GetServer().GetContext())
+	return true
+}
+
+func (this *Guild) Stop() {
+	this.stopOnce.Do(func() {
+		this.stopChan <- struct{}{}
+	})
 }
 
 func (this *Guild) processMessage(message *GuildMessage) {
@@ -121,8 +140,8 @@ func (this *Guild) OnGuildJoinReq(message *GuildMessage, req *pb.GuildJoinReq) {
 		return
 	}
 	this.joinRequests.Add(&pb.GuildJoinRequest{
-		PlayerId: message.fromPlayerId,
-		PlayerName: message.fromPlayerName,
+		PlayerId:     message.fromPlayerId,
+		PlayerName:   message.fromPlayerName,
 		TimestampSec: int32(util.GetCurrentTimeStamp()),
 	})
 	this.RoutePlayerPacket(message, PacketCommand(pb.CmdGuild_Cmd_GuildJoinRes), &pb.GuildJoinRes{
@@ -147,8 +166,8 @@ func (this *Guild) OnGuildJoinAgreeReq(message *GuildMessage, req *pb.GuildJoinA
 	if req.IsAgree {
 		// TODO:检查该玩家是否已经有公会了
 		this.members.Add(&pb.GuildMemberData{
-			Id: joinRequest.PlayerId,
-			Name: joinRequest.PlayerName,
+			Id:       joinRequest.PlayerId,
+			Name:     joinRequest.PlayerName,
 			Position: int32(pb.GuildPosition_Member),
 		})
 		this.baseInfo.SetMemberCount(int32(len(this.members.data)))
@@ -158,7 +177,7 @@ func (this *Guild) OnGuildJoinAgreeReq(message *GuildMessage, req *pb.GuildJoinA
 	this.joinRequests.Remove(req.JoinPlayerId)
 	this.RoutePlayerPacket(message, PacketCommand(pb.CmdGuild_Cmd_GuildJoinAgreeRes), &pb.GuildJoinAgreeRes{
 		JoinPlayerId: joinRequest.PlayerId,
-		IsAgree: req.IsAgree,
+		IsAgree:      req.IsAgree,
 	})
 }
 
@@ -169,9 +188,9 @@ func (this *Guild) OnRequestGuildDataReq(message *GuildMessage, req *pb.RequestG
 	}
 	this.RoutePlayerPacket(message, PacketCommand(pb.CmdGuild_Cmd_RequestGuildDataRes), &pb.RequestGuildDataRes{
 		GuildData: &pb.GuildData{
-			Id: this.GetId(),
-			BaseInfo: this.baseInfo.data,
-			Members: this.members.data,
+			Id:           this.GetId(),
+			BaseInfo:     this.baseInfo.data,
+			Members:      this.members.data,
 			JoinRequests: this.joinRequests.data,
 		},
 	})

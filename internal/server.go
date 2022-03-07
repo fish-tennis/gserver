@@ -88,6 +88,7 @@ type BaseServer struct {
 	defaultServerConnectorCodec *ProtoCodec
 	ctx context.Context
 	wg sync.WaitGroup
+	onServerInitFuncs []func()
 }
 
 func (this *BaseServer) GetConfigFile() string {
@@ -114,6 +115,11 @@ func (this *BaseServer) GetServerList() *ServerList {
 	return this.serverList
 }
 
+// 添加初始化回调函数
+func (this *BaseServer) AddInitHook(initFunc ...func()) {
+	this.onServerInitFuncs = append(this.onServerInitFuncs, initFunc...)
+}
+
 // 加载配置文件
 func (this *BaseServer) Init(ctx context.Context, configFile string) bool {
 	logger.Info("BaseServer.Init")
@@ -126,6 +132,9 @@ func (this *BaseServer) Init(ctx context.Context, configFile string) bool {
 	// 初始化id生成器
 	util.InitIdGenerator(uint16(this.serverInfo.ServerId))
 	this.ctx = ctx
+	for _,initFunc := range this.onServerInitFuncs {
+		initFunc()
+	}
 	return true
 }
 

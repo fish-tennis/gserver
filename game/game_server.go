@@ -56,9 +56,17 @@ func (this *GameServer) Init(ctx context.Context, configFile string) bool {
 	this.initCache()
 
 	netMgr := GetNetMgr()
-	// 监听客户端
+	// 客户端的codec和handler
 	clientCodec := NewProtoCodec(nil)
 	clientHandler := NewClientConnectionHandler(clientCodec)
+
+	// 服务器的codec和handler
+	serverCodec := NewProtoCodec(nil)
+	serverHandler := NewDefaultConnectionHandler(serverCodec)
+
+	// 其他模块初始化
+	social.OnServerInit(clientHandler, serverHandler, this)
+
 	this.registerClientPacket(clientHandler)
 	if netMgr.NewListener(ctx, this.config.ClientListenAddr, this.config.ClientConnConfig, clientCodec,
 		clientHandler, &ClientListerHandler{}) == nil {
@@ -66,9 +74,6 @@ func (this *GameServer) Init(ctx context.Context, configFile string) bool {
 		return false
 	}
 
-	// 监听服务器
-	serverCodec := NewProtoCodec(nil)
-	serverHandler := NewDefaultConnectionHandler(serverCodec)
 	this.registerServerPacket(serverHandler)
 	this.serverListener = netMgr.NewListener(ctx, this.config.ServerListenAddr, this.config.ServerConnConfig, serverCodec,
 		serverHandler, nil)
@@ -233,8 +238,6 @@ func (this *GameServer) registerClientPacket(clientHandler *ClientConnectionHand
 	clientHandler.autoRegisterPlayerComponentProto()
 	// proto_code_gen工具生成的回调函数
 	player_component_handler_auto_register(clientHandler)
-	// 公会相关消息
-	social.GuildClientHandlerRegister(clientHandler, this)
 }
 
 // 心跳回复
@@ -252,7 +255,6 @@ func (this *GameServer) registerServerPacket(serverHandler *DefaultConnectionHan
 	serverHandler.Register(PacketCommand(pb.CmdInner_Cmd_KickPlayer), this.onKickPlayer, func() proto.Message {return new(pb.KickPlayer)})
 	serverHandler.Register(PacketCommand(pb.CmdRoute_Cmd_RoutePlayerMessage), this.onRoutePlayerMessage, func() proto.Message {return new(pb.RoutePlayerMessage)})
 	//serverHandler.autoRegisterPlayerComponentProto()
-	social.GuildServerHandlerRegister(serverHandler, this)
 }
 
 // 添加一个在线玩家
