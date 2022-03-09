@@ -10,6 +10,7 @@ import (
 	"github.com/fish-tennis/gserver/game"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/login"
+	"github.com/fish-tennis/gserver/testclient"
 	"math/rand"
 	"os"
 	"os/exec"
@@ -118,6 +119,8 @@ func createServer(serverType string) internal.Server {
 		return new(login.LoginServer)
 	case "game":
 		return new(game.GameServer)
+	case "testclient":
+		return new(testclient.TestClient)
 	}
 	panic("err server type")
 }

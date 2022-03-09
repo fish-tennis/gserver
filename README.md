@@ -18,14 +18,15 @@
 - 玩家数据修改即时缓存,下线才保存到数据库
 - 游戏服宕机后重启,自动修复缓存数据,防止玩家数据回档
 - 工具生成消息注册和发送消息代码[proto_code_gen](https://github.com/fish-tennis/proto_code_gen)
+- 通过反射自动注册消息回调
 - 采用Entity-Component设计,模块解耦
 - 玩家组件事件分发
 - 业务层和数据层分离,业务代码无需操作数据库和缓存
+- 通过公会功能演示如何开发分布式的功能
+- 通过公会功能演示服务器动态扩缩容的处理方式
 
 ## 编译
 项目使用go.mod
-
-国内用户,可以设置 GOPROXY=https://goproxy.cn
 
 ## 编码规范参考
 [https://github.com/uber-go/guide](https://github.com/uber-go/guide)

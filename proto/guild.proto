@@ -16,8 +16,8 @@ enum CmdGuild {
   Cmd_GuildJoinRes      = 2006;
   Cmd_GuildJoinAgreeReq = 2007;
   Cmd_GuildJoinAgreeRes = 2008;
-  Cmd_RequestGuildDataReq = 2009;
-  Cmd_RequestGuildDataRes = 2010;
+  Cmd_GuildDataViewReq  = 2009;
+  Cmd_GuildDataViewRes  = 2010;
 }
 
 enum GuildPosition {
@@ -110,11 +110,11 @@ message GuildJoinAgreeRes {
 }
 
 // 查看自己公会的数据
-message RequestGuildDataReq {
+message GuildDataViewReq {
 }
 
 // 查看公会数据返回结果
 // @Player
-message RequestGuildDataRes {
+message GuildDataViewRes {
   GuildData guildData = 1;
 }

@@ -69,8 +69,6 @@ func (this *ClientConnectionHandler) registerMethod(command PacketCommand, compo
 }
 
 // 根据proto的命名规则和玩家组件里消息回调的格式,通过反射自动生成消息的注册
-// 用了反射,性能有所损失
-// 也可以用proto_code_gen工具来生成代码,可以避免用反射所带来的性能损失
 func (this *ClientConnectionHandler) autoRegisterPlayerComponentProto() {
 	player := gameplayer.CreateTempPlayer(0, 0)
 	for _, component := range player.GetComponents() {
@@ -97,7 +95,7 @@ func (this *ClientConnectionHandler) autoRegisterPlayerComponentProto() {
 				logger.Debug("methodName not match:%v", method.Name)
 				continue
 			}
-			messageId := util.GetMessageIdByMessageName(componentStructName, messageName)
+			messageId := util.GetMessageIdByMessageName("gserver", componentStructName, messageName)
 			if messageId == 0 {
 				continue
 			}

@@ -129,7 +129,6 @@ type CoinRes struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	//@inject_tag: send:"Player"
 	TotalCoin int32 `protobuf:"varint,1,opt,name=totalCoin,proto3" json:"totalCoin,omitempty"` // 当前总值
 }
 

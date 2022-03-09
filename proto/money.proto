@@ -26,6 +26,5 @@ message CoinReq {
 // @Player表示是服务器上的玩家对象发给客户端的消息,工具会生成相应的辅助代码
 // @Player
 message CoinRes {
-  //@inject_tag: send:"Player"
   int32 totalCoin = 1; // 当前总值
 }

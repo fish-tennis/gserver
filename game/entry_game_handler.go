@@ -3,7 +3,7 @@ package game
 import (
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
-	"github.com/fish-tennis/gserver/internal"
+	. "github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/db"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
@@ -16,14 +16,14 @@ func onPlayerEntryGameReq(connection Connection, packet *ProtoPacket) {
 	req := packet.Message().(*pb.PlayerEntryGameReq)
 	if connection.GetTag() != nil {
 		connection.Send(PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameRes), &pb.PlayerEntryGameRes{
-			Result: "HasLogin",
+			Error: "HasLogin",
 		})
 		return
 	}
 	// 验证LoginSession
 	if !cache.VerifyLoginSession(req.GetAccountId(), req.GetLoginSession()) {
 		connection.Send(PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameRes), &pb.PlayerEntryGameRes{
-			Result: "SessionError",
+			Error: "SessionError",
 		})
 		return
 	}
@@ -31,7 +31,7 @@ func onPlayerEntryGameReq(connection Connection, packet *ProtoPacket) {
 	hasData,err := db.GetPlayerDb().FindPlayerByAccountId(req.GetAccountId(), req.GetRegionId(), playerData)
 	if err != nil {
 		connection.Send(PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameRes), &pb.PlayerEntryGameRes{
-			Result: "DbError",
+			Error: "DbError",
 		})
 		logger.Error(err.Error())
 		return
@@ -40,7 +40,7 @@ func onPlayerEntryGameReq(connection Connection, packet *ProtoPacket) {
 	isReconnect := false
 	if !hasData {
 		connection.Send(PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameRes), &pb.PlayerEntryGameRes{
-			Result: "NoPlayer",
+			Error: "NoPlayer",
 			AccountId: req.GetAccountId(),
 			RegionId: req.GetRegionId(),
 		})
@@ -66,14 +66,14 @@ func onPlayerEntryGameReq(connection Connection, packet *ProtoPacket) {
 				entryPlayer.GetAccountId(), entryPlayer.GetId(), gameServerId)
 			if gameServerId > 0 {
 				// 通知目标游戏服踢掉玩家
-				_gameServer.SendToServer(gameServerId, PacketCommand(pb.CmdInner_Cmd_KickPlayer), &pb.KickPlayer{
+				SendKickPlayer(gameServerId, &pb.KickPlayer{
 					AccountId: entryPlayer.GetAccountId(),
 					PlayerId:  entryPlayer.GetId(),
 				})
 			}
 			// 通知客户端稍后重新登录
 			connection.Send(PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameRes), &pb.PlayerEntryGameRes{
-				Result: "TryLater",
+				Error: "TryLater",
 			})
 			return
 		}
@@ -85,14 +85,13 @@ func onPlayerEntryGameReq(connection Connection, packet *ProtoPacket) {
 	entryPlayer.SetConnection(connection)
 	logger.Debug("entry entryPlayer:%v %v", entryPlayer.GetId(), entryPlayer.GetName())
 	entryPlayer.SendPlayerEntryGameRes(&pb.PlayerEntryGameRes{
-		Result:    "ok",
 		AccountId: entryPlayer.GetAccountId(),
 		PlayerId:  entryPlayer.GetId(),
 		RegionId:  entryPlayer.GetRegionId(),
 		GuildData: entryPlayer.GetGuild().GetGuildData(),
 	})
 	// 分发事件
-	entryPlayer.FireEvent(&internal.EventPlayerEntryGame{IsReconnect: isReconnect})
+	entryPlayer.FireEvent(&EventPlayerEntryGame{IsReconnect: isReconnect})
 }
 
 // 创建角色
@@ -101,14 +100,14 @@ func onCreatePlayerReq(connection Connection, packet *ProtoPacket) {
 	req := packet.Message().(*pb.CreatePlayerReq)
 	if connection.GetTag() != nil {
 		connection.Send(PacketCommand(pb.CmdLogin_Cmd_CreatePlayerRes), &pb.CreatePlayerRes{
-			Result: "HasLogin",
+			Error: "HasLogin",
 		})
 		return
 	}
 	// 验证LoginSession
 	if !cache.VerifyLoginSession(req.GetAccountId(), req.GetLoginSession()) {
 		connection.Send(PacketCommand(pb.CmdLogin_Cmd_CreatePlayerRes), &pb.CreatePlayerRes{
-			Result: "SessionError",
+			Error: "SessionError",
 		})
 		return
 	}
@@ -130,7 +129,7 @@ func onCreatePlayerReq(connection Connection, packet *ProtoPacket) {
 			result = "DuplicateName"
 		}
 		connection.Send(PacketCommand(pb.CmdLogin_Cmd_CreatePlayerRes), &pb.CreatePlayerRes{
-			Result: result,
+			Error: result,
 			Name: playerData.Name,
 		})
 		logger.Error("CreatePlayer result:%v err:%v playerData:%v", result, err, playerData)
@@ -138,7 +137,6 @@ func onCreatePlayerReq(connection Connection, packet *ProtoPacket) {
 	}
 	logger.Debug("CreatePlayer:%v %v", playerData.Id, playerData.Name)
 	connection.Send(PacketCommand(pb.CmdLogin_Cmd_CreatePlayerRes), &pb.CreatePlayerRes{
-		Result: "ok",
 		AccountId: req.AccountId,
 		RegionId: req.RegionId,
 		Name: req.Name,

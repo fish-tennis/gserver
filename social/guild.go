@@ -108,9 +108,9 @@ func (this *Guild) processMessage(message *GuildMessage) {
 		}
 	}()
 	switch v := message.message.(type) {
-	case *pb.RequestGuildDataReq:
+	case *pb.GuildDataViewReq:
 		logger.Debug("%v", v)
-		this.OnRequestGuildDataReq(message, v)
+		this.OnGuildDataViewReq(message, v)
 	case *pb.GuildJoinReq:
 		logger.Debug("%v", v)
 		this.OnGuildJoinReq(message, v)
@@ -182,11 +182,11 @@ func (this *Guild) OnGuildJoinAgreeReq(message *GuildMessage, req *pb.GuildJoinA
 }
 
 // 查看公会数据
-func (this *Guild) OnRequestGuildDataReq(message *GuildMessage, req *pb.RequestGuildDataReq) {
+func (this *Guild) OnGuildDataViewReq(message *GuildMessage, req *pb.GuildDataViewReq) {
 	if this.GetMember(message.fromPlayerId) == nil {
 		return
 	}
-	this.RoutePlayerPacket(message, PacketCommand(pb.CmdGuild_Cmd_RequestGuildDataRes), &pb.RequestGuildDataRes{
+	this.RoutePlayerPacket(message, PacketCommand(pb.CmdGuild_Cmd_GuildDataViewRes), &pb.GuildDataViewRes{
 		GuildData: &pb.GuildData{
 			Id:           this.GetId(),
 			BaseInfo:     this.baseInfo.data,

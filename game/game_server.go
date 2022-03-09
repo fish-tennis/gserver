@@ -7,10 +7,10 @@ import (
 	"github.com/fish-tennis/gserver/cache"
 	"github.com/fish-tennis/gserver/db"
 	"github.com/fish-tennis/gserver/db/mongodb"
+	"github.com/fish-tennis/gserver/gameplayer"
 	. "github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
-	"github.com/fish-tennis/gserver/gameplayer"
 	"github.com/fish-tennis/gserver/social"
 	"google.golang.org/protobuf/proto"
 	"os"
@@ -212,19 +212,6 @@ func (this *GameServer) repairPlayerCache(playerId,accountId int64) error {
 			}
 		}
 	}
-	//for componentName,_ := range gameplayer.GetPlayerComponentMap() {
-	//	cacheKey := gameplayer.GetComponentCacheKey(playerId, componentName)
-	//	cacheType,err := cache.GetRedis().Type(context.Background(), cacheKey).Result()
-	//	if err == redis.Nil || cacheType == "" || cacheType == "none" {
-	//		continue
-	//	}
-	//	component := tmpPlayer.GetComponent(componentName)
-	//	if component == nil {
-	//		logger.Error("%v GetComponent nil %v", playerId, componentName)
-	//		continue
-	//	}
-	//
-	//}
 	return nil
 }
 
@@ -236,8 +223,9 @@ func (this *GameServer) registerClientPacket(clientHandler *ClientConnectionHand
 	clientHandler.Register(PacketCommand(pb.CmdLogin_Cmd_CreatePlayerReq), onCreatePlayerReq, func() proto.Message {return &pb.CreatePlayerReq{}})
 	// 通过反射自动注册消息回调
 	clientHandler.autoRegisterPlayerComponentProto()
-	// proto_code_gen工具生成的回调函数
-	player_component_handler_auto_register(clientHandler)
+	// 自动注册消息回调的另一种方案: proto_code_gen工具生成的回调函数
+	// 因为已经用了反射自动注册,所以这里注释了
+	// player_component_handler_auto_register(clientHandler)
 }
 
 // 心跳回复

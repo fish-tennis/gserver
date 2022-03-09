@@ -6,6 +6,7 @@ import (
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 	"github.com/fish-tennis/gserver/util"
+	. "github.com/fish-tennis/gserver/internal"
 	"math/rand"
 )
 
@@ -23,19 +24,19 @@ func onLoginReq(connection Connection, packet *ProtoPacket) {
 		if !hasData {
 			result = "NotReg"
 		} else if req.GetPassword() == account.GetPassword() {
-			result = "ok"
+			result = ""
 			loginSession = cache.NewLoginSession(account)
 		} else {
 			result = "PasswordError"
 		}
 	}
 	loginRes := &pb.LoginRes{
-		Result: result,
+		Error: result,
 		AccountName: req.GetAccountName(),
 		AccountId: account.GetId(),
 		LoginSession: loginSession,
 	}
-	if result == "ok" {
+	if result == "" {
 		onlinePlayerId,gameServerId := cache.GetOnlineAccount(account.GetId())
 		if onlinePlayerId > 0 {
 			// 如果该账号还在游戏中,则需要先将其清理下线
@@ -49,7 +50,7 @@ func onLoginReq(connection Connection, packet *ProtoPacket) {
 				//	LogError("RemoveOnlinePlayer account:%v playerId:%v gameServerId:%v",
 				//		account.GetId(), onlinePlayerId, gameServerId)
 				//}
-				_loginServer.SendToServer(gameServerId, PacketCommand(pb.CmdInner_Cmd_KickPlayer), &pb.KickPlayer{
+				SendKickPlayer(gameServerId, &pb.KickPlayer{
 					AccountId: account.GetId(),
 					PlayerId: onlinePlayerId,
 				})
@@ -99,7 +100,7 @@ func onAccountReg(connection Connection, packet *ProtoPacket) {
 		logger.Error("onAccountReg account:%v result:%v err:%v", account.Name, result, err.Error())
 	}
 	connection.Send(PacketCommand(pb.CmdLogin_Cmd_AccountRes), &pb.AccountRes{
-		Result: result,
+		Error: result,
 		AccountName: account.Name,
 		AccountId: account.Id,
 	})
