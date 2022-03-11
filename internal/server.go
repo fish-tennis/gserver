@@ -222,7 +222,7 @@ func (this *BaseServer) SetDefaultServerConnectorConfig(config ConnectionConfig)
 
 // 默认的服务器连接接口
 func (this *BaseServer) DefaultServerConnectorFunc(ctx context.Context, info *pb.ServerInfo) Connection {
-	return GetNetMgr().NewConnector(ctx, info.GetServerListenAddr(), this.serverConnectorConfig,
+	return GetNetMgr().NewConnector(ctx, info.GetServerListenAddr(), &this.serverConnectorConfig,
 		this.defaultServerConnectorCodec, this.defaultServerConnectorHandler, nil)
 }
 

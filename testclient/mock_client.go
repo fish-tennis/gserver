@@ -44,7 +44,7 @@ func (this *MockClient) start() {
 		//	}
 		//}()
 
-		this.conn = GetNetMgr().NewConnector(_testClient.GetContext(), _testClient.serverAddr, *this.getConnectionConfig(),
+		this.conn = GetNetMgr().NewConnector(_testClient.GetContext(), _testClient.serverAddr, this.getConnectionConfig(),
 			_testClient.clientCodec, _testClient.clientHandler, this.accountName)
 		if this.conn == nil {
 			_testClient.removeMockClient(this.accountName)
@@ -71,7 +71,7 @@ func (this *MockClient) OnLoginRes(res *pb.LoginRes) {
 		this.conn.SetTag("")
 		this.conn.Close()
 		// 账号登录成功后,连接游戏服
-		this.conn = GetNetMgr().NewConnector(_testClient.ctx, res.GetGameServer().GetClientListenAddr(), *this.getConnectionConfig(),
+		this.conn = GetNetMgr().NewConnector(_testClient.ctx, res.GetGameServer().GetClientListenAddr(), this.getConnectionConfig(),
 			_testClient.clientCodec, _testClient.clientHandler, this.accountName)
 		if this.conn == nil {
 			logger.Error("%v connect game failed", this.accountName)
