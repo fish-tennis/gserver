@@ -47,7 +47,7 @@ func onPlayerEntryGameReq(connection Connection, packet *ProtoPacket) {
 		return
 	} else {
 		// 检查该账号是否已经有对应的在线玩家
-		entryPlayer = _gameServer.GetPlayer(playerData.Id)
+		entryPlayer = gameplayer.GetPlayerMgr().GetPlayer(playerData.Id)
 		if entryPlayer != nil {
 			// 重连
 			isReconnect = true
@@ -59,7 +59,7 @@ func onPlayerEntryGameReq(connection Connection, packet *ProtoPacket) {
 	if !isReconnect {
 		// 分布式游戏服必须保证一个账号同时只在一个游戏服上登录,防止写数据覆盖
 		// 通过redis做缓存来实现账号的"独占性"
-		if !cache.AddOnlineAccount(entryPlayer.GetAccountId(), entryPlayer.GetId(), _gameServer.GetServerId()) {
+		if !cache.AddOnlineAccount(entryPlayer.GetAccountId(), entryPlayer.GetId(), GetServer().GetServerId()) {
 			// 该账号已经在另一个游戏服上登录了
 			_,gameServerId := cache.GetOnlinePlayer(entryPlayer.GetId())
 			logger.Error("exist online account:%v playerId:%v gameServerId:%v",
@@ -78,7 +78,7 @@ func onPlayerEntryGameReq(connection Connection, packet *ProtoPacket) {
 			return
 		}
 		// 加入在线玩家表
-		_gameServer.AddPlayer(entryPlayer)
+		gameplayer.GetPlayerMgr().AddPlayer(entryPlayer)
 		// 开启玩家独立线程
 		entryPlayer.StartProcessRoutine()
 	}

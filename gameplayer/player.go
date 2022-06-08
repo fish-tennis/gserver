@@ -5,9 +5,9 @@ import (
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/db"
 	. "github.com/fish-tennis/gserver/internal"
+	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 	"google.golang.org/protobuf/proto"
-	"github.com/fish-tennis/gserver/logger"
 	"reflect"
 	"sync"
 )
@@ -124,14 +124,29 @@ func (this *Player) StartProcessRoutine() bool {
 			select {
 			case <-ctx.Done():
 				logger.Info("exitNotify")
-				return
+				goto END
 			case <-this.stopChan:
 				logger.Debug("stop")
-				return
+				goto END
 			case message := <-this.messages:
-				logger.Debug("processMessage %v", proto.MessageName(message.Message()).Name())
+				// nil消息 表示这是需要处理的最后一条消息
+				if message == nil {
+					return
+				}
 				this.processMessage(message)
 			}
+		}
+
+		// 有可能还有未处理的消息
+	END:
+		messageLen := len(this.messages)
+		for i := 0; i < messageLen; i++ {
+			message := <-this.messages
+			// nil消息 表示这是需要处理的最后一条消息
+			if message == nil {
+				return
+			}
+			this.processMessage(message)
 		}
 	}(GetServer().GetContext())
 	return true
@@ -143,6 +158,7 @@ func (this *Player) processMessage(message *ProtoPacket) {
 			logger.LogStack()
 		}
 	}()
+	logger.Debug("processMessage %v", proto.MessageName(message.Message()).Name())
 	// 先找组件接口
 	handlerInfo := _playerComponentHandlerInfos[message.Command()]
 	if handlerInfo != nil {

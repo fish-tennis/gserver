@@ -2,6 +2,7 @@ package game
 
 import (
 	. "github.com/fish-tennis/gnet"
+	"github.com/fish-tennis/gserver/gameplayer"
 	"github.com/fish-tennis/gserver/logger"
 )
 
@@ -19,7 +20,7 @@ func (this *ClientListerHandler) OnConnectionDisconnect(listener Listener, conne
 		return
 	}
 	if playerId,ok := connection.GetTag().(int64); ok {
-		player := _gameServer.GetPlayer(playerId)
+		player := gameplayer.GetPlayerMgr().GetPlayer(playerId)
 		if player == nil {
 			return
 		}

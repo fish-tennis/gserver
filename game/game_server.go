@@ -10,6 +10,7 @@ import (
 	"github.com/fish-tennis/gserver/gameplayer"
 	. "github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
+	"github.com/fish-tennis/gserver/misc"
 	"github.com/fish-tennis/gserver/pb"
 	"github.com/fish-tennis/gserver/social"
 	"os"
@@ -19,8 +20,6 @@ import (
 
 var (
 	_ Server = (*GameServer)(nil)
-	// singleton
-	_gameServer *GameServer
 )
 
 // 游戏服
@@ -38,13 +37,8 @@ type GameServerConfig struct {
 	BaseServerConfig
 }
 
-func GetGameServer() *GameServer {
-	return _gameServer
-}
-
 // 初始化
 func (this *GameServer) Init(ctx context.Context, configFile string) bool {
-	_gameServer = this
 	gameplayer.SetPlayerMgr(this)
 	if !this.BaseServer.Init(ctx, configFile) {
 		return false
@@ -58,15 +52,12 @@ func (this *GameServer) Init(ctx context.Context, configFile string) bool {
 	// 客户端的codec和handler
 	clientCodec := NewProtoCodec(nil)
 	clientHandler := gameplayer.NewClientConnectionHandler(clientCodec)
+	this.registerClientPacket(clientHandler)
 
 	// 服务器的codec和handler
 	serverCodec := NewProtoCodec(nil)
 	serverHandler := NewDefaultConnectionHandler(serverCodec)
 
-	// 其他模块初始化
-	social.OnServerInit(clientHandler, serverHandler, this)
-
-	this.registerClientPacket(clientHandler)
 	if netMgr.NewListener(ctx, this.config.ClientListenAddr, this.config.ClientConnConfig, clientCodec,
 		clientHandler, &ClientListerHandler{}) == nil {
 		panic("listen client failed")
@@ -85,6 +76,16 @@ func (this *GameServer) Init(ctx context.Context, configFile string) bool {
 	this.BaseServer.SetDefaultServerConnectorConfig(this.config.ServerConnConfig)
 	this.BaseServer.GetServerList().SetFetchAndConnectServerTypes("game")
 
+	// 其他模块初始化
+	this.AddServerHook(&social.Hook{})
+	serverInitArg := &misc.GameServerInitArg{
+		ClientHandler: clientHandler,
+		ServerHandler: serverHandler,
+		PlayerMgr: gameplayer.GetPlayerMgr(),
+	}
+	for _,hook := range this.BaseServer.GetServerHooks() {
+		hook.OnServerInit(serverInitArg)
+	}
 	logger.Info("GameServer.Init")
 	return true
 }
@@ -253,7 +254,7 @@ func (this *GameServer) registerServerPacket(serverHandler *DefaultConnectionHan
 // 添加一个在线玩家
 func (this *GameServer) AddPlayer(player *gameplayer.Player) {
 	this.playerMap.Store(player.GetId(), player)
-	cache.AddOnlinePlayer(player.GetId(), player.GetAccountId(), _gameServer.GetServerId())
+	cache.AddOnlinePlayer(player.GetId(), player.GetAccountId(), this.GetServerId())
 }
 
 // 删除一个在线玩家

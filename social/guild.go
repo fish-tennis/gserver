@@ -78,18 +78,35 @@ func (this *Guild) StartProcessRoutine() bool {
 		for {
 			select {
 			case <-ctx.Done():
-				logger.Info("exitNotify")
-				return
+				logger.Info("exitNotify %v", this.GetId())
+				goto END
 			case <-this.stopChan:
-				logger.Debug("stop")
-				return
+				logger.Debug("stop %v", this.GetId())
+				goto END
 			case message := <-this.messages:
+				// nil消息 表示这是需要处理的最后一条消息
+				if message == nil {
+					return
+				}
 				this.processMessage(message)
 				//this.SaveCache()
 				// 这里演示一种直接保存数据库的用法,可以用于那些不经常修改的数据
 				// 这种方式,省去了要处理crash后从缓存恢复数据的步骤
 				SaveEntityToDb(GetGuildDb(), this, false)
 			}
+		}
+
+		// 有可能还有未处理的消息
+	END:
+		messageLen := len(this.messages)
+		for i := 0; i < messageLen; i++ {
+			message := <-this.messages
+			// nil消息 表示这是需要处理的最后一条消息
+			if message == nil {
+				return
+			}
+			this.processMessage(message)
+			SaveEntityToDb(GetGuildDb(), this, false)
 		}
 	}(GetServer().GetContext())
 	return true

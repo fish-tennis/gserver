@@ -40,6 +40,12 @@ type Server interface {
 	Exit()
 }
 
+// 服务器回调接口
+type ServerHook interface {
+	OnServerInit(initArg interface{})
+	OnServerExit()
+}
+
 func SetServer(server Server) {
 	_server = server
 }
@@ -88,7 +94,7 @@ type BaseServer struct {
 	defaultServerConnectorCodec *ProtoCodec
 	ctx context.Context
 	wg sync.WaitGroup
-	onServerInitFuncs []func()
+	serverHooks []ServerHook
 }
 
 func (this *BaseServer) GetConfigFile() string {
@@ -115,9 +121,12 @@ func (this *BaseServer) GetServerList() *ServerList {
 	return this.serverList
 }
 
-// 添加初始化回调函数
-func (this *BaseServer) AddInitHook(initFunc ...func()) {
-	this.onServerInitFuncs = append(this.onServerInitFuncs, initFunc...)
+func (this *BaseServer) AddServerHook(hooks ...ServerHook) {
+	this.serverHooks = append(this.serverHooks, hooks...)
+}
+
+func (this *BaseServer) GetServerHooks() []ServerHook {
+	return this.serverHooks
 }
 
 // 加载配置文件
@@ -132,9 +141,6 @@ func (this *BaseServer) Init(ctx context.Context, configFile string) bool {
 	// 初始化id生成器
 	util.InitIdGenerator(uint16(this.serverInfo.ServerId))
 	this.ctx = ctx
-	for _,initFunc := range this.onServerInitFuncs {
-		initFunc()
-	}
 	return true
 }
 
@@ -156,6 +162,9 @@ func (this *BaseServer) OnUpdate(ctx context.Context, updateCount int64) {
 
 func (this *BaseServer) Exit() {
 	logger.Info("BaseServer.Exit")
+	for _,hook := range this.serverHooks {
+		hook.OnServerExit()
+	}
 	// 服务器管理的协程关闭
 	logger.Info("wait server goroutine close")
 	this.wg.Wait()
