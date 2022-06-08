@@ -79,6 +79,8 @@ func onPlayerEntryGameReq(connection Connection, packet *ProtoPacket) {
 		}
 		// 加入在线玩家表
 		_gameServer.AddPlayer(entryPlayer)
+		// 开启玩家独立线程
+		entryPlayer.StartProcessRoutine()
 	}
 	// 玩家和连接设置关联
 	connection.SetTag(entryPlayer.GetId())

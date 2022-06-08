@@ -12,7 +12,6 @@ import (
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 	"github.com/fish-tennis/gserver/social"
-	"google.golang.org/protobuf/proto"
 	"os"
 	"sync"
 	"time"
@@ -58,7 +57,7 @@ func (this *GameServer) Init(ctx context.Context, configFile string) bool {
 	netMgr := GetNetMgr()
 	// 客户端的codec和handler
 	clientCodec := NewProtoCodec(nil)
-	clientHandler := NewClientConnectionHandler(clientCodec)
+	clientHandler := gameplayer.NewClientConnectionHandler(clientCodec)
 
 	// 服务器的codec和handler
 	serverCodec := NewProtoCodec(nil)
@@ -98,6 +97,11 @@ func (this *GameServer) Run(ctx context.Context) {
 
 // 退出
 func (this *GameServer) Exit() {
+	this.playerMap.Range(func(key, value interface{}) bool {
+		player := value.(*gameplayer.Player)
+		player.Stop()
+		return true
+	})
 	this.BaseServer.Exit()
 	logger.Info("GameServer.Exit")
 	dbMgr := db.GetDbMgr()
@@ -216,13 +220,14 @@ func (this *GameServer) repairPlayerCache(playerId,accountId int64) error {
 }
 
 // 注册客户端消息回调
-func (this *GameServer) registerClientPacket(clientHandler *ClientConnectionHandler) {
+func (this *GameServer) registerClientPacket(clientHandler *gameplayer.ClientConnectionHandler) {
 	// 手动注册消息回调
-	clientHandler.Register(PacketCommand(pb.CmdInner_Cmd_HeartBeatReq), onHeartBeatReq, func() proto.Message {return &pb.HeartBeatReq{}})
-	clientHandler.Register(PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameReq), onPlayerEntryGameReq, func() proto.Message {return &pb.PlayerEntryGameReq{}})
-	clientHandler.Register(PacketCommand(pb.CmdLogin_Cmd_CreatePlayerReq), onCreatePlayerReq, func() proto.Message {return &pb.CreatePlayerReq{}})
+	clientHandler.Register(PacketCommand(pb.CmdInner_Cmd_HeartBeatReq), onHeartBeatReq, new(pb.HeartBeatReq))
+	clientHandler.Register(PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameReq), onPlayerEntryGameReq, new(pb.PlayerEntryGameReq))
+	clientHandler.Register(PacketCommand(pb.CmdLogin_Cmd_CreatePlayerReq), onCreatePlayerReq, new(pb.CreatePlayerReq))
 	// 通过反射自动注册消息回调
-	clientHandler.autoRegisterPlayerComponentProto()
+	//clientHandler.autoRegisterPlayerComponentProto()
+	gameplayer.AutoRegisterPlayerComponentProto(clientHandler)
 	// 自动注册消息回调的另一种方案: proto_code_gen工具生成的回调函数
 	// 因为已经用了反射自动注册,所以这里注释了
 	// player_component_handler_auto_register(clientHandler)
@@ -239,9 +244,9 @@ func onHeartBeatReq(connection Connection, packet *ProtoPacket) {
 
 // 注册服务器消息回调
 func (this *GameServer) registerServerPacket(serverHandler *DefaultConnectionHandler) {
-	serverHandler.Register(PacketCommand(pb.CmdInner_Cmd_HeartBeatReq), onHeartBeatReq, func() proto.Message {return new(pb.HeartBeatReq)})
-	serverHandler.Register(PacketCommand(pb.CmdInner_Cmd_KickPlayer), this.onKickPlayer, func() proto.Message {return new(pb.KickPlayer)})
-	serverHandler.Register(PacketCommand(pb.CmdRoute_Cmd_RoutePlayerMessage), this.onRoutePlayerMessage, func() proto.Message {return new(pb.RoutePlayerMessage)})
+	serverHandler.Register(PacketCommand(pb.CmdInner_Cmd_HeartBeatReq), onHeartBeatReq, new(pb.HeartBeatReq))
+	serverHandler.Register(PacketCommand(pb.CmdInner_Cmd_KickPlayer), this.onKickPlayer, new(pb.KickPlayer))
+	serverHandler.Register(PacketCommand(pb.CmdRoute_Cmd_RoutePlayerMessage), this.onRoutePlayerMessage, new(pb.RoutePlayerMessage))
 	//serverHandler.autoRegisterPlayerComponentProto()
 }
 
@@ -274,7 +279,7 @@ func (this *GameServer) onKickPlayer(connection Connection, packet *ProtoPacket)
 	player := this.GetPlayer(req.GetPlayerId())
 	if player != nil {
 		player.SetConnection(nil)
-		this.RemovePlayer(player)
+		player.Stop()
 	} else {
 		logger.Error("kick player failed account:%v playerId:%v gameServerId:%v",
 			req.GetAccountId(), req.GetPlayerId(), this.GetServerId())

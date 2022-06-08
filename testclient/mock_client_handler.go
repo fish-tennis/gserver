@@ -29,9 +29,7 @@ func NewMockClientHandler(protoCodec *ProtoCodec) *MockClientHandler {
 		}
 	})
 	handler.Register(PacketCommand(pb.CmdInner_Cmd_HeartBeatRes), func(connection Connection, packet *ProtoPacket) {
-	} , func() proto.Message {
-		return new(pb.HeartBeatRes)
-	})
+	} , new(pb.HeartBeatRes))
 	handler.SetUnRegisterHandler(func(connection Connection, packet *ProtoPacket) {
 		logger.Debug("un register %v", string(packet.Message().ProtoReflect().Descriptor().Name()))
 	})
@@ -95,9 +93,7 @@ func (this *MockClientHandler) autoRegister() {
 		// 注册消息回调到组件上
 		this.methods[cmd] = method
 		// 注册消息的构造函数
-		this.DefaultConnectionHandler.Register(cmd, nil, func() proto.Message {
-			return reflect.New(methonArg1.Elem()).Interface().(proto.Message)
-		})
+		this.DefaultConnectionHandler.Register(cmd, nil, reflect.New(methonArg1.Elem()).Interface().(proto.Message))
 		logger.Debug("register %v %v", messageId, method.Name)
 	}
 }

@@ -26,7 +26,7 @@ func (this *ClientListerHandler) OnConnectionDisconnect(listener Listener, conne
 		//if atomic.CompareAndSwapPointer((*unsafe.Pointer)(unsafe.Pointer(&player.connection)), unsafe.Pointer(&connection), nil) {
 		if player.GetConnection() == connection {
 			player.SetConnection(nil)
-			_gameServer.RemovePlayer(player)
+			player.Stop()
 		}
 		logger.Debug("player %v exit", player.GetId())
 	}

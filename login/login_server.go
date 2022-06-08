@@ -5,12 +5,11 @@ import (
 	"encoding/json"
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
-	. "github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/db"
 	"github.com/fish-tennis/gserver/db/mongodb"
+	. "github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
-	"google.golang.org/protobuf/proto"
 	"os"
 	"time"
 )
@@ -118,9 +117,9 @@ func (this *LoginServer) initCache() {
 
 // 注册客户端消息回调
 func (this *LoginServer) registerClientPacket(clientHandler *DefaultConnectionHandler) {
-	clientHandler.Register(PacketCommand(pb.CmdInner_Cmd_HeartBeatReq), onHeartBeatReq, func() proto.Message {return &pb.HeartBeatReq{}})
-	clientHandler.Register(PacketCommand(pb.CmdLogin_Cmd_LoginReq), onLoginReq, func() proto.Message {return &pb.LoginReq{}})
-	clientHandler.Register(PacketCommand(pb.CmdLogin_Cmd_AccountReg), onAccountReg, func() proto.Message {return &pb.AccountReg{}})
+	clientHandler.Register(PacketCommand(pb.CmdInner_Cmd_HeartBeatReq), onHeartBeatReq,  new(pb.HeartBeatReq))
+	clientHandler.Register(PacketCommand(pb.CmdLogin_Cmd_LoginReq), onLoginReq, new(pb.LoginReq))
+	clientHandler.Register(PacketCommand(pb.CmdLogin_Cmd_AccountReg), onAccountReg, new(pb.AccountReg))
 }
 
 // 客户端心跳回复

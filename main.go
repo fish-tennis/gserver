@@ -69,9 +69,9 @@ func main() {
 			for {
 				lineBytes, _, _ := consoleReader.ReadLine()
 				line := strings.ToLower(string(lineBytes))
-				logger.Debug("line:%v", line)
+				logger.Info("line:%v", line)
 				if line == "close" || line == "exit" {
-					logger.Debug("kill by console input")
+					logger.Info("kill by console input")
 					// 在windows系统模拟一个kill信号,以方便测试服务器退出流程
 					signalKillNotify <- os.Kill
 				}

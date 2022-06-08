@@ -214,9 +214,7 @@ func (this *BaseServer) SetDefaultServerConnectorConfig(config ConnectionConfig)
 		}
 	})
 	handler.Register(PacketCommand(pb.CmdInner_Cmd_HeartBeatRes), func(connection Connection, packet *ProtoPacket) {
-	}, func() proto.Message {
-		return new(pb.HeartBeatRes)
-	})
+	}, new(pb.HeartBeatRes))
 	this.defaultServerConnectorHandler = handler
 }
 

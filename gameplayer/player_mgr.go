@@ -4,6 +4,7 @@ var _playerMgr PlayerMgr
 
 type PlayerMgr interface {
 	GetPlayer(playerId int64) *Player
+	RemovePlayer(player *Player)
 }
 
 func SetPlayerMgr(mgr PlayerMgr) {

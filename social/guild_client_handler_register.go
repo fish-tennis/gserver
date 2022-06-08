@@ -20,9 +20,7 @@ func GuildClientHandlerRegister(handler PacketHandlerRegister, playerMgr gamepla
 				player.SaveCache()
 			}
 		}
-	}, func() proto.Message {
-		return new(pb.GuildListReq)
-	})
+	}, new(pb.GuildListReq))
 
 	handler.Register(PacketCommand(pb.CmdGuild_Cmd_GuildCreateReq), func(connection Connection, packet *ProtoPacket) {
 		if connection.GetTag() != nil {
@@ -32,9 +30,7 @@ func GuildClientHandlerRegister(handler PacketHandlerRegister, playerMgr gamepla
 				player.SaveCache()
 			}
 		}
-	}, func() proto.Message {
-		return new(pb.GuildCreateReq)
-	})
+	}, new(pb.GuildCreateReq))
 
 	handler.Register(PacketCommand(pb.CmdGuild_Cmd_GuildJoinReq), func(connection Connection, packet *ProtoPacket) {
 		if connection.GetTag() != nil {
@@ -48,9 +44,7 @@ func GuildClientHandlerRegister(handler PacketHandlerRegister, playerMgr gamepla
 				GuildRouteReqPacket(player, req.Id, packet)
 			}
 		}
-	}, func() proto.Message {
-		return new(pb.GuildJoinReq)
-	})
+	}, new(pb.GuildJoinReq))
 
 	RegisterPlayerGuildHandler(handler, playerMgr, new(pb.GuildDataViewReq))
 	RegisterPlayerGuildHandler(handler, playerMgr, new(pb.GuildJoinAgreeReq))
@@ -72,8 +66,6 @@ func RegisterPlayerGuildHandler(handler PacketHandlerRegister, playerMgr gamepla
 				GuildRouteReqPacket(player, guildId, packet)
 			}
 		}
-	}, func() proto.Message {
-		return reflect.New(reflect.TypeOf(message).Elem()).Interface().(proto.Message)
-	})
+	}, reflect.New(reflect.TypeOf(message).Elem()).Interface().(proto.Message))
 	logger.Debug("RegisterPlayerGuildHandler %v->%v", cmd, messageName)
 }

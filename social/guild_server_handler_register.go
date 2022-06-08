@@ -1,12 +1,11 @@
 package social
 
 import (
+	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/gameplayer"
 	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
-	. "github.com/fish-tennis/gnet"
-	"google.golang.org/protobuf/proto"
 )
 
 func GuildServerHandlerRegister(handler PacketHandlerRegister, playerMgr gameplayer.PlayerMgr) {
@@ -45,7 +44,5 @@ func GuildServerHandlerRegister(handler PacketHandlerRegister, playerMgr gamepla
 			cmd: PacketCommand(uint16(req.PacketCommand)),
 			message: message,
 		})
-	}, func() proto.Message {
-		return new(pb.GuildRoutePlayerMessageReq)
-	})
+	}, new(pb.GuildRoutePlayerMessageReq))
 }

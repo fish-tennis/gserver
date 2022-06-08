@@ -1,11 +1,15 @@
 package gameplayer
 
 import (
+	"context"
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/db"
 	. "github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/pb"
 	"google.golang.org/protobuf/proto"
+	"github.com/fish-tennis/gserver/logger"
+	"reflect"
+	"sync"
 )
 
 var _ Entity = (*Player)(nil)
@@ -24,6 +28,10 @@ type Player struct {
 	//accountName string
 	// 关联的连接
 	connection Connection
+	// 消息队列
+	messages chan *ProtoPacket
+	stopChan chan struct{}
+	stopOnce sync.Once
 }
 
 // 玩家唯一id
@@ -96,6 +104,86 @@ func (this *Player) GetGuild() *Guild {
 	return this.GetComponent("Guild").(*Guild)
 }
 
+// 开启消息处理协程
+// 每个玩家一个独立的消息处理协程
+// 除了登录消息,其他消息都在玩家自己的协程里处理,因此这里对本玩家的操作不需要加锁
+func (this *Player) StartProcessRoutine() bool {
+	GetServer().GetWaitGroup().Add(1)
+	go func(ctx context.Context) {
+		defer func() {
+			// 协程结束的时候,移除玩家
+			GetPlayerMgr().RemovePlayer(this)
+			GetServer().GetWaitGroup().Done()
+			if err := recover(); err != nil {
+				logger.LogStack()
+			}
+			logger.Debug("EndProcessRoutine %v", this.GetId())
+		}()
+
+		for {
+			select {
+			case <-ctx.Done():
+				logger.Info("exitNotify")
+				return
+			case <-this.stopChan:
+				logger.Debug("stop")
+				return
+			case message := <-this.messages:
+				logger.Debug("processMessage %v", proto.MessageName(message.Message()).Name())
+				this.processMessage(message)
+			}
+		}
+	}(GetServer().GetContext())
+	return true
+}
+
+func (this *Player) processMessage(message *ProtoPacket) {
+	defer func() {
+		if err := recover(); err != nil {
+			logger.LogStack()
+		}
+	}()
+	// 先找组件接口
+	handlerInfo := _playerComponentHandlerInfos[message.Command()]
+	if handlerInfo != nil {
+		// 在线玩家的消息,自动路由到对应的玩家组件上
+		component := this.GetComponent(handlerInfo.componentName)
+		if component != nil {
+			if handlerInfo.handler != nil {
+				handlerInfo.handler(component, message.Message())
+			} else {
+				// 用了反射,性能有所损失
+				handlerInfo.method.Func.Call([]reflect.Value{reflect.ValueOf(component), reflect.ValueOf(message.Message())})
+			}
+			// 如果有需要保存的数据修改了,即时保存数据库
+			this.SaveCache()
+			return
+		}
+	}
+	// 再找普通接口
+	packetHandler := _clientConnectionHandler.GetPacketHandler(message.Command())
+	if packetHandler != nil {
+		packetHandler(this.GetConnection(), message)
+		// 如果有需要保存的数据修改了,即时保存数据库
+		this.SaveCache()
+		return
+	}
+	logger.Error("unhandle message:%v", message.Command())
+}
+
+// 收到网络消息,先放入消息队列
+func (this *Player) OnRecvPacket(packet *ProtoPacket) {
+	this.messages <- packet
+	logger.Debug("OnRecvPacket %v", proto.MessageName(packet.Message()).Name())
+}
+
+// 停止协程
+func (this *Player) Stop() {
+	this.stopOnce.Do(func() {
+		this.stopChan <- struct{}{}
+	})
+}
+
 // 从加载的数据构造出玩家对象
 func CreatePlayerFromData(playerData *pb.PlayerData) *Player {
 	player := &Player{
@@ -103,6 +191,8 @@ func CreatePlayerFromData(playerData *pb.PlayerData) *Player {
 		name:      playerData.Name,
 		accountId: playerData.AccountId,
 		regionId:  playerData.RegionId,
+		messages: make(chan *ProtoPacket, 8),
+		stopChan: make(chan struct{}, 1),
 	}
 	// 初始化玩家的各个模块
 	player.AddComponent(NewBaseInfo(player, playerData.BaseInfo), nil)
