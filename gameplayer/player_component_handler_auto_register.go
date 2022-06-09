@@ -3,19 +3,20 @@
 package gameplayer
 
 import (
-	. "github.com/fish-tennis/gnet"
-	"github.com/fish-tennis/gserver/pb"
-	"google.golang.org/protobuf/proto"
-	. "github.com/fish-tennis/gserver/internal"
+ . "github.com/fish-tennis/gnet"
+ . "github.com/fish-tennis/gserver/internal"
+ "github.com/fish-tennis/gserver/pb"
+ "google.golang.org/protobuf/proto"
 )
+
 
 // 自动注册玩家组件相关消息回调
 func player_component_handler_auto_register(packetHandlerRegister PacketHandlerRegister) {
 
-	// 请求加coin的测试消息
-	// @Client表示是客户端发的消息,工具也可以考虑为客户端生成相应的辅助代码(c#或lua)
-	// @Client
-	RegisterPlayerProtoCodeGen(packetHandlerRegister, "Money", PacketCommand(pb.CmdMoney_Cmd_CoinReq), new(pb.CoinReq), func(c Component, m proto.Message) {
-		c.(*Money).OnCoinReq(m.(*pb.CoinReq))
-	})
+   // 请求加coin的测试消息
+// @Client表示是客户端发的消息,工具也可以考虑为客户端生成相应的辅助代码(c#或lua)
+// @Client
+   RegisterPlayerProtoCodeGen(packetHandlerRegister, "Money", PacketCommand(pb.CmdMoney_Cmd_CoinReq), new(pb.CoinReq), func(c Component, m proto.Message) {
+       c.(*Money).OnCoinReq(m.(*pb.CoinReq))
+   })
 }
