@@ -4,6 +4,7 @@ import (
 	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
+	"time"
 )
 
 // 编译期检查是否实现了Saveable接口
@@ -18,9 +19,9 @@ type Money struct {
 
 func NewMoney(player *Player) *Money {
 	component := &Money{
-		PlayerDataComponent: *NewPlayerDataComponent(player,"Money"),
+		PlayerDataComponent: *NewPlayerDataComponent(player, "Money"),
 		data: &pb.Money{
-			Coin: 0,
+			Coin:    0,
 			Diamond: 0,
 		},
 	}
@@ -31,7 +32,7 @@ func (this *Money) DbData() (dbData interface{}, protoMarshal bool) {
 	// 演示proto序列化后存储到数据库
 	// 优点:占用空间少,读取数据快,游戏模块大多采用这种方式
 	// 缺点:数据库语言无法直接操作字段
-	return this.data,true
+	return this.data, true
 }
 
 func (this *Money) CacheData() interface{} {
@@ -43,16 +44,32 @@ func (this *Money) OnEvent(event interface{}) {
 	switch v := event.(type) {
 	case *internal.EventPlayerEntryGame:
 		this.OnPlayerEntryGame(v)
+		// 测试倒计时,玩家的钱币每秒+1
+		this.player.GetTimerEntries().After(time.Second, func() time.Duration {
+			this.IncCoin(1)
+			//logger.Debug("timer IncCoin")
+			return time.Second
+		})
+		//this.player.GetTimerEntries().After(time.Second, func() time.Duration {
+		//	this.IncDiamond(1)
+		//	//logger.Debug("timer IncDiamond once")
+		//	return 0
+		//})
 	}
 }
 
 // 事件处理
-func (this *Money) OnPlayerEntryGame( eventPlayerEntryGame *internal.EventPlayerEntryGame) {
+func (this *Money) OnPlayerEntryGame(eventPlayerEntryGame *internal.EventPlayerEntryGame) {
 	logger.Debug("OnEvent:%v", eventPlayerEntryGame)
 }
 
 func (this *Money) IncCoin(coin int32) {
 	this.data.Coin += coin
+	this.SetDirty()
+}
+
+func (this *Money) IncDiamond(diamond int32) {
+	this.data.Diamond += diamond
 	this.SetDirty()
 }
 

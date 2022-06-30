@@ -32,6 +32,8 @@ type Player struct {
 	messages chan *ProtoPacket
 	stopChan chan struct{}
 	stopOnce sync.Once
+	// 倒计时管理
+	timerEntries *TimerEntries
 }
 
 // 玩家唯一id
@@ -104,6 +106,10 @@ func (this *Player) GetGuild() *Guild {
 	return this.GetComponent("Guild").(*Guild)
 }
 
+func (this *Player) GetTimerEntries() *TimerEntries {
+	return this.timerEntries
+}
+
 // 开启消息处理协程
 // 每个玩家一个独立的消息处理协程
 // 除了登录消息,其他消息都在玩家自己的协程里处理,因此这里对本玩家的操作不需要加锁
@@ -120,6 +126,7 @@ func (this *Player) StartProcessRoutine() bool {
 			logger.Debug("EndProcessRoutine %v", this.GetId())
 		}()
 
+		this.timerEntries.Start()
 		for {
 			select {
 			case <-ctx.Done():
@@ -134,6 +141,9 @@ func (this *Player) StartProcessRoutine() bool {
 					return
 				}
 				this.processMessage(message)
+			case timeNow := <-this.timerEntries.TimerChan():
+				// 计时器的回调在玩家协程里执行,所以是协程安全的
+				this.timerEntries.Run(timeNow)
 			}
 		}
 
@@ -203,12 +213,13 @@ func (this *Player) Stop() {
 // 从加载的数据构造出玩家对象
 func CreatePlayerFromData(playerData *pb.PlayerData) *Player {
 	player := &Player{
-		id:        playerData.Id,
-		name:      playerData.Name,
-		accountId: playerData.AccountId,
-		regionId:  playerData.RegionId,
-		messages: make(chan *ProtoPacket, 8),
-		stopChan: make(chan struct{}, 1),
+		id:           playerData.Id,
+		name:         playerData.Name,
+		accountId:    playerData.AccountId,
+		regionId:     playerData.RegionId,
+		messages:     make(chan *ProtoPacket, 8),
+		stopChan:     make(chan struct{}, 1),
+		timerEntries: NewTimerEntries(),
 	}
 	// 初始化玩家的各个模块
 	player.AddComponent(NewBaseInfo(player, playerData.BaseInfo), nil)
