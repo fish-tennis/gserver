@@ -30,6 +30,10 @@ type EntityDb interface {
 // Db接口是为了应用层能够灵活的更换存储数据库(mysql,mongo,redis等)
 type PlayerDb interface {
 	EntityDb
+
+	// 根据账号id查找角色id
+	FindPlayerIdByAccountId(accountId int64, regionId int32) (int64, error)
+
 	// 根据账号id查找玩家数据
 	// 适用于一个账号在一个区服只有一个玩家角色的游戏
 	FindPlayerByAccountId(accountId int64, regionId int32, playerData interface{}) (bool, error)

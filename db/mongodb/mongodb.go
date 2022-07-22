@@ -140,6 +140,25 @@ func (this *MongoCollectionPlayer) FindPlayerByAccountId(accountId int64, region
 	return true, nil
 }
 
+func (this *MongoCollectionPlayer) FindPlayerIdByAccountId(accountId int64, regionId int32) (int64, error) {
+	col := this.mongoDatabase.Collection(this.collectionName)
+	opts := options.FindOne().
+		SetProjection(bson.D{{"id",1}})
+	result := col.FindOne(context.Background(), bson.D{{this.colAccountId, accountId}, {this.colRegionId, regionId}}, opts)
+	if result == nil || result.Err() == mongo.ErrNoDocuments {
+		return 0, nil
+	}
+	res, err := result.DecodeBytes()
+	if err != nil {
+		return 0, err
+	}
+	idValue,err := res.LookupErr("id")
+	if err != nil {
+		return 0, err
+	}
+	return idValue.Int64(), nil
+}
+
 var _ db.DbMgr = (*MongoDb)(nil)
 
 // db.DbMgr的mongo实现

@@ -281,6 +281,8 @@ func (this *GameServer) onKickPlayer(connection Connection, packet *ProtoPacket)
 	if player != nil {
 		player.SetConnection(nil)
 		player.Stop()
+		logger.Debug("kick player account:%v playerId:%v gameServerId:%v",
+			req.GetAccountId(), req.GetPlayerId(), this.GetServerId())
 	} else {
 		logger.Error("kick player failed account:%v playerId:%v gameServerId:%v",
 			req.GetAccountId(), req.GetPlayerId(), this.GetServerId())

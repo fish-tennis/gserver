@@ -20,15 +20,16 @@ func onPlayerEntryGameReq(connection Connection, packet *ProtoPacket) {
 		})
 		return
 	}
+	accountId := req.GetAccountId()
 	// 验证LoginSession
-	if !cache.VerifyLoginSession(req.GetAccountId(), req.GetLoginSession()) {
+	if !cache.VerifyLoginSession(accountId, req.GetLoginSession()) {
 		connection.Send(PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameRes), &pb.PlayerEntryGameRes{
 			Error: "SessionError",
 		})
 		return
 	}
-	playerData := &pb.PlayerData{}
-	hasData,err := db.GetPlayerDb().FindPlayerByAccountId(req.GetAccountId(), req.GetRegionId(), playerData)
+	playerId, err := db.GetPlayerDb().FindPlayerIdByAccountId(accountId, req.GetRegionId())
+	//hasData,err := db.GetPlayerDb().FindPlayerByAccountId(req.GetAccountId(), req.GetRegionId(), playerData)
 	if err != nil {
 		connection.Send(PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameRes), &pb.PlayerEntryGameRes{
 			Error: "DbError",
@@ -38,7 +39,7 @@ func onPlayerEntryGameReq(connection Connection, packet *ProtoPacket) {
 	}
 	var entryPlayer *gameplayer.Player
 	isReconnect := false
-	if !hasData {
+	if playerId == 0 {
 		connection.Send(PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameRes), &pb.PlayerEntryGameRes{
 			Error: "NoPlayer",
 			AccountId: req.GetAccountId(),
@@ -47,28 +48,26 @@ func onPlayerEntryGameReq(connection Connection, packet *ProtoPacket) {
 		return
 	} else {
 		// 检查该账号是否已经有对应的在线玩家
-		entryPlayer = gameplayer.GetPlayerMgr().GetPlayer(playerData.Id)
+		entryPlayer = gameplayer.GetPlayerMgr().GetPlayer(playerId)
 		if entryPlayer != nil {
 			// 重连
 			isReconnect = true
 			logger.Debug("reconnect %v %v", entryPlayer.GetId(), entryPlayer.GetName())
-		} else {
-			entryPlayer = gameplayer.CreatePlayerFromData(playerData)
 		}
 	}
 	if !isReconnect {
 		// 分布式游戏服必须保证一个账号同时只在一个游戏服上登录,防止写数据覆盖
 		// 通过redis做缓存来实现账号的"独占性"
-		if !cache.AddOnlineAccount(entryPlayer.GetAccountId(), entryPlayer.GetId(), GetServer().GetServerId()) {
+		if !cache.AddOnlineAccount(accountId, playerId, GetServer().GetServerId()) {
 			// 该账号已经在另一个游戏服上登录了
-			_,gameServerId := cache.GetOnlinePlayer(entryPlayer.GetId())
+			_,gameServerId := cache.GetOnlinePlayer(playerId)
 			logger.Error("exist online account:%v playerId:%v gameServerId:%v",
-				entryPlayer.GetAccountId(), entryPlayer.GetId(), gameServerId)
+				accountId, playerId, gameServerId)
 			if gameServerId > 0 {
 				// 通知目标游戏服踢掉玩家
 				SendKickPlayer(gameServerId, &pb.KickPlayer{
-					AccountId: entryPlayer.GetAccountId(),
-					PlayerId:  entryPlayer.GetId(),
+					AccountId: accountId,
+					PlayerId:  playerId,
 				})
 			}
 			// 通知客户端稍后重新登录
@@ -77,6 +76,26 @@ func onPlayerEntryGameReq(connection Connection, packet *ProtoPacket) {
 			})
 			return
 		}
+		playerData := &pb.PlayerData{}
+		hasData,err := db.GetPlayerDb().FindPlayerByAccountId(req.GetAccountId(), req.GetRegionId(), playerData)
+		if err != nil {
+			cache.RemoveOnlineAccount(accountId)
+			connection.Send(PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameRes), &pb.PlayerEntryGameRes{
+				Error: "DbError",
+			})
+			logger.Error(err.Error())
+			return
+		}
+		if !hasData {
+			cache.RemoveOnlineAccount(accountId)
+			connection.Send(PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameRes), &pb.PlayerEntryGameRes{
+				Error: "NoPlayer",
+				AccountId: req.GetAccountId(),
+				RegionId: req.GetRegionId(),
+			})
+			return
+		}
+		entryPlayer = gameplayer.CreatePlayerFromData(playerData)
 		// 加入在线玩家表
 		gameplayer.GetPlayerMgr().AddPlayer(entryPlayer)
 		// 开启玩家独立线程
