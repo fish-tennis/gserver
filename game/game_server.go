@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
+	"github.com/fish-tennis/gserver/cfg"
 	"github.com/fish-tennis/gserver/db"
 	"github.com/fish-tennis/gserver/db/mongodb"
 	"github.com/fish-tennis/gserver/gameplayer"
@@ -44,6 +45,7 @@ func (this *GameServer) Init(ctx context.Context, configFile string) bool {
 		return false
 	}
 	this.readConfig()
+	this.loadCfgs()
 	gameplayer.InitPlayerComponentMap()
 	this.initDb()
 	this.initCache()
@@ -129,6 +131,12 @@ func (this *GameServer) readConfig() {
 	this.BaseServer.GetServerInfo().ServerListenAddr = this.config.ServerListenAddr
 }
 
+// 加载配置数据
+func (this *GameServer) loadCfgs() {
+	cfg.GetQuestCfgMgr().SetConditionMgr(gameplayer.RegisterConditionCheckers())
+	cfg.GetQuestCfgMgr().Load("cfgdata/questcfg.json")
+}
+
 // 初始化数据库
 func (this *GameServer) initDb() {
 	// 使用mongodb来演示
@@ -170,7 +178,10 @@ func (this *GameServer) repairPlayerCache(playerId,accountId int64) error {
 	tmpPlayer := gameplayer.CreateTempPlayer(playerId,accountId)
 	for _,component := range tmpPlayer.GetComponents() {
 		if saveable,ok := component.(Saveable); ok {
-			err := LoadFromCache(saveable)
+			hasCache,err := LoadFromCache(saveable)
+			if !hasCache {
+				continue
+			}
 			if err != nil {
 				logger.Error("LoadFromCache %v error:%v", saveable.GetCacheKey(), err.Error())
 				continue
@@ -192,7 +203,10 @@ func (this *GameServer) repairPlayerCache(playerId,accountId int64) error {
 		if compositeSaveable,ok := component.(CompositeSaveable); ok {
 			saveables := compositeSaveable.SaveableChildren()
 			for _,saveable := range saveables {
-				err := LoadFromCache(saveable)
+				hasCache,err := LoadFromCache(saveable)
+				if !hasCache {
+					continue
+				}
 				if err != nil {
 					logger.Error("LoadFromCache %v error:%v", saveable.GetCacheKey(), err.Error())
 					continue
@@ -226,6 +240,7 @@ func (this *GameServer) registerClientPacket(clientHandler *gameplayer.ClientCon
 	clientHandler.Register(PacketCommand(pb.CmdInner_Cmd_HeartBeatReq), onHeartBeatReq, new(pb.HeartBeatReq))
 	clientHandler.Register(PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameReq), onPlayerEntryGameReq, new(pb.PlayerEntryGameReq))
 	clientHandler.Register(PacketCommand(pb.CmdLogin_Cmd_CreatePlayerReq), onCreatePlayerReq, new(pb.CreatePlayerReq))
+	clientHandler.Register(PacketCommand(pb.CmdInner_Cmd_TestCmd), onTestCmd, new(pb.TestCmd))
 	// 通过反射自动注册消息回调
 	//clientHandler.autoRegisterPlayerComponentProto()
 	gameplayer.AutoRegisterPlayerComponentProto(clientHandler)

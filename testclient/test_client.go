@@ -124,3 +124,11 @@ func (this *TestClient) removeMockClient(accountName string) {
 	defer this.mockClientsMutex.Unlock()
 	delete(this.mockClients, accountName)
 }
+
+func (this *TestClient) OnInputCmd(cmd string) {
+	this.mockClientsMutex.RLock()
+	defer this.mockClientsMutex.RUnlock()
+	for _,mockClient := range this.mockClients {
+		mockClient.OnInputCmd(cmd)
+	}
+}

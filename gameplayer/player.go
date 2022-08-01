@@ -94,12 +94,28 @@ func (this *Player) Send(command PacketCommand, message proto.Message) bool {
 
 // 分发事件给组件
 func (this *Player) FireEvent(event interface{}) {
+	logger.Debug("%v FireEvent:%v", this.GetId(), event)
 	this.RangeComponent(func(component Component) bool {
 		if eventReceiver, ok := component.(EventReceiver); ok {
 			eventReceiver.OnEvent(event)
 		}
 		return true
 	})
+}
+
+// 分发条件相关事件
+func (this *Player) FireConditionEvent(event interface{}) {
+	logger.Debug("%v FireConditionEvent:%v", this.GetId(), event)
+	// 目前只有任务模块用了Condition
+	this.GetQuest().quests.fireEvent(event)
+}
+
+func (this *Player) GetBaseInfo() *BaseInfo {
+	return this.GetComponent("BaseInfo").(*BaseInfo)
+}
+
+func (this *Player) GetQuest() *Quest {
+	return this.GetComponent("Quest").(*Quest)
 }
 
 func (this *Player) GetGuild() *Guild {

@@ -192,3 +192,9 @@ func (this *MockClient) OnGuildDataViewRes(res *pb.GuildDataViewRes) {
 		})
 	}
 }
+
+func (this *MockClient) OnInputCmd(cmd string) {
+	this.conn.Send(PacketCommand(pb.CmdInner_Cmd_TestCmd), &pb.TestCmd{
+		Cmd: cmd,
+	})
+}

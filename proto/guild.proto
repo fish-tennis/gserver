@@ -4,7 +4,7 @@ option go_package = "./pb";
 
 package gserver;
 
-// 公会相关proto,某些项目可能叫帮派,联盟,俱乐部等
+// 公会相关proto
 
 enum CmdGuild {
   CmdGuild_None         = 0; // 解决"The first enum value must be zero in proto3."的报错

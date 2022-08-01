@@ -608,11 +608,11 @@ func SaveCompositeSaveableDirtyCache(compositeSaveable CompositeSaveable) {
 }
 
 // 从缓存中恢复数据
-func LoadFromCache(saveable Saveable) error {
+func LoadFromCache(saveable Saveable) (bool,error) {
 	cacheKey := saveable.GetCacheKey()
 	cacheType,err := cache.Get().Type(cacheKey)
 	if err == redis.Nil || cacheType == "" || cacheType == "none" {
-		return nil
+		return false,nil
 	}
 	cacheData := saveable.CacheData()
 	if cacheType == "string" {
@@ -622,32 +622,35 @@ func LoadFromCache(saveable Saveable) error {
 			err = cache.Get().GetProto(cacheKey, realData)
 			if cache.IsRedisError(err) {
 				logger.Error("GetProto %v %v err:%v", cacheKey, cacheType, err)
-				return err
+				return true,err
 			}
+			return true,nil
 		case *SliceInt32:
 			// string -> SliceInt32
 			strData,err := cache.Get().Get(cacheKey)
 			if cache.IsRedisError(err) {
 				logger.Error("GetProto %v %v err:%v", cacheKey, cacheType, err)
-				return err
+				return true,err
 			}
 			realData.FromString(strData)
+			return true,nil
 		default:
 			logger.Error("%v unsupport cache type:%v", cacheKey, cacheType)
-			return errors.New(fmt.Sprintf("%v unsupport cache type:%v", cacheKey, cacheType))
+			return true,errors.New(fmt.Sprintf("%v unsupport cache type:%v", cacheKey, cacheType))
 		}
 	} else if cacheType == "hash" {
 		// hash -> map
 		err = cache.Get().GetMap(cacheKey, cacheData)
 		if cache.IsRedisError(err) {
 			logger.Error("GetMap %v %v err:%v", cacheKey, cacheType, err)
-			return err
+			return true,err
 		}
+		return true,nil
 	} else {
 		logger.Error("%v unsupport cache type:%v", cacheKey, cacheType)
-		return errors.New(fmt.Sprintf("%v unsupport cache type:%v", cacheKey, cacheType))
+		return true,errors.New(fmt.Sprintf("%v unsupport cache type:%v", cacheKey, cacheType))
 	}
-	return nil
+	return true,nil
 }
 
 // Entity数据保存到数据库
@@ -680,8 +683,9 @@ func SaveEntityToDb(entityDb db.EntityDb, entity Entity, removeCacheAfterSaveDb 
 			logger.Debug("SaveDb %v %v", entity.GetId(), component.GetName())
 		}
 		if compositeSaveable, ok := component.(CompositeSaveable); ok {
-			compositeData := make(map[string]interface{})
+			//compositeData := make(map[string]interface{})
 			saveables := compositeSaveable.SaveableChildren()
+			saveChildCount := 0
 			// 只需要保存修改过数据的子模块
 			for _, saveable := range saveables {
 				if !saveable.IsChanged() {
@@ -697,15 +701,17 @@ func SaveEntityToDb(entityDb db.EntityDb, entity Entity, removeCacheAfterSaveDb 
 					logger.Debug("%v ignore nil %v", entity.GetId(), component.GetName())
 					continue
 				}
-				compositeData[component.GetNameLower()+"."+saveable.Key()] = saveData
+				componentDatas[component.GetNameLower()+"."+saveable.Key()] = saveData
+				saveChildCount++
 				if removeCacheAfterSaveDb {
 					delKeys = append(delKeys, saveable.GetCacheKey())
 				}
 				saved = append(saved, saveable)
 				logger.Debug("SaveDb %v %v.%v", entity.GetId(), component.GetNameLower(), saveable.Key())
 			}
-			if len(compositeData) > 0 {
-				logger.Debug("SaveDb %v %v child:%v", entity.GetId(), component.GetName(), len(compositeData))
+			if saveChildCount > 0 {
+				//componentDatas[component.GetNameLower()] = compositeData
+				logger.Debug("SaveDb %v %v child:%v", entity.GetId(), component.GetName(), saveChildCount)
 			}
 		}
 		return true

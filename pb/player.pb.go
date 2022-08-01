@@ -140,7 +140,7 @@ func (x *Money) GetDiamond() int32 {
 	return 0
 }
 
-// 背包数据
+// 背包模块数据
 type Bag struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -196,7 +196,7 @@ func (x *Bag) GetUniqueItems() map[int64]*UniqueItem {
 	return nil
 }
 
-// 任务数据
+// 任务模块数据
 type Quest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -252,6 +252,7 @@ func (x *Quest) GetQuests() map[int32][]byte {
 	return nil
 }
 
+// 任务数据
 type QuestData struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache

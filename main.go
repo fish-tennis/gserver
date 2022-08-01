@@ -74,6 +74,11 @@ func main() {
 					logger.Info("kill by console input")
 					// 在windows系统模拟一个kill信号,以方便测试服务器退出流程
 					signalKillNotify <- os.Kill
+					return
+				}
+				// 机器人程序输入测试命令
+				if testClient,ok := server.(*testclient.TestClient); ok {
+					testClient.OnInputCmd(line)
 				}
 			}
 		}()

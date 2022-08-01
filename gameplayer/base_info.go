@@ -2,6 +2,7 @@ package gameplayer
 
 import (
 	"github.com/fish-tennis/gserver/internal"
+	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 )
 
@@ -47,6 +48,15 @@ func (this *BaseInfo) CacheData() interface{} {
 
 func (this *BaseInfo) IncExp(incExp int32) {
 	this.data.Exp += incExp
+	lvl := this.data.Exp/100
+	if lvl > this.data.Level {
+		this.data.Level = lvl
+		this.GetPlayer().FireConditionEvent(&pb.EventPlayerLevelup{
+			PlayerId: this.GetPlayerId(),
+			Level: lvl,
+		})
+	}
+	logger.Debug("exp:%v lvl:%v", this.data.Exp, this.data.Level)
 	// 修改了需要保存的数据后,必须设置标记
 	this.SetDirty()
 }

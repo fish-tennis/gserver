@@ -1,11 +1,11 @@
 package gameplayer
 
 import (
+	"github.com/fish-tennis/gserver/cfg"
 	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 	"github.com/fish-tennis/gserver/util"
-	"math/rand"
 )
 
 var _ internal.CompositeSaveable = (*Quest)(nil)
@@ -64,8 +64,7 @@ func (f *FinishedQuests) Add(finishedQuestId int32) {
 	}
 	f.finished.Append(finishedQuestId)
 	f.SetDirty()
-	//f.finished[finishedQuestId] = 1
-	//f.SetDirty(strconv.Itoa(int(finishedQuestId)), true)
+	logger.Debug("add finished %v", finishedQuestId)
 }
 
 var _ internal.MapDirtyMark = (*CurQuests)(nil)
@@ -104,6 +103,22 @@ func (c *CurQuests) Add(questData *pb.QuestData) {
 	logger.Debug("add quest:%v", questData)
 }
 
+func (c *CurQuests) Remove(questId int32) {
+	delete(c.quests, questId)
+	c.SetDirty(questId, false)
+	logger.Debug("remove quest:%v", questId)
+}
+
+func (c *CurQuests) fireEvent(event interface{}) {
+	for _,questData := range c.quests {
+		questCfg := cfg.GetQuestCfgMgr().GetQuestCfg(questData.GetCfgId())
+		if cfg.GetQuestCfgMgr().GetConditionMgr().CheckEvent(event, questCfg.ConditionCfg, questData) {
+			c.SetDirty(questData.GetCfgId(), true)
+			logger.Debug("quest %v progress:%v", questData.GetCfgId(), questData.GetProgress())
+		}
+	}
+}
+
 func NewQuest(player *Player) *Quest {
 	component := &Quest{
 		BasePlayerComponent: BasePlayerComponent{
@@ -140,9 +155,22 @@ func (this *Quest) OnEvent(event interface{}) {
 	switch event.(type) {
 	case *internal.EventPlayerEntryGame:
 		// 测试代码
-		//this.finished.Add(int32(rand.Intn(100)))
-		//logger.Debug("finished:%v", this.finished.finished)
-		questData := &pb.QuestData{CfgId: int32(rand.Intn(1000)), Progress: rand.Int31n(100)}
-		this.quests.Add(questData)
+		if len(this.quests.quests) == 0 {
+			for _,questCfg := range cfg.GetQuestCfgMgr().GetQuestCfgs() {
+				questData := &pb.QuestData{CfgId: questCfg.CfgId}
+				this.quests.Add(questData)
+			}
+		}
+	}
+}
+
+// 完成任务,领取任务奖励
+func (this *Quest) FinishQuests() {
+	for questId,questData := range this.quests.quests {
+		questCfg := cfg.GetQuestCfgMgr().GetQuestCfg(questData.GetCfgId())
+		if questData.GetProgress() >= questCfg.ConditionCfg.Total {
+			this.quests.Remove(questId)
+			this.finished.Add(questId)
+		}
 	}
 }

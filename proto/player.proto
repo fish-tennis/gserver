@@ -19,18 +19,19 @@ message Money {
   int32 diamond = 2; // 钻石
 }
 
-// 背包数据
+// 背包模块数据
 message Bag {
   map<int32,int32> countItems = 1;
   map<int64,UniqueItem> uniqueItems = 2;
 }
 
-// 任务数据
+// 任务模块数据
 message Quest {
   repeated int32 finished = 1; // 已完成的任务
   map<int32,bytes> quests = 2; // 进行中的任务
 }
 
+// 任务数据
 message QuestData {
   int32 cfgId = 1; // 配置id
   int32 progress = 2; // 进度

@@ -13,6 +13,7 @@ enum CmdInner {
 	Cmd_HeartBeatRes = 2; // 心跳返回
 	Cmd_ErrorRes     = 3; // 通用的错误返回消息
 	Cmd_KickPlayer   = 4; // 踢玩家下线
+	Cmd_TestCmd      = 5; // 测试命令
 }
 
 // 心跳包请求
@@ -48,4 +49,9 @@ message ServerInfo {
 message KickPlayer {
   int64 accountId = 1; // 账号id
   int64 playerId = 2; // 玩家id
+}
+
+// 测试命令
+message TestCmd {
+  string cmd = 1;
 }
