@@ -14,13 +14,13 @@ var _ internal.Saveable = (*Money)(nil)
 // 玩家的钱财组件
 type Money struct {
 	PlayerDataComponent
-	data *pb.Money
+	Data *pb.Money `db:"baseinfo"`
 }
 
 func NewMoney(player *Player) *Money {
 	component := &Money{
 		PlayerDataComponent: *NewPlayerDataComponent(player, "Money"),
-		data: &pb.Money{
+		Data: &pb.Money{
 			Coin:    0,
 			Diamond: 0,
 		},
@@ -32,11 +32,11 @@ func (this *Money) DbData() (dbData interface{}, protoMarshal bool) {
 	// 演示proto序列化后存储到数据库
 	// 优点:占用空间少,读取数据快,游戏模块大多采用这种方式
 	// 缺点:数据库语言无法直接操作字段
-	return this.data, true
+	return this.Data, true
 }
 
 func (this *Money) CacheData() interface{} {
-	return this.data
+	return this.Data
 }
 
 // 事件接口
@@ -64,12 +64,12 @@ func (this *Money) OnPlayerEntryGame(eventPlayerEntryGame *internal.EventPlayerE
 }
 
 func (this *Money) IncCoin(coin int32) {
-	this.data.Coin += coin
+	this.Data.Coin += coin
 	this.SetDirty()
 }
 
 func (this *Money) IncDiamond(diamond int32) {
-	this.data.Diamond += diamond
+	this.Data.Diamond += diamond
 	this.SetDirty()
 }
 
@@ -79,7 +79,7 @@ func (this *Money) OnCoinReq(req *pb.CoinReq) {
 	logger.Debug("OnCoinReq:%v", req)
 	this.IncCoin(req.GetAddCoin())
 	this.GetPlayer().SendCoinRes(&pb.CoinRes{
-		TotalCoin: this.data.GetCoin(),
+		TotalCoin: this.Data.GetCoin(),
 	})
 }
 
@@ -89,6 +89,6 @@ func OnCoinReq(this *Money, req *pb.CoinReq) {
 	logger.Debug("OnCoinReq:%v", req)
 	this.IncCoin(req.GetAddCoin())
 	this.GetPlayer().SendCoinRes(&pb.CoinRes{
-		TotalCoin: this.data.GetCoin(),
+		TotalCoin: this.Data.GetCoin(),
 	})
 }

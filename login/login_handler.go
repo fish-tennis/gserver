@@ -83,7 +83,7 @@ func selectGameServer(account *pb.Account) *pb.ServerInfo {
 func onAccountReg(connection Connection, packet *ProtoPacket) {
 	logger.Debug("onAccountReg:%v", packet.Message())
 	req := packet.Message().(*pb.AccountReg)
-	result := "ok"
+	result := ""
 	account := &pb.Account{
 		Id: util.GenUniqueId(),
 		Name: req.GetAccountName(),

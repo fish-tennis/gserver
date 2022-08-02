@@ -67,7 +67,8 @@ func (this *Player) GetComponent(componentName string) Component {
 
 // 玩家数据保存数据库
 func (this *Player) SaveDb(removeCacheAfterSaveDb bool) error {
-	return SaveEntityToDb(db.GetPlayerDb(), this, removeCacheAfterSaveDb)
+	return SaveEntityToDb_New(db.GetPlayerDb(), this, removeCacheAfterSaveDb)
+	//return SaveEntityToDb(db.GetPlayerDb(), this, removeCacheAfterSaveDb)
 }
 
 // 设置关联的连接
@@ -107,7 +108,7 @@ func (this *Player) FireEvent(event interface{}) {
 func (this *Player) FireConditionEvent(event interface{}) {
 	logger.Debug("%v FireConditionEvent:%v", this.GetId(), event)
 	// 目前只有任务模块用了Condition
-	this.GetQuest().quests.fireEvent(event)
+	this.GetQuest().Quests.fireEvent(event)
 }
 
 func (this *Player) GetBaseInfo() *BaseInfo {

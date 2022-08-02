@@ -17,9 +17,9 @@ var _ internal.CompositeSaveable = (*Quest)(nil)
 type Quest struct {
 	BasePlayerComponent
 	// 已完成的任务
-	finished *FinishedQuests
+	Finished *FinishedQuests `child:"finished"`
 	// 当前任务列表
-	quests *CurQuests
+	Quests *CurQuests `child:"quests"`
 }
 
 var _ internal.DirtyMark = (*FinishedQuests)(nil)
@@ -32,17 +32,17 @@ type FinishedQuests struct {
 	// SliceInt32只能和DirtyMark配合使用,不支持MapDirtyMark
 	// NOTE:使用SliceInt32作用有限,还不如用proto更方便,这里只是演示一种保存方式,实际应用的时候不推荐
 	// 暂时也没有实现SliceInt64,SliceProto之类的扩展类,因为redis里不好存储
-	finished *internal.SliceInt32
+	Finished *internal.SliceInt32 `db:"finished"`
 	// 排重数组也可以使用map代替
-	//finished map[int32]int8
+	//Finished map[int32]int8
 }
 
 func (f *FinishedQuests) DbData() (dbData interface{}, protoMarshal bool) {
-	return f.finished, false
+	return f.Finished, false
 }
 
 func (f *FinishedQuests) CacheData() interface{} {
-	return f.finished
+	return f.Finished
 }
 
 func (f *FinishedQuests) Key() string {
@@ -54,17 +54,17 @@ func (f *FinishedQuests) GetCacheKey() string {
 }
 
 //func (f *FinishedQuests) GetMapValue(key string) (value interface{}, exists bool) {
-//	value,exists = f.finished[int32(util.Atoi(key))]
+//	value,exists = f.Finished[int32(util.Atoi(key))]
 //	return
 //}
 
 func (f *FinishedQuests) Add(finishedQuestId int32) {
-	if f.finished.Contains(finishedQuestId) {
+	if f.Finished.Contains(finishedQuestId) {
 		return
 	}
-	f.finished.Append(finishedQuestId)
+	f.Finished.Append(finishedQuestId)
 	f.SetDirty()
-	logger.Debug("add finished %v", finishedQuestId)
+	logger.Debug("add Finished %v", finishedQuestId)
 }
 
 var _ internal.MapDirtyMark = (*CurQuests)(nil)
@@ -73,20 +73,20 @@ var _ internal.MapDirtyMark = (*CurQuests)(nil)
 type CurQuests struct {
 	internal.BaseMapDirtyMark
 	quest  *Quest
-	quests map[int32]*pb.QuestData
+	Quests map[int32]*pb.QuestData `db:"quests"`
 }
 
 func (c *CurQuests) GetMapValue(key string) (value interface{}, exists bool) {
-	value, exists = c.quests[int32(util.Atoi(key))]
+	value, exists = c.Quests[int32(util.Atoi(key))]
 	return
 }
 
 func (c *CurQuests) DbData() (dbData interface{}, protoMarshal bool) {
-	return c.quests, true
+	return c.Quests, true
 }
 
 func (c *CurQuests) CacheData() interface{} {
-	return c.quests
+	return c.Quests
 }
 
 func (c *CurQuests) Key() string {
@@ -98,19 +98,19 @@ func (c *CurQuests) GetCacheKey() string {
 }
 
 func (c *CurQuests) Add(questData *pb.QuestData) {
-	c.quests[questData.CfgId] = questData
+	c.Quests[questData.CfgId] = questData
 	c.SetDirty(questData.CfgId, true)
 	logger.Debug("add quest:%v", questData)
 }
 
 func (c *CurQuests) Remove(questId int32) {
-	delete(c.quests, questId)
+	delete(c.Quests, questId)
 	c.SetDirty(questId, false)
 	logger.Debug("remove quest:%v", questId)
 }
 
 func (c *CurQuests) fireEvent(event interface{}) {
-	for _,questData := range c.quests {
+	for _,questData := range c.Quests {
 		questCfg := cfg.GetQuestCfgMgr().GetQuestCfg(questData.GetCfgId())
 		if cfg.GetQuestCfgMgr().GetConditionMgr().CheckEvent(event, questCfg.ConditionCfg, questData) {
 			c.SetDirty(questData.GetCfgId(), true)
@@ -125,28 +125,28 @@ func NewQuest(player *Player) *Quest {
 			player: player,
 			name:   "Quest",
 		},
-		finished: &FinishedQuests{
+		Finished: &FinishedQuests{
 		},
-		quests: &CurQuests{
+		Quests: &CurQuests{
 		},
 	}
-	component.finished.quest = component
-	component.quests.quest = component
+	component.Finished.quest = component
+	component.Quests.quest = component
 	component.checkData()
 	return component
 }
 
 // 需要保存数据的子模块
 func (this *Quest) SaveableChildren() []internal.ChildSaveable {
-	return []internal.ChildSaveable{this.finished, this.quests}
+	return []internal.ChildSaveable{this.Finished, this.Quests}
 }
 
 func (this *Quest) checkData() {
-	if this.finished.finished == nil {
-		this.finished.finished = new(internal.SliceInt32)
+	if this.Finished.Finished == nil {
+		this.Finished.Finished = new(internal.SliceInt32)
 	}
-	if this.quests.quests == nil {
-		this.quests.quests = make(map[int32]*pb.QuestData)
+	if this.Quests.Quests == nil {
+		this.Quests.Quests = make(map[int32]*pb.QuestData)
 	}
 }
 
@@ -155,10 +155,10 @@ func (this *Quest) OnEvent(event interface{}) {
 	switch event.(type) {
 	case *internal.EventPlayerEntryGame:
 		// 测试代码
-		if len(this.quests.quests) == 0 {
+		if len(this.Quests.Quests) == 0 {
 			for _,questCfg := range cfg.GetQuestCfgMgr().GetQuestCfgs() {
 				questData := &pb.QuestData{CfgId: questCfg.CfgId}
-				this.quests.Add(questData)
+				this.Quests.Add(questData)
 			}
 		}
 	}
@@ -166,11 +166,11 @@ func (this *Quest) OnEvent(event interface{}) {
 
 // 完成任务,领取任务奖励
 func (this *Quest) FinishQuests() {
-	for questId,questData := range this.quests.quests {
+	for questId,questData := range this.Quests.Quests {
 		questCfg := cfg.GetQuestCfgMgr().GetQuestCfg(questData.GetCfgId())
 		if questData.GetProgress() >= questCfg.ConditionCfg.Total {
-			this.quests.Remove(questId)
-			this.finished.Add(questId)
+			this.Quests.Remove(questId)
+			this.Finished.Add(questId)
 		}
 	}
 }

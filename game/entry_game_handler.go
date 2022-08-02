@@ -143,7 +143,14 @@ func onCreatePlayerReq(connection Connection, packet *ProtoPacket) {
 			Exp: 0,
 		},
 	}
-	err,isDuplicateKey := db.GetPlayerDb().InsertEntity(playerData.Id, playerData)
+	newPlayer := gameplayer.CreatePlayerFromData(playerData)
+	newPlayerSaveData := make(map[string]interface{})
+	newPlayerSaveData["id"] = playerData.Id
+	newPlayerSaveData["name"] = playerData.Name
+	newPlayerSaveData["accountid"] = playerData.AccountId
+	newPlayerSaveData["regionid"] = playerData.RegionId
+	GetEntitySaveData(newPlayer, newPlayerSaveData)
+	err,isDuplicateKey := db.GetPlayerDb().InsertEntity(playerData.Id, newPlayerSaveData)
 	if err != nil {
 		result := "DbError"
 		if isDuplicateKey {

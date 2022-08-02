@@ -13,7 +13,7 @@ var _ internal.Saveable = (*BaseInfo)(nil)
 // 玩家基础信息组件
 type BaseInfo struct {
 	PlayerDataComponent
-	data *pb.BaseInfo
+	Data *pb.BaseInfo `db:"baseinfo;plain"`
 }
 
 func NewBaseInfo(player *Player, data *pb.BaseInfo) *BaseInfo {
@@ -24,13 +24,13 @@ func NewBaseInfo(player *Player, data *pb.BaseInfo) *BaseInfo {
 				name:   "BaseInfo",
 			},
 		},
-		data: &pb.BaseInfo{
+		Data: &pb.BaseInfo{
 			Level: 1,
 			Exp: 0,
 		},
 	}
 	if data != nil {
-		component.data = data
+		component.Data = data
 	}
 	return component
 }
@@ -39,24 +39,24 @@ func (this *BaseInfo) DbData() (dbData interface{}, protoMarshal bool) {
 	// 演示明文保存数据库
 	// 优点:便于查看,数据库语言可直接操作字段
 	// 缺点:字段名也会保存到数据库,占用空间多
-	return this.data,false
+	return this.Data,false
 }
 
 func (this *BaseInfo) CacheData() interface{} {
-	return this.data
+	return this.Data
 }
 
 func (this *BaseInfo) IncExp(incExp int32) {
-	this.data.Exp += incExp
-	lvl := this.data.Exp/100
-	if lvl > this.data.Level {
-		this.data.Level = lvl
+	this.Data.Exp += incExp
+	lvl := this.Data.Exp/100
+	if lvl > this.Data.Level {
+		this.Data.Level = lvl
 		this.GetPlayer().FireConditionEvent(&pb.EventPlayerLevelup{
 			PlayerId: this.GetPlayerId(),
 			Level: lvl,
 		})
 	}
-	logger.Debug("exp:%v lvl:%v", this.data.Exp, this.data.Level)
+	logger.Debug("exp:%v lvl:%v", this.Data.Exp, this.Data.Level)
 	// 修改了需要保存的数据后,必须设置标记
 	this.SetDirty()
 }

@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"fmt"
 	"github.com/fish-tennis/gserver/logger"
 	"strings"
 )
@@ -137,4 +138,17 @@ func NewMapDataComponent(entity Entity, componentName string) *MapDataComponent 
 			name:   componentName,
 		},
 	}
+}
+
+// 获取玩家组件的缓存key
+func GetPlayerComponentCacheKey(playerId int64, componentName string) string {
+	// 使用{playerId}形式的hashtag,使同一个玩家的不同组件的数据都落在一个redis节点上
+	// 落在一个redis节点上的好处:可以使用redis lua对玩家数据进行类似事务的原子操作
+	// https://redis.io/topics/cluster-tutorial
+	return fmt.Sprintf("p.%v.{%v}", strings.ToLower(componentName), playerId)
+}
+
+// 获取玩家组件子对象的缓存key
+func GetPlayerComponentChildCacheKey(playerId int64, componentName string, childName string) string {
+	return ""
 }
