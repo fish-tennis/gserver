@@ -32,7 +32,7 @@ type FinishedQuests struct {
 	// SliceInt32只能和DirtyMark配合使用,不支持MapDirtyMark
 	// NOTE:使用SliceInt32作用有限,还不如用proto更方便,这里只是演示一种保存方式,实际应用的时候不推荐
 	// 暂时也没有实现SliceInt64,SliceProto之类的扩展类,因为redis里不好存储
-	Finished *internal.SliceInt32 `db:"finished"`
+	Finished []int32 `db:"finished;plain"`
 	// 排重数组也可以使用map代替
 	//Finished map[int32]int8
 }
@@ -59,10 +59,10 @@ func (f *FinishedQuests) GetCacheKey() string {
 //}
 
 func (f *FinishedQuests) Add(finishedQuestId int32) {
-	if f.Finished.Contains(finishedQuestId) {
+	if util.ContainsInt32(f.Finished, finishedQuestId) {
 		return
 	}
-	f.Finished.Append(finishedQuestId)
+	f.Finished = append(f.Finished, finishedQuestId)
 	f.SetDirty()
 	logger.Debug("add Finished %v", finishedQuestId)
 }
@@ -143,7 +143,7 @@ func (this *Quest) SaveableChildren() []internal.ChildSaveable {
 
 func (this *Quest) checkData() {
 	if this.Finished.Finished == nil {
-		this.Finished.Finished = new(internal.SliceInt32)
+		this.Finished.Finished = make([]int32, 0)
 	}
 	if this.Quests.Quests == nil {
 		this.Quests.Quests = make(map[int32]*pb.QuestData)

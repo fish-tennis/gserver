@@ -4,7 +4,6 @@ import (
 	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
-	"time"
 )
 
 // 编译期检查是否实现了Saveable接口
@@ -44,12 +43,12 @@ func (this *Money) OnEvent(event interface{}) {
 	switch v := event.(type) {
 	case *internal.EventPlayerEntryGame:
 		this.OnPlayerEntryGame(v)
-		// 测试倒计时,玩家的钱币每秒+1
-		this.player.GetTimerEntries().After(time.Second, func() time.Duration {
-			this.IncCoin(1)
-			//logger.Debug("timer IncCoin")
-			return time.Second
-		})
+		//// 测试倒计时,玩家的钱币每秒+1
+		//this.player.GetTimerEntries().After(time.Second, func() time.Duration {
+		//	this.IncCoin(1)
+		//	//logger.Debug("timer IncCoin")
+		//	return time.Second
+		//})
 		//this.player.GetTimerEntries().After(time.Second, func() time.Duration {
 		//	this.IncDiamond(1)
 		//	//logger.Debug("timer IncDiamond once")

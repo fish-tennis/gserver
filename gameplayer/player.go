@@ -67,7 +67,7 @@ func (this *Player) GetComponent(componentName string) Component {
 
 // 玩家数据保存数据库
 func (this *Player) SaveDb(removeCacheAfterSaveDb bool) error {
-	return SaveEntityToDb_New(db.GetPlayerDb(), this, removeCacheAfterSaveDb)
+	return SaveEntityChangedDataToDb(db.GetPlayerDb(), this, removeCacheAfterSaveDb)
 	//return SaveEntityToDb(db.GetPlayerDb(), this, removeCacheAfterSaveDb)
 }
 
@@ -130,7 +130,7 @@ func (this *Player) GetTimerEntries() *TimerEntries {
 // 开启消息处理协程
 // 每个玩家一个独立的消息处理协程
 // 除了登录消息,其他消息都在玩家自己的协程里处理,因此这里对本玩家的操作不需要加锁
-func (this *Player) StartProcessRoutine() bool {
+func (this *Player) RunProcessRoutine() bool {
 	GetServer().GetWaitGroup().Add(1)
 	go func(ctx context.Context) {
 		defer func() {
@@ -160,7 +160,10 @@ func (this *Player) StartProcessRoutine() bool {
 				this.processMessage(message)
 			case timeNow := <-this.timerEntries.TimerChan():
 				// 计时器的回调在玩家协程里执行,所以是协程安全的
-				this.timerEntries.Run(timeNow)
+				if this.timerEntries.Run(timeNow) {
+					// 如果有需要保存的数据修改了,即时保存数据库
+					this.SaveCache()
+				}
 			}
 		}
 

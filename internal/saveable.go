@@ -156,135 +156,29 @@ func (this *BaseMapDirtyMark) GetDirtyMap() map[string]bool {
 	return this.dirtyMap
 }
 
-// 保存数据库之前,对Saveable进行预处理
-func SaveSaveable(saveable Saveable) (interface{}, error) {
-	saveData, protoMarshal := saveable.DbData()
-	if protoMarshal {
-		// 模块的保存数据是一个proto.Message
-		// proto.Message -> []byte
-		if protoMessage, ok := saveData.(proto.Message); ok {
-			return proto.Marshal(protoMessage)
-		}
-		val := reflect.ValueOf(saveData)
-		switch val.Kind() {
-		case reflect.Map:
-			// 模块的保存数据是一个map
-			typ := reflect.TypeOf(saveData)
-			keyType := typ.Key()
-			valType := typ.Elem()
-			if valType.Kind() == reflect.Interface || valType.Kind() == reflect.Ptr {
-				switch keyType.Kind() {
-				case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-					// map[int]proto.Message -> map[int64][]byte
-					// map[int]interface{} -> map[int64]interface{}
-					newMap := make(map[int64]interface{})
-					it := val.MapRange()
-					for it.Next() {
-						// map的value是proto格式,进行序列化
-						if protoMessage, ok := it.Value().Interface().(proto.Message); ok {
-							bytes, err := proto.Marshal(protoMessage)
-							if err != nil {
-								logger.Error("proto %v err:%v", it.Key().Int(), err.Error())
-								return nil, err
-							}
-							newMap[it.Key().Int()] = bytes
-						} else {
-							newMap[it.Key().Int()] = it.Value().Interface()
-						}
-					}
-					return newMap, nil
-				case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-					// map[uint]proto.Message -> map[uint64][]byte
-					// map[uint]interface{} -> map[uint64]interface{}
-					newMap := make(map[uint64]interface{})
-					it := val.MapRange()
-					for it.Next() {
-						// map的value是proto格式,进行序列化
-						if protoMessage, ok := it.Value().Interface().(proto.Message); ok {
-							bytes, err := proto.Marshal(protoMessage)
-							if err != nil {
-								logger.Error("%v proto %v err:%v", saveable.GetCacheKey(), it.Key().Uint(), err.Error())
-								return nil, err
-							}
-							newMap[it.Key().Uint()] = bytes
-						} else {
-							newMap[it.Key().Uint()] = it.Value().Interface()
-						}
-					}
-					return newMap, nil
-				case reflect.String:
-					// map[string]proto.Message -> map[string][]byte
-					// map[string]interface{} -> map[string]interface{}
-					newMap := make(map[string]interface{})
-					it := val.MapRange()
-					for it.Next() {
-						// map的value是proto格式,进行序列化
-						if protoMessage, ok := it.Value().Interface().(proto.Message); ok {
-							bytes, err := proto.Marshal(protoMessage)
-							if err != nil {
-								logger.Error("proto %v err:%v", it.Key().String(), err.Error())
-								return nil, err
-							}
-							newMap[it.Key().String()] = bytes
-						} else {
-							newMap[it.Key().String()] = it.Value().Interface()
-						}
-					}
-					return newMap, nil
-				default:
-					logger.Error("%v unsupport key type:%v", saveable.GetCacheKey(), keyType.Kind())
-					return nil, errors.New("unsupport key type")
-				}
-			} else {
-				return saveData, nil
-			}
-		}
-	} else {
-		switch realData := saveData.(type) {
-		case *SliceInt32:
-			// SliceInt32 -> []int32
-			return realData.Data(), nil
-		}
+// 获取对象的保存数据
+func GetSaveData(obj interface{}, parentName string) (interface{}, error) {
+	structCache := GetSaveableStruct(reflect.TypeOf(obj))
+	if structCache == nil {
+		logger.Debug("not saveable %v", parentName)
+		return nil, nil
 	}
-	return saveData, nil
-}
-
-func SaveSaveable_New(saveable Saveable) (interface{}, error) {
-	reflectType := reflect.ValueOf(saveable).Type()
-	if reflectType.Kind() != reflect.Ptr {
-		return nil, errors.New("must Ptr")
-	}
-	reflectType = reflectType.Elem()
-	if reflectType.Kind() != reflect.Struct {
-		return nil, errors.New("must Struct")
-	}
-	reflectVal := reflect.ValueOf(saveable).Elem()
-	for i := 0; i < reflectType.NumField(); i++ {
-		fieldStruct := reflectType.Field(i)
-		if len(fieldStruct.Tag) == 0 {
-			continue
-		}
-		isPlain := false
-		dbSetting := fieldStruct.Tag.Get("db")
-		if len(dbSetting) == 0 {
-			continue
-		}
-		dbSettings := strings.Split(dbSetting, ";")
-		if util.HasString(dbSettings, "plain") {
-			isPlain = true
-		}
-		val := reflectVal.Field(i)
+	reflectVal := reflect.ValueOf(obj).Elem()
+	if !structCache.IsCompositeSaveable {
+		fieldCache := structCache.Fields[0]
+		val := reflectVal.Field(fieldCache.FieldIndex)
 		if val.IsNil() {
 			return nil, nil
 		}
 		fieldInterface := val.Interface()
-		if isPlain {
+		// 明文保存数据
+		if fieldCache.IsPlain {
 			return fieldInterface, nil
 		}
-
+		// 非明文保存的数据,一般用于对proto进行序列化
 		switch val.Kind() {
 		case reflect.Map:
-			// 模块的保存数据是一个map
+			// 保存数据是一个map
 			typ := reflect.TypeOf(fieldInterface)
 			keyType := typ.Key()
 			valType := typ.Elem()
@@ -300,7 +194,7 @@ func SaveSaveable_New(saveable Saveable) (interface{}, error) {
 						if protoMessage, ok := it.Value().Interface().(proto.Message); ok {
 							bytes, err := proto.Marshal(protoMessage)
 							if err != nil {
-								logger.Error("proto %v err:%v", it.Key().Int(), err.Error())
+								logger.Error("%v.%v proto %v err:%v", parentName, fieldCache.Name, it.Key().Int(), err.Error())
 								return nil, err
 							}
 							newMap[it.Key().Int()] = bytes
@@ -319,7 +213,7 @@ func SaveSaveable_New(saveable Saveable) (interface{}, error) {
 						if protoMessage, ok := it.Value().Interface().(proto.Message); ok {
 							bytes, err := proto.Marshal(protoMessage)
 							if err != nil {
-								logger.Error("%v proto %v err:%v", saveable.GetCacheKey(), it.Key().Uint(), err.Error())
+								logger.Error("%v.%v proto %v err:%v", parentName, fieldCache.Name, it.Key().Uint(), err.Error())
 								return nil, err
 							}
 							newMap[it.Key().Uint()] = bytes
@@ -331,14 +225,14 @@ func SaveSaveable_New(saveable Saveable) (interface{}, error) {
 				case reflect.String:
 					// map[string]proto.Message -> map[string][]byte
 					// map[string]interface{} -> map[string]interface{}
-					newMap := make(map[string]interface{})
+					newMap := make(map[string]interface{}, val.Len())
 					it := val.MapRange()
 					for it.Next() {
 						// map的value是proto格式,进行序列化
 						if protoMessage, ok := it.Value().Interface().(proto.Message); ok {
 							bytes, err := proto.Marshal(protoMessage)
 							if err != nil {
-								logger.Error("proto %v err:%v", it.Key().String(), err.Error())
+								logger.Error("%v.%v proto %v err:%v", parentName, fieldCache.Name, it.Key().String(), err.Error())
 								return nil, err
 							}
 							newMap[it.Key().String()] = bytes
@@ -348,17 +242,38 @@ func SaveSaveable_New(saveable Saveable) (interface{}, error) {
 					}
 					return newMap, nil
 				default:
-					logger.Error("%v unsupport key type:%v", saveable.GetCacheKey(), keyType.Kind())
+					logger.Error("%v.%v unsupport key type:%v", parentName, fieldCache.Name, keyType.Kind())
 					return nil, errors.New("unsupport key type")
 				}
 			} else {
+				// map的value是基础类型,无需序列化,直接返回
 				return fieldInterface, nil
 			}
 
 		case reflect.Slice:
-		// slice := make(interface{},0)
-		// proto
-		// return slice,nil
+			typ := reflect.TypeOf(fieldInterface)
+			valType := typ.Elem()
+			if valType.Kind() == reflect.Interface || valType.Kind() == reflect.Ptr {
+				newSlice := make([]interface{}, 0, val.Len())
+				for i := 0; i < val.Len(); i++ {
+					sliceElem := val.Index(i)
+					if protoMessage, ok := sliceElem.Interface().(proto.Message); ok {
+						bytes, err := proto.Marshal(protoMessage)
+						if err != nil {
+							logger.Error("%v.%v proto %v err:%v", parentName, fieldCache.Name, i, err.Error())
+							return nil, err
+						}
+						newSlice = append(newSlice, bytes)
+					} else {
+						newSlice = append(newSlice, sliceElem.Interface())
+					}
+				}
+				// proto
+				return newSlice, nil
+			} else {
+				// slice的value是基础类型,无需序列化,直接返回
+				return fieldInterface, nil
+			}
 
 		case reflect.Ptr:
 			// 模块的保存数据是一个proto.Message
@@ -369,204 +284,175 @@ func SaveSaveable_New(saveable Saveable) (interface{}, error) {
 			if sliceInt32, ok := fieldInterface.(*SliceInt32); ok {
 				return sliceInt32.Data(), nil
 			}
-		}
-	}
 
-	// 检查组合模块
-	var compositeSaveData map[string]interface{}
-	for i := 0; i < reflectType.NumField(); i++ {
-		fieldStruct := reflectType.Field(i)
-		if len(fieldStruct.Tag) == 0 {
-			continue
+		default:
+			return nil, errors.New("unsupport key type")
 		}
-		dbSetting := fieldStruct.Tag.Get("child")
-		if len(dbSetting) == 0 {
-			continue
-		}
-		if compositeSaveData == nil {
-			compositeSaveData = make(map[string]interface{})
-		}
-		val := reflectVal.Field(i)
-		if val.IsNil() {
-			compositeSaveData[saveable.GetCacheKey()+"."+dbSetting] = nil
-			continue
-		}
-		fieldInterface := val.Interface()
-		// 子模块必须是ChildSaveable
-		if childSaveable, ok := fieldInterface.(ChildSaveable); ok {
-			childSaveData,childError := SaveSaveable_New(childSaveable)
-			if childError != nil {
-				compositeSaveData[saveable.GetCacheKey()+"."+dbSetting] = childSaveData
-			}
-		}
-	}
-	if compositeSaveData != nil {
-		return compositeSaveData, nil
-	}
-	return nil, nil
-}
-
-func SaveCompositeSaveable_New(saveable CompositeSaveable, ignoreUnchangeData bool) (map[string]interface{},[]Saveable,error) {
-	// 检查组合模块
-	var compositeSaveData map[string]interface{}
-	reflectType := reflect.ValueOf(saveable).Type()
-	if reflectType.Kind() != reflect.Ptr {
-		return nil, nil, errors.New("must Ptr")
-	}
-	reflectType = reflectType.Elem()
-	if reflectType.Kind() != reflect.Struct {
-		return nil, nil, errors.New("must Struct")
-	}
-	reflectVal := reflect.ValueOf(saveable).Elem()
-	childSaveables := make([]Saveable,0)
-	for i := 0; i < reflectType.NumField(); i++ {
-		fieldStruct := reflectType.Field(i)
-		if len(fieldStruct.Tag) == 0 {
-			continue
-		}
-		dbSetting := fieldStruct.Tag.Get("child")
-		if len(dbSetting) == 0 {
-			continue
-		}
-		if compositeSaveData == nil {
-			compositeSaveData = make(map[string]interface{})
-		}
-		val := reflectVal.Field(i)
-		if val.IsNil() {
-			compositeSaveData[dbSetting] = nil
-			continue
-		}
-		fieldInterface := val.Interface()
-		// 子模块必须是ChildSaveable
-		if childSaveable, ok := fieldInterface.(ChildSaveable); ok {
-			if ignoreUnchangeData && !childSaveable.IsChanged() {
-				logger.Debug("ignore %v", dbSetting)
+	} else {
+		// 多个子模块的组合
+		compositeSaveData := make(map[string]interface{})
+		for _, fieldCache := range structCache.Fields {
+			childName := parentName + "." + fieldCache.Name
+			val := reflectVal.Field(fieldCache.FieldIndex)
+			if val.IsNil() {
+				compositeSaveData[fieldCache.Name] = nil
 				continue
 			}
-			childSaveData,childError := SaveSaveable_New(childSaveable)
-			if childError == nil {
-				compositeSaveData[dbSetting] = childSaveData
-				childSaveables = append(childSaveables, childSaveable)
+			fieldInterface := val.Interface()
+			childSaveData, err := GetSaveData(fieldInterface, childName)
+			if err != nil {
+				return nil, err
 			}
+			compositeSaveData[fieldCache.Name] = childSaveData
 		}
+		return compositeSaveData, nil
 	}
-	return compositeSaveData, childSaveables, nil
+	return nil, errors.New("unsupport type")
+}
+
+// 组件的保存数据
+func GetComponentSaveData(component Component) (interface{}, error) {
+	return GetSaveData(component, component.GetNameLower())
 }
 
 // 加载数据
-func LoadSaveable(saveable Saveable, sourceData interface{}) error {
+// 反序列化
+func LoadData(obj interface{}, sourceData interface{}) error {
 	if util.IsNil(sourceData) {
 		return nil
 	}
-	dbData, protoMarshal := saveable.DbData()
-	if util.IsNil(dbData) {
-		return nil
+	structCache := GetSaveableStruct(reflect.TypeOf(obj))
+	if structCache == nil {
+		return errors.New("not Saveable object")
 	}
-	typ := reflect.TypeOf(dbData)
-	sourceTyp := reflect.TypeOf(sourceData)
-	switch sourceTyp.Kind() {
-	case reflect.Slice:
-		if protoMarshal {
-			// []byte -> proto.Message
-			if sourceTyp.Elem().Kind() == reflect.Uint8 {
-				if bytes, ok := sourceData.([]byte); ok {
-					if len(bytes) == 0 {
+	reflectVal := reflect.ValueOf(obj).Elem()
+	if !structCache.IsCompositeSaveable {
+		fieldCache := structCache.Fields[0]
+		val := reflectVal.Field(fieldCache.FieldIndex)
+		if val.IsNil() {
+			if !val.CanSet() {
+				logger.Error("%v CanSet false", fieldCache.Name)
+				return nil
+			}
+			newElem := reflect.New(fieldCache.StructField.Type)
+			val.Set(newElem)
+		}
+		sourceTyp := reflect.TypeOf(sourceData)
+		switch sourceTyp.Kind() {
+		case reflect.Slice:
+			if !fieldCache.IsPlain {
+				// proto反序列化
+				// []byte -> proto.Message
+				if sourceTyp.Elem().Kind() == reflect.Uint8 {
+					if bytes, ok := sourceData.([]byte); ok {
+						if len(bytes) == 0 {
+							return nil
+						}
+						// []byte -> proto.Message
+						if protoMessage, ok2 := val.Interface().(proto.Message); ok2 {
+							err := proto.Unmarshal(bytes, protoMessage)
+							if err != nil {
+								logger.Error("%v proto.Unmarshal err:%v", fieldCache.Name, err.Error())
+								return err
+							}
+							return nil
+						}
+					}
+				}
+			}
+			// 基础类型的slice
+			if fieldCache.StructField.Type.Kind() == reflect.Slice {
+				// 数组类型一致,就直接赋值
+				if sourceTyp.Elem().Kind() == fieldCache.StructField.Type.Elem().Kind() {
+					if val.CanSet() {
+						val.Set(reflect.ValueOf(sourceData))
 						return nil
 					}
-					// []byte -> proto.Message
-					if protoMessage, ok2 := dbData.(proto.Message); ok2 {
-						err := proto.Unmarshal(bytes, protoMessage)
-						if err != nil {
-							logger.Error("%v proto err:%v", saveable.GetCacheKey(), err.Error())
-							return err
-						}
+				}
+				// 类型不一致,暂时返回错误
+				return errors.New("slice element type error")
+			}
+
+		case reflect.Map:
+			// map[intORstring]intORstring -> map[intORstring]intORstring
+			// map[intORstring][]byte -> map[intORstring]proto.Message
+			sourceVal := reflect.ValueOf(sourceData)
+			sourceKeyType := sourceTyp.Key()
+			sourceValType := sourceTyp.Elem()
+			if fieldCache.StructField.Type.Kind() == reflect.Map {
+				//fieldVal := reflect.ValueOf(val)
+				keyType := fieldCache.StructField.Type.Key()
+				valType := fieldCache.StructField.Type.Elem()
+				sourceIt := sourceVal.MapRange()
+				for sourceIt.Next() {
+					k := convertValueToInterface(sourceKeyType, keyType, sourceIt.Key())
+					v := convertValueToInterface(sourceValType, valType, sourceIt.Value())
+					val.SetMapIndex(reflect.ValueOf(k), reflect.ValueOf(v))
+				}
+				return nil
+			}
+
+		case reflect.Interface, reflect.Ptr:
+			sourceVal := reflect.ValueOf(sourceData)
+			//if fieldCache.StructField.Type == sourceTyp {
+			//	if val.CanSet() {
+			//		val.Set(sourceVal)
+			//		return nil
+			//	}
+			//}
+			if sourceProtoMessage, ok := sourceVal.Interface().(proto.Message); ok {
+				if protoMessage, ok2 := val.Interface().(proto.Message); ok2 {
+					if sourceProtoMessage.ProtoReflect().Descriptor() == protoMessage.ProtoReflect().Descriptor() {
+						proto.Merge(protoMessage, sourceProtoMessage)
 						return nil
 					}
 				}
 			}
-		}
-		switch realData := dbData.(type) {
-		case *SliceInt32:
-			// []int -> SliceInt32
-			sourceVal := reflect.ValueOf(sourceData)
-			sourceValType := sourceTyp.Elem()
-			for i := 0; i < sourceVal.Len(); i++ {
-				realData.Append(int32(convertValueToInt(sourceValType, sourceVal.Index(i))))
-			}
-			logger.Debug("%v slice:%v", saveable.GetCacheKey(), realData.Data())
-			return nil
+			// TODO:扩展一个序列化接口
+			return errors.New(fmt.Sprintf("unsupport type %v", fieldCache.Name))
+
 		default:
-			logger.Error("%v unsupport type:%v", saveable.GetCacheKey(), sourceTyp.Kind())
-			return errors.New(fmt.Sprintf("%v unsupport type:%v", saveable.GetCacheKey(), sourceTyp.Kind()))
-		}
+			return errors.New(fmt.Sprintf("unsupport type %v sourceTyp.Kind():%v", fieldCache.Name, sourceTyp.Kind()))
 
-	case reflect.Map:
-		// map[intORstring]intORstring -> map[intORstring]intORstring
-		// map[intORstring][]byte -> map[intORstring]proto.Message
-		sourceVal := reflect.ValueOf(sourceData)
-		sourceKeyType := sourceTyp.Key()
-		sourceValType := sourceTyp.Elem()
-		if typ.Kind() == reflect.Map {
-			val := reflect.ValueOf(dbData)
-			keyType := typ.Key()
-			valType := typ.Elem()
-			sourceIt := sourceVal.MapRange()
-			for sourceIt.Next() {
-				k := convertValueToInterface(sourceKeyType, keyType, sourceIt.Key())
-				v := convertValueToInterface(sourceValType, valType, sourceIt.Value())
-				val.SetMapIndex(reflect.ValueOf(k), reflect.ValueOf(v))
+		}
+	} else {
+		sourceTyp := reflect.TypeOf(sourceData)
+		// 如果是proto,先转换成map
+		if sourceTyp.Kind() == reflect.Ptr {
+			protoMessage, ok := sourceData.(proto.Message)
+			if !ok {
+				logger.Error("unsupport type:%v", sourceTyp.Kind())
+				return errors.New(fmt.Sprintf("unsupport type:%v", sourceTyp.Kind()))
 			}
-			return nil
+			// mongodb中读出来是proto.Message格式,转换成map[string]interface{}
+			sourceData = convertProtoToMap(protoMessage)
+			sourceTyp = reflect.TypeOf(sourceData)
 		}
-	}
-	logger.Error("%v unsupport type:%v", saveable.GetCacheKey(), sourceTyp.Kind())
-	return errors.New(fmt.Sprintf("%v unsupport type:%v", saveable.GetCacheKey(), sourceTyp.Kind()))
-}
-
-func LoadCompositeSaveable(compositeSaveable CompositeSaveable, sourceData interface{}) error {
-	if util.IsNil(sourceData) {
-		return nil
-	}
-	sourceTyp := reflect.TypeOf(sourceData)
-	// 如果是proto,先转换成map
-	if sourceTyp.Kind() == reflect.Ptr {
-		protoMessage, ok := sourceData.(proto.Message)
-		if !ok {
+		if sourceTyp.Kind() != reflect.Map {
 			logger.Error("unsupport type:%v", sourceTyp.Kind())
-			return errors.New(fmt.Sprintf("unsupport type:%v", sourceTyp.Kind()))
+			return errors.New("sourceData type error")
 		}
-		// mongodb中读出来是proto.Message格式,转换成map[string]interface{}
-		// map的key对应ChildSaveable的Key()接口
-		sourceData = convertProtoToMap(protoMessage)
-		sourceTyp = reflect.TypeOf(sourceData)
-	}
-	if sourceTyp.Kind() != reflect.Map {
-		logger.Error("unsupport type:%v", sourceTyp.Kind())
-		return errors.New(fmt.Sprintf("unsupport type:%v", sourceTyp.Kind()))
-	}
-	sourceVal := reflect.ValueOf(sourceData)
-	saveables := compositeSaveable.SaveableChildren()
-	for _, saveable := range saveables {
-		// 子模块对应的数据
-		v := sourceVal.MapIndex(reflect.ValueOf(saveable.Key()))
-		if !v.IsValid() {
-			logger.Debug("saveable not exists:%v", saveable.GetCacheKey())
-			continue
-		}
-		switch v.Kind() {
-		case reflect.Slice:
-			if v.Type().Elem().Kind() != reflect.Uint8 {
-				logger.Error("%v unsupport slice type:%v", saveable.GetCacheKey(), v.Type().Elem().Kind())
-				return errors.New(fmt.Sprintf("unsupport slice type:%v", v.Type().Elem().Kind()))
+		sourceVal := reflect.ValueOf(sourceData)
+		for _, fieldCache := range structCache.Fields {
+			sourceFieldVal := sourceVal.MapIndex(reflect.ValueOf(fieldCache.Name))
+			if !sourceFieldVal.IsValid() {
+				logger.Debug("saveable not exists:%v", fieldCache.Name)
+				continue
 			}
-			err := LoadSaveable(saveable, v.Bytes())
-			if err != nil {
-				return err
+			val := reflectVal.Field(fieldCache.FieldIndex)
+			if val.IsNil() {
+				if !val.CanSet() {
+					logger.Error("child cant new field:%v", fieldCache.Name)
+					continue
+				}
+				newElem := reflect.New(fieldCache.StructField.Type)
+				val.Set(newElem)
 			}
-		case reflect.Interface, reflect.Ptr:
-			err := LoadSaveable(saveable, v.Interface())
-			if err != nil {
-				return err
+			fieldInterface := val.Interface()
+			childLoadErr := LoadData(fieldInterface, sourceFieldVal.Interface())
+			if childLoadErr != nil {
+				logger.Error("child load error field:%v", fieldCache.Name)
+				return childLoadErr
 			}
 		}
 	}
@@ -689,60 +575,95 @@ func convertProtoToMap(protoMessage proto.Message) map[string]interface{} {
 	return stringMap
 }
 
-// 把修改数据保存到缓存
-func SaveDirtyCache(data interface{}) {
-	if saveable, ok := data.(Saveable); ok {
-		// 缓存数据作为一个整体的
-		SaveSaveableDirtyCache(saveable)
+func SaveComponentChangedDataToCache(component Component) {
+	structCache := GetSaveableStruct(reflect.TypeOf(component))
+	if structCache == nil {
+		return
 	}
-	if compositeSaveable, ok := data.(CompositeSaveable); ok {
-		SaveCompositeSaveableDirtyCache(compositeSaveable)
+	if !structCache.IsCompositeSaveable {
+		cacheKey := GetPlayerComponentCacheKey(component.GetEntity().GetId(), component.GetName())
+		SaveChangedDataToCache(component, cacheKey)
+	} else {
+		reflectVal := reflect.ValueOf(component).Elem()
+		for _,fieldCache := range structCache.Fields {
+			val := reflectVal.Field(fieldCache.FieldIndex)
+			if val.IsNil() {
+
+			}
+			fieldInterface := val.Interface()
+			cacheKey := GetPlayerComponentChildCacheKey(component.GetEntity().GetId(), component.GetName(), fieldCache.Name)
+			SaveChangedDataToCache(fieldInterface, cacheKey)
+		}
 	}
 }
 
 // 把修改数据保存到缓存
-func SaveSaveableDirtyCache(saveable Saveable) {
+func SaveChangedDataToCache(saveable interface{}, cacheKeyName string) {
+	structCache := GetSaveableStruct(reflect.TypeOf(saveable))
+	if structCache == nil {
+		return
+	}
+	if structCache.IsCompositeSaveable {
+		return
+	}
+	fieldCache := structCache.Fields[0]
 	// 缓存数据作为一个整体的
-	if dirtyMark, ok2 := saveable.(DirtyMark); ok2 {
+	if dirtyMark, ok := saveable.(DirtyMark); ok {
 		if !dirtyMark.IsDirty() {
 			return
 		}
-		cacheData := saveable.CacheData()
-		if cacheData == nil {
-			return
-		}
-		cacheKeyName := saveable.GetCacheKey()
-		if reflect.ValueOf(cacheData).Kind() == reflect.Map {
-			// map格式作为一个整体缓存时,需要先删除之前的数据
+		reflectVal := reflect.ValueOf(saveable).Elem()
+		val := reflectVal.Field(fieldCache.FieldIndex)
+		if val.IsNil() {
 			err := cache.Get().Del(cacheKeyName)
 			if cache.IsRedisError(err) {
 				logger.Error("%v cache err:%v", cacheKeyName, err.Error())
 				return
 			}
-			err = cache.Get().SetMap(cacheKeyName, cacheData)
-			if cache.IsRedisError(err) {
-				logger.Error("%v cache err:%v", cacheKeyName, err.Error())
-				return
-			}
 		} else {
-			switch realData := cacheData.(type) {
-			case proto.Message:
-				// proto.Message -> []byte
-				err := cache.Get().SetProto(cacheKeyName, realData, 0)
+			switch val.Kind() {
+			case reflect.Ptr,reflect.Interface:
+				cacheData := val.Interface()
+				switch realData := cacheData.(type) {
+				case proto.Message:
+					// proto.Message -> []byte
+					err := cache.Get().SetProto(cacheKeyName, realData, 0)
+					if cache.IsRedisError(err) {
+						logger.Error("%v cache err:%v", cacheKeyName, err.Error())
+						return
+					}
+
+				case []int32:
+					// TODO: []int32 -> string
+				//case *SliceInt32:
+				//	// SliceInt32 -> string
+				//	err := cache.Get().Set(cacheKeyName, realData.ToString(), 0)
+				//	if cache.IsRedisError(err) {
+				//		logger.Error("%v cache err:%v", cacheKeyName, err.Error())
+				//		return
+				//	}
+
+				default:
+					logger.Error("%v cache err:unsupport type:%v", cacheKeyName, reflect.TypeOf(realData))
+					return
+				}
+
+			case reflect.Map:
+				// map格式作为一个整体缓存时,需要先删除之前的数据
+				err := cache.Get().Del(cacheKeyName)
 				if cache.IsRedisError(err) {
 					logger.Error("%v cache err:%v", cacheKeyName, err.Error())
 					return
 				}
-			case *SliceInt32:
-				// SliceInt32 -> string
-				err := cache.Get().Set(cacheKeyName, realData.ToString(), 0)
+				cacheData := val.Interface()
+				err = cache.Get().SetMap(cacheKeyName, cacheData)
 				if cache.IsRedisError(err) {
 					logger.Error("%v cache err:%v", cacheKeyName, err.Error())
 					return
 				}
+
 			default:
-				logger.Error("%v cache err:unsupport type", cacheKeyName)
-				return
+				logger.Error("%v cache err:unsupport kind:%v", cacheKeyName, val.Kind())
 			}
 		}
 		dirtyMark.ResetDirty()
@@ -750,50 +671,63 @@ func SaveSaveableDirtyCache(saveable Saveable) {
 		return
 	}
 	// map格式的
-	if dirtyMark, ok2 := saveable.(MapDirtyMark); ok2 {
+	if dirtyMark, ok := saveable.(MapDirtyMark); ok {
 		if !dirtyMark.IsDirty() {
 			return
 		}
-		cacheKeyName := saveable.GetCacheKey()
-		if !dirtyMark.HasCached() {
-			// 必须把整体数据缓存一次,后面的修改才能增量更新
-			cacheData := saveable.CacheData()
-			if cacheData == nil {
-				return
-			}
-			err := cache.Get().SetMap(cacheKeyName, cacheData)
+		reflectVal := reflect.ValueOf(saveable).Elem()
+		val := reflectVal.Field(fieldCache.FieldIndex)
+		if val.IsNil() {
+			err := cache.Get().Del(cacheKeyName)
 			if cache.IsRedisError(err) {
 				logger.Error("%v cache err:%v", cacheKeyName, err.Error())
 				return
 			}
-			dirtyMark.SetCached()
 		} else {
-			setMap := make(map[string]interface{})
-			var delMap []string
-			for dirtyKey, isAddOrUpdate := range dirtyMark.GetDirtyMap() {
-				if isAddOrUpdate {
-					if dirtyValue, exists := dirtyMark.GetMapValue(dirtyKey); exists {
-						setMap[dirtyKey] = dirtyValue
+			if val.Kind() != reflect.Map {
+				logger.Error("%v unsupport kind:%v", cacheKeyName, val.Kind())
+				return
+			}
+			cacheData := val.Interface()
+			if !dirtyMark.HasCached() {
+				// 必须把整体数据缓存一次,后面的修改才能增量更新
+				if cacheData == nil {
+					return
+				}
+				err := cache.Get().SetMap(cacheKeyName, cacheData)
+				if cache.IsRedisError(err) {
+					logger.Error("%v cache err:%v", cacheKeyName, err.Error())
+					return
+				}
+				dirtyMark.SetCached()
+			} else {
+				setMap := make(map[string]interface{})
+				var delMap []string
+				for dirtyKey, isAddOrUpdate := range dirtyMark.GetDirtyMap() {
+					if isAddOrUpdate {
+						if dirtyValue, exists := dirtyMark.GetMapValue(dirtyKey); exists {
+							setMap[dirtyKey] = dirtyValue
+						}
+					} else {
+						// delete
+						delMap = append(delMap, dirtyKey)
 					}
-				} else {
-					// delete
-					delMap = append(delMap, dirtyKey)
 				}
-			}
-			if len(setMap) > 0 {
-				// 批量更新
-				err := cache.Get().SetMap(cacheKeyName, setMap)
-				if cache.IsRedisError(err) {
-					logger.Error("%v cache %v err:%v", cacheKeyName, setMap, err.Error())
-					return
+				if len(setMap) > 0 {
+					// 批量更新
+					err := cache.Get().SetMap(cacheKeyName, setMap)
+					if cache.IsRedisError(err) {
+						logger.Error("%v cache %v err:%v", cacheKeyName, setMap, err.Error())
+						return
+					}
 				}
-			}
-			if len(delMap) > 0 {
-				// 批量删除
-				err := cache.Get().DelMapField(cacheKeyName, delMap...)
-				if cache.IsRedisError(err) {
-					logger.Error("%v cache %v err:%v", cacheKeyName, delMap, err.Error())
-					return
+				if len(delMap) > 0 {
+					// 批量删除
+					err := cache.Get().DelMapField(cacheKeyName, delMap...)
+					if cache.IsRedisError(err) {
+						logger.Error("%v cache %v err:%v", cacheKeyName, delMap, err.Error())
+						return
+					}
 				}
 			}
 		}
@@ -803,206 +737,172 @@ func SaveSaveableDirtyCache(saveable Saveable) {
 	}
 }
 
-// 把组合模块的修改数据保存到缓存
-func SaveCompositeSaveableDirtyCache(compositeSaveable CompositeSaveable) {
-	saveables := compositeSaveable.SaveableChildren()
-	for _, saveable := range saveables {
-		SaveSaveableDirtyCache(saveable)
-	}
-}
-
 // 从缓存中恢复数据
-func LoadFromCache(saveable Saveable) (bool, error) {
-	cacheKey := saveable.GetCacheKey()
+func LoadFromCache(obj interface{}, cacheKey string) (bool, error) {
+	structCache := GetSaveableStruct(reflect.TypeOf(obj))
+	if structCache == nil {
+		return false, nil
+	}
 	cacheType, err := cache.Get().Type(cacheKey)
 	if err == redis.Nil || cacheType == "" || cacheType == "none" {
 		return false, nil
 	}
-	cacheData := saveable.CacheData()
-	if cacheType == "string" {
-		switch realData := cacheData.(type) {
-		case proto.Message:
-			// []byte -> proto.Message
-			err = cache.Get().GetProto(cacheKey, realData)
+	reflectVal := reflect.ValueOf(obj).Elem()
+	if !structCache.IsCompositeSaveable {
+		fieldCache := structCache.Fields[0]
+		val := reflectVal.Field(fieldCache.FieldIndex)
+		if cacheType == "string" {
+			if fieldCache.StructField.Type.Kind() == reflect.Ptr || fieldCache.StructField.Type.Kind() == reflect.Interface {
+				if val.IsNil() {
+					if !val.CanSet() {
+						logger.Error("%v CanSet false", fieldCache.Name)
+						return true, errors.New(fmt.Sprintf("%v CanSet false", fieldCache.Name))
+					}
+					newElem := reflect.New(fieldCache.StructField.Type)
+					val.Set(newElem)
+					logger.Debug("cacheKey:%v new %v", cacheKey, fieldCache.Name)
+				}
+				if !val.CanInterface() {
+					return true, errors.New(fmt.Sprintf("%v CanInterface false", fieldCache.Name))
+				}
+				if protoMessage, ok := val.Interface().(proto.Message); ok {
+					// []byte -> proto.Message
+					err = cache.Get().GetProto(cacheKey, protoMessage)
+					if cache.IsRedisError(err) {
+						logger.Error("GetProto %v %v err:%v", cacheKey, cacheType, err)
+						return true, err
+					}
+					return true, nil
+				}
+			} else if fieldCache.StructField.Type.Kind() == reflect.Slice {
+				// TODO:slice int
+			}
+			return true, errors.New(fmt.Sprintf("unsupport kind:%v cacheKey:%v cacheType:%v", fieldCache.StructField.Type.Kind(), cacheKey, cacheType))
+		} else if cacheType == "hash" {
+			if val.IsNil() {
+				if !val.CanSet() {
+					logger.Error("%v CanSet false", fieldCache.Name)
+					return true, errors.New(fmt.Sprintf("%v CanSet false", fieldCache.Name))
+				}
+				newElem := reflect.New(fieldCache.StructField.Type)
+				val.Set(newElem)
+				logger.Debug("cacheKey:%v new %v", cacheKey, fieldCache.Name)
+			}
+			if !val.CanInterface() {
+				return true, errors.New(fmt.Sprintf("%v CanInterface false", fieldCache.Name))
+			}
+			// hash -> map
+			err = cache.Get().GetMap(cacheKey, val.Interface())
 			if cache.IsRedisError(err) {
-				logger.Error("GetProto %v %v err:%v", cacheKey, cacheType, err)
+				logger.Error("GetMap %v %v err:%v", cacheKey, cacheType, err)
 				return true, err
 			}
 			return true, nil
-		case *SliceInt32:
-			// string -> SliceInt32
-			strData, err := cache.Get().Get(cacheKey)
-			if cache.IsRedisError(err) {
-				logger.Error("GetProto %v %v err:%v", cacheKey, cacheType, err)
-				return true, err
-			}
-			realData.FromString(strData)
-			return true, nil
-		default:
+		} else {
 			logger.Error("%v unsupport cache type:%v", cacheKey, cacheType)
 			return true, errors.New(fmt.Sprintf("%v unsupport cache type:%v", cacheKey, cacheType))
 		}
-	} else if cacheType == "hash" {
-		// hash -> map
-		err = cache.Get().GetMap(cacheKey, cacheData)
-		if cache.IsRedisError(err) {
-			logger.Error("GetMap %v %v err:%v", cacheKey, cacheType, err)
-			return true, err
-		}
-		return true, nil
 	} else {
-		logger.Error("%v unsupport cache type:%v", cacheKey, cacheType)
-		return true, errors.New(fmt.Sprintf("%v unsupport cache type:%v", cacheKey, cacheType))
+		for _, fieldCache := range structCache.Fields {
+			val := reflectVal.Field(fieldCache.FieldIndex)
+			if val.IsNil() {
+				if !val.CanSet() {
+					logger.Error("%v CanSet false", fieldCache.Name)
+					return true, errors.New(fmt.Sprintf("%v CanSet false", fieldCache.Name))
+				}
+				newElem := reflect.New(fieldCache.StructField.Type)
+				val.Set(newElem)
+				logger.Debug("cacheKey:%v new %v", cacheKey, fieldCache.Name)
+			}
+			fieldInterface := val.Interface()
+			hasCache, err := LoadFromCache(fieldInterface, cacheKey+"."+fieldCache.Name)
+			if !hasCache {
+				continue
+			}
+			if err != nil {
+				logger.Error("LoadFromCache %v error:%v", cacheKey, err.Error())
+				continue
+			}
+		}
 	}
 	return true, nil
 }
 
-// Entity数据保存到数据库
-func SaveEntityToDb(entityDb db.EntityDb, entity Entity, removeCacheAfterSaveDb bool) error {
-	componentDatas := make(map[string]interface{})
+// Entity的变化数据保存到数据库
+func SaveEntityChangedDataToDb(entityDb db.EntityDb, entity Entity, removeCacheAfterSaveDb bool) error {
+	changedDatas := make(map[string]interface{})
 	var saved []Saveable
 	var delKeys []string
 	entity.RangeComponent(func(component Component) bool {
-		if saveable, ok := component.(Saveable); ok {
-			// 如果某个组件数据没改变过,就无需保存
-			if !saveable.IsChanged() {
-				logger.Debug("%v ignore %v", entity.GetId(), component.GetName())
-				return true
-			}
-			saveData, err := SaveSaveable(saveable)
-			if err != nil {
-				logger.Error("%v Save %v err:%v", entity.GetId(), component.GetName(), err.Error())
-				return true
-			}
-			if saveData == nil {
-				logger.Debug("%v ignore nil %v", entity.GetId(), component.GetName())
-				return true
-			}
-			// 使用protobuf存mongodb时,mongodb默认会把字段名转成小写,因为protobuf没设置bson tag
-			componentDatas[component.GetNameLower()] = saveData
-			if removeCacheAfterSaveDb {
-				delKeys = append(delKeys, saveable.GetCacheKey())
-			}
-			saved = append(saved, saveable)
-			logger.Debug("SaveDb %v %v", entity.GetId(), component.GetName())
+		structCache := GetSaveableStruct(reflect.TypeOf(component))
+		if structCache == nil {
+			return true
 		}
-		if compositeSaveable, ok := component.(CompositeSaveable); ok {
-			//compositeData := make(map[string]interface{})
-			saveables := compositeSaveable.SaveableChildren()
-			saveChildCount := 0
-			// 只需要保存修改过数据的子模块
-			for _, saveable := range saveables {
+		if !structCache.IsCompositeSaveable {
+			if saveable, ok := component.(Saveable); ok {
+				// 如果某个组件数据没改变过,就无需保存
 				if !saveable.IsChanged() {
-					logger.Debug("%v ignore %v", entity.GetId(), saveable.GetCacheKey())
-					continue
+					logger.Debug("%v ignore %v", entity.GetId(), component.GetName())
+					return true
 				}
-				saveData, err := SaveSaveable(saveable)
+				saveData, err := GetComponentSaveData(component)
 				if err != nil {
-					logger.Error("%v Save %v err:%v", entity.GetId(), saveable.GetCacheKey(), err.Error())
-					continue
+					logger.Error("%v Save %v err:%v", entity.GetId(), component.GetName(), err.Error())
+					return true
 				}
-				if saveData == nil {
-					logger.Debug("%v ignore nil %v", entity.GetId(), component.GetName())
-					continue
-				}
-				componentDatas[component.GetNameLower()+"."+saveable.Key()] = saveData
-				saveChildCount++
+				// 使用protobuf存mongodb时,mongodb默认会把字段名转成小写,因为protobuf没设置bson tag
+				changedDatas[component.GetNameLower()] = saveData
 				if removeCacheAfterSaveDb {
-					delKeys = append(delKeys, saveable.GetCacheKey())
+					delKeys = append(delKeys, GetEntityComponentCacheKey("p", entity.GetId(), component.GetName()))
 				}
 				saved = append(saved, saveable)
-				logger.Debug("SaveDb %v %v.%v", entity.GetId(), component.GetNameLower(), saveable.Key())
+				logger.Debug("SaveDb %v %v", entity.GetId(), component.GetName())
 			}
-			if saveChildCount > 0 {
-				//componentDatas[component.GetNameLower()] = compositeData
-				logger.Debug("SaveDb %v %v child:%v", entity.GetId(), component.GetName(), saveChildCount)
-			}
-		}
-		return true
-	})
-	if len(componentDatas) == 0 {
-		logger.Debug("ignore unchange data %v", entity.GetId())
-		return nil
-	}
-	saveDbErr := entityDb.SaveComponents(entity.GetId(), componentDatas)
-	if saveDbErr != nil {
-		logger.Error("SaveDb %v err:%v", entity.GetId(), saveDbErr)
-	} else {
-		logger.Debug("SaveDb %v", entity.GetId())
-	}
-	if saveDbErr == nil {
-		for _, saveable := range saved {
-			saveable.ResetChanged()
-		}
-		if len(delKeys) > 0 {
-			// 保存数据库成功后,才删除缓存
-			cache.Get().Del(delKeys...)
-			logger.Debug("RemoveCache %v %v", entity.GetId(), delKeys)
-		}
-	}
-	return saveDbErr
-}
-
-// Entity数据保存到数据库
-func SaveEntityToDb_New(entityDb db.EntityDb, entity Entity, removeCacheAfterSaveDb bool) error {
-	componentDatas := make(map[string]interface{})
-	var saved []Saveable
-	var delKeys []string
-	entity.RangeComponent(func(component Component) bool {
-		if saveable, ok := component.(Saveable); ok {
-			// 如果某个组件数据没改变过,就无需保存
-			if !saveable.IsChanged() {
-				logger.Debug("%v ignore %v", entity.GetId(), component.GetName())
-				return true
-			}
-			saveData, err := SaveSaveable_New(saveable)
-			if err != nil {
-				logger.Error("%v Save %v err:%v", entity.GetId(), component.GetName(), err.Error())
-				return true
-			}
-			if saveData == nil {
-				logger.Debug("%v ignore nil %v", entity.GetId(), component.GetName())
-				return true
-			}
-			// 使用protobuf存mongodb时,mongodb默认会把字段名转成小写,因为protobuf没设置bson tag
-			componentDatas[component.GetNameLower()] = saveData
-			if removeCacheAfterSaveDb {
-				delKeys = append(delKeys, saveable.GetCacheKey())
-			}
-			saved = append(saved, saveable)
-			logger.Debug("SaveDb %v %v", entity.GetId(), component.GetName())
-		}
-		if compositeSaveable, ok := component.(CompositeSaveable); ok {
-			compositeSaveData,childSaveables,err := SaveCompositeSaveable_New(compositeSaveable, true)
-			if err != nil {
-				logger.Error("%v Save %v err:%v", entity.GetId(), component.GetName(), err.Error())
-			} else {
-				for k,v := range compositeSaveData {
-					componentDatas[component.GetNameLower()+"."+k] = v
-					logger.Debug("SaveDb %v %v.%v", entity.GetId(), component.GetNameLower(), k)
+		} else {
+			reflectVal := reflect.ValueOf(component).Elem()
+			for _, fieldCache := range structCache.Fields {
+				childName := component.GetNameLower() + "." + fieldCache.Name
+				val := reflectVal.Field(fieldCache.FieldIndex)
+				if val.IsNil() {
+					changedDatas[childName] = nil
+					continue
 				}
-				if removeCacheAfterSaveDb {
-					for _,childSaveable := range childSaveables {
-						delKeys = append(delKeys, childSaveable.GetCacheKey())
+				fieldInterface := val.Interface()
+				if saveable, ok := fieldInterface.(Saveable); ok {
+					// 如果某个组件数据没改变过,就无需保存
+					if !saveable.IsChanged() {
+						logger.Debug("%v ignore %v.%v", entity.GetId(), component.GetName(), childName)
+						continue
 					}
+					childSaveData, err := GetSaveData(fieldInterface, childName)
+					if err != nil {
+						logger.Error("%v Save %v.%v err:%v", entity.GetId(), component.GetName(), childName, err.Error())
+						continue
+					}
+					changedDatas[childName] = childSaveData
+					if removeCacheAfterSaveDb {
+						delKeys = append(delKeys, GetEntityComponentChildCacheKey("p", entity.GetId(), component.GetName(), fieldCache.Name))
+					}
+					saved = append(saved, saveable)
+					logger.Debug("SaveDb %v %v.%v", entity.GetId(), component.GetName(), childName)
 				}
-				saved = append(saved, childSaveables...)
 			}
 		}
 		return true
 	})
-	if len(componentDatas) == 0 {
+	if len(changedDatas) == 0 {
 		logger.Debug("ignore unchange data %v", entity.GetId())
 		return nil
 	}
-	saveDbErr := entityDb.SaveComponents(entity.GetId(), componentDatas)
+	saveDbErr := entityDb.SaveComponents(entity.GetId(), changedDatas)
 	if saveDbErr != nil {
 		logger.Error("SaveDb %v err:%v", entity.GetId(), saveDbErr)
-		logger.Error("%v", componentDatas)
+		logger.Error("%v", changedDatas)
 	} else {
 		logger.Debug("SaveDb %v", entity.GetId())
 	}
 	if saveDbErr == nil {
+		// 保存数据库成功后,重置修改标记
 		for _, saveable := range saved {
 			saveable.ResetChanged()
 		}
@@ -1018,28 +918,17 @@ func SaveEntityToDb_New(entityDb db.EntityDb, entity Entity, removeCacheAfterSav
 // 获取实体需要保存到数据库的数据
 func GetEntitySaveData(entity Entity, componentDatas map[string]interface{}) {
 	entity.RangeComponent(func(component Component) bool {
-		if saveable, ok := component.(Saveable); ok {
-			saveData, err := SaveSaveable_New(saveable)
-			if err != nil {
-				logger.Error("%v Insert %v err:%v", entity.GetId(), component.GetName(), err.Error())
-				return true
-			}
-			if saveData == nil {
-				logger.Debug("%v ignore nil %v", entity.GetId(), component.GetName())
-				return true
-			}
-			// 使用protobuf存mongodb时,mongodb默认会把字段名转成小写,因为protobuf没设置bson tag
-			componentDatas[component.GetNameLower()] = saveData
-			logger.Debug("SaveDb %v %v", entity.GetId(), component.GetName())
+		structCache := GetSaveableStruct(reflect.TypeOf(component))
+		if structCache == nil {
+			return true
 		}
-		if compositeSaveable, ok := component.(CompositeSaveable); ok {
-			compositeSaveData,_,err := SaveCompositeSaveable_New(compositeSaveable, false)
-			if err != nil {
-				logger.Error("%v Save %v err:%v", entity.GetId(), component.GetName(), err.Error())
-			} else {
-				componentDatas[component.GetNameLower()] = compositeSaveData
-			}
+		saveData, err := GetComponentSaveData(component)
+		if err != nil {
+			logger.Error("%v %v err:%v", entity.GetId(), component.GetName(), err.Error())
+			return true
 		}
+		componentDatas[component.GetNameLower()] = saveData
+		logger.Debug("GetEntitySaveData %v %v", entity.GetId(), component.GetName())
 		return true
 	})
 }

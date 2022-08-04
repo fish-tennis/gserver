@@ -48,7 +48,7 @@ func NewGuild(guildData *pb.GuildData) *Guild {
 }
 
 func (this *Guild) GetId() int64 {
-	return this.baseInfo.data.Id
+	return this.baseInfo.Data.Id
 }
 
 func (this *Guild) PushMessage(guildMessage *GuildMessage) {
@@ -56,8 +56,8 @@ func (this *Guild) PushMessage(guildMessage *GuildMessage) {
 }
 
 // 开启消息处理协程
-func (this *Guild) StartProcessRoutine() bool {
-	logger.Debug("StartProcessRoutine %v", this.GetId())
+func (this *Guild) RunProcessRoutine() bool {
+	logger.Debug("RunProcessRoutine %v", this.GetId())
 	// redis实现的分布式锁,保证同一个公会的逻辑处理协程只会在一个服务器上
 	if !guildServerLock(this.GetId()) {
 		return false
@@ -92,7 +92,7 @@ func (this *Guild) StartProcessRoutine() bool {
 				//this.SaveCache()
 				// 这里演示一种直接保存数据库的用法,可以用于那些不经常修改的数据
 				// 这种方式,省去了要处理crash后从缓存恢复数据的步骤
-				SaveEntityToDb(GetGuildDb(), this, false)
+				SaveEntityChangedDataToDb(GetGuildDb(), this, false)
 			}
 		}
 
@@ -106,7 +106,7 @@ func (this *Guild) StartProcessRoutine() bool {
 				return
 			}
 			this.processMessage(message)
-			SaveEntityToDb(GetGuildDb(), this, false)
+			SaveEntityChangedDataToDb(GetGuildDb(), this, false)
 		}
 	}(GetServer().GetContext())
 	return true
@@ -187,7 +187,7 @@ func (this *Guild) OnGuildJoinAgreeReq(message *GuildMessage, req *pb.GuildJoinA
 			Name:     joinRequest.PlayerName,
 			Position: int32(pb.GuildPosition_Member),
 		})
-		this.baseInfo.SetMemberCount(int32(len(this.members.data)))
+		this.baseInfo.SetMemberCount(int32(len(this.members.Data)))
 	} else {
 		// 略:给该玩家发一个提示信息
 	}
@@ -206,9 +206,9 @@ func (this *Guild) OnGuildDataViewReq(message *GuildMessage, req *pb.GuildDataVi
 	this.RoutePlayerPacket(message, PacketCommand(pb.CmdGuild_Cmd_GuildDataViewRes), &pb.GuildDataViewRes{
 		GuildData: &pb.GuildData{
 			Id:           this.GetId(),
-			BaseInfo:     this.baseInfo.data,
-			Members:      this.members.data,
-			JoinRequests: this.joinRequests.data,
+			BaseInfo:     this.baseInfo.Data,
+			Members:      this.members.Data,
+			JoinRequests: this.joinRequests.Data,
 		},
 	})
 }

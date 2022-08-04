@@ -56,7 +56,7 @@ func LoadGuild(guildId int64) *Guild {
 	if existGuild, ok := _guildMap[guildId]; ok {
 		return existGuild
 	}
-	if guild.StartProcessRoutine() {
+	if guild.RunProcessRoutine() {
 		_guildMap[guildId] = guild
 	}
 	return guild

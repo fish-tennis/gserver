@@ -3,6 +3,7 @@ package cache
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/util"
 	"github.com/go-redis/redis/v8"
@@ -56,7 +57,7 @@ func (this *RedisCache) Type(key string) (string, error) {
 // redis hash -> map
 func (this *RedisCache) GetMap(key string, m interface{}) error {
 	if m == nil {
-		return errors.New("map must valid")
+		return errors.New(fmt.Sprintf("map must valid key:%v", key))
 	}
 	strMap, err := this.redisClient.HGetAll(context.Background(), key).Result()
 	if IsRedisError(err) {
@@ -64,7 +65,7 @@ func (this *RedisCache) GetMap(key string, m interface{}) error {
 	}
 	val := reflect.ValueOf(m)
 	if val.Kind() != reflect.Map {
-		return errors.New("unsupport type")
+		return errors.New(fmt.Sprintf("unsupport type kind:%v key:%v", val.Kind(), key))
 	}
 	typ := reflect.TypeOf(m)
 	keyType := typ.Key()

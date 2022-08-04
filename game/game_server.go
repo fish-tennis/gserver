@@ -15,6 +15,7 @@ import (
 	"github.com/fish-tennis/gserver/pb"
 	"github.com/fish-tennis/gserver/social"
 	"os"
+	"reflect"
 	"sync"
 	"time"
 )
@@ -177,16 +178,21 @@ func (this *GameServer) repairPlayerCache(playerId,accountId int64) error {
 	}()
 	tmpPlayer := gameplayer.CreateTempPlayer(playerId,accountId)
 	for _,component := range tmpPlayer.GetComponents() {
-		if saveable,ok := component.(Saveable); ok {
-			hasCache,err := LoadFromCache(saveable)
+		structCache := GetSaveableStruct(reflect.TypeOf(component))
+		if structCache == nil {
+			continue
+		}
+		if !structCache.IsCompositeSaveable {
+			cacheKey := GetPlayerComponentCacheKey(playerId, component.GetName())
+			hasCache,err := LoadFromCache(component, cacheKey)
 			if !hasCache {
 				continue
 			}
 			if err != nil {
-				logger.Error("LoadFromCache %v error:%v", saveable.GetCacheKey(), err.Error())
+				logger.Error("LoadFromCache %v error:%v", cacheKey, err.Error())
 				continue
 			}
-			saveData,err := SaveSaveable(saveable)
+			saveData,err := GetComponentSaveData(component)
 			if err != nil {
 				logger.Error("%v Save %v err %v", playerId, component.GetName(), err.Error())
 				continue
@@ -197,37 +203,45 @@ func (this *GameServer) repairPlayerCache(playerId,accountId int64) error {
 				continue
 			}
 			logger.Info("%v SaveDb %v", playerId, component.GetNameLower())
-			cache.Get().Del(saveable.GetCacheKey())
-			logger.Info("RemoveCache %v %v", playerId, saveable.GetCacheKey())
-		}
-		if compositeSaveable,ok := component.(CompositeSaveable); ok {
-			saveables := compositeSaveable.SaveableChildren()
-			for _,saveable := range saveables {
-				hasCache,err := LoadFromCache(saveable)
+			cache.Get().Del(cacheKey)
+			logger.Info("RemoveCache %v", playerId, cacheKey)
+		} else {
+			reflectVal := reflect.ValueOf(component).Elem()
+			for _, fieldCache := range structCache.Fields {
+				//childName := component.GetNameLower() + "." + fieldCache.Name
+				val := reflectVal.Field(fieldCache.FieldIndex)
+				if val.IsNil() {
+					if !val.CanSet() {
+						logger.Error("%v CanSet false", fieldCache.Name)
+						continue
+					}
+					newElem := reflect.New(fieldCache.StructField.Type)
+					val.Set(newElem)
+					logger.Debug("new %v", fieldCache.Name)
+				}
+				fieldInterface := val.Interface()
+				cacheKey := GetPlayerComponentChildCacheKey(playerId, component.GetName(), fieldCache.Name)
+				hasCache,err := LoadFromCache(fieldInterface, cacheKey)
 				if !hasCache {
 					continue
 				}
 				if err != nil {
-					logger.Error("LoadFromCache %v error:%v", saveable.GetCacheKey(), err.Error())
+					logger.Error("LoadFromCache %v error:%v", cacheKey, err.Error())
 					continue
 				}
-				saveData,err := SaveSaveable(saveable)
+				saveData,err := GetSaveData(component, component.GetNameLower())
 				if err != nil {
-					logger.Error("Save %v err:%v", saveable.GetCacheKey(), err.Error())
+					logger.Error("%v Save %v.%v err %v", playerId, component.GetName(), fieldCache.Name, err.Error())
 					continue
 				}
-				if saveData == nil {
-					logger.Info("ignore nil %v", saveable.GetCacheKey())
-					continue
-				}
-				saveDbErr := db.GetPlayerDb().SaveComponentField(playerId, component.GetNameLower(), saveable.Key(), saveData)
+				saveDbErr := db.GetPlayerDb().SaveComponentField(playerId, component.GetNameLower(), fieldCache.Name, saveData)
 				if saveDbErr != nil {
-					logger.Error("%v SaveDb %v.%v err %v", playerId, component.GetNameLower(), saveable.Key(), saveDbErr.Error())
+					logger.Error("%v SaveDb %v.%v err %v", playerId, component.GetNameLower(), fieldCache.Name, saveDbErr.Error())
 					continue
 				}
-				logger.Info("%v SaveDb %v", playerId, component.GetNameLower()+"."+saveable.Key())
-				cache.Get().Del(saveable.GetCacheKey())
-				logger.Info("RemoveCache %v %v", playerId, saveable.GetCacheKey())
+				logger.Info("%v SaveDb %v.%v", playerId, component.GetNameLower(), fieldCache.Name)
+				cache.Get().Del(cacheKey)
+				logger.Info("RemoveCache %v %v", playerId, cacheKey)
 			}
 		}
 	}

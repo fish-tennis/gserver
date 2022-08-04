@@ -296,6 +296,10 @@ func (this *MongoDb) Disconnect() {
 	logger.Info("mongo Disconnected")
 }
 
+func (this *MongoDb) GetMongoDatabase() *mongo.Database {
+	return this.mongoDatabase
+}
+
 // 检查是否是key重复错误
 func IsDuplicateKeyError(err error) bool {
 	switch e := err.(type) {

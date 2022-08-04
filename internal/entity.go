@@ -68,22 +68,17 @@ func (this *BaseEntity) RangeComponent(fun func(component Component) bool) {
 
 func (this *BaseEntity) AddComponent(component Component, sourceData interface{}) {
 	if len(component.GetName()) == 0 {
-		logger.Error("Component name empty")
+		logger.Error("Component Name empty")
 	}
 	if sourceData != nil {
-		if saveable, ok := component.(Saveable); ok {
-			LoadSaveable(saveable, sourceData)
-		}
-		if compositeSaveable, ok := component.(CompositeSaveable); ok {
-			LoadCompositeSaveable(compositeSaveable, sourceData)
-		}
+		LoadData(component, sourceData)
 	}
 	this.components = append(this.components, component)
 }
 
 func (this *BaseEntity) SaveCache() error {
 	for _, component := range this.components {
-		SaveDirtyCache(component)
+		SaveComponentChangedDataToCache(component)
 	}
 	return nil
 }
@@ -145,10 +140,27 @@ func GetPlayerComponentCacheKey(playerId int64, componentName string) string {
 	// 使用{playerId}形式的hashtag,使同一个玩家的不同组件的数据都落在一个redis节点上
 	// 落在一个redis节点上的好处:可以使用redis lua对玩家数据进行类似事务的原子操作
 	// https://redis.io/topics/cluster-tutorial
-	return fmt.Sprintf("p.%v.{%v}", strings.ToLower(componentName), playerId)
+	return fmt.Sprintf("p.{%v}.%v", playerId, strings.ToLower(componentName) )
 }
 
 // 获取玩家组件子对象的缓存key
 func GetPlayerComponentChildCacheKey(playerId int64, componentName string, childName string) string {
-	return ""
+	return fmt.Sprintf("p.{%v}.%v.%v", playerId, strings.ToLower(componentName), childName)
+}
+
+// 获取对象组件的缓存key
+func GetEntityComponentCacheKey(prefix string, entityId int64, componentName string) string {
+	// 使用{entityId}形式的hashtag,使同一个实体的不同组件的数据都落在一个redis节点上
+	// 落在一个redis节点上的好处:可以使用redis lua对数据进行类似事务的原子操作
+	// https://redis.io/topics/cluster-tutorial
+	return fmt.Sprintf("%v.{%v}.%v", prefix, entityId, strings.ToLower(componentName))
+}
+
+// 获取对象组件子对象的缓存key
+func GetEntityComponentChildCacheKey(prefix string, entityId int64, componentName string, childName string) string {
+	return fmt.Sprintf("%v.{%v}.%v.%v", prefix, entityId, strings.ToLower(componentName), childName)
+}
+
+func GetChildCacheKey(parentName,childName string) string {
+	return fmt.Sprintf("%v.%v", parentName, childName)
 }

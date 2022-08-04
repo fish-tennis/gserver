@@ -99,9 +99,10 @@ func (this *TimerEntries) TimerChan() <-chan time.Time {
 	return this.Timer.C
 }
 
-func (this *TimerEntries) Run(now time.Time) {
+func (this *TimerEntries) Run(now time.Time) bool {
 	removed := false
 	modified := false
+	jobRun := false
 	entryCount := len(this.entries)
 	for i := 0; i < entryCount; i++ {
 		entry := this.entries[i]
@@ -111,6 +112,7 @@ func (this *TimerEntries) Run(now time.Time) {
 		// job()里面可能执行append(entries,...)
 		// 新加的entry下次Run才能被执行
 		d := entry.job()
+		jobRun = true
 		if d > 0 {
 			entry.next = now.Add(d)
 		} else {
@@ -132,4 +134,5 @@ func (this *TimerEntries) Run(now time.Time) {
 		this.sort()
 		this.resetTime(now)
 	}
+	return jobRun
 }

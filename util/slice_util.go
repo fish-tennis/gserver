@@ -12,3 +12,12 @@ func IndexString(slice []string, s string) int {
 func HasString(slice []string, s string) bool {
 	return IndexString(slice,s) >= 0
 }
+
+func ContainsInt32(slice []int32, i int32) bool {
+	for _,v := range slice {
+		if v == i {
+			return true
+		}
+	}
+	return false
+}
