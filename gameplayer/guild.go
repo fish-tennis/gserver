@@ -23,14 +23,6 @@ func NewGuild(player *Player) *Guild {
 	return component
 }
 
-func (this *Guild) DbData() (dbData interface{}, protoMarshal bool) {
-	return this.Data,true
-}
-
-func (this *Guild) CacheData() interface{} {
-	return this.Data
-}
-
 func (this *Guild) GetGuildData() *pb.PlayerGuildData {
 	return this.Data
 }

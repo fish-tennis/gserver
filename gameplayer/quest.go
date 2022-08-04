@@ -8,8 +8,6 @@ import (
 	"github.com/fish-tennis/gserver/util"
 )
 
-var _ internal.CompositeSaveable = (*Quest)(nil)
-
 // 任务模块
 // 演示了一种与Bag不同的组合模块方式
 // 与Bag不同,Quest由一个Component和多个ChildSaveable组合而成
@@ -35,22 +33,6 @@ type FinishedQuests struct {
 	Finished []int32 `db:"finished;plain"`
 	// 排重数组也可以使用map代替
 	//Finished map[int32]int8
-}
-
-func (f *FinishedQuests) DbData() (dbData interface{}, protoMarshal bool) {
-	return f.Finished, false
-}
-
-func (f *FinishedQuests) CacheData() interface{} {
-	return f.Finished
-}
-
-func (f *FinishedQuests) Key() string {
-	return "finished"
-}
-
-func (f *FinishedQuests) GetCacheKey() string {
-	return f.quest.GetCacheKey() + f.Key()
 }
 
 //func (f *FinishedQuests) GetMapValue(key string) (value interface{}, exists bool) {
@@ -79,22 +61,6 @@ type CurQuests struct {
 func (c *CurQuests) GetMapValue(key string) (value interface{}, exists bool) {
 	value, exists = c.Quests[int32(util.Atoi(key))]
 	return
-}
-
-func (c *CurQuests) DbData() (dbData interface{}, protoMarshal bool) {
-	return c.Quests, true
-}
-
-func (c *CurQuests) CacheData() interface{} {
-	return c.Quests
-}
-
-func (c *CurQuests) Key() string {
-	return "quests"
-}
-
-func (c *CurQuests) GetCacheKey() string {
-	return c.quest.GetCacheKey() + c.Key()
 }
 
 func (c *CurQuests) Add(questData *pb.QuestData) {
@@ -134,11 +100,6 @@ func NewQuest(player *Player) *Quest {
 	component.Quests.quest = component
 	component.checkData()
 	return component
-}
-
-// 需要保存数据的子模块
-func (this *Quest) SaveableChildren() []internal.ChildSaveable {
-	return []internal.ChildSaveable{this.Finished, this.Quests}
 }
 
 func (this *Quest) checkData() {

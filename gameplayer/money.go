@@ -27,17 +27,6 @@ func NewMoney(player *Player) *Money {
 	return component
 }
 
-func (this *Money) DbData() (dbData interface{}, protoMarshal bool) {
-	// 演示proto序列化后存储到数据库
-	// 优点:占用空间少,读取数据快,游戏模块大多采用这种方式
-	// 缺点:数据库语言无法直接操作字段
-	return this.Data, true
-}
-
-func (this *Money) CacheData() interface{} {
-	return this.Data
-}
-
 // 事件接口
 func (this *Money) OnEvent(event interface{}) {
 	switch v := event.(type) {

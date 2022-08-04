@@ -25,17 +25,6 @@ func NewBagCountItem(player *Player, data map[int32]int32) *BagCountItem {
 	return component
 }
 
-func (this *BagCountItem) DbData() (dbData interface{}, protoMarshal bool) {
-	// 演示明文保存数据库
-	// 优点:便于查看,数据库语言可直接操作字段
-	// 缺点:字段名也会保存到数据库,占用空间多
-	return this.Items,false
-}
-
-func (this *BagCountItem) CacheData() interface{} {
-	return this.Items
-}
-
 func (this *BagCountItem) GetMapValue(key string) (value interface{}, exists bool) {
 	value,exists = this.Items[int32(util.Atoi(key))]
 	return value,exists

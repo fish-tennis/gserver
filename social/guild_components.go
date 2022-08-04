@@ -1,12 +1,10 @@
 package social
 
 import (
-	"fmt"
+	. "github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 	"github.com/fish-tennis/gserver/util"
-	"strings"
-	. "github.com/fish-tennis/gserver/internal"
 )
 
 var _ SaveableDirtyMark = (*GuildBaseInfo)(nil)
@@ -27,24 +25,11 @@ func NewGuildBaseInfo(entity Entity, data *pb.GuildInfo) *GuildBaseInfo {
 	return c
 }
 
-func (g *GuildBaseInfo) DbData() (dbData interface{}, protoMarshal bool) {
-	return g.Data,false
-}
-
-func (g *GuildBaseInfo) CacheData() interface{} {
-	return g.Data
-}
-
-func (g *GuildBaseInfo) GetCacheKey() string {
-	return fmt.Sprintf("g.%v.{%v}", strings.ToLower(g.GetName()), g.GetEntity().GetId())
-}
-
 func (g *GuildBaseInfo) SetMemberCount(memberCount int32) {
 	g.Data.MemberCount = memberCount
 	g.SetDirty()
 }
 
-var _ SaveableMapDirtyMark = (*GuildMembers)(nil)
 // 公会成员数据
 type GuildMembers struct {
 	MapDataComponent
@@ -60,18 +45,6 @@ func NewGuildMembers(entity Entity, data map[int64]*pb.GuildMemberData) *GuildMe
 		c.Data = make(map[int64]*pb.GuildMemberData)
 	}
 	return c
-}
-
-func (g *GuildMembers) DbData() (dbData interface{}, protoMarshal bool) {
-	return g.Data,false
-}
-
-func (g *GuildMembers) CacheData() interface{} {
-	return g.Data
-}
-
-func (g *GuildMembers) GetCacheKey() string {
-	return fmt.Sprintf("g.%v.{%v}", strings.ToLower(g.GetName()), g.GetEntity().GetId())
 }
 
 func (g *GuildMembers) GetMapValue(key string) (value interface{}, exists bool) {
@@ -96,7 +69,6 @@ func (g *GuildMembers) Remove(playerId int64) {
 }
 
 
-var _ SaveableMapDirtyMark = (*GuildJoinRequests)(nil)
 // 公会加入请求
 type GuildJoinRequests struct {
 	MapDataComponent
@@ -112,18 +84,6 @@ func NewGuildJoinRequests(entity Entity, data map[int64]*pb.GuildJoinRequest) *G
 		c.Data = make(map[int64]*pb.GuildJoinRequest)
 	}
 	return c
-}
-
-func (g *GuildJoinRequests) DbData() (dbData interface{}, protoMarshal bool) {
-	return g.Data,false
-}
-
-func (g *GuildJoinRequests) CacheData() interface{} {
-	return g.Data
-}
-
-func (g *GuildJoinRequests) GetCacheKey() string {
-	return fmt.Sprintf("g.%v.{%v}", strings.ToLower(g.GetName()), g.GetEntity().GetId())
 }
 
 func (g *GuildJoinRequests) GetMapValue(key string) (value interface{}, exists bool) {

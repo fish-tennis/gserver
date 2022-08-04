@@ -35,17 +35,6 @@ func NewBaseInfo(player *Player, data *pb.BaseInfo) *BaseInfo {
 	return component
 }
 
-func (this *BaseInfo) DbData() (dbData interface{}, protoMarshal bool) {
-	// 演示明文保存数据库
-	// 优点:便于查看,数据库语言可直接操作字段
-	// 缺点:字段名也会保存到数据库,占用空间多
-	return this.Data,false
-}
-
-func (this *BaseInfo) CacheData() interface{} {
-	return this.Data
-}
-
 func (this *BaseInfo) IncExp(incExp int32) {
 	this.Data.Exp += incExp
 	lvl := this.Data.Exp/100

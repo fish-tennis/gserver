@@ -19,33 +19,6 @@ type Saveable interface {
 	IsChanged() bool
 
 	ResetChanged()
-
-	// 需要保存到数据库的数据
-	// 支持类型:
-	// proto.Message
-	// map[intORstring]intORstring
-	// map[intORstring]proto.Message
-	// SliceInt32
-	DbData() (dbData interface{}, protoMarshal bool)
-
-	// 需要缓存的数据
-	// 支持类型:
-	// proto.Message
-	// map key:int or string value:int or string or proto.Message
-	CacheData() interface{}
-
-	GetCacheKey() string
-}
-
-// 保存接口子模块
-type ChildSaveable interface {
-	Saveable
-	Key() string
-}
-
-// 多个保存子模块的组合
-type CompositeSaveable interface {
-	SaveableChildren() []ChildSaveable
 }
 
 // 保存数据作为一个整体,只要一个字段修改了,整个数据都需要缓存
@@ -106,12 +79,8 @@ type MapDirtyMark interface {
 	SetCached()
 
 	GetDirtyMap() map[string]bool
+	// TODO:用反射,去掉该接口
 	GetMapValue(key string) (value interface{}, exists bool)
-}
-
-type SaveableMapDirtyMark interface {
-	Saveable
-	MapDirtyMark
 }
 
 type BaseMapDirtyMark struct {

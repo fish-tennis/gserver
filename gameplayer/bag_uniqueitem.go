@@ -25,14 +25,6 @@ func NewBagUniqueItem(player *Player) *BagUniqueItem {
 	return component
 }
 
-func (this *BagUniqueItem) DbData() (dbData interface{}, protoMarshal bool) {
-	return this.Items,true
-}
-
-func (this *BagUniqueItem) CacheData() interface{} {
-	return this.Items
-}
-
 func (this *BagUniqueItem) GetMapValue(key string) (value interface{}, exists bool) {
 	value,exists = this.Items[util.Atoi64(key)]
 	return value,exists
