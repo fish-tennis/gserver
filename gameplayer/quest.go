@@ -17,7 +17,7 @@ type Quest struct {
 	// 保存数据的子模块:已完成的任务
 	// 保存数据的子模块必须是导出字段(字段名大写开头)
 	Finished *FinishedQuests `child:"finished"`
-	// 子模块:当前任务列表
+	// 保存数据的子模块:当前任务列表
 	Quests *CurQuests `child:"quests"`
 }
 
@@ -27,6 +27,7 @@ var _ internal.DirtyMark = (*FinishedQuests)(nil)
 type FinishedQuests struct {
 	internal.BaseDirtyMark
 	quest *Quest
+	// 明文存储
 	Finished []int32 `db:"finished;plain"`
 }
 

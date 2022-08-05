@@ -13,6 +13,7 @@ var _ internal.Saveable = (*BaseInfo)(nil)
 // 玩家基础信息组件
 type BaseInfo struct {
 	PlayerDataComponent
+	// plain表示明文存储,在保存到mongo时,不会进行proto序列化
 	Data *pb.BaseInfo `db:"baseinfo;plain"`
 }
 
