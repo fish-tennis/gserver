@@ -13,7 +13,9 @@ var _ internal.Saveable = (*Money)(nil)
 // 玩家的钱财组件
 type Money struct {
 	PlayerDataComponent
-	Data *pb.Money `db:"baseinfo"`
+	// 该字段必须导出(首字母大写)
+	// 使用struct tag来标记该字段需要存数据库,可以设置存储字段名(proto格式存mongo时,使用全小写格式)
+	Data *pb.Money `db:"money"`
 }
 
 func NewMoney(player *Player) *Money {
