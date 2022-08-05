@@ -1,10 +1,14 @@
 package internal
 
 import (
+	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/util"
 	"reflect"
 	"strings"
+	"sync"
 )
+
+var _saveableStructsMap = newSaveableStructsMap()
 
 type SaveableStruct struct {
 	// 是否是子模块的组合
@@ -23,12 +27,41 @@ type SaveableField struct {
 	Name        string
 }
 
+type safeSaveableStructsMap struct {
+	m map[reflect.Type]*SaveableStruct
+	l *sync.RWMutex
+}
+
+func (s *safeSaveableStructsMap) Set(key reflect.Type, value *SaveableStruct) {
+	s.l.Lock()
+	defer s.l.Unlock()
+	s.m[key] = value
+	if value != nil {
+		logger.Debug("SaveableStruct: %v", key)
+	}
+}
+
+func (s *safeSaveableStructsMap) Get(key reflect.Type) (*SaveableStruct,bool) {
+	s.l.RLock()
+	defer s.l.RUnlock()
+	v,ok := s.m[key]
+	return v,ok
+}
+
+func newSaveableStructsMap() *safeSaveableStructsMap {
+	return &safeSaveableStructsMap{l: new(sync.RWMutex), m: make(map[reflect.Type]*SaveableStruct)}
+}
+
 func GetSaveableStruct(reflectType reflect.Type) *SaveableStruct {
 	if reflectType.Kind() == reflect.Ptr {
 		reflectType = reflectType.Elem()
 	}
 	if reflectType.Kind() != reflect.Struct {
 		return nil
+	}
+	cacheStruct,ok := _saveableStructsMap.Get(reflectType)
+	if ok {
+		return cacheStruct
 	}
 	structCahce := &SaveableStruct{
 		Fields: make([]*SaveableField, 0),
@@ -64,6 +97,7 @@ func GetSaveableStruct(reflectType reflect.Type) *SaveableStruct {
 		//logger.Debug("%v %v %v", reflectType.Name(), name, isPlain)
 	}
 	if len(structCahce.Fields) > 0 {
+		_saveableStructsMap.Set(reflectType, structCahce)
 		return structCahce
 	}
 	for i := 0; i < reflectType.NumField(); i++ {
@@ -93,7 +127,9 @@ func GetSaveableStruct(reflectType reflect.Type) *SaveableStruct {
 		//logger.Debug("%v.%v", reflectType.Name(), name)
 	}
 	if len(structCahce.Fields) == 0 {
+		_saveableStructsMap.Set(reflectType, nil)
 		return nil
 	}
+	_saveableStructsMap.Set(reflectType, structCahce)
 	return structCahce
 }
