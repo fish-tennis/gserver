@@ -55,6 +55,8 @@ func Itoa(i interface{}) string {
 		return strconv.FormatFloat(float64(v), 'f', 2, 32)
 	case float64:
 		return strconv.FormatFloat(v, 'f', 2, 64)
+	case string:
+		return v
 	}
 	logger.Error("Itoa not support type:%v", i)
 	return ""

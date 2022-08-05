@@ -3,7 +3,6 @@ package gameplayer
 import (
 	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
-	"github.com/fish-tennis/gserver/util"
 	"math"
 )
 
@@ -23,11 +22,6 @@ func NewBagCountItem(player *Player, data map[int32]int32) *BagCountItem {
 	}
 	component.checkData()
 	return component
-}
-
-func (this *BagCountItem) GetMapValue(key string) (value interface{}, exists bool) {
-	value,exists = this.Items[int32(util.Atoi(key))]
-	return value,exists
 }
 
 func (this *BagCountItem) checkData() {

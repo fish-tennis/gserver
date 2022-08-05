@@ -138,6 +138,7 @@ func (this *Player) RunProcessRoutine() bool {
 			GetPlayerMgr().RemovePlayer(this)
 			GetServer().GetWaitGroup().Done()
 			if err := recover(); err != nil {
+				logger.Error("recover:%v", err)
 				logger.LogStack()
 			}
 			logger.Debug("EndProcessRoutine %v", this.GetId())
@@ -185,6 +186,7 @@ func (this *Player) RunProcessRoutine() bool {
 func (this *Player) processMessage(message *ProtoPacket) {
 	defer func() {
 		if err := recover(); err != nil {
+			logger.Error("recover:%v", err)
 			logger.LogStack()
 		}
 	}()

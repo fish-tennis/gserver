@@ -26,19 +26,8 @@ var _ internal.DirtyMark = (*FinishedQuests)(nil)
 type FinishedQuests struct {
 	internal.BaseDirtyMark
 	quest *Quest
-	// 保存数组数据,不能直接使用[]int32
-	// SliceInt32只能和DirtyMark配合使用,不支持MapDirtyMark
-	// NOTE:使用SliceInt32作用有限,还不如用proto更方便,这里只是演示一种保存方式,实际应用的时候不推荐
-	// 暂时也没有实现SliceInt64,SliceProto之类的扩展类,因为redis里不好存储
 	Finished []int32 `db:"finished;plain"`
-	// 排重数组也可以使用map代替
-	//Finished map[int32]int8
 }
-
-//func (f *FinishedQuests) GetMapValue(key string) (value interface{}, exists bool) {
-//	value,exists = f.Finished[int32(util.Atoi(key))]
-//	return
-//}
 
 func (f *FinishedQuests) Add(finishedQuestId int32) {
 	if util.ContainsInt32(f.Finished, finishedQuestId) {
@@ -58,11 +47,6 @@ type CurQuests struct {
 	Quests map[int32]*pb.QuestData `db:"quests"`
 }
 
-func (c *CurQuests) GetMapValue(key string) (value interface{}, exists bool) {
-	value, exists = c.Quests[int32(util.Atoi(key))]
-	return
-}
-
 func (c *CurQuests) Add(questData *pb.QuestData) {
 	c.Quests[questData.CfgId] = questData
 	c.SetDirty(questData.CfgId, true)
@@ -75,6 +59,7 @@ func (c *CurQuests) Remove(questId int32) {
 	logger.Debug("remove quest:%v", questId)
 }
 
+// 触发了事件,检查任务进度的更新
 func (c *CurQuests) fireEvent(event interface{}) {
 	for _,questData := range c.Quests {
 		questCfg := cfg.GetQuestCfgMgr().GetQuestCfg(questData.GetCfgId())
@@ -115,8 +100,8 @@ func (this *Quest) checkData() {
 func (this *Quest) OnEvent(event interface{}) {
 	switch event.(type) {
 	case *internal.EventPlayerEntryGame:
-		// 测试代码
-		if len(this.Quests.Quests) == 0 {
+		// 测试代码:给新玩家添加初始任务
+		if len(this.Quests.Quests) == 0 && len(this.Finished.Finished) == 0 {
 			for _,questCfg := range cfg.GetQuestCfgMgr().GetQuestCfgs() {
 				questData := &pb.QuestData{CfgId: questCfg.CfgId}
 				this.Quests.Add(questData)
@@ -132,6 +117,7 @@ func (this *Quest) FinishQuests() {
 		if questData.GetProgress() >= questCfg.ConditionCfg.Total {
 			this.Quests.Remove(questId)
 			this.Finished.Add(questId)
+			// TODO:任务奖励
 		}
 	}
 }

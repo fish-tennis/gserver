@@ -4,7 +4,6 @@ import (
 	. "github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
-	"github.com/fish-tennis/gserver/util"
 )
 
 var _ SaveableDirtyMark = (*GuildBaseInfo)(nil)
@@ -47,11 +46,6 @@ func NewGuildMembers(entity Entity, data map[int64]*pb.GuildMemberData) *GuildMe
 	return c
 }
 
-func (g *GuildMembers) GetMapValue(key string) (value interface{}, exists bool) {
-	value,exists = g.Data[util.Atoi64(key)]
-	return
-}
-
 func (g *GuildMembers) Get(playerId int64) *pb.GuildMemberData {
 	return g.Data[playerId]
 }
@@ -84,11 +78,6 @@ func NewGuildJoinRequests(entity Entity, data map[int64]*pb.GuildJoinRequest) *G
 		c.Data = make(map[int64]*pb.GuildJoinRequest)
 	}
 	return c
-}
-
-func (g *GuildJoinRequests) GetMapValue(key string) (value interface{}, exists bool) {
-	value,exists = g.Data[util.Atoi64(key)]
-	return
 }
 
 func (g *GuildJoinRequests) Get(playerId int64) *pb.GuildJoinRequest {

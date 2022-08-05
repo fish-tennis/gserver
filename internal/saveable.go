@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/fish-tennis/gserver/cache"
@@ -13,11 +14,13 @@ import (
 	"strings"
 )
 
-// 保存数据接口
+// 保存数据的接口
+// 用于检查数据是否修改过
 type Saveable interface {
 	// 数据是否改变过
 	IsChanged() bool
 
+	// 重置
 	ResetChanged()
 }
 
@@ -31,6 +34,11 @@ type DirtyMark interface {
 	ResetDirty()
 }
 
+// 同时需要保存数据库和缓存的接口
+// Saveable:
+//   保存数据库的频率低,比如玩家下线时才会保存数据库,那么Saveable只会在上线期间记录有没有改变过就可以
+// DirtyMark:
+//   缓存的保存频率高,比如玩家每一次操作都可能引起缓存的更新
 type SaveableDirtyMark interface {
 	Saveable
 	DirtyMark
@@ -74,19 +82,18 @@ type MapDirtyMark interface {
 	// 重置标记
 	ResetDirty()
 
-	// 是否把整体数据缓存了
+	// 是否把整体数据缓存过了
 	HasCached() bool
+	// 第一次有数据修改时,会把整体数据缓存一次,之后只保存修改过的项(增量更新)
 	SetCached()
 
-	GetDirtyMap() map[string]bool
-	// TODO:用反射,去掉该接口
-	GetMapValue(key string) (value interface{}, exists bool)
+	GetDirtyMap() map[interface{}]bool
 }
 
 type BaseMapDirtyMark struct {
 	isChanged bool
 	hasCached bool
-	dirtyMap  map[string]bool
+	dirtyMap  map[interface{}]bool
 }
 
 func (this *BaseMapDirtyMark) IsChanged() bool {
@@ -103,14 +110,14 @@ func (this *BaseMapDirtyMark) IsDirty() bool {
 
 func (this *BaseMapDirtyMark) SetDirty(k interface{}, isAddOrUpdate bool) {
 	if this.dirtyMap == nil {
-		this.dirtyMap = make(map[string]bool)
+		this.dirtyMap = make(map[interface{}]bool)
 	}
-	this.dirtyMap[util.Itoa(k)] = isAddOrUpdate
+	this.dirtyMap[k] = isAddOrUpdate
 	this.isChanged = true
 }
 
 func (this *BaseMapDirtyMark) ResetDirty() {
-	this.dirtyMap = make(map[string]bool)
+	this.dirtyMap = make(map[interface{}]bool)
 }
 
 func (this *BaseMapDirtyMark) HasCached() bool {
@@ -121,7 +128,7 @@ func (this *BaseMapDirtyMark) SetCached() {
 	this.hasCached = true
 }
 
-func (this *BaseMapDirtyMark) GetDirtyMap() map[string]bool {
+func (this *BaseMapDirtyMark) GetDirtyMap() map[interface{}]bool {
 	return this.dirtyMap
 }
 
@@ -250,9 +257,7 @@ func GetSaveData(obj interface{}, parentName string) (interface{}, error) {
 			if protoMessage, ok := fieldInterface.(proto.Message); ok {
 				return proto.Marshal(protoMessage)
 			}
-			if sliceInt32, ok := fieldInterface.(*SliceInt32); ok {
-				return sliceInt32.Data(), nil
-			}
+			// TODO:扩展一个自定义序列化接口
 
 		default:
 			return nil, errors.New("unsupport key type")
@@ -279,7 +284,7 @@ func GetSaveData(obj interface{}, parentName string) (interface{}, error) {
 	return nil, errors.New("unsupport type")
 }
 
-// 组件的保存数据
+// 获取组件的保存数据
 func GetComponentSaveData(component Component) (interface{}, error) {
 	return GetSaveData(component, component.GetNameLower())
 }
@@ -544,6 +549,7 @@ func convertProtoToMap(protoMessage proto.Message) map[string]interface{} {
 	return stringMap
 }
 
+// 把组件的修改数据保存到缓存
 func SaveComponentChangedDataToCache(component Component) {
 	structCache := GetSaveableStruct(reflect.TypeOf(component))
 	if structCache == nil {
@@ -567,8 +573,8 @@ func SaveComponentChangedDataToCache(component Component) {
 }
 
 // 把修改数据保存到缓存
-func SaveChangedDataToCache(saveable interface{}, cacheKeyName string) {
-	structCache := GetSaveableStruct(reflect.TypeOf(saveable))
+func SaveChangedDataToCache(obj interface{}, cacheKeyName string) {
+	structCache := GetSaveableStruct(reflect.TypeOf(obj))
 	if structCache == nil {
 		return
 	}
@@ -577,11 +583,11 @@ func SaveChangedDataToCache(saveable interface{}, cacheKeyName string) {
 	}
 	fieldCache := structCache.Fields[0]
 	// 缓存数据作为一个整体的
-	if dirtyMark, ok := saveable.(DirtyMark); ok {
+	if dirtyMark, ok := obj.(DirtyMark); ok {
 		if !dirtyMark.IsDirty() {
 			return
 		}
-		reflectVal := reflect.ValueOf(saveable).Elem()
+		reflectVal := reflect.ValueOf(obj).Elem()
 		val := reflectVal.Field(fieldCache.FieldIndex)
 		if val.IsNil() {
 			err := cache.Get().Del(cacheKeyName)
@@ -603,14 +609,19 @@ func SaveChangedDataToCache(saveable interface{}, cacheKeyName string) {
 					}
 
 				case []int32:
-					// TODO: []int32 -> string
-				//case *SliceInt32:
-				//	// SliceInt32 -> string
-				//	err := cache.Get().Set(cacheKeyName, realData.ToString(), 0)
-				//	if cache.IsRedisError(err) {
-				//		logger.Error("%v cache err:%v", cacheKeyName, err.Error())
-				//		return
-				//	}
+					// []int32 -> string
+					// TODO:使用proto序列化是不是更好一些?
+					jsonBytes,err := json.Marshal(realData)
+					if err != nil {
+						logger.Error("%v json.Marshal err:%v", cacheKeyName, err.Error())
+						return
+					}
+					err = cache.Get().Set(cacheKeyName, jsonBytes, 0)
+					if cache.IsRedisError(err) {
+						logger.Error("%v cache err:%v", cacheKeyName, err.Error())
+						return
+					}
+					logger.Debug("%v json.Marshal", cacheKeyName)
 
 				default:
 					logger.Error("%v cache err:unsupport type:%v", cacheKeyName, reflect.TypeOf(realData))
@@ -640,11 +651,11 @@ func SaveChangedDataToCache(saveable interface{}, cacheKeyName string) {
 		return
 	}
 	// map格式的
-	if dirtyMark, ok := saveable.(MapDirtyMark); ok {
+	if dirtyMark, ok := obj.(MapDirtyMark); ok {
 		if !dirtyMark.IsDirty() {
 			return
 		}
-		reflectVal := reflect.ValueOf(saveable).Elem()
+		reflectVal := reflect.ValueOf(obj).Elem()
 		val := reflectVal.Field(fieldCache.FieldIndex)
 		if val.IsNil() {
 			err := cache.Get().Del(cacheKeyName)
@@ -670,16 +681,27 @@ func SaveChangedDataToCache(saveable interface{}, cacheKeyName string) {
 				}
 				dirtyMark.SetCached()
 			} else {
-				setMap := make(map[string]interface{})
+				setMap := make(map[interface{}]interface{})
 				var delMap []string
 				for dirtyKey, isAddOrUpdate := range dirtyMark.GetDirtyMap() {
 					if isAddOrUpdate {
-						if dirtyValue, exists := dirtyMark.GetMapValue(dirtyKey); exists {
-							setMap[dirtyKey] = dirtyValue
+						mapValue := val.MapIndex(reflect.ValueOf(dirtyKey))
+						if mapValue.IsValid() {
+							// use convertValueToInterface()?
+							if !mapValue.CanInterface() {
+								logger.Error("%v mapValue.CanInterface() false dirtyKey:%v", cacheKeyName, dirtyKey)
+								return
+							}
+							setMap[dirtyKey] = mapValue.Interface()
+						} else {
+							logger.Debug("%v mapValue.IsValid() false dirtyKey:%v", cacheKeyName, dirtyKey)
 						}
+						//if dirtyValue, exists := dirtyMark.GetMapValue(dirtyKey); exists {
+						//	setMap[dirtyKey] = dirtyValue
+						//}
 					} else {
 						// delete
-						delMap = append(delMap, dirtyKey)
+						delMap = append(delMap, util.Itoa(dirtyKey))
 					}
 				}
 				if len(setMap) > 0 {
@@ -744,7 +766,30 @@ func LoadFromCache(obj interface{}, cacheKey string) (bool, error) {
 					return true, nil
 				}
 			} else if fieldCache.StructField.Type.Kind() == reflect.Slice {
-				// TODO:slice int
+				if val.IsNil() {
+					if !val.CanSet() {
+						logger.Error("%v CanSet false", fieldCache.Name)
+						return true, errors.New(fmt.Sprintf("%v CanSet false", fieldCache.Name))
+					}
+					newElem := reflect.New(fieldCache.StructField.Type)
+					val.Set(newElem)
+					logger.Debug("cacheKey:%v new %v", cacheKey, fieldCache.Name)
+				}
+				if !val.CanInterface() {
+					return true, errors.New(fmt.Sprintf("%v CanInterface false", fieldCache.Name))
+				}
+				jsonData,err:= cache.Get().Get(cacheKey)
+				if cache.IsRedisError(err) {
+					logger.Error("Get %v %v err:%v", cacheKey, cacheType, err)
+					return true, err
+				}
+				err = json.Unmarshal([]byte(jsonData), val.Interface())
+				if err != nil {
+					logger.Error("json.Unmarshal %v %v err:%v", cacheKey, cacheType, err)
+					return true, err
+				}
+				logger.Debug("%v json.Unmarshal", cacheKey)
+				return true, nil
 			}
 			return true, errors.New(fmt.Sprintf("unsupport kind:%v cacheKey:%v cacheType:%v", fieldCache.StructField.Type.Kind(), cacheKey, cacheType))
 		} else if cacheType == "hash" {
@@ -884,7 +929,7 @@ func SaveEntityChangedDataToDb(entityDb db.EntityDb, entity Entity, removeCacheA
 	return saveDbErr
 }
 
-// 获取实体需要保存到数据库的数据
+// 获取实体需要保存到数据库的完整数据
 func GetEntitySaveData(entity Entity, componentDatas map[string]interface{}) {
 	entity.RangeComponent(func(component Component) bool {
 		structCache := GetSaveableStruct(reflect.TypeOf(component))

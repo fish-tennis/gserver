@@ -70,6 +70,7 @@ func (this *Guild) RunProcessRoutine() bool {
 			//SaveEntityToDb(GetGuildDb(), this, true)
 			GetServer().GetWaitGroup().Done()
 			if err := recover(); err != nil {
+				logger.Error("recover:%v", err)
 				logger.LogStack()
 			}
 			logger.Debug("EndProcessRoutine %v", this.GetId())
@@ -121,6 +122,7 @@ func (this *Guild) Stop() {
 func (this *Guild) processMessage(message *GuildMessage) {
 	defer func() {
 		if err := recover(); err != nil {
+			logger.Error("recover:%v", err)
 			logger.LogStack()
 		}
 	}()

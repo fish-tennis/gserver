@@ -202,13 +202,12 @@ func (this *GameServer) repairPlayerCache(playerId,accountId int64) error {
 				logger.Error("%v SaveDb %v err %v", playerId, component.GetNameLower(), saveDbErr.Error())
 				continue
 			}
-			logger.Info("%v SaveDb %v", playerId, component.GetNameLower())
+			logger.Info("%v -> %v", cacheKey, component.GetNameLower())
 			cache.Get().Del(cacheKey)
-			logger.Info("RemoveCache %v", playerId, cacheKey)
+			logger.Info("RemoveCache %v", cacheKey)
 		} else {
 			reflectVal := reflect.ValueOf(component).Elem()
 			for _, fieldCache := range structCache.Fields {
-				//childName := component.GetNameLower() + "." + fieldCache.Name
 				val := reflectVal.Field(fieldCache.FieldIndex)
 				if val.IsNil() {
 					if !val.CanSet() {
@@ -229,19 +228,21 @@ func (this *GameServer) repairPlayerCache(playerId,accountId int64) error {
 					logger.Error("LoadFromCache %v error:%v", cacheKey, err.Error())
 					continue
 				}
-				saveData,err := GetSaveData(component, component.GetNameLower())
+				logger.Debug("%v", fieldInterface)
+				saveData,err := GetSaveData(fieldInterface, component.GetNameLower())
 				if err != nil {
 					logger.Error("%v Save %v.%v err %v", playerId, component.GetName(), fieldCache.Name, err.Error())
 					continue
 				}
+				logger.Debug("%v", saveData)
 				saveDbErr := db.GetPlayerDb().SaveComponentField(playerId, component.GetNameLower(), fieldCache.Name, saveData)
 				if saveDbErr != nil {
 					logger.Error("%v SaveDb %v.%v err %v", playerId, component.GetNameLower(), fieldCache.Name, saveDbErr.Error())
 					continue
 				}
-				logger.Info("%v SaveDb %v.%v", playerId, component.GetNameLower(), fieldCache.Name)
+				logger.Info("%v -> %v.%v", cacheKey, component.GetNameLower(), fieldCache.Name)
 				cache.Get().Del(cacheKey)
-				logger.Info("RemoveCache %v %v", playerId, cacheKey)
+				logger.Info("RemoveCache %v", cacheKey)
 			}
 		}
 	}

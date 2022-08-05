@@ -4,7 +4,6 @@ import (
 	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
-	"github.com/fish-tennis/gserver/util"
 )
 
 var _ internal.Saveable = (*BagUniqueItem)(nil)
@@ -23,11 +22,6 @@ func NewBagUniqueItem(player *Player) *BagUniqueItem {
 	}
 	component.checkData()
 	return component
-}
-
-func (this *BagUniqueItem) GetMapValue(key string) (value interface{}, exists bool) {
-	value,exists = this.Items[util.Atoi64(key)]
-	return value,exists
 }
 
 func (this *BagUniqueItem) checkData() {

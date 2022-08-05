@@ -48,7 +48,7 @@ func (this *TestClient) GetWaitGroup() *sync.WaitGroup {
 func (this *TestClient) parseCmdArgs() {
 	flag.StringVar(&this.serverAddr, "server", "127.0.0.1:10002", "server's ip:port")
 	flag.IntVar(&this.mockClientNum, "num", 1, "num of mock client")
-	flag.IntVar(&this.mockClientBeginId, "begin", 108, "begin id of mock client")
+	flag.IntVar(&this.mockClientBeginId, "begin", 1, "begin id of mock client")
 	flag.StringVar(&this.mockClientAccountPrefix, "prefix", "mock", "prefix of mock client's accountName")
 	flag.Parse()
 	logger.Info("server:%v num:%v prefix:%v beginId:%v", this.serverAddr, this.mockClientNum,
