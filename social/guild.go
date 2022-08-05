@@ -20,9 +20,9 @@ type Guild struct {
 	stopChan chan struct{}
 	stopOnce sync.Once
 
-	baseInfo     *GuildBaseInfo
-	members      *GuildMembers
-	joinRequests *GuildJoinRequests
+	BaseInfo     *GuildBaseInfo     `child:"baseinfo"`
+	Members      *GuildMembers      `child:"members"`
+	JoinRequests *GuildJoinRequests `child:"joinrequests"`
 }
 
 type GuildMessage struct {
@@ -33,22 +33,22 @@ type GuildMessage struct {
 	message        proto.Message
 }
 
-func NewGuild(guildData *pb.GuildData) *Guild {
+func NewGuild(guildData *pb.GuildLoadData) *Guild {
 	guild := &Guild{
 		messages: make(chan *GuildMessage, 32),
 		stopChan: make(chan struct{}, 1),
 	}
-	guild.baseInfo = NewGuildBaseInfo(guild, guildData.BaseInfo)
-	guild.AddComponent(guild.baseInfo, nil)
-	guild.members = NewGuildMembers(guild, guildData.Members)
-	guild.AddComponent(guild.members, nil)
-	guild.joinRequests = NewGuildJoinRequests(guild, guildData.JoinRequests)
-	guild.AddComponent(guild.joinRequests, nil)
+	guild.BaseInfo = NewGuildBaseInfo(guild, guildData.BaseInfo)
+	guild.AddComponent(guild.BaseInfo, nil)
+	guild.Members = NewGuildMembers(guild, guildData.Members)
+	guild.AddComponent(guild.Members, nil)
+	guild.JoinRequests = NewGuildJoinRequests(guild)
+	guild.AddComponent(guild.JoinRequests, guildData.JoinRequests)
 	return guild
 }
 
 func (this *Guild) GetId() int64 {
-	return this.baseInfo.Data.Id
+	return this.BaseInfo.Data.Id
 }
 
 func (this *Guild) PushMessage(guildMessage *GuildMessage) {
@@ -142,7 +142,7 @@ func (this *Guild) processMessage(message *GuildMessage) {
 }
 
 func (this *Guild) GetMember(playerId int64) *pb.GuildMemberData {
-	return this.members.Get(playerId)
+	return this.Members.Get(playerId)
 }
 
 // 路由玩家消息
@@ -155,10 +155,10 @@ func (this *Guild) OnGuildJoinReq(message *GuildMessage, req *pb.GuildJoinReq) {
 	if this.GetMember(message.fromPlayerId) != nil {
 		return
 	}
-	if this.joinRequests.Get(message.fromPlayerId) != nil {
+	if this.JoinRequests.Get(message.fromPlayerId) != nil {
 		return
 	}
-	this.joinRequests.Add(&pb.GuildJoinRequest{
+	this.JoinRequests.Add(&pb.GuildJoinRequest{
 		PlayerId:     message.fromPlayerId,
 		PlayerName:   message.fromPlayerName,
 		TimestampSec: int32(util.GetCurrentTimeStamp()),
@@ -178,22 +178,22 @@ func (this *Guild) OnGuildJoinAgreeReq(message *GuildMessage, req *pb.GuildJoinA
 	if member.Position < int32(pb.GuildPosition_Manager) {
 		return
 	}
-	joinRequest := this.joinRequests.Get(req.JoinPlayerId)
+	joinRequest := this.JoinRequests.Get(req.JoinPlayerId)
 	if joinRequest == nil {
 		return
 	}
 	if req.IsAgree {
 		// TODO:检查该玩家是否已经有公会了
-		this.members.Add(&pb.GuildMemberData{
+		this.Members.Add(&pb.GuildMemberData{
 			Id:       joinRequest.PlayerId,
 			Name:     joinRequest.PlayerName,
 			Position: int32(pb.GuildPosition_Member),
 		})
-		this.baseInfo.SetMemberCount(int32(len(this.members.Data)))
+		this.BaseInfo.SetMemberCount(int32(len(this.Members.Data)))
 	} else {
 		// 略:给该玩家发一个提示信息
 	}
-	this.joinRequests.Remove(req.JoinPlayerId)
+	this.JoinRequests.Remove(req.JoinPlayerId)
 	this.RoutePlayerPacket(message, PacketCommand(pb.CmdGuild_Cmd_GuildJoinAgreeRes), &pb.GuildJoinAgreeRes{
 		JoinPlayerId: joinRequest.PlayerId,
 		IsAgree:      req.IsAgree,
@@ -208,9 +208,9 @@ func (this *Guild) OnGuildDataViewReq(message *GuildMessage, req *pb.GuildDataVi
 	this.RoutePlayerPacket(message, PacketCommand(pb.CmdGuild_Cmd_GuildDataViewRes), &pb.GuildDataViewRes{
 		GuildData: &pb.GuildData{
 			Id:           this.GetId(),
-			BaseInfo:     this.baseInfo.Data,
-			Members:      this.members.Data,
-			JoinRequests: this.joinRequests.Data,
+			BaseInfo:     this.BaseInfo.Data,
+			Members:      this.Members.Data,
+			JoinRequests: this.JoinRequests.Data,
 		},
 	})
 }

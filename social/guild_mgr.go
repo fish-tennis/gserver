@@ -39,7 +39,7 @@ func GetGuildById(guildId int64) *Guild {
 
 // 从数据库加载公会数据
 func LoadGuild(guildId int64) *Guild {
-	guildData := &pb.GuildData{
+	guildData := &pb.GuildLoadData{
 		Id: guildId,
 	}
 	exist, err := GetGuildDb().FindEntityById(guildId, guildData)
@@ -142,7 +142,7 @@ func GuildRouteReqPacket(player *gameplayer.Player, guildId int64, packet *Proto
 			// 再到数据库加载
 			guild = LoadGuild(guildId)
 			if guild == nil {
-				logger.Error("not find guild:%v", guild)
+				logger.Error("not find guild:%v", guildId)
 				return false
 			}
 		}

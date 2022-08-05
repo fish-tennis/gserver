@@ -32,7 +32,7 @@ func (g *GuildBaseInfo) SetMemberCount(memberCount int32) {
 // 公会成员数据
 type GuildMembers struct {
 	MapDataComponent
-	Data map[int64]*pb.GuildMemberData `db:"members"`
+	Data map[int64]*pb.GuildMemberData `db:"members;plain"`
 }
 
 func NewGuildMembers(entity Entity, data map[int64]*pb.GuildMemberData) *GuildMembers {
@@ -69,13 +69,10 @@ type GuildJoinRequests struct {
 	Data map[int64]*pb.GuildJoinRequest `db:"joinrequests"`
 }
 
-func NewGuildJoinRequests(entity Entity, data map[int64]*pb.GuildJoinRequest) *GuildJoinRequests {
+func NewGuildJoinRequests(entity Entity) *GuildJoinRequests {
 	c := &GuildJoinRequests{
 		MapDataComponent: *NewMapDataComponent(entity,"JoinRequests"),
-		Data:             data,
-	}
-	if c.Data == nil {
-		c.Data = make(map[int64]*pb.GuildJoinRequest)
+		Data:             make(map[int64]*pb.GuildJoinRequest),
 	}
 	return c
 }

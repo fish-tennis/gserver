@@ -42,7 +42,7 @@ message PlayerGuildData {
   int64 guildId = 1; // 公会id
 }
 
-// 玩家在数据库中的保存格式
+// 玩家在mongo中的保存格式
 // 用于一次性把玩家数据加载进来
 message PlayerData {
   int64 id = 1; // 玩家id
@@ -53,6 +53,6 @@ message PlayerData {
   bytes money = 6;
   Quest quest = 8;
   map<int32,int32> bagCountItem = 9;
-  map<int64,bytes> bagUniqueItem = 10;
-  bytes guild = 11;
+  map<int64,bytes> bagUniqueItem = 10; // (proto序列化)
+  bytes guild = 11; // (proto序列化)
 }

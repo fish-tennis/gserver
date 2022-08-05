@@ -26,6 +26,15 @@ enum GuildPosition {
   Leader  = 2; // 会长
 }
 
+// 公会在mongo中的保存格式
+// 用于一次性把公会数据加载进来
+message GuildLoadData {
+  int64 id = 1; // 公会唯一id
+  GuildInfo baseInfo = 2;
+  map<int64,GuildMemberData> members = 3; // 公会成员(明文)
+  map<int64,bytes> joinRequests = 4; // 申请加入公会的请求信息(proto序列化)
+}
+
 // 公会数据
 message GuildData {
   int64 id = 1; // 公会唯一id

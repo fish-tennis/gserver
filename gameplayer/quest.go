@@ -14,9 +14,10 @@ import (
 // 不同的ChildSaveable可以有不同的数据保存方式
 type Quest struct {
 	BasePlayerComponent
-	// 已完成的任务
+	// 保存数据的子模块:已完成的任务
+	// 保存数据的子模块必须是导出字段(字段名大写开头)
 	Finished *FinishedQuests `child:"finished"`
-	// 当前任务列表
+	// 子模块:当前任务列表
 	Quests *CurQuests `child:"quests"`
 }
 

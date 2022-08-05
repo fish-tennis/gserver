@@ -356,7 +356,7 @@ func (x *PlayerGuildData) GetGuildId() int64 {
 	return 0
 }
 
-// 玩家在数据库中的保存格式
+// 玩家在mongo中的保存格式
 // 用于一次性把玩家数据加载进来
 type PlayerData struct {
 	state         protoimpl.MessageState
@@ -371,8 +371,8 @@ type PlayerData struct {
 	Money         []byte           `protobuf:"bytes,6,opt,name=money,proto3" json:"money,omitempty"`
 	Quest         *Quest           `protobuf:"bytes,8,opt,name=quest,proto3" json:"quest,omitempty"`
 	BagCountItem  map[int32]int32  `protobuf:"bytes,9,rep,name=bagCountItem,proto3" json:"bagCountItem,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"varint,2,opt,name=value,proto3"`
-	BagUniqueItem map[int64][]byte `protobuf:"bytes,10,rep,name=bagUniqueItem,proto3" json:"bagUniqueItem,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
-	Guild         []byte           `protobuf:"bytes,11,opt,name=guild,proto3" json:"guild,omitempty"`
+	BagUniqueItem map[int64][]byte `protobuf:"bytes,10,rep,name=bagUniqueItem,proto3" json:"bagUniqueItem,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"` // (proto序列化)
+	Guild         []byte           `protobuf:"bytes,11,opt,name=guild,proto3" json:"guild,omitempty"`                                                                                                          // (proto序列化)
 }
 
 func (x *PlayerData) Reset() {
