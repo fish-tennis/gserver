@@ -33,20 +33,20 @@ func (this *RedisCache) Get(key string) (string, error) {
 
 func (this *RedisCache) Set(key string, value interface{}, expiration time.Duration) error {
 	// 如果是proto,自动转换成[]byte
-	if protoMessage,ok := value.(proto.Message); ok {
-		bytes,protoErr := proto.Marshal(protoMessage)
+	if protoMessage, ok := value.(proto.Message); ok {
+		bytes, protoErr := proto.Marshal(protoMessage)
 		if protoErr != nil {
 			return protoErr
 		}
-		_,err := this.redisClient.Set(context.Background(), key, bytes, expiration).Result()
+		_, err := this.redisClient.Set(context.Background(), key, bytes, expiration).Result()
 		return err
 	}
-	_,err := this.redisClient.Set(context.Background(), key, value, expiration).Result()
+	_, err := this.redisClient.Set(context.Background(), key, value, expiration).Result()
 	return err
 }
 
 func (this *RedisCache) Del(key ...string) error {
-	_,err := this.redisClient.Del(context.Background(), key...).Result()
+	_, err := this.redisClient.Del(context.Background(), key...).Result()
 	return err
 }
 
@@ -70,7 +70,7 @@ func (this *RedisCache) GetMap(key string, m interface{}) error {
 	typ := reflect.TypeOf(m)
 	keyType := typ.Key()
 	valType := typ.Elem()
-	for k,v := range strMap {
+	for k, v := range strMap {
 		realKey := convertStringToRealType(keyType, k)
 		realValue := convertStringToRealType(valType, v)
 		val.SetMapIndex(reflect.ValueOf(realKey), reflect.ValueOf(realValue))
@@ -84,29 +84,35 @@ func (this *RedisCache) SetMap(k string, m interface{}) error {
 	val := reflect.ValueOf(m)
 	it := val.MapRange()
 	for it.Next() {
-		key := convertValueToString(it.Key())
-		value := convertValueToStringOrInterface(it.Value())
+		key,err := convertValueToString(it.Key())
+		if err != nil {
+			return err
+		}
+		value,err := convertValueToStringOrInterface(it.Value())
+		if err != nil {
+			return err
+		}
 		cacheData[key] = value
 	}
 	if len(cacheData) == 0 {
 		return nil
 	}
-	_,err := this.redisClient.HSet(context.Background(), k, cacheData).Result()
+	_, err := this.redisClient.HSet(context.Background(), k, cacheData).Result()
 	return err
 }
 
-func (this *RedisCache) SetMapField(key,fieldName string, value interface{}) (isNewField bool, err error) {
-	ret,redisError := this.redisClient.HSet(context.Background(), key, fieldName, value).Result()
-	return ret==1,redisError
+func (this *RedisCache) SetMapField(key, fieldName string, value interface{}) (isNewField bool, err error) {
+	ret, redisError := this.redisClient.HSet(context.Background(), key, fieldName, value).Result()
+	return ret == 1, redisError
 }
 
 func (this *RedisCache) DelMapField(key string, fields ...string) error {
-	_,err := this.redisClient.HDel(context.Background(), key, fields...).Result()
+	_, err := this.redisClient.HDel(context.Background(), key, fields...).Result()
 	return err
 }
 
 func (this *RedisCache) GetProto(key string, value proto.Message) error {
-	str,err := this.redisClient.Get(context.Background(), key).Result()
+	str, err := this.redisClient.Get(context.Background(), key).Result()
 	// 不存在的key或者空数据,直接跳过,防止错误的覆盖
 	if err == redis.Nil || len(str) == 0 {
 		return nil
@@ -119,31 +125,37 @@ func (this *RedisCache) GetProto(key string, value proto.Message) error {
 }
 
 func (this *RedisCache) SetProto(key string, value proto.Message, expiration time.Duration) error {
-	bytes,protoErr := proto.Marshal(value)
+	bytes, protoErr := proto.Marshal(value)
 	if protoErr != nil {
 		return protoErr
 	}
-	_,err := this.redisClient.Set(context.Background(), key, bytes, expiration).Result()
+	_, err := this.redisClient.Set(context.Background(), key, bytes, expiration).Result()
 	return err
 }
 
-func convertValueToString(val reflect.Value) string {
+func convertValueToString(val reflect.Value) (string, error) {
 	switch val.Kind() {
-	case reflect.Int,reflect.Int8,reflect.Int16,reflect.Int32,reflect.Int64:
-		return strconv.Itoa(int(val.Int()))
-	case reflect.Uint,reflect.Uint8,reflect.Uint16,reflect.Uint32,reflect.Uint64:
-		return strconv.FormatUint(val.Uint(), 10)
-	case reflect.Float32,reflect.Float64:
-		return strconv.FormatFloat(val.Float(), 'f', 2, 64)
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return strconv.Itoa(int(val.Int())), nil
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return strconv.FormatUint(val.Uint(), 10), nil
+	case reflect.Float32, reflect.Float64:
+		return strconv.FormatFloat(val.Float(), 'f', 2, 64), nil
 	case reflect.String:
-		return val.String()
+		return val.String(), nil
+	case reflect.Interface:
+		if !val.CanInterface() {
+			logger.Error("unsupport type:%v", val.Kind())
+			return "", errors.New(fmt.Sprintf("unsupport type:%v", val.Kind()))
+		}
+		return util.ToString(val.Interface())
 	default:
-		logger.Error("unsupport type:%v",val.Kind())
-		return ""
+		logger.Error("unsupport type:%v", val.Kind())
+		return "", errors.New(fmt.Sprintf("unsupport type:%v", val.Kind()))
 	}
 }
 
-func convertValueToStringOrInterface(val reflect.Value) interface{} {
+func convertValueToStringOrInterface(val reflect.Value) (interface{},error) {
 	switch val.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
 		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
@@ -152,21 +164,26 @@ func convertValueToStringOrInterface(val reflect.Value) interface{} {
 		return convertValueToString(val)
 	case reflect.Interface, reflect.Ptr:
 		if !val.IsNil() {
+			if !val.CanInterface() {
+				logger.Error("unsupport type:%v", val.Kind())
+				return nil,errors.New(fmt.Sprintf("unsupport type:%v", val.Kind()))
+			}
 			i := val.Interface()
 			if protoMessage, ok := i.(proto.Message); ok {
 				bytes, protoErr := proto.Marshal(protoMessage)
 				if protoErr != nil {
 					logger.Error("proto err:%v", protoErr.Error())
-					return protoErr
+					return nil, protoErr
 				}
-				return bytes
+				return bytes,nil
 			}
 		}
 	default:
 		logger.Error("unsupport type:%v", val.Kind())
-		return nil
+		return nil,errors.New(fmt.Sprintf("unsupport type:%v", val.Kind()))
 	}
-	return nil
+	logger.Error("unsupport type:%v", val.Kind())
+	return nil,errors.New(fmt.Sprintf("unsupport type:%v", val.Kind()))
 }
 
 func convertStringToRealType(typ reflect.Type, v string) interface{} {
@@ -192,16 +209,16 @@ func convertStringToRealType(typ reflect.Type, v string) interface{} {
 	case reflect.Uint64:
 		return util.Atou(v)
 	case reflect.Float32:
-		f,_ := strconv.ParseFloat(v,64)
+		f, _ := strconv.ParseFloat(v, 64)
 		return float32(f)
 	case reflect.Float64:
-		f,_ := strconv.ParseFloat(v,64)
+		f, _ := strconv.ParseFloat(v, 64)
 		return f
 	case reflect.String:
 		return v
-	case reflect.Interface,reflect.Ptr:
+	case reflect.Interface, reflect.Ptr:
 		newProto := reflect.New(typ.Elem())
-		if protoMessage,ok := newProto.Interface().(proto.Message); ok {
+		if protoMessage, ok := newProto.Interface().(proto.Message); ok {
 			protoErr := proto.Unmarshal([]byte(v), protoMessage)
 			if protoErr != nil {
 				logger.Error("proto err:%v", protoErr.Error())
@@ -210,6 +227,6 @@ func convertStringToRealType(typ reflect.Type, v string) interface{} {
 			return protoMessage
 		}
 	}
-	logger.Error("unsupport type:%v",typ.Kind())
+	logger.Error("unsupport type:%v", typ.Kind())
 	return nil
 }

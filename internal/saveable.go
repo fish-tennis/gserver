@@ -607,22 +607,6 @@ func SaveChangedDataToCache(obj interface{}, cacheKeyName string) {
 						logger.Error("%v cache err:%v", cacheKeyName, err.Error())
 						return
 					}
-
-				case []int32:
-					// []int32 -> string
-					// TODO:使用proto序列化是不是更好一些?
-					jsonBytes,err := json.Marshal(realData)
-					if err != nil {
-						logger.Error("%v json.Marshal err:%v", cacheKeyName, err.Error())
-						return
-					}
-					err = cache.Get().Set(cacheKeyName, jsonBytes, 0)
-					if cache.IsRedisError(err) {
-						logger.Error("%v cache err:%v", cacheKeyName, err.Error())
-						return
-					}
-					logger.Debug("%v json.Marshal", cacheKeyName)
-
 				default:
 					logger.Error("%v cache err:unsupport type:%v", cacheKeyName, reflect.TypeOf(realData))
 					return
@@ -641,6 +625,20 @@ func SaveChangedDataToCache(obj interface{}, cacheKeyName string) {
 					logger.Error("%v cache err:%v", cacheKeyName, err.Error())
 					return
 				}
+
+			case reflect.Slice:
+				cacheData := val.Interface()
+				jsonBytes,err := json.Marshal(cacheData)
+				if err != nil {
+					logger.Error("%v json.Marshal err:%v", cacheKeyName, err.Error())
+					return
+				}
+				err = cache.Get().Set(cacheKeyName, string(jsonBytes), 0)
+				if cache.IsRedisError(err) {
+					logger.Error("%v cache err:%v", cacheKeyName, err.Error())
+					return
+				}
+				logger.Debug("%v json.Marshal", cacheKeyName)
 
 			default:
 				logger.Error("%v cache err:unsupport kind:%v", cacheKeyName, val.Kind())
@@ -783,9 +781,10 @@ func LoadFromCache(obj interface{}, cacheKey string) (bool, error) {
 					logger.Error("Get %v %v err:%v", cacheKey, cacheType, err)
 					return true, err
 				}
-				err = json.Unmarshal([]byte(jsonData), val.Interface())
+				fieldInterface := val.Addr().Interface()
+				err = json.Unmarshal([]byte(jsonData), fieldInterface)
 				if err != nil {
-					logger.Error("json.Unmarshal %v %v err:%v", cacheKey, cacheType, err)
+					logger.Error("json.Unmarshal %v %v err:%v", cacheKey, val.Interface(), err)
 					return true, err
 				}
 				logger.Debug("%v json.Unmarshal", cacheKey)
