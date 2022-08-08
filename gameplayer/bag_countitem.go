@@ -11,42 +11,25 @@ var _ internal.MapDirtyMark = (*BagCountItem)(nil)
 
 // 有数量的物品背包
 type BagCountItem struct {
-	PlayerMapDataComponent
-	Items map[int32]int32 `db:"bagcountitem"`
+	internal.BaseMapDirtyMark
+	Items map[int32]int32 `db:"countitems;plain"`
 }
 
-func NewBagCountItem(player *Player, data map[int32]int32) *BagCountItem {
-	component := &BagCountItem{
-		PlayerMapDataComponent: *NewPlayerMapDataComponent(player, "BagCountItem"),
-		Items:                  data,
+func NewBagCountItem() *BagCountItem {
+	bag := &BagCountItem{
+		Items: make(map[int32]int32),
 	}
-	component.checkData()
-	return component
+	return bag
 }
 
-func (this *BagCountItem) checkData() {
-	if this.Items == nil {
-		this.Items = make(map[int32]int32)
-	}
-}
-
-// 事件接口
-func (this *BagCountItem) OnEvent(event interface{}) {
-	switch event.(type) {
-	case *internal.EventPlayerEntryGame:
-		//// 测试代码
-		//this.AddItem(rand.Int31n(100),rand.Int31n(100))
-	}
-}
-
-func (this *BagCountItem) AddItem(itemCfgId,addCount int32) {
+func (this *BagCountItem) AddItem(itemCfgId, addCount int32) {
 	if addCount <= 0 {
 		return
 	}
-	curCount,ok := this.Items[itemCfgId]
+	curCount, ok := this.Items[itemCfgId]
 	if ok {
 		// 检查数值溢出
-		if int64(curCount) + int64(addCount) > math.MaxInt32 {
+		if int64(curCount)+int64(addCount) > math.MaxInt32 {
 			curCount = math.MaxInt32
 		}
 	} else {
@@ -57,11 +40,11 @@ func (this *BagCountItem) AddItem(itemCfgId,addCount int32) {
 	logger.Debug("AddItem cfgId:%v curCount:%v", itemCfgId, curCount)
 }
 
-func (this *BagCountItem) DelItem(itemCfgId,delCount int32) {
+func (this *BagCountItem) DelItem(itemCfgId, delCount int32) {
 	if delCount <= 0 {
 		return
 	}
-	curCount,ok := this.Items[itemCfgId]
+	curCount, ok := this.Items[itemCfgId]
 	if !ok {
 		return
 	}

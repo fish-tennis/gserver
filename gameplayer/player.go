@@ -115,6 +115,10 @@ func (this *Player) GetBaseInfo() *BaseInfo {
 	return this.GetComponent("BaseInfo").(*BaseInfo)
 }
 
+func (this *Player) GetBag() *Bag {
+	return this.GetComponent("Bag").(*Bag)
+}
+
 func (this *Player) GetQuest() *Quest {
 	return this.GetComponent("Quest").(*Quest)
 }
@@ -246,11 +250,7 @@ func CreatePlayerFromData(playerData *pb.PlayerData) *Player {
 	// 初始化玩家的各个模块
 	player.AddComponent(NewBaseInfo(player, playerData.BaseInfo), nil)
 	player.AddComponent(NewMoney(player), playerData.Money)
-	bagCountItem := NewBagCountItem(player, playerData.BagCountItem)
-	player.AddComponent(bagCountItem, nil)
-	bagUniqueItem := NewBagUniqueItem(player)
-	player.AddComponent(bagUniqueItem, playerData.BagUniqueItem)
-	player.AddComponent(NewBag(player, bagCountItem, bagUniqueItem), nil)
+	player.AddComponent(NewBag(player), playerData.Bag)
 	player.AddComponent(NewQuest(player), playerData.Quest)
 	player.AddComponent(NewGuild(player), playerData.Guild)
 	return player

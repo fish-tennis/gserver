@@ -1,0 +1,24 @@
+[
+  {
+    "cfgId": 1,
+    "name": "普通物品1",
+    "detail": "普通物品1"
+  },
+  {
+    "cfgId": 2,
+    "name": "普通物品2",
+    "detail": "普通物品2"
+  },
+  {
+    "cfgId": 3,
+    "name": "装备3",
+    "detail": "装备3",
+    "unique": true
+  },
+  {
+    "cfgId": 4,
+    "name": "装备4",
+    "detail": "装备4",
+    "unique": true
+  }
+]

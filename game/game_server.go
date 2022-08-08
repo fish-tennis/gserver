@@ -136,6 +136,8 @@ func (this *GameServer) readConfig() {
 func (this *GameServer) loadCfgs() {
 	cfg.GetQuestCfgMgr().SetConditionMgr(gameplayer.RegisterConditionCheckers())
 	cfg.GetQuestCfgMgr().Load("cfgdata/questcfg.json")
+	cfg.GetLevelCfgMgr().Load("cfgdata/levelcfg.csv")
+	cfg.GetItemCfgMgr().Load("cfgdata/itemcfg.json")
 }
 
 // 初始化数据库

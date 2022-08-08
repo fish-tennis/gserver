@@ -29,30 +29,6 @@ func NewMoney(player *Player) *Money {
 	return component
 }
 
-// 事件接口
-func (this *Money) OnEvent(event interface{}) {
-	switch v := event.(type) {
-	case *internal.EventPlayerEntryGame:
-		this.OnPlayerEntryGame(v)
-		//// 测试倒计时,玩家的钱币每秒+1
-		//this.player.GetTimerEntries().After(time.Second, func() time.Duration {
-		//	this.IncCoin(1)
-		//	//logger.Debug("timer IncCoin")
-		//	return time.Second
-		//})
-		//this.player.GetTimerEntries().After(time.Second, func() time.Duration {
-		//	this.IncDiamond(1)
-		//	//logger.Debug("timer IncDiamond once")
-		//	return 0
-		//})
-	}
-}
-
-// 事件处理
-func (this *Money) OnPlayerEntryGame(eventPlayerEntryGame *internal.EventPlayerEntryGame) {
-	logger.Debug("OnEvent:%v", eventPlayerEntryGame)
-}
-
 func (this *Money) IncCoin(coin int32) {
 	this.Data.Coin += coin
 	this.SetDirty()

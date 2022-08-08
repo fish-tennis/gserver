@@ -13,15 +13,15 @@ var (
 
 // 任务配置数据
 type QuestCfg struct {
-	CfgId        int32         `json:"cfgId"` // 配置id
-	Name         string        `json:"name"` // 任务名
-	Detail       string        `json:"detail"` // 任务详情
+	CfgId        int32         `json:"cfgId"`        // 配置id
+	Name         string        `json:"name"`         // 任务名
+	Detail       string        `json:"detail"`       // 任务详情
 	ConditionCfg *ConditionCfg `json:"conditionCfg"` // 条件配置
 }
 
 // 任务配置数据管理
 type QuestCfgMgr struct {
-	cfgs map[int32]*QuestCfg
+	cfgs         map[int32]*QuestCfg
 	conditionMgr *ConditionMgr
 }
 
@@ -52,25 +52,25 @@ func (this *QuestCfgMgr) SetConditionMgr(conditionMgr *ConditionMgr) {
 
 // 加载任务配置数据
 func (this *QuestCfgMgr) Load(fileName string) bool {
-	fileData,err := os.ReadFile(fileName)
+	fileData, err := os.ReadFile(fileName)
 	if err != nil {
-		logger.Error("%v",err)
+		logger.Error("%v", err)
 		return false
 	}
-	type questCfgList struct {
-		Quests []*QuestCfg
-	}
-	cfgList := new(questCfgList)
-	err = json.Unmarshal(fileData, cfgList)
+	var cfgList []*QuestCfg
+	err = json.Unmarshal(fileData, &cfgList)
 	if err != nil {
-		logger.Error("%v",err)
+		logger.Error("%v", err)
 		return false
 	}
-	cfgMap := make(map[int32]*QuestCfg, len(cfgList.Quests))
-	for _,cfg := range cfgList.Quests {
+	cfgMap := make(map[int32]*QuestCfg, len(cfgList))
+	for _, cfg := range cfgList {
+		if _, exists := cfgMap[cfg.CfgId]; exists {
+			logger.Error("duplicate id:%v", cfg.CfgId)
+		}
 		cfgMap[cfg.CfgId] = cfg
 	}
 	this.cfgs = cfgMap
-	logger.Info("quest count:%v", len(this.cfgs))
+	logger.Info("count:%v", len(this.cfgs))
 	return true
 }

@@ -1,33 +1,45 @@
 package gameplayer
 
 import (
-	"github.com/fish-tennis/gserver/internal"
+	"github.com/fish-tennis/gserver/cfg"
+	"github.com/fish-tennis/gserver/pb"
+	"github.com/fish-tennis/gserver/util"
 )
 
 // 背包模块
 // 演示通过组合模式,整合多个不同的子背包模块,提供更高一级的背包接口
 type Bag struct {
 	BasePlayerComponent
-	bagCountItem *BagCountItem
-	bagUniqueItem *BagUniqueItem
+	BagCountItem  *BagCountItem  `child:"countitems"`
+	BagUniqueItem *BagUniqueItem `child:"uniqueitems"`
 }
 
-func NewBag(player *Player, bagCountItem *BagCountItem, bagUniqueItem *BagUniqueItem) *Bag {
+func NewBag(player *Player) *Bag {
 	component := &Bag{
 		BasePlayerComponent: BasePlayerComponent{
 			player: player,
 			name:   "Bag",
 		},
-		bagCountItem: bagCountItem,
-		bagUniqueItem: bagUniqueItem,
+		BagCountItem:  NewBagCountItem(),
+		BagUniqueItem: NewBagUniqueItem(),
 	}
 	return component
 }
 
-// 事件接口
-func (this *Bag) OnEvent(event interface{}) {
-	switch event.(type) {
-	case *internal.EventPlayerEntryGame:
-		// 测试代码
+func (this *Bag) AddItem(cfgId int32, num int32) bool {
+	itemCfg := cfg.GetItemCfgMgr().GetItemCfg(cfgId)
+	if itemCfg == nil {
+		return false
 	}
+	if itemCfg.Unique {
+		for i := 0; i < int(num); i++ {
+			this.BagUniqueItem.AddUniqueItem(&pb.UniqueItem{
+				CfgId: cfgId,
+				UniqueId: util.GenUniqueId(),
+			})
+		}
+	} else {
+		this.BagCountItem.AddItem(cfgId, num)
+	}
+	return true
 }

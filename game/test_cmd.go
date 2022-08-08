@@ -2,6 +2,7 @@ package game
 
 import (
 	. "github.com/fish-tennis/gnet"
+	"github.com/fish-tennis/gserver/cfg"
 	"github.com/fish-tennis/gserver/gameplayer"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
@@ -53,6 +54,37 @@ func onTestCmd(connection Connection, packet *ProtoPacket) {
 			return
 		}
 		player.GetBaseInfo().IncExp(value)
+
+	case "additem":
+		// 加物品
+		if len(cmdArgs) < 1 {
+			connection.Send(PacketCommand(pb.CmdInner_Cmd_ErrorRes), &pb.ErrorRes{
+				Command: int32(packet.Command()),
+				ResultStr: "additem cmdArgs error",
+			})
+			return
+		}
+		itemCfgId := int32(util.Atoi(cmdArgs[0]))
+		itemCfg := cfg.GetItemCfgMgr().GetItemCfg(itemCfgId)
+		if itemCfg == nil {
+			connection.Send(PacketCommand(pb.CmdInner_Cmd_ErrorRes), &pb.ErrorRes{
+				Command: int32(packet.Command()),
+				ResultStr: "additem cmdArgs error",
+			})
+			return
+		}
+		itemNum := int32(1)
+		if len(cmdArgs) >= 2 {
+			itemNum = int32(util.Atoi(cmdArgs[1]))
+		}
+		if itemNum < 1 {
+			connection.Send(PacketCommand(pb.CmdInner_Cmd_ErrorRes), &pb.ErrorRes{
+				Command: int32(packet.Command()),
+				ResultStr: "additem cmdArgs error",
+			})
+			return
+		}
+		player.GetBag().AddItem(itemCfgId, itemNum)
 
 	case "finishquest","finishquests":
 		// 完成任务

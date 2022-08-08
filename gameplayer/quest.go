@@ -9,9 +9,7 @@ import (
 )
 
 // 任务模块
-// 演示了一种与Bag不同的组合模块方式
-// 与Bag不同,Quest由一个Component和多个ChildSaveable组合而成
-// 不同的ChildSaveable可以有不同的数据保存方式
+// 有多个子模块
 type Quest struct {
 	BasePlayerComponent
 	// 保存数据的子模块:已完成的任务

@@ -20,13 +20,13 @@ message Money {
 }
 
 // 背包模块数据
-message Bag {
+message BagSaveData {
   map<int32,int32> countItems = 1;
-  map<int64,UniqueItem> uniqueItems = 2;
+  map<int64,bytes> uniqueItems = 2;
 }
 
 // 任务模块数据
-message Quest {
+message QuestSaveData {
   repeated int32 finished = 1; // 已完成的任务
   map<int32,bytes> quests = 2; // 进行中的任务
 }
@@ -51,8 +51,7 @@ message PlayerData {
   int32 regionId = 4; // 区服id
   BaseInfo baseInfo = 5;
   bytes money = 6;
-  Quest quest = 8;
-  map<int32,int32> bagCountItem = 9;
-  map<int64,bytes> bagUniqueItem = 10; // (proto序列化)
-  bytes guild = 11; // (proto序列化)
+  BagSaveData bag = 7;
+  QuestSaveData quest = 8;
+  bytes guild = 9; // (proto序列化)
 }
