@@ -6,11 +6,10 @@ import (
 	"flag"
 	"fmt"
 	"github.com/fish-tennis/gnet"
-	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/game"
+	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/login"
-	"github.com/fish-tennis/gserver/testclient"
 	"math/rand"
 	"os"
 	"os/exec"
@@ -62,27 +61,21 @@ func main() {
 	// 监听系统的kill信号
 	signalKillNotify := make(chan os.Signal, 1)
 	signal.Notify(signalKillNotify, os.Interrupt, os.Kill, syscall.SIGTERM)
-	// windows系统上,加一个控制台输入,以方便调试
-	if runtime.GOOS == "windows" {
-		go func() {
-			consoleReader := bufio.NewReader(os.Stdin)
-			for {
-				lineBytes, _, _ := consoleReader.ReadLine()
-				line := strings.ToLower(string(lineBytes))
-				logger.Info("line:%v", line)
-				if line == "close" || line == "exit" {
-					logger.Info("kill by console input")
-					// 在windows系统模拟一个kill信号,以方便测试服务器退出流程
-					signalKillNotify <- os.Kill
-					return
-				}
-				// 机器人程序输入测试命令
-				if testClient,ok := server.(*testclient.TestClient); ok {
-					testClient.OnInputCmd(line)
-				}
+	// 加一个控制台输入,以方便调试
+	go func() {
+		consoleReader := bufio.NewReader(os.Stdin)
+		for {
+			lineBytes, _, _ := consoleReader.ReadLine()
+			line := strings.ToLower(string(lineBytes))
+			logger.Info("line:%v", line)
+			if line == "close" || line == "exit" {
+				logger.Info("kill by console input")
+				// 模拟一个kill信号,以方便测试服务器退出流程
+				signalKillNotify <- os.Kill
+				return
 			}
-		}()
-	}
+		}
+	}()
 	// 阻塞等待系统关闭信号
 	logger.Info("wait for kill signal")
 	select {
@@ -124,8 +117,6 @@ func createServer(serverType string) internal.Server {
 		return new(login.LoginServer)
 	case "game":
 		return new(game.GameServer)
-	case "testclient":
-		return new(testclient.TestClient)
 	}
 	panic("err server type")
 }

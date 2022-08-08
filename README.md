@@ -50,6 +50,7 @@ type BaseInfo struct {
 
 支持组合模式
 ```go
+// 玩家的任务组件
 type Quest struct {
 	BasePlayerComponent
 	// 保存数据的子模块:已完成的任务
@@ -69,7 +70,7 @@ type CurQuests struct {
 }
 ```
 
-## 部署
+## 运行
 
 安装mongodb
 
@@ -80,6 +81,7 @@ type CurQuests struct {
 编译运行
 
 ## 测试
+测试客户端[gtestclient](https://github.com/fish-tennis/gtestclient)
 
 ## 编码规范参考
 [https://github.com/uber-go/guide](https://github.com/uber-go/guide)
@@ -89,5 +91,5 @@ type CurQuests struct {
 ## TODO
 - 全局对象的数据绑定
 
-## 联系
+## 讨论
 QQ群: 764912827
