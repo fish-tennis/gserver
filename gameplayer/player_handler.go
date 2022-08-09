@@ -34,19 +34,24 @@ func AutoRegisterPlayerComponentProto(packetHandlerRegister PacketHandlerRegiste
 		componentStructName := typ.String()[strings.LastIndex(typ.String(), ".")+1:]
 		for i := 0; i < typ.NumMethod(); i++ {
 			method := typ.Method(i)
-			if method.Type.NumIn() != 2 || !strings.HasPrefix(method.Name, "On") {
+			if method.Type.NumIn() != 3 || !strings.HasPrefix(method.Name, "On") {
 				continue
 			}
-			// 消息回调格式: func (this *Money) OnCoinReq(req *pb.CoinReq)
+			// 消息回调格式: func (this *Money) OnCoinReq(reqCmd PacketCommand, req *pb.CoinReq)
 			methonArg1 := method.Type.In(1)
-			if !strings.HasPrefix(methonArg1.String(), "*pb.") {
+			if methonArg1.Name() != "PacketCommand" {
 				continue
 			}
-			//if !methonArg1.Implements(reflect.TypeOf(&proto.Message{})) {
+			methonArg2 := method.Type.In(2)
+			if !strings.HasPrefix(methonArg2.String(), "*pb.") {
+				continue
+			}
+			//if !methonArg2.Implements(reflect.TypeOf(&proto.Message{})) {
 			//	continue
 			//}
 			// 消息名,如: CoinReq
-			messageName := methonArg1.String()[strings.LastIndex(methonArg1.String(), ".")+1:]
+			// *pb.CoinReq -> CoinReq
+			messageName := methonArg2.String()[strings.LastIndex(methonArg2.String(), ".")+1:]
 			// 函数名必须是OnCoinReq
 			if method.Name != fmt.Sprintf("On%v", messageName) {
 				logger.Debug("methodName not match:%v", method.Name)
@@ -63,7 +68,8 @@ func AutoRegisterPlayerComponentProto(packetHandlerRegister PacketHandlerRegiste
 				method: method,
 			}
 			// 注册消息的构造函数
-			packetHandlerRegister.Register(cmd, nil, reflect.New(methonArg1.Elem()).Interface().(proto.Message))
+			packetHandlerRegister.Register(cmd, nil, reflect.New(methonArg2.Elem()).Interface().(proto.Message))
+			logger.Debug("AutoRegister %v.%v", componentStructName, method.Name)
 		}
 	}
 }

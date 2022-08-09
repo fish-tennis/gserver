@@ -1,6 +1,7 @@
 package gameplayer
 
 import (
+	"github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cfg"
 	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
@@ -50,6 +51,11 @@ type CurQuests struct {
 func (c *CurQuests) Add(questData *pb.QuestData) {
 	c.Quests[questData.CfgId] = questData
 	c.SetDirty(questData.CfgId, true)
+	questCfg := cfg.GetQuestCfgMgr().GetQuestCfg(questData.GetCfgId())
+	// 有些条件需要初始化进度
+	if questCfg != nil && questCfg.ConditionCfg != nil {
+		cfg.GetQuestCfgMgr().GetConditionMgr().InitCondition(c.quest.GetPlayer(), questCfg.ConditionCfg, questData)
+	}
 	logger.Debug("add quest:%v", questData)
 }
 
@@ -110,14 +116,23 @@ func (this *Quest) OnEvent(event interface{}) {
 	}
 }
 
-// 完成任务,领取任务奖励
-func (this *Quest) FinishQuests() {
-	for questId,questData := range this.Quests.Quests {
+// 完成任务的消息回调
+// 这种格式写的函数可以自动注册消息回调
+func (this *Quest) OnFinishQuestReq(reqCmd gnet.PacketCommand, req *pb.FinishQuestReq) {
+	logger.Debug("OnFinishQuestReq:%v", req)
+	if questData,ok := this.Quests.Quests[req.QuestCfgId]; ok {
 		questCfg := cfg.GetQuestCfgMgr().GetQuestCfg(questData.GetCfgId())
 		if questData.GetProgress() >= questCfg.ConditionCfg.Total {
-			this.Quests.Remove(questId)
-			this.Finished.Add(questId)
-			// TODO:任务奖励
+			this.Quests.Remove(questData.GetCfgId())
+			this.Finished.Add(questData.GetCfgId())
+			// 任务奖励
+			for _,idNum := range questCfg.Rewards {
+				this.GetPlayer().GetBag().AddItem(idNum.Id, idNum.Num)
+			}
+			return
 		}
+		this.GetPlayer().SendErrorRes(reqCmd, "quest not finish")
+		return
 	}
+	this.GetPlayer().SendErrorRes(reqCmd, "quest not exist")
 }

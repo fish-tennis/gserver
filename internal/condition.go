@@ -35,11 +35,18 @@ type ProgressHolder interface {
 type ConditionMgr struct {
 	// 事件和条件的映射信息
 	eventMapping map[reflect.Type]*eventMappingInfo
+
+	// 条件关联的初始化接口
+	// 例如:
+	// 条件1: 玩家升到10级
+	// 当初始化该条件时,条件进度用玩家当前等级来初始化
+	conditionInits map[int32]ConditionInitFunc
 }
 
 func NewConditionMgr() *ConditionMgr {
 	return &ConditionMgr{
 		eventMapping: make(map[reflect.Type]*eventMappingInfo),
+		conditionInits: make(map[int32]ConditionInitFunc),
 	}
 }
 
@@ -51,10 +58,15 @@ func NewConditionMgr() *ConditionMgr {
 //   进度+5
 type ConditionCheckFunc func(event interface{}, conditionCfg *ConditionCfg) int32
 
+// 条件初始化接口
+// 返回初始进度
+type ConditionInitFunc func(arg interface{}, conditionCfg *ConditionCfg) int32
+
 // 事件和条件的映射信息
 type eventMappingInfo struct {
 	// 事件类型
 	eventTyp reflect.Type
+
 	// 该事件关联的条件以及检查接口
 	// 一个事件可以对应多个条件
 	// 例如:
@@ -67,6 +79,12 @@ type eventMappingInfo struct {
 // 注册事件和条件检查接口
 // checker可以为nil
 func (this *ConditionMgr) Register(conditionType int32, event interface{}, checker ConditionCheckFunc) {
+	this.RegisterWithInit(conditionType, event, checker, nil)
+}
+
+// 注册事件和条件检查接口
+// checker可以为nil
+func (this *ConditionMgr) RegisterWithInit(conditionType int32, event interface{}, checker ConditionCheckFunc, init ConditionInitFunc) {
 	eventTyp := reflect.TypeOf(event).Elem()
 	info,ok := this.eventMapping[eventTyp]
 	if !ok {
@@ -77,8 +95,12 @@ func (this *ConditionMgr) Register(conditionType int32, event interface{}, check
 		this.eventMapping[eventTyp] = info
 	}
 	info.conditionCheckers[conditionType] = checker
+	if init != nil {
+		this.conditionInits[conditionType] = init
+	}
 }
 
+// 注册默认的条件检查接口
 func (this *ConditionMgr) RegisterDefault(conditionType int32, event interface{}) {
 	this.Register(conditionType, event, DefaultConditionChecker)
 }
@@ -103,6 +125,23 @@ func (this *ConditionMgr) GetConditionChecker(event interface{}, conditionType i
 	}
 	v,has := info.conditionCheckers[conditionType]
 	return v,has
+}
+
+// 初始化条件,更新初始进度
+func (this *ConditionMgr) InitCondition(arg interface{}, conditionCfg *ConditionCfg, progressHolder ProgressHolder) bool {
+	initFunc,ok := this.conditionInits[conditionCfg.ConditionType]
+	if !ok {
+		return false
+	}
+	if initFunc == nil {
+		return false
+	}
+	progress := initFunc(arg, conditionCfg)
+	if progressHolder.GetProgress() != progress {
+		progressHolder.SetProgress(progress)
+		return true
+	}
+	return false
 }
 
 // 检查事件是否触发进度的更新,并更新进度

@@ -2,39 +2,57 @@
   {
     "cfgId": 1,
     "name": "升到5级",
-    "detail": "升到5级,奖励金币100",
+    "detail": "升到5级,奖励xxx",
     "conditionCfg": {
       "conditionType": 1,
       "progressType": 2,
       "total": 5
-    }
+    },
+    "rewards": [
+      {
+        "id": 1,
+        "num": 2
+      }
+    ]
   },
   {
     "cfgId": 2,
     "name": "2场战斗",
-    "detail": "2场战斗,奖励金币100",
+    "detail": "2场战斗,奖励xxx",
     "conditionCfg": {
       "conditionType": 2,
       "progressType": 1,
       "total": 5
-    }
+    },
+    "rewards": [
+      {
+        "id": 1,
+        "num": 3
+      }
+    ]
   },
   {
     "cfgId": 3,
     "name": "2场PVP",
-    "detail": "2场PVP,奖励金币100",
+    "detail": "2场PVP,奖励xxx",
     "conditionCfg": {
       "conditionType": 2,
       "total": 5,
       "eventArgs": {
         "IsPvp": true
       }
-    }
+    },
+    "rewards": [
+      {
+        "id": 1,
+        "num": 5
+      }
+    ]
   },
   {
     "cfgId": 4,
     "name": "赢2场PVP",
-    "detail": "赢2场PVP,奖励金币100",
+    "detail": "赢2场PVP,奖励xxx",
     "conditionCfg": {
       "conditionType": 2,
       "total": 5,
@@ -42,6 +60,12 @@
         "IsPvp": true,
         "IsWin": true
       }
-    }
+    },
+    "rewards": [
+      {
+        "id": 3,
+        "num": 1
+      }
+    ]
   }
 ]

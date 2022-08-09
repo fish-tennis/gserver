@@ -10,11 +10,12 @@
 //  message Xyz {
 //    int32 abc = 1;
 //  }
-package internal
+package gen
 
 import (
  . "github.com/fish-tennis/gnet"
  "github.com/fish-tennis/gserver/pb"
+ . "github.com/fish-tennis/gserver/internal"
 )
 
 // 踢玩家下线

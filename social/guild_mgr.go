@@ -7,6 +7,7 @@ import (
 	"github.com/fish-tennis/gserver/db"
 	"github.com/fish-tennis/gserver/db/mongodb"
 	"github.com/fish-tennis/gserver/gameplayer"
+	"github.com/fish-tennis/gserver/gen"
 	. "github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
@@ -200,7 +201,7 @@ func OnGuildListReq(player *gameplayer.Player, req *pb.GuildListReq) {
 		PageCount:  int32(math.Ceil(float64(count) / float64(pageSize))),
 		GuildInfos: guildInfos,
 	}
-	player.SendGuildListRes(res)
+	gen.SendGuildListRes(player, res)
 }
 
 // 创建公会
@@ -208,7 +209,7 @@ func OnGuildCreateReq(player *gameplayer.Player, req *pb.GuildCreateReq) {
 	logger.Debug("OnGuildCreateReq")
 	playerGuild := player.GetGuild()
 	if playerGuild.GetGuildData().GuildId > 0 {
-		player.SendGuildCreateRes(&pb.GuildCreateRes{
+		gen.SendGuildCreateRes(player, &pb.GuildCreateRes{
 			Error: "CantCreateGuild",
 		})
 		return
@@ -232,19 +233,19 @@ func OnGuildCreateReq(player *gameplayer.Player, req *pb.GuildCreateReq) {
 	dbErr, isDuplicateName := GetGuildDb().InsertEntity(newGuildData.Id, newGuildData)
 	if dbErr != nil {
 		logger.Error("OnGuildCreateReq dbErr:%v", dbErr)
-		player.SendGuildCreateRes(&pb.GuildCreateRes{
+		gen.SendGuildCreateRes(player, &pb.GuildCreateRes{
 			Error: "DbError",
 		})
 		return
 	}
 	if isDuplicateName {
-		player.SendGuildCreateRes(&pb.GuildCreateRes{
+		gen.SendGuildCreateRes(player, &pb.GuildCreateRes{
 			Error: "DuplicateName",
 		})
 		return
 	}
 	playerGuild.SetGuildId(newGuildData.Id)
-	player.SendGuildCreateRes(&pb.GuildCreateRes{
+	gen.SendGuildCreateRes(player, &pb.GuildCreateRes{
 		Id:   newGuildData.Id,
 		Name: newGuildData.BaseInfo.Name,
 	})

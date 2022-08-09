@@ -93,6 +93,17 @@ func (this *Player) Send(command PacketCommand, message proto.Message) bool {
 	return false
 }
 
+// 通用的错误返回消息
+func (this *Player) SendErrorRes(errorReqCmd PacketCommand, errorMsg string) bool {
+	if this.connection != nil {
+		return this.connection.Send(PacketCommand(pb.CmdInner_Cmd_ErrorRes), &pb.ErrorRes{
+			Command: int32(errorReqCmd),
+			ResultStr: errorMsg,
+		})
+	}
+	return false
+}
+
 // 分发事件给组件
 func (this *Player) FireEvent(event interface{}) {
 	logger.Debug("%v FireEvent:%v", this.GetId(), event)
@@ -204,10 +215,12 @@ func (this *Player) processMessage(message *ProtoPacket) {
 			if handlerInfo.handler != nil {
 				handlerInfo.handler(component, message.Message())
 			} else {
-				// 用了反射,性能有所损失
-				handlerInfo.method.Func.Call([]reflect.Value{reflect.ValueOf(component), reflect.ValueOf(message.Message())})
+				// 反射调用函数
+				handlerInfo.method.Func.Call([]reflect.Value{reflect.ValueOf(component),
+					reflect.ValueOf(message.Command()),
+					reflect.ValueOf(message.Message())})
 			}
-			// 如果有需要保存的数据修改了,即时保存数据库
+			// 如果有需要保存的数据修改了,即时保存缓存
 			this.SaveCache()
 			return
 		}
@@ -216,7 +229,7 @@ func (this *Player) processMessage(message *ProtoPacket) {
 	packetHandler := _clientConnectionHandler.GetPacketHandler(message.Command())
 	if packetHandler != nil {
 		packetHandler(this.GetConnection(), message)
-		// 如果有需要保存的数据修改了,即时保存数据库
+		// 如果有需要保存的数据修改了,即时保存缓存
 		this.SaveCache()
 		return
 	}

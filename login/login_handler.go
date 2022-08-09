@@ -3,10 +3,10 @@ package login
 import (
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
+	"github.com/fish-tennis/gserver/gen"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 	"github.com/fish-tennis/gserver/util"
-	. "github.com/fish-tennis/gserver/internal"
 	"math/rand"
 )
 
@@ -50,7 +50,7 @@ func onLoginReq(connection Connection, packet *ProtoPacket) {
 				//	LogError("RemoveOnlinePlayer account:%v playerId:%v gameServerId:%v",
 				//		account.GetId(), onlinePlayerId, gameServerId)
 				//}
-				SendKickPlayer(gameServerId, &pb.KickPlayer{
+				gen.SendKickPlayer(gameServerId, &pb.KickPlayer{
 					AccountId: account.GetId(),
 					PlayerId: onlinePlayerId,
 				})

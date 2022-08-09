@@ -1,6 +1,8 @@
 package gameplayer
 
 import (
+	"github.com/fish-tennis/gnet"
+	"github.com/fish-tennis/gserver/gen"
 	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
@@ -41,10 +43,10 @@ func (this *Money) IncDiamond(diamond int32) {
 
 // 请求加coin的消息回调
 // 这种格式写的函数可以自动注册消息回调
-func (this *Money) OnCoinReq(req *pb.CoinReq) {
+func (this *Money) OnCoinReq(_ gnet.PacketCommand, req *pb.CoinReq) {
 	logger.Debug("OnCoinReq:%v", req)
 	this.IncCoin(req.GetAddCoin())
-	this.GetPlayer().SendCoinRes(&pb.CoinRes{
+	gen.SendCoinRes(this.GetPlayer(), &pb.CoinRes{
 		TotalCoin: this.Data.GetCoin(),
 	})
 }
@@ -54,7 +56,7 @@ func (this *Money) OnCoinReq(req *pb.CoinReq) {
 func OnCoinReq(this *Money, req *pb.CoinReq) {
 	logger.Debug("OnCoinReq:%v", req)
 	this.IncCoin(req.GetAddCoin())
-	this.GetPlayer().SendCoinRes(&pb.CoinRes{
+	gen.SendCoinRes(this.GetPlayer(), &pb.CoinRes{
 		TotalCoin: this.Data.GetCoin(),
 	})
 }

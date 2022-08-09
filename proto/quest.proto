@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+option go_package = "./pb";
+
+package gserver;
+
+// 消息号定义
+enum CmdQuest {
+	CmdQuest_None = 0; // 解决"The first enum value must be zero in proto3."的报错
+	
+	// 消息号枚举值的命名规范:Cmd_MessageName,便于工具处理,生成一些辅助代码
+
+	Cmd_FinishQuestReq = 1201; // 完成任务
+	Cmd_FinishQuestRes = 1202; // 完成任务的返回结果
+}
+
+// 完成任务
+// @Client表示是客户端发的消息,工具也可以考虑为客户端生成相应的辅助代码(c#或lua)
+// @Client
+// @PlayerHandler
+message FinishQuestReq {
+  int32 questCfgId = 1; // 任务id
+}
+
+// 完成任务的返回结果
+// @Player表示是服务器上的玩家对象发给客户端的消息,工具会生成相应的辅助代码
+// @Player
+message FinishQuestRes {
+  int32 questCfgId = 1; // 任务id
+}

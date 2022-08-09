@@ -3,6 +3,7 @@ package game
 import (
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
+	"github.com/fish-tennis/gserver/gen"
 	. "github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/db"
 	"github.com/fish-tennis/gserver/logger"
@@ -65,7 +66,7 @@ func onPlayerEntryGameReq(connection Connection, packet *ProtoPacket) {
 				accountId, playerId, gameServerId)
 			if gameServerId > 0 {
 				// 通知目标游戏服踢掉玩家
-				SendKickPlayer(gameServerId, &pb.KickPlayer{
+				gen.SendKickPlayer(gameServerId, &pb.KickPlayer{
 					AccountId: accountId,
 					PlayerId:  playerId,
 				})
@@ -105,7 +106,7 @@ func onPlayerEntryGameReq(connection Connection, packet *ProtoPacket) {
 	connection.SetTag(entryPlayer.GetId())
 	entryPlayer.SetConnection(connection)
 	logger.Debug("entry entryPlayer:%v %v", entryPlayer.GetId(), entryPlayer.GetName())
-	entryPlayer.SendPlayerEntryGameRes(&pb.PlayerEntryGameRes{
+	gen.SendPlayerEntryGameRes(entryPlayer, &pb.PlayerEntryGameRes{
 		AccountId: entryPlayer.GetAccountId(),
 		PlayerId:  entryPlayer.GetId(),
 		RegionId:  entryPlayer.GetRegionId(),

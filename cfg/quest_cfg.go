@@ -17,6 +17,13 @@ type QuestCfg struct {
 	Name         string        `json:"name"`         // 任务名
 	Detail       string        `json:"detail"`       // 任务详情
 	ConditionCfg *ConditionCfg `json:"conditionCfg"` // 条件配置
+	Rewards      []*IdNum      `json:"rewards"`      // 奖励
+}
+
+// id + num
+type IdNum struct {
+	Id  int32 `json:"id"`
+	Num int32 `json:"num"`
 }
 
 // 任务配置数据管理
