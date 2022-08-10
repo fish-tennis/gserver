@@ -68,7 +68,6 @@ func (this *Player) GetComponent(componentName string) Component {
 // 玩家数据保存数据库
 func (this *Player) SaveDb(removeCacheAfterSaveDb bool) error {
 	return SaveEntityChangedDataToDb(db.GetPlayerDb(), this, removeCacheAfterSaveDb)
-	//return SaveEntityToDb(db.GetPlayerDb(), this, removeCacheAfterSaveDb)
 }
 
 // 设置关联的连接

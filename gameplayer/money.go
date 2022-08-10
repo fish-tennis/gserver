@@ -3,21 +3,16 @@ package gameplayer
 import (
 	"github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/gen"
-	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 )
-
-// 编译期检查是否实现了Saveable接口
-// https://github.com/uber-go/guide/blob/master/style.md#verify-interface-compliance
-var _ internal.Saveable = (*Money)(nil)
 
 // 玩家的钱财组件
 type Money struct {
 	PlayerDataComponent
 	// 该字段必须导出(首字母大写)
-	// 使用struct tag来标记该字段需要存数据库,可以设置存储字段名(proto格式存mongo时,使用全小写格式)
-	Data *pb.Money `db:"money"`
+	// 使用struct tag来标记该字段需要存数据库,可以设置存储字段名
+	Data *pb.Money `db:"Money"`
 }
 
 func NewMoney(player *Player) *Money {

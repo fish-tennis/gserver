@@ -3,6 +3,7 @@ package gameplayer
 import (
 	"github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cfg"
+	"github.com/fish-tennis/gserver/gen"
 	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
@@ -15,19 +16,17 @@ type Quest struct {
 	BasePlayerComponent
 	// 保存数据的子模块:已完成的任务
 	// 保存数据的子模块必须是导出字段(字段名大写开头)
-	Finished *FinishedQuests `child:"finished"`
+	Finished *FinishedQuests `child:""`
 	// 保存数据的子模块:当前任务列表
-	Quests *CurQuests `child:"quests"`
+	Quests *CurQuests `child:""`
 }
-
-var _ internal.DirtyMark = (*FinishedQuests)(nil)
 
 // 已完成的任务
 type FinishedQuests struct {
 	internal.BaseDirtyMark
 	quest *Quest
-	// 明文存储
-	Finished []int32 `db:"finished;plain"`
+	// struct tag里面没有设置保存字段名,会默认使用字段名的全小写形式
+	Finished []int32 `db:"plain"` // 基础类型,设置明文存储
 }
 
 func (f *FinishedQuests) Add(finishedQuestId int32) {
@@ -39,13 +38,12 @@ func (f *FinishedQuests) Add(finishedQuestId int32) {
 	logger.Debug("add Finished %v", finishedQuestId)
 }
 
-var _ internal.MapDirtyMark = (*CurQuests)(nil)
-
 // 当前任务列表
 type CurQuests struct {
 	internal.BaseMapDirtyMark
 	quest  *Quest
-	Quests map[int32]*pb.QuestData `db:"quests"`
+	// struct tag里面没有设置保存字段名,会默认使用字段名的全小写形式
+	Quests map[int32]*pb.QuestData `db:""`
 }
 
 func (c *CurQuests) Add(questData *pb.QuestData) {
@@ -129,6 +127,9 @@ func (this *Quest) OnFinishQuestReq(reqCmd gnet.PacketCommand, req *pb.FinishQue
 			for _,idNum := range questCfg.Rewards {
 				this.GetPlayer().GetBag().AddItem(idNum.Id, idNum.Num)
 			}
+			gen.SendFinishQuestRes(this.GetPlayer(), &pb.FinishQuestRes{
+				QuestCfgId: questData.GetCfgId(),
+			})
 			return
 		}
 		this.GetPlayer().SendErrorRes(reqCmd, "quest not finish")

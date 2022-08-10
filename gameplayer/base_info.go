@@ -2,20 +2,15 @@ package gameplayer
 
 import (
 	"github.com/fish-tennis/gserver/cfg"
-	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 )
-
-// 编译期检查是否实现了Saveable接口
-// https://github.com/uber-go/guide/blob/master/style.md#verify-interface-compliance
-var _ internal.Saveable = (*BaseInfo)(nil)
 
 // 玩家基础信息组件
 type BaseInfo struct {
 	PlayerDataComponent
 	// plain表示明文存储,在保存到mongo时,不会进行proto序列化
-	Data *pb.BaseInfo `db:"baseinfo;plain"`
+	Data *pb.BaseInfo `db:"BaseInfo;plain"`
 }
 
 func NewBaseInfo(player *Player, data *pb.BaseInfo) *BaseInfo {
@@ -39,16 +34,20 @@ func NewBaseInfo(player *Player, data *pb.BaseInfo) *BaseInfo {
 
 func (this *BaseInfo) IncExp(incExp int32) {
 	this.Data.Exp += incExp
-	if this.Data.Level < cfg.GetLevelCfgMgr().GetMaxLevel() {
-		needExp := cfg.GetLevelCfgMgr().GetNeedExp(this.Data.Level+1)
-		if this.Data.Exp >= needExp {
-			this.Data.Level++
-			this.Data.Exp -= needExp
-			this.GetPlayer().FireConditionEvent(&pb.EventPlayerLevelup{
-				PlayerId: this.GetPlayerId(),
-				Level: this.Data.Level,
-			})
+	for {
+		if this.Data.Level < cfg.GetLevelCfgMgr().GetMaxLevel() {
+			needExp := cfg.GetLevelCfgMgr().GetNeedExp(this.Data.Level+1)
+			if needExp > 0 && this.Data.Exp >= needExp {
+				this.Data.Level++
+				this.Data.Exp -= needExp
+				this.GetPlayer().FireConditionEvent(&pb.EventPlayerLevelup{
+					PlayerId: this.GetPlayerId(),
+					Level: this.Data.Level,
+				})
+				continue
+			}
 		}
+		break
 	}
 	logger.Debug("%v exp:%v lvl:%v", this.GetPlayerId(), this.Data.Exp, this.Data.Level)
 	// 修改了需要保存的数据后,必须设置标记

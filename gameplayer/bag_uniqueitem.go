@@ -6,13 +6,10 @@ import (
 	"github.com/fish-tennis/gserver/pb"
 )
 
-var _ internal.Saveable = (*BagUniqueItem)(nil)
-var _ internal.MapDirtyMark = (*BagUniqueItem)(nil)
-
 // 不可叠加的物品背包
 type BagUniqueItem struct {
 	internal.BaseMapDirtyMark
-	Items map[int64]*pb.UniqueItem `db:"uniqueitems"`
+	Items map[int64]*pb.UniqueItem `db:"UniqueItem"`
 }
 
 func NewBagUniqueItem() *BagUniqueItem {

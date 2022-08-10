@@ -1,16 +1,13 @@
 package gameplayer
 
 import (
-	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/pb"
 )
-
-var _ internal.Saveable = (*Guild)(nil)
 
 // 玩家的公会模块
 type Guild struct {
 	PlayerDataComponent
-	Data *pb.PlayerGuildData `db:"guild"`
+	Data *pb.PlayerGuildData `db:"Guild"`
 }
 
 func NewGuild(player *Player) *Guild {

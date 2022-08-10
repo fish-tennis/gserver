@@ -21,8 +21,8 @@ message Money {
 
 // 背包模块数据
 message BagSaveData {
-  map<int32,int32> countItems = 1;
-  map<int64,bytes> uniqueItems = 2;
+  map<int32,int32> countItem = 1;
+  map<int64,bytes> uniqueItem = 2;
 }
 
 // 任务模块数据

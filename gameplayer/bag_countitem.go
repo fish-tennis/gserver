@@ -6,13 +6,10 @@ import (
 	"math"
 )
 
-var _ internal.Saveable = (*BagCountItem)(nil)
-var _ internal.MapDirtyMark = (*BagCountItem)(nil)
-
 // 有数量的物品背包
 type BagCountItem struct {
 	internal.BaseMapDirtyMark
-	Items map[int32]int32 `db:"countitems;plain"`
+	Items map[int32]int32 `db:"CountItem;plain"`
 }
 
 func NewBagCountItem() *BagCountItem {
@@ -31,6 +28,8 @@ func (this *BagCountItem) AddItem(itemCfgId, addCount int32) {
 		// 检查数值溢出
 		if int64(curCount)+int64(addCount) > math.MaxInt32 {
 			curCount = math.MaxInt32
+		} else {
+			curCount += addCount
 		}
 	} else {
 		curCount = addCount

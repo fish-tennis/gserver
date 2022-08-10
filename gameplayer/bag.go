@@ -10,8 +10,8 @@ import (
 // 演示通过组合模式,整合多个不同的子背包模块,提供更高一级的背包接口
 type Bag struct {
 	BasePlayerComponent
-	BagCountItem  *BagCountItem  `child:"countitems"`
-	BagUniqueItem *BagUniqueItem `child:"uniqueitems"`
+	BagCountItem  *BagCountItem  `child:"CountItem"`
+	BagUniqueItem *BagUniqueItem `child:"UniqueItem"`
 }
 
 func NewBag(player *Player) *Bag {

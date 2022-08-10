@@ -28,6 +28,8 @@ type SaveableField struct {
 }
 
 type safeSaveableStructsMap struct {
+	// 是否使用全小写
+	useLowerName bool
 	m map[reflect.Type]*SaveableStruct
 	l *sync.RWMutex
 }
@@ -49,7 +51,11 @@ func (s *safeSaveableStructsMap) Get(key reflect.Type) (*SaveableStruct,bool) {
 }
 
 func newSaveableStructsMap() *safeSaveableStructsMap {
-	return &safeSaveableStructsMap{l: new(sync.RWMutex), m: make(map[reflect.Type]*SaveableStruct)}
+	return &safeSaveableStructsMap{
+		useLowerName: true, // 默认使用全小写
+		l: new(sync.RWMutex),
+		m: make(map[reflect.Type]*SaveableStruct),
+	}
 }
 
 func GetSaveableStruct(reflectType reflect.Type) *SaveableStruct {
@@ -72,18 +78,24 @@ func GetSaveableStruct(reflectType reflect.Type) *SaveableStruct {
 			continue
 		}
 		isPlain := false
-		dbSetting := fieldStruct.Tag.Get("db")
-		if len(dbSetting) == 0 {
+		dbSetting,ok := fieldStruct.Tag.Lookup("db")
+		if !ok {
 			continue
 		}
 		dbSettings := strings.Split(dbSetting, ";")
 		if util.HasString(dbSettings, "plain") {
 			isPlain = true
 		}
+		// 默认使用字段名的全小写
 		name := strings.ToLower(fieldStruct.Name)
 		for _,n := range dbSettings {
 			if n != "" && n != "plain" {
-				name = n
+				// 自动转全小写
+				if _saveableStructsMap.useLowerName {
+					name = strings.ToLower(n)
+				} else {
+					name = n
+				}
 				break
 			}
 		}
@@ -94,7 +106,7 @@ func GetSaveableStruct(reflectType reflect.Type) *SaveableStruct {
 			Name:        name,
 		}
 		structCahce.Fields = append(structCahce.Fields, fieldCache)
-		//logger.Debug("%v %v %v", reflectType.Name(), name, isPlain)
+		logger.Debug("%v %v %v", reflectType.Name(), name, isPlain)
 	}
 	if len(structCahce.Fields) > 0 {
 		_saveableStructsMap.Set(reflectType, structCahce)
@@ -105,16 +117,22 @@ func GetSaveableStruct(reflectType reflect.Type) *SaveableStruct {
 		if len(fieldStruct.Tag) == 0 {
 			continue
 		}
-		dbSetting := fieldStruct.Tag.Get("child")
-		if len(dbSetting) == 0 {
+		dbSetting,ok := fieldStruct.Tag.Lookup("child")
+		if !ok {
 			continue
 		}
 		structCahce.IsCompositeSaveable = true
+		// 默认使用字段名的全小写
 		name := strings.ToLower(fieldStruct.Name)
 		dbSettings := strings.Split(dbSetting, ";")
 		for _,n := range dbSettings {
 			if n != "" {
-				name = n
+				// 自动转全小写
+				if _saveableStructsMap.useLowerName {
+					name = strings.ToLower(n)
+				} else {
+					name = n
+				}
 				break
 			}
 		}
@@ -124,7 +142,7 @@ func GetSaveableStruct(reflectType reflect.Type) *SaveableStruct {
 			Name:        name,
 		}
 		structCahce.Fields = append(structCahce.Fields, fieldCache)
-		//logger.Debug("%v.%v", reflectType.Name(), name)
+		logger.Debug("child %v.%v", reflectType.Name(), name)
 	}
 	if len(structCahce.Fields) == 0 {
 		_saveableStructsMap.Set(reflectType, nil)
