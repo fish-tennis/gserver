@@ -3,17 +3,16 @@ package game
 import (
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
+	"github.com/fish-tennis/gserver/db"
+	"github.com/fish-tennis/gserver/gameplayer"
 	"github.com/fish-tennis/gserver/gen"
 	. "github.com/fish-tennis/gserver/internal"
-	"github.com/fish-tennis/gserver/db"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
-	"github.com/fish-tennis/gserver/gameplayer"
 	"github.com/fish-tennis/gserver/util"
 )
 
-// 玩家进游戏服
-func onPlayerEntryGameReq(connection Connection, packet *ProtoPacket) {
+func tryStartPlayerRoutine(connection Connection, packet *ProtoPacket) {
 	req := packet.Message().(*pb.PlayerEntryGameReq)
 	if connection.GetTag() != nil {
 		connection.Send(PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameRes), &pb.PlayerEntryGameRes{
@@ -42,26 +41,27 @@ func onPlayerEntryGameReq(connection Connection, packet *ProtoPacket) {
 	isReconnect := false
 	if playerId == 0 {
 		connection.Send(PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameRes), &pb.PlayerEntryGameRes{
-			Error: "NoPlayer",
+			Error:     "NoPlayer",
 			AccountId: req.GetAccountId(),
-			RegionId: req.GetRegionId(),
+			RegionId:  req.GetRegionId(),
 		})
 		return
-	} else {
-		// 检查该账号是否已经有对应的在线玩家
-		entryPlayer = gameplayer.GetPlayerMgr().GetPlayer(playerId)
-		if entryPlayer != nil {
-			// 重连
-			isReconnect = true
-			logger.Debug("reconnect %v %v", entryPlayer.GetId(), entryPlayer.GetName())
-		}
 	}
+
+	// 检查该账号是否已经有对应的在线玩家
+	entryPlayer = gameplayer.GetPlayerMgr().GetPlayer(playerId)
+	if entryPlayer != nil {
+		// 重连
+		isReconnect = true
+		logger.Debug("reconnect %v %v", entryPlayer.GetId(), entryPlayer.GetName())
+	}
+
 	if !isReconnect {
 		// 分布式游戏服必须保证一个账号同时只在一个游戏服上登录,防止写数据覆盖
 		// 通过redis做缓存来实现账号的"独占性"
 		if !cache.AddOnlineAccount(accountId, playerId, GetServer().GetServerId()) {
 			// 该账号已经在另一个游戏服上登录了
-			_,gameServerId := cache.GetOnlinePlayer(playerId)
+			_, gameServerId := cache.GetOnlinePlayer(playerId)
 			logger.Error("exist online account:%v playerId:%v gameServerId:%v",
 				accountId, playerId, gameServerId)
 			if gameServerId > 0 {
@@ -78,7 +78,7 @@ func onPlayerEntryGameReq(connection Connection, packet *ProtoPacket) {
 			return
 		}
 		playerData := &pb.PlayerData{}
-		hasData,err := db.GetPlayerDb().FindPlayerByAccountId(req.GetAccountId(), req.GetRegionId(), playerData)
+		hasData, err := db.GetPlayerDb().FindPlayerByAccountId(req.GetAccountId(), req.GetRegionId(), playerData)
 		if err != nil {
 			cache.RemoveOnlineAccount(accountId)
 			connection.Send(PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameRes), &pb.PlayerEntryGameRes{
@@ -90,9 +90,9 @@ func onPlayerEntryGameReq(connection Connection, packet *ProtoPacket) {
 		if !hasData {
 			cache.RemoveOnlineAccount(accountId)
 			connection.Send(PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameRes), &pb.PlayerEntryGameRes{
-				Error: "NoPlayer",
+				Error:     "NoPlayer",
 				AccountId: req.GetAccountId(),
-				RegionId: req.GetRegionId(),
+				RegionId:  req.GetRegionId(),
 			})
 			return
 		}
@@ -102,18 +102,35 @@ func onPlayerEntryGameReq(connection Connection, packet *ProtoPacket) {
 		// 开启玩家独立线程
 		entryPlayer.RunProcessRoutine()
 	}
+
 	// 玩家和连接设置关联
 	connection.SetTag(entryPlayer.GetId())
 	entryPlayer.SetConnection(connection)
-	logger.Debug("entry entryPlayer:%v %v", entryPlayer.GetId(), entryPlayer.GetName())
-	gen.SendPlayerEntryGameRes(entryPlayer, &pb.PlayerEntryGameRes{
-		AccountId: entryPlayer.GetAccountId(),
-		PlayerId:  entryPlayer.GetId(),
-		RegionId:  entryPlayer.GetRegionId(),
-		GuildData: entryPlayer.GetGuild().GetGuildData(),
+	entryPlayer.OnRecvPacket(packet)
+}
+
+// 玩家进游戏服
+func onPlayerEntryGameReq(connection Connection, packet *ProtoPacket) {
+	if connection.GetTag() == nil {
+		return
+	}
+	playerId, ok := connection.GetTag().(int64)
+	if !ok {
+		return
+	}
+	player := gameplayer.GetPlayerMgr().GetPlayer(playerId)
+	if player == nil {
+		return
+	}
+
+	gen.SendPlayerEntryGameRes(player, &pb.PlayerEntryGameRes{
+		AccountId: player.GetAccountId(),
+		PlayerId:  player.GetId(),
+		RegionId:  player.GetRegionId(),
+		GuildData: player.GetGuild().GetGuildData(),
 	})
 	// 分发事件
-	entryPlayer.FireEvent(&EventPlayerEntryGame{IsReconnect: isReconnect})
+	player.FireEvent(&EventPlayerEntryGame{})
 }
 
 // 创建角色
@@ -134,14 +151,14 @@ func onCreatePlayerReq(connection Connection, packet *ProtoPacket) {
 		return
 	}
 	playerData := &pb.PlayerData{
-		Id: util.GenUniqueId(),
-		Name: req.Name,
+		Id:        util.GenUniqueId(),
+		Name:      req.Name,
 		AccountId: req.AccountId,
-		RegionId: req.RegionId,
+		RegionId:  req.RegionId,
 		BaseInfo: &pb.BaseInfo{
 			Gender: req.Gender,
-			Level: 1,
-			Exp: 0,
+			Level:  1,
+			Exp:    0,
 		},
 	}
 	newPlayer := gameplayer.CreatePlayerFromData(playerData)
@@ -151,7 +168,7 @@ func onCreatePlayerReq(connection Connection, packet *ProtoPacket) {
 	newPlayerSaveData["accountid"] = playerData.AccountId
 	newPlayerSaveData["regionid"] = playerData.RegionId
 	GetEntitySaveData(newPlayer, newPlayerSaveData)
-	err,isDuplicateKey := db.GetPlayerDb().InsertEntity(playerData.Id, newPlayerSaveData)
+	err, isDuplicateKey := db.GetPlayerDb().InsertEntity(playerData.Id, newPlayerSaveData)
 	if err != nil {
 		result := "DbError"
 		if isDuplicateKey {
@@ -159,7 +176,7 @@ func onCreatePlayerReq(connection Connection, packet *ProtoPacket) {
 		}
 		connection.Send(PacketCommand(pb.CmdLogin_Cmd_CreatePlayerRes), &pb.CreatePlayerRes{
 			Error: result,
-			Name: playerData.Name,
+			Name:  playerData.Name,
 		})
 		logger.Error("CreatePlayer result:%v err:%v playerData:%v", result, err, playerData)
 		return
@@ -167,7 +184,7 @@ func onCreatePlayerReq(connection Connection, packet *ProtoPacket) {
 	logger.Debug("CreatePlayer:%v %v", playerData.Id, playerData.Name)
 	connection.Send(PacketCommand(pb.CmdLogin_Cmd_CreatePlayerRes), &pb.CreatePlayerRes{
 		AccountId: req.AccountId,
-		RegionId: req.RegionId,
-		Name: req.Name,
+		RegionId:  req.RegionId,
+		Name:      req.Name,
 	})
 }

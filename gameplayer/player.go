@@ -2,14 +2,15 @@ package gameplayer
 
 import (
 	"context"
+	"reflect"
+	"sync"
+
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/db"
 	. "github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 	"google.golang.org/protobuf/proto"
-	"reflect"
-	"sync"
 )
 
 var _ Entity = (*Player)(nil)
@@ -34,6 +35,7 @@ type Player struct {
 	stopOnce sync.Once
 	// 倒计时管理
 	timerEntries *TimerEntries
+	reconnect    bool
 }
 
 // 玩家唯一id
@@ -97,7 +99,7 @@ func (this *Player) Send(command PacketCommand, message proto.Message) bool {
 func (this *Player) SendErrorRes(errorReqCmd PacketCommand, errorMsg string) bool {
 	if this.connection != nil {
 		return this.connection.Send(PacketCommand(pb.CmdInner_Cmd_ErrorRes), &pb.ErrorRes{
-			Command: int32(errorReqCmd),
+			Command:   int32(errorReqCmd),
 			ResultStr: errorMsg,
 		})
 	}

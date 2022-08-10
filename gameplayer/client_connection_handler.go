@@ -11,6 +11,7 @@ var _clientConnectionHandler *ClientConnectionHandler
 // 客户端连接的handler
 type ClientConnectionHandler struct {
 	DefaultConnectionHandler
+	entryGameHook func(connection Connection, packet *ProtoPacket)
 }
 
 func NewClientConnectionHandler(protoCodec *ProtoCodec) *ClientConnectionHandler {
@@ -31,6 +32,16 @@ func (this *ClientConnectionHandler) OnRecvPacket(connection Connection, packet 
 			}
 		}
 	}
+
+	if packet.Command() == PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameReq) &&
+		this.entryGameHook != nil {
+		this.entryGameHook(connection, packet.(*ProtoPacket))
+		return
+	}
 	// 未登录的玩家消息,走默认处理,在收包协程里
 	this.DefaultConnectionHandler.OnRecvPacket(connection, packet)
+}
+
+func (this *ClientConnectionHandler) SetEntryGameHook(hook func(connection Connection, packet *ProtoPacket)) {
+	this.entryGameHook = hook
 }

@@ -3,6 +3,11 @@ package game
 import (
 	"context"
 	"encoding/json"
+	"os"
+	"reflect"
+	"sync"
+	"time"
+
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
 	"github.com/fish-tennis/gserver/cfg"
@@ -14,10 +19,6 @@ import (
 	"github.com/fish-tennis/gserver/misc"
 	"github.com/fish-tennis/gserver/pb"
 	"github.com/fish-tennis/gserver/social"
-	"os"
-	"reflect"
-	"sync"
-	"time"
 )
 
 var (
@@ -55,6 +56,7 @@ func (this *GameServer) Init(ctx context.Context, configFile string) bool {
 	// 客户端的codec和handler
 	clientCodec := NewProtoCodec(nil)
 	clientHandler := gameplayer.NewClientConnectionHandler(clientCodec)
+	clientHandler.SetEntryGameHook(tryStartPlayerRoutine)
 	this.registerClientPacket(clientHandler)
 
 	// 服务器的codec和handler
@@ -84,9 +86,9 @@ func (this *GameServer) Init(ctx context.Context, configFile string) bool {
 	serverInitArg := &misc.GameServerInitArg{
 		ClientHandler: clientHandler,
 		ServerHandler: serverHandler,
-		PlayerMgr: gameplayer.GetPlayerMgr(),
+		PlayerMgr:     gameplayer.GetPlayerMgr(),
 	}
-	for _,hook := range this.BaseServer.GetServerHooks() {
+	for _, hook := range this.BaseServer.GetServerHooks() {
 		hook.OnServerInit(serverInitArg)
 	}
 	logger.Info("GameServer.Init")
@@ -116,7 +118,7 @@ func (this *GameServer) Exit() {
 
 // 读取配置文件
 func (this *GameServer) readConfig() {
-	fileData,err := os.ReadFile(this.GetConfigFile())
+	fileData, err := os.ReadFile(this.GetConfigFile())
 	if err != nil {
 		panic("read config file err")
 	}
@@ -143,7 +145,7 @@ func (this *GameServer) loadCfgs() {
 // 初始化数据库
 func (this *GameServer) initDb() {
 	// 使用mongodb来演示
-	mongoDb := mongodb.NewMongoDb(this.config.MongoUri,"testdb")
+	mongoDb := mongodb.NewMongoDb(this.config.MongoUri, "testdb")
 	mongoDb.RegisterPlayerPb("player", "id", "name", "accountid", "regionid")
 	mongoDb.RegisterEntityDb("guild", "id", "name")
 	//mongoDb.SetAccountColumnNames("accountid","")
@@ -157,7 +159,7 @@ func (this *GameServer) initDb() {
 // 初始化redis缓存
 func (this *GameServer) initCache() {
 	cache.NewRedis(this.config.RedisUri, this.config.RedisPassword, this.config.RedisCluster)
-	pong,err := cache.GetRedis().Ping(context.Background()).Result()
+	pong, err := cache.GetRedis().Ping(context.Background()).Result()
 	if err != nil || pong == "" {
 		panic("redis connect error")
 	}
@@ -171,22 +173,22 @@ func (this *GameServer) repairCache() {
 
 // 缓存中的玩家数据保存到数据库
 // 服务器crash时,缓存数据没来得及保存到数据库,服务器重启后进行自动修复,防止玩家数据回档
-func (this *GameServer) repairPlayerCache(playerId,accountId int64) error {
+func (this *GameServer) repairPlayerCache(playerId, accountId int64) error {
 	defer func() {
 		if err := recover(); err != nil {
 			logger.Error("repairPlayerCache %v err:%v", playerId, err.(error).Error())
 			LogStack()
 		}
 	}()
-	tmpPlayer := gameplayer.CreateTempPlayer(playerId,accountId)
-	for _,component := range tmpPlayer.GetComponents() {
+	tmpPlayer := gameplayer.CreateTempPlayer(playerId, accountId)
+	for _, component := range tmpPlayer.GetComponents() {
 		structCache := GetSaveableStruct(reflect.TypeOf(component))
 		if structCache == nil {
 			continue
 		}
 		if !structCache.IsCompositeSaveable {
 			cacheKey := GetPlayerComponentCacheKey(playerId, component.GetName())
-			hasCache,err := LoadFromCache(component, cacheKey)
+			hasCache, err := LoadFromCache(component, cacheKey)
 			if !hasCache {
 				continue
 			}
@@ -194,7 +196,7 @@ func (this *GameServer) repairPlayerCache(playerId,accountId int64) error {
 				logger.Error("LoadFromCache %v error:%v", cacheKey, err.Error())
 				continue
 			}
-			saveData,err := GetComponentSaveData(component)
+			saveData, err := GetComponentSaveData(component)
 			if err != nil {
 				logger.Error("%v Save %v err %v", playerId, component.GetName(), err.Error())
 				continue
@@ -222,7 +224,7 @@ func (this *GameServer) repairPlayerCache(playerId,accountId int64) error {
 				}
 				fieldInterface := val.Interface()
 				cacheKey := GetPlayerComponentChildCacheKey(playerId, component.GetName(), fieldCache.Name)
-				hasCache,err := LoadFromCache(fieldInterface, cacheKey)
+				hasCache, err := LoadFromCache(fieldInterface, cacheKey)
 				if !hasCache {
 					continue
 				}
@@ -231,7 +233,7 @@ func (this *GameServer) repairPlayerCache(playerId,accountId int64) error {
 					continue
 				}
 				logger.Debug("%v", fieldInterface)
-				saveData,err := GetSaveData(fieldInterface, component.GetNameLower())
+				saveData, err := GetSaveData(fieldInterface, component.GetNameLower())
 				if err != nil {
 					logger.Error("%v Save %v.%v err %v", playerId, component.GetName(), fieldCache.Name, err.Error())
 					continue
@@ -257,7 +259,7 @@ func (this *GameServer) registerClientPacket(clientHandler *gameplayer.ClientCon
 	clientHandler.Register(PacketCommand(pb.CmdInner_Cmd_HeartBeatReq), onHeartBeatReq, new(pb.HeartBeatReq))
 	clientHandler.Register(PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameReq), onPlayerEntryGameReq, new(pb.PlayerEntryGameReq))
 	clientHandler.Register(PacketCommand(pb.CmdLogin_Cmd_CreatePlayerReq), onCreatePlayerReq, new(pb.CreatePlayerReq))
-	clientHandler.Register(PacketCommand(pb.CmdInner_Cmd_TestCmd), onTestCmd, new(pb.TestCmd))
+	clientHandler.Register(PacketCommand(pb.CmdInner_Cmd_TestCmd), wrapPlayerHandler(onTestCmd), new(pb.TestCmd))
 	// 通过反射自动注册消息回调
 	//clientHandler.autoRegisterPlayerComponentProto()
 	gameplayer.AutoRegisterPlayerComponentProto(clientHandler)
@@ -266,12 +268,29 @@ func (this *GameServer) registerClientPacket(clientHandler *gameplayer.ClientCon
 	// player_component_handler_auto_register(clientHandler)
 }
 
+func wrapPlayerHandler(fn func(player *gameplayer.Player, packet *ProtoPacket)) func(connection Connection, packet *ProtoPacket) {
+	return func(connection Connection, packet *ProtoPacket) {
+		if connection.GetTag() == nil {
+			return
+		}
+		playerId, ok := connection.GetTag().(int64)
+		if !ok {
+			return
+		}
+		player := gameplayer.GetPlayerMgr().GetPlayer(playerId)
+		if player == nil {
+			return
+		}
+		fn(player, packet)
+	}
+}
+
 // 心跳回复
 func onHeartBeatReq(connection Connection, packet *ProtoPacket) {
 	req := packet.Message().(*pb.HeartBeatReq)
 	connection.Send(PacketCommand(pb.CmdInner_Cmd_HeartBeatRes), &pb.HeartBeatRes{
-		RequestTimestamp: req.GetTimestamp(),
-		ResponseTimestamp: uint64(time.Now().UnixNano()/int64(time.Microsecond)),
+		RequestTimestamp:  req.GetTimestamp(),
+		ResponseTimestamp: uint64(time.Now().UnixNano() / int64(time.Microsecond)),
 	})
 }
 
@@ -300,7 +319,7 @@ func (this *GameServer) RemovePlayer(player *gameplayer.Player) {
 
 // 获取一个在线玩家
 func (this *GameServer) GetPlayer(playerId int64) *gameplayer.Player {
-	if v,ok := this.playerMap.Load(playerId); ok {
+	if v, ok := this.playerMap.Load(playerId); ok {
 		return v.(*gameplayer.Player)
 	}
 	return nil
@@ -331,7 +350,7 @@ func (this *GameServer) onRoutePlayerMessage(connection Connection, packet *Prot
 		logger.Error("player nil %v", req.ToPlayerId)
 		return
 	}
-	message,err := req.PacketData.UnmarshalNew()
+	message, err := req.PacketData.UnmarshalNew()
 	if err != nil {
 		logger.Error("UnmarshalNew %v err:%v", req.ToPlayerId, err)
 		return
