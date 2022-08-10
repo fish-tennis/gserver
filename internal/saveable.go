@@ -140,8 +140,8 @@ func GetSaveData(obj interface{}, parentName string) (interface{}, error) {
 		return nil, nil
 	}
 	reflectVal := reflect.ValueOf(obj).Elem()
-	if !structCache.IsCompositeSaveable {
-		fieldCache := structCache.Fields[0]
+	if structCache.IsSingleField() {
+		fieldCache := structCache.Field
 		val := reflectVal.Field(fieldCache.FieldIndex)
 		if val.IsNil() {
 			return nil, nil
@@ -263,9 +263,9 @@ func GetSaveData(obj interface{}, parentName string) (interface{}, error) {
 			return nil, errors.New("unsupport key type")
 		}
 	} else {
-		// 多个子模块的组合
+		// 多个child子模块的组合
 		compositeSaveData := make(map[string]interface{})
-		for _, fieldCache := range structCache.Fields {
+		for _, fieldCache := range structCache.Children {
 			childName := parentName + "." + fieldCache.Name
 			val := reflectVal.Field(fieldCache.FieldIndex)
 			if val.IsNil() {
@@ -300,8 +300,8 @@ func LoadData(obj interface{}, sourceData interface{}) error {
 		return errors.New("not Saveable object")
 	}
 	reflectVal := reflect.ValueOf(obj).Elem()
-	if !structCache.IsCompositeSaveable {
-		fieldCache := structCache.Fields[0]
+	if structCache.IsSingleField() {
+		fieldCache := structCache.Field
 		val := reflectVal.Field(fieldCache.FieldIndex)
 		if val.IsNil() {
 			if !val.CanSet() {
@@ -407,7 +407,7 @@ func LoadData(obj interface{}, sourceData interface{}) error {
 			return errors.New("sourceData type error")
 		}
 		sourceVal := reflect.ValueOf(sourceData)
-		for _, fieldCache := range structCache.Fields {
+		for _, fieldCache := range structCache.Children {
 			sourceFieldVal := sourceVal.MapIndex(reflect.ValueOf(fieldCache.Name))
 			if !sourceFieldVal.IsValid() {
 				logger.Debug("saveable not exists:%v", fieldCache.Name)
@@ -555,12 +555,12 @@ func SaveComponentChangedDataToCache(component Component) {
 	if structCache == nil {
 		return
 	}
-	if !structCache.IsCompositeSaveable {
+	if structCache.IsSingleField() {
 		cacheKey := GetPlayerComponentCacheKey(component.GetEntity().GetId(), component.GetName())
 		SaveChangedDataToCache(component, cacheKey)
 	} else {
 		reflectVal := reflect.ValueOf(component).Elem()
-		for _,fieldCache := range structCache.Fields {
+		for _,fieldCache := range structCache.Children {
 			val := reflectVal.Field(fieldCache.FieldIndex)
 			if val.IsNil() {
 
@@ -578,10 +578,10 @@ func SaveChangedDataToCache(obj interface{}, cacheKeyName string) {
 	if structCache == nil {
 		return
 	}
-	if structCache.IsCompositeSaveable {
+	if !structCache.IsSingleField() {
 		return
 	}
-	fieldCache := structCache.Fields[0]
+	fieldCache := structCache.Field
 	// 缓存数据作为一个整体的
 	if dirtyMark, ok := obj.(DirtyMark); ok {
 		if !dirtyMark.IsDirty() {
@@ -737,8 +737,8 @@ func LoadFromCache(obj interface{}, cacheKey string) (bool, error) {
 		return false, nil
 	}
 	reflectVal := reflect.ValueOf(obj).Elem()
-	if !structCache.IsCompositeSaveable {
-		fieldCache := structCache.Fields[0]
+	if structCache.IsSingleField() {
+		fieldCache := structCache.Field
 		val := reflectVal.Field(fieldCache.FieldIndex)
 		if cacheType == "string" {
 			if fieldCache.StructField.Type.Kind() == reflect.Ptr || fieldCache.StructField.Type.Kind() == reflect.Interface {
@@ -816,7 +816,7 @@ func LoadFromCache(obj interface{}, cacheKey string) (bool, error) {
 			return true, errors.New(fmt.Sprintf("%v unsupport cache type:%v", cacheKey, cacheType))
 		}
 	} else {
-		for _, fieldCache := range structCache.Fields {
+		for _, fieldCache := range structCache.Children {
 			val := reflectVal.Field(fieldCache.FieldIndex)
 			if val.IsNil() {
 				if !val.CanSet() {
@@ -851,7 +851,7 @@ func SaveEntityChangedDataToDb(entityDb db.EntityDb, entity Entity, removeCacheA
 		if structCache == nil {
 			return true
 		}
-		if !structCache.IsCompositeSaveable {
+		if structCache.IsSingleField() {
 			if saveable, ok := component.(Saveable); ok {
 				// 如果某个组件数据没改变过,就无需保存
 				if !saveable.IsChanged() {
@@ -873,7 +873,7 @@ func SaveEntityChangedDataToDb(entityDb db.EntityDb, entity Entity, removeCacheA
 			}
 		} else {
 			reflectVal := reflect.ValueOf(component).Elem()
-			for _, fieldCache := range structCache.Fields {
+			for _, fieldCache := range structCache.Children {
 				childName := component.GetNameLower() + "." + fieldCache.Name
 				val := reflectVal.Field(fieldCache.FieldIndex)
 				if val.IsNil() {

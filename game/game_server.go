@@ -184,7 +184,7 @@ func (this *GameServer) repairPlayerCache(playerId,accountId int64) error {
 		if structCache == nil {
 			continue
 		}
-		if !structCache.IsCompositeSaveable {
+		if structCache.IsSingleField() {
 			cacheKey := GetPlayerComponentCacheKey(playerId, component.GetName())
 			hasCache,err := LoadFromCache(component, cacheKey)
 			if !hasCache {
@@ -209,7 +209,7 @@ func (this *GameServer) repairPlayerCache(playerId,accountId int64) error {
 			logger.Info("RemoveCache %v", cacheKey)
 		} else {
 			reflectVal := reflect.ValueOf(component).Elem()
-			for _, fieldCache := range structCache.Fields {
+			for _, fieldCache := range structCache.Children {
 				val := reflectVal.Field(fieldCache.FieldIndex)
 				if val.IsNil() {
 					if !val.CanSet() {

@@ -1,5 +1,10 @@
 package gameplayer
 
+import (
+	"github.com/fish-tennis/gserver/internal"
+	"reflect"
+)
+
 var(
 	// 玩家组件名和组件索引的对照表
 	// 玩家的结构是固定的,所以这个对照表可以共用
@@ -12,6 +17,7 @@ func InitPlayerComponentMap() {
 	player := CreateTempPlayer(0,0)
 	for idx,component := range player.GetComponents() {
 		_playerComponentNameMap[component.GetName()] = idx
+		internal.GetSaveableStruct(reflect.TypeOf(component))
 	}
 }
 

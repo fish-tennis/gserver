@@ -177,6 +177,7 @@ func convertValueToStringOrInterface(val reflect.Value) (interface{},error) {
 				}
 				return bytes,nil
 			}
+			return i,nil
 		}
 	default:
 		logger.Error("unsupport type:%v", val.Kind())
