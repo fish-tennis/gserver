@@ -85,7 +85,7 @@ func AutoRegisterPlayerComponentProto(packetHandlerRegister PacketHandlerRegiste
 			if isClientMessage {
 				packetHandlerRegister.Register(cmd, nil, reflect.New(methonArg2.Elem()).Interface().(proto.Message))
 			}
-			logger.Debug("AutoRegister %v.%v client:%v", componentStructName, method.Name, isClientMessage)
+			logger.Debug("AutoRegister %v.%v %v client:%v", componentStructName, method.Name, messageId, isClientMessage)
 		}
 	}
 }

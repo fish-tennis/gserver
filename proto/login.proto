@@ -24,7 +24,6 @@ enum CmdLogin {
 	Cmd_PlayerEntryGameRes = 1006;
 	Cmd_CreatePlayerReq = 1007;
 	Cmd_CreatePlayerRes = 1008;
-	Cmd_PlayerEntryGameOk = 1009; // 玩家进游戏服成功,非客户端消息
 }
 
 // 账号登录请求
@@ -93,9 +92,4 @@ message CreatePlayerRes {
   int64 accountId = 2;
   int32 regionId = 3; // 区服id
   string name = 4; // 玩家名
-}
-
-// 玩家进游戏服成功,非客户端消息
-message PlayerEntryGameOk {
-  bool isReconnect = 1;
 }

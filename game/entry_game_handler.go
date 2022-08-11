@@ -117,7 +117,7 @@ func onPlayerEntryGameReq(connection Connection, packet *ProtoPacket) {
 		GuildData: entryPlayer.GetGuild().GetGuildData(),
 	})
 	// 转到玩家协程中去处理
-	entryPlayer.OnRecvPacket(NewProtoPacket(PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameOk), &pb.PlayerEntryGameOk{
+	entryPlayer.OnRecvPacket(NewProtoPacket(PacketCommand(pb.CmdBaseInfo_Cmd_PlayerEntryGameOk), &pb.PlayerEntryGameOk{
 		IsReconnect: isReconnect,
 	}))
 }
