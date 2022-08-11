@@ -35,7 +35,6 @@ type Player struct {
 	stopOnce sync.Once
 	// 倒计时管理
 	timerEntries *TimerEntries
-	reconnect    bool
 }
 
 // 玩家唯一id

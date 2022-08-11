@@ -56,7 +56,6 @@ func (this *GameServer) Init(ctx context.Context, configFile string) bool {
 	// 客户端的codec和handler
 	clientCodec := NewProtoCodec(nil)
 	clientHandler := gameplayer.NewClientConnectionHandler(clientCodec)
-	clientHandler.SetEntryGameHook(tryStartPlayerRoutine)
 	this.registerClientPacket(clientHandler)
 
 	// 服务器的codec和handler
