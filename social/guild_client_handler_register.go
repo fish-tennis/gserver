@@ -53,7 +53,7 @@ func GuildClientHandlerRegister(handler PacketHandlerRegister, playerMgr gamepla
 // 注册玩家公会消息回调
 func RegisterPlayerGuildHandler(handler PacketHandlerRegister, playerMgr gameplayer.PlayerMgr, message proto.Message) {
 	messageName := message.ProtoReflect().Descriptor().Name()
-	cmd := util.GetMessageIdByMessageName("gserver", "Guild", string(messageName))
+	cmd := util.GetMessageIdByComponentMessageName("gserver", "Guild", string(messageName))
 	handler.Register(PacketCommand(uint16(cmd)), func(connection Connection, packet *ProtoPacket) {
 		if connection.GetTag() != nil {
 			player := playerMgr.GetPlayer(connection.GetTag().(int64))

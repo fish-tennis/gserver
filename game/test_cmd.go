@@ -1,29 +1,19 @@
 package game
 
 import (
+	"strings"
+
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cfg"
 	"github.com/fish-tennis/gserver/gameplayer"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 	"github.com/fish-tennis/gserver/util"
-	"strings"
 )
 
 // 客户端字符串形式的测试命令,仅用于测试环境!
-func onTestCmd(connection Connection, packet *ProtoPacket) {
+func onTestCmd(player *gameplayer.Player, packet *ProtoPacket) {
 	logger.Debug("onTestCmd %v", packet.Message())
-	if connection.GetTag() == nil {
-		return
-	}
-	playerId,ok := connection.GetTag().(int64)
-	if !ok {
-		return
-	}
-	player := gameplayer.GetPlayerMgr().GetPlayer(playerId)
-	if player == nil {
-		return
-	}
 	req := packet.Message().(*pb.TestCmd)
 	cmdStrs := strings.Split(req.GetCmd(), " ")
 	if len(cmdStrs) == 0 {
@@ -68,14 +58,14 @@ func onTestCmd(connection Connection, packet *ProtoPacket) {
 		}
 		player.GetBag().AddItem(itemCfgId, itemNum)
 
-	case "finishquest","finishquests":
+	case "finishquest", "finishquests":
 		if len(cmdArgs) < 1 {
 			player.SendErrorRes(packet.Command(), "finishquest cmdArgs error")
 			return
 		}
 		// 完成所有任务
 		if strings.ToLower(cmdArgs[0]) == "all" {
-			for cfgId,_ := range player.GetQuest().Quests.Quests {
+			for cfgId, _ := range player.GetQuest().Quests.Quests {
 				player.GetQuest().OnFinishQuestReq(PacketCommand(pb.CmdQuest_Cmd_FinishQuestReq), &pb.FinishQuestReq{
 					QuestCfgId: cfgId,
 				})
@@ -91,7 +81,7 @@ func onTestCmd(connection Connection, packet *ProtoPacket) {
 	case "fight":
 		// 模拟一个战斗事件
 		evt := &pb.EventFight{
-		PlayerId: playerId,
+			PlayerId: player.GetId(),
 		}
 		if len(cmdArgs) >= 1 && cmdArgs[0] == "true" {
 			evt.IsPvp = true

@@ -1,6 +1,7 @@
 package gameplayer
 
 import (
+	"github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cfg"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
@@ -30,6 +31,14 @@ func NewBaseInfo(player *Player, data *pb.BaseInfo) *BaseInfo {
 		component.Data = data
 	}
 	return component
+}
+
+// 玩家进游戏服成功,非客户端消息
+// 这种格式写的函数可以自动注册非客户端的消息回调
+func (this *BaseInfo) HandlePlayerEntryGameOk(_ gnet.PacketCommand, msg *pb.PlayerEntryGameOk) {
+	logger.Debug("HandlePlayerEntryGameOk:%v", msg)
+	// 分发事件:玩家进游戏服
+	this.GetPlayer().FireEvent(&internal.EventPlayerEntryGame{IsReconnect: msg.IsReconnect})
 }
 
 func (this *BaseInfo) IncExp(incExp int32) {

@@ -37,7 +37,7 @@ func (this *Money) IncDiamond(diamond int32) {
 }
 
 // 请求加coin的消息回调
-// 这种格式写的函数可以自动注册消息回调
+// 这种格式写的函数可以自动注册客户端消息回调
 func (this *Money) OnCoinReq(_ gnet.PacketCommand, req *pb.CoinReq) {
 	logger.Debug("OnCoinReq:%v", req)
 	this.IncCoin(req.GetAddCoin())
