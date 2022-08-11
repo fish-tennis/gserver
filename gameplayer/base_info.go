@@ -3,6 +3,7 @@ package gameplayer
 import (
 	"github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cfg"
+	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 )

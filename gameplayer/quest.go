@@ -115,7 +115,7 @@ func (this *Quest) OnEvent(event interface{}) {
 }
 
 // 完成任务的消息回调
-// 这种格式写的函数可以自动注册消息回调
+// 这种格式写的函数可以自动注册客户端消息回调
 func (this *Quest) OnFinishQuestReq(reqCmd gnet.PacketCommand, req *pb.FinishQuestReq) {
 	logger.Debug("OnFinishQuestReq:%v", req)
 	if questData,ok := this.Quests.Quests[req.QuestCfgId]; ok {

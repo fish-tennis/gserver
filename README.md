@@ -1,5 +1,5 @@
 # gserver
-使用[gnet](https://github.com/fish-tennis/gnet)开发的分布式游戏服务器框架
+分布式游戏服务器框架
 
 ## 设计思路
 - 网络库使用[gnet](https://github.com/fish-tennis/gnet)
@@ -13,7 +13,6 @@
 - 服务器自动组网
 - 游戏服负载均衡
 - 一个账号同时只能登录一个服务器(数据一致性前提)
-- 玩家数据修改即时缓存,下线才保存到数据库
 - 游戏服宕机后重启,自动修复缓存数据,防止玩家数据回档
 - 工具生成消息注册和发送消息代码[proto_code_gen](https://github.com/fish-tennis/proto_code_gen)
 - 通过反射自动注册消息回调
@@ -24,9 +23,14 @@
 - 通过公会功能演示服务器动态扩缩容的处理方式
 
 ## 数据方案
+玩家数据落地使用mongodb(支持扩展为mysql),玩家上线时,从mongodb拉取玩家数据,玩家下线时,把玩家数据保存到mongodb
+
+缓存使用redis,玩家在线期间修改的数据,即时保存到redis,防止服务器crash导致数据丢失
+
+gserver提供了数据绑定的方案,业务层只需要标记哪些数据需要保存,无需自己写代码操作数据库
 
 ## 数据绑定
-使用go的struct tag,设置对象组件的字段,框架接口会自动对这些字段进行数据库读取保存和缓存更新
+使用go的struct tag,设置对象组件的字段,框架接口会自动对这些字段进行数据库读取保存和缓存更新,极大的简化了业务代码对数据库和缓存的操作
 
 设置组件保存数据
 ```go
@@ -74,11 +78,25 @@ type CurQuests struct {
 ```
 
 ## 消息回调
+支持自动注册消息回调
+```go
+// 客户端发给服务器的完成任务的消息回调
+// 这种格式写的函数可以自动注册客户端消息回调
+func (this *Quest) OnFinishQuestReq(reqCmd gnet.PacketCommand, req *pb.FinishQuestReq) {
+	// logic code ...
+}
+```
+```go
+// 这种格式写的函数可以自动注册非客户端的消息回调
+func (this *BaseInfo) HandlePlayerEntryGameOk(cmd gnet.PacketCommand, msg *pb.PlayerEntryGameOk) { 
+	// logic code ...
+}
+```
 
 ## 协程
+每个玩家分配一个独立的逻辑协程,玩家在自己的逻辑协程中执行只涉及自身数据的代码,无需加锁
 
 ## 运行
-
 安装mongodb
 
 安装redis,单机模式和集群模式均可
