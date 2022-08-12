@@ -154,7 +154,26 @@ func (this *MongoCollectionPlayer) FindPlayerIdByAccountId(accountId int64, regi
 	if err != nil {
 		return 0, err
 	}
-	idValue,err := res.LookupErr("id")
+	idValue,err := res.LookupErr(this.uniqueId)
+	if err != nil {
+		return 0, err
+	}
+	return idValue.Int64(), nil
+}
+
+func (this *MongoCollectionPlayer) FindAccountIdByPlayerId(playerId int64) (int64, error) {
+	col := this.mongoDatabase.Collection(this.collectionName)
+	opts := options.FindOne().
+		SetProjection(bson.D{{this.colAccountId,1}})
+	result := col.FindOne(context.Background(), bson.D{{this.uniqueId, playerId}}, opts)
+	if result == nil || result.Err() == mongo.ErrNoDocuments {
+		return 0, nil
+	}
+	res, err := result.DecodeBytes()
+	if err != nil {
+		return 0, err
+	}
+	idValue,err := res.LookupErr(this.colAccountId)
 	if err != nil {
 		return 0, err
 	}

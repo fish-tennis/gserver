@@ -15,13 +15,16 @@ enum CmdRoute {
 }
 
 // 路由转发给玩家的消息
+// server -> otherserver -> player
 message RoutePlayerMessage {
   int64 toPlayerId = 1; // 玩家id
   int32 packetCommand = 2; // 消息号
-  google.protobuf.Any packetData = 3; // 转发的消息
+  bool directSendClient = 3; // 是否直接转发给客户端
+  google.protobuf.Any packetData = 4; // 转发的消息
 }
 
 // 路由转发玩家的公会请求消息
+// server -> otherserver -> guild
 message GuildRoutePlayerMessageReq {
   int64 fromPlayerId = 1; // 玩家id
   int64 fromGuildId = 2;  // 玩家公会id

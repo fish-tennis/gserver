@@ -340,12 +340,14 @@ func (this *GameServer) onKickPlayer(connection Connection, packet *ProtoPacket)
 }
 
 // 转发玩家消息
-// otherServer -> thisServer -> client
+// otherServer -> thisServer -> player
 func (this *GameServer) onRoutePlayerMessage(connection Connection, packet *ProtoPacket) {
-	logger.Debug("onRoutePlayerMessage")
 	req := packet.Message().(*pb.RoutePlayerMessage)
+	logger.Debug("onRoutePlayerMessage %v", req)
 	player := this.GetPlayer(req.ToPlayerId)
 	if player == nil {
+		// NOTE: 由于是异步消息,这里的player有很低的概率可能不在线了,如果是重要的不能丢弃的消息,需要保存该消息,留待后续处理
+		// 演示程序暂不处理,这里就直接丢弃了
 		logger.Error("player nil %v", req.ToPlayerId)
 		return
 	}
@@ -359,5 +361,11 @@ func (this *GameServer) onRoutePlayerMessage(connection Connection, packet *Prot
 		logger.Error("UnmarshalTo %v err:%v", req.ToPlayerId, err)
 		return
 	}
-	player.Send(PacketCommand(uint16(req.PacketCommand)), message)
+	if req.DirectSendClient {
+		// 不需要player处理的消息,直接转发给客户端
+		player.Send(PacketCommand(uint16(req.PacketCommand)), message)
+	} else {
+		// 需要player处理的消息,放进player的消息队列,在玩家的逻辑协程中处理
+		player.OnRecvPacket(NewProtoPacket(PacketCommand(req.PacketCommand), message))
+	}
 }

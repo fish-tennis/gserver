@@ -3,6 +3,8 @@ package social
 import (
 	"context"
 	. "github.com/fish-tennis/gnet"
+	"github.com/fish-tennis/gserver/cache"
+	"github.com/fish-tennis/gserver/gameplayer"
 	. "github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
@@ -146,8 +148,31 @@ func (this *Guild) GetMember(playerId int64) *pb.GuildMemberData {
 }
 
 // 路由玩家消息
+// this server -> other server -> player
 func (this *Guild) RoutePlayerPacket(guildMessage *GuildMessage, cmd PacketCommand, message proto.Message) {
-	RoutePlayerPacket(guildMessage.fromPlayerId, guildMessage.fromServerId, cmd, message)
+	gameplayer.RoutePlayerPacketWithServer(guildMessage.fromPlayerId, guildMessage.fromServerId, cmd, message, false)
+}
+
+// 路由玩家消息,直接发给客户端
+// this server -> other server -> client
+func (this *Guild) RouteClientPacket(guildMessage *GuildMessage, cmd PacketCommand, message proto.Message) {
+	gameplayer.RoutePlayerPacketWithServer(guildMessage.fromPlayerId, guildMessage.fromServerId, cmd, message, true)
+}
+
+// 广播公会消息
+// this server -> other server -> player
+func (this *Guild) BroadcastPlayerPacket(cmd PacketCommand, message proto.Message) {
+	for _, member := range this.Members.Data {
+		gameplayer.RoutePlayerPacket(member.Id, cmd, message, false)
+	}
+}
+
+// 广播公会消息,直接发给客户端
+// this server -> other server -> client
+func (this *Guild) BroadcastClientPacket(cmd PacketCommand, message proto.Message) {
+	for _, member := range this.Members.Data {
+		gameplayer.RoutePlayerPacket(member.Id, cmd, message, true)
+	}
 }
 
 // 加入公会请求
@@ -163,8 +188,12 @@ func (this *Guild) OnGuildJoinReq(message *GuildMessage, req *pb.GuildJoinReq) {
 		PlayerName:   message.fromPlayerName,
 		TimestampSec: int32(util.GetCurrentTimeStamp()),
 	})
-	this.RoutePlayerPacket(message, PacketCommand(pb.CmdGuild_Cmd_GuildJoinRes), &pb.GuildJoinRes{
+	this.RouteClientPacket(message, PacketCommand(pb.CmdGuild_Cmd_GuildJoinRes), &pb.GuildJoinRes{
 		Id: this.GetId(),
+	})
+	this.BroadcastClientPacket(PacketCommand(pb.CmdGuild_Cmd_GuildJoinReqTip), &pb.GuildJoinReqTip{
+		PlayerId:   message.fromPlayerId,
+		PlayerName: message.fromPlayerName,
 	})
 	logger.Debug("JoinRequests %v %v", this.GetId(), message.fromPlayerId)
 }
@@ -190,14 +219,42 @@ func (this *Guild) OnGuildJoinAgreeReq(message *GuildMessage, req *pb.GuildJoinA
 			Position: int32(pb.GuildPosition_Member),
 		})
 		this.BaseInfo.SetMemberCount(int32(len(this.Members.Data)))
-	} else {
-		// 略:给该玩家发一个提示信息
 	}
 	this.JoinRequests.Remove(req.JoinPlayerId)
-	this.RoutePlayerPacket(message, PacketCommand(pb.CmdGuild_Cmd_GuildJoinAgreeRes), &pb.GuildJoinAgreeRes{
-		JoinPlayerId: joinRequest.PlayerId,
-		IsAgree:      req.IsAgree,
+	// 返回操作结果
+	this.RouteClientPacket(message, PacketCommand(pb.CmdGuild_Cmd_GuildJoinAgreeRes), &pb.GuildJoinAgreeRes{
+		GuildId:         this.GetId(),
+		ManagerPlayerId: member.Id,
+		JoinPlayerId:    joinRequest.PlayerId,
+		IsAgree:         req.IsAgree,
 	})
+	// 修改新加入玩家的公会模块数据
+	_, serverId := cache.GetOnlinePlayer(joinRequest.PlayerId)
+	if serverId > 0 {
+		// 该玩家在线,则直接发消息
+		gameplayer.RoutePlayerPacketWithServer(joinRequest.PlayerId, serverId, PacketCommand(pb.CmdGuild_Cmd_GuildJoinAgreeRes), &pb.GuildJoinAgreeRes{
+			GuildId:         this.GetId(),
+			ManagerPlayerId: member.Id,
+			JoinPlayerId:    joinRequest.PlayerId,
+			IsAgree:         req.IsAgree,
+		}, false)
+	} else {
+		// 该玩家不在线,直接修改数据库
+		// 只加载玩家的公会模块数据
+		type playerGuildData struct {
+			Guild []byte `json:"guild"`
+		}
+		tmpPlayerGuildData := &playerGuildData{}
+		gameplayer.OfflinePlayerProcess(joinRequest.PlayerId, tmpPlayerGuildData, func(offlinePlayerId int64, offlineData interface{}) bool {
+			logger.Debug("tmpPlayerGuildData:%v", tmpPlayerGuildData)
+			tempPlayer := gameplayer.NewEmptyPlayer(offlinePlayerId)
+			guildComponent := gameplayer.NewGuild(tempPlayer)
+			tempPlayer.AddComponent(guildComponent, tmpPlayerGuildData.Guild)
+			guildComponent.SetGuildId(this.GetId())
+			saveErr := tempPlayer.SaveDb(false)
+			return saveErr == nil
+		})
+	}
 }
 
 // 查看公会数据
@@ -205,7 +262,7 @@ func (this *Guild) OnGuildDataViewReq(message *GuildMessage, req *pb.GuildDataVi
 	if this.GetMember(message.fromPlayerId) == nil {
 		return
 	}
-	this.RoutePlayerPacket(message, PacketCommand(pb.CmdGuild_Cmd_GuildDataViewRes), &pb.GuildDataViewRes{
+	this.RouteClientPacket(message, PacketCommand(pb.CmdGuild_Cmd_GuildDataViewRes), &pb.GuildDataViewRes{
 		GuildData: &pb.GuildData{
 			Id:           this.GetId(),
 			BaseInfo:     this.BaseInfo.Data,

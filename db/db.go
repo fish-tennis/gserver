@@ -37,6 +37,9 @@ type PlayerDb interface {
 	// 根据账号id查找玩家数据
 	// 适用于一个账号在一个区服只有一个玩家角色的游戏
 	FindPlayerByAccountId(accountId int64, regionId int32, playerData interface{}) (bool, error)
+
+	// 根据角色id查找账号id
+	FindAccountIdByPlayerId(playerId int64) (int64, error)
 }
 
 // Kv数据接口

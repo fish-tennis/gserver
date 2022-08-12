@@ -77,6 +77,9 @@ func GetOnlinePlayer(playerId int64) (accountId int64, gameServerId int32) {
 	if IsRedisError(err) {
 		return
 	}
+	if len(accountIdAndGameServerId) == 0 {
+		return
+	}
 	ids := strings.Split(accountIdAndGameServerId,";")
 	if len(ids) != 2 {
 		return

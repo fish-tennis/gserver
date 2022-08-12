@@ -95,6 +95,12 @@ func (this *TimerEntries) Start() {
 	}
 }
 
+func (this *TimerEntries) Stop() {
+	if this.Timer != nil {
+		this.Timer.Stop()
+	}
+}
+
 func (this *TimerEntries) TimerChan() <-chan time.Time {
 	return this.Timer.C
 }

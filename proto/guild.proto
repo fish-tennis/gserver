@@ -18,6 +18,7 @@ enum CmdGuild {
   Cmd_GuildJoinAgreeRes = 2008;
   Cmd_GuildDataViewReq  = 2009;
   Cmd_GuildDataViewRes  = 2010;
+  Cmd_GuildJoinReqTip   = 2012;
 }
 
 enum GuildPosition {
@@ -114,8 +115,10 @@ message GuildJoinAgreeReq {
 // @Player
 message GuildJoinAgreeRes {
   string error = 1;
-  int64 joinPlayerId = 2; // 申请加入公会的玩家id
-  bool isAgree = 3; // 是否同意加入
+  int64 guildId = 2;
+  int64 managerPlayerId = 3; // 管理员id
+  int64 joinPlayerId = 4; // 申请加入公会的玩家id
+  bool isAgree = 5; // 是否同意加入
 }
 
 // 查看自己公会的数据
@@ -126,4 +129,10 @@ message GuildDataViewReq {
 // @Player
 message GuildDataViewRes {
   GuildData guildData = 1;
+}
+
+// 提示有人申请加入本公会
+message GuildJoinReqTip {
+   int64 playerId = 1; // 玩家id
+   string playerName = 2; // 玩家名
 }

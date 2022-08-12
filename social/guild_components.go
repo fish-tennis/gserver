@@ -84,9 +84,11 @@ func (g *GuildJoinRequests) Get(playerId int64) *pb.GuildJoinRequest {
 func (g *GuildJoinRequests) Add(joinRequest *pb.GuildJoinRequest) {
 	g.Data[joinRequest.PlayerId] = joinRequest
 	g.SetDirty(joinRequest.PlayerId, true)
+	logger.Debug("Add request:%v", joinRequest)
 }
 
 func (g *GuildJoinRequests) Remove(playerId int64) {
 	delete(g.Data, playerId)
 	g.SetDirty(playerId, false)
+	logger.Debug("Remove request:%v", playerId)
 }

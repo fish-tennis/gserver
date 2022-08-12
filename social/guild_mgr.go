@@ -150,6 +150,7 @@ func GuildRouteReqPacket(player *gameplayer.Player, guildId int64, packet *Proto
 		guild.PushMessage(&GuildMessage{
 			fromPlayerId: player.GetId(),
 			fromServerId: GetServer().GetServerId(),
+			fromPlayerName: player.GetName(),
 			cmd:          packet.Command(),
 			message:      packet.Message(),
 		})
@@ -190,7 +191,10 @@ func OnGuildListReq(player *gameplayer.Player, req *pb.GuildListReq) {
 		logger.Error("db err:%v", dbErr)
 		return
 	}
-	var guildInfos []*pb.GuildInfo
+	type guildBaseInfo struct {
+		BaseInfo *pb.GuildInfo `json:"baseinfo"`
+	}
+	var guildInfos []*guildBaseInfo
 	err = cursor.All(context.Background(), &guildInfos)
 	if err != nil {
 		logger.Error("db err:%v", err)
@@ -199,7 +203,10 @@ func OnGuildListReq(player *gameplayer.Player, req *pb.GuildListReq) {
 	res := &pb.GuildListRes{
 		PageIndex:  req.PageIndex,
 		PageCount:  int32(math.Ceil(float64(count) / float64(pageSize))),
-		GuildInfos: guildInfos,
+		GuildInfos: make([]*pb.GuildInfo, len(guildInfos), len(guildInfos)),
+	}
+	for i,info := range guildInfos {
+		res.GuildInfos[i] = info.BaseInfo
 	}
 	gen.SendGuildListRes(player, res)
 }

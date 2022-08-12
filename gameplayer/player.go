@@ -149,6 +149,7 @@ func (this *Player) RunProcessRoutine() bool {
 	GetServer().GetWaitGroup().Add(1)
 	go func(ctx context.Context) {
 		defer func() {
+			this.timerEntries.Stop()
 			// 协程结束的时候,移除玩家
 			GetPlayerMgr().RemovePlayer(this)
 			GetServer().GetWaitGroup().Done()
@@ -275,4 +276,10 @@ func CreateTempPlayer(playerId, accountId int64) *Player {
 	player.id = playerId
 	player.accountId = accountId
 	return player
+}
+
+func NewEmptyPlayer(playerId int64) *Player {
+	return &Player{
+		id: playerId,
+	}
 }
