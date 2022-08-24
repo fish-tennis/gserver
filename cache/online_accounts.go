@@ -3,7 +3,7 @@ package cache
 import (
 	"context"
 	"fmt"
-	"github.com/fish-tennis/gserver/util"
+	"github.com/fish-tennis/gentity/util"
 	"strings"
 )
 

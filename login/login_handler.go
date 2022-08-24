@@ -1,12 +1,12 @@
 package login
 
 import (
+	"github.com/fish-tennis/gentity/util"
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
 	"github.com/fish-tennis/gserver/gen"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
-	"github.com/fish-tennis/gserver/util"
 	"math/rand"
 )
 

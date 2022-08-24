@@ -3,10 +3,10 @@ package login
 import (
 	"context"
 	"encoding/json"
+	"github.com/fish-tennis/gentity"
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
 	"github.com/fish-tennis/gserver/db"
-	"github.com/fish-tennis/gserver/db/mongodb"
 	. "github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
@@ -25,7 +25,7 @@ type LoginServer struct {
 	BaseServer
 	config *LoginServerConfig
 	// 账号数据接口
-	accountDb db.EntityDb
+	accountDb gentity.EntityDb
 }
 
 // 登录服配置
@@ -34,7 +34,7 @@ type LoginServerConfig struct {
 }
 
 // 账号db接口
-func (this *LoginServer) GetAccountDb() db.EntityDb {
+func (this *LoginServer) GetAccountDb() gentity.EntityDb {
 	return this.accountDb
 }
 
@@ -74,7 +74,7 @@ func (this *LoginServer) Exit() {
 	this.BaseServer.Exit()
 	logger.Info("LoginServer.Exit")
 	if db.GetDbMgr() != nil {
-		db.GetDbMgr().(*mongodb.MongoDb).Disconnect()
+		db.GetDbMgr().(*gentity.MongoDb).Disconnect()
 	}
 }
 
@@ -98,7 +98,7 @@ func (this *LoginServer) readConfig() {
 // 初始化数据库
 func (this *LoginServer) initDb() {
 	// 使用mongodb来演示
-	mongoDb := mongodb.NewMongoDb(this.config.MongoUri,"testdb")
+	mongoDb := gentity.NewMongoDb(this.config.MongoUri,"testdb")
 	this.accountDb = mongoDb.RegisterEntityDb("account","id", "name")
 	if !mongoDb.Connect() {
 		panic("connect db error")

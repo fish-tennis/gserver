@@ -2,16 +2,16 @@ package social
 
 import (
 	"context"
+	"github.com/fish-tennis/gentity/util"
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
 	"github.com/fish-tennis/gserver/db"
-	"github.com/fish-tennis/gserver/db/mongodb"
 	"github.com/fish-tennis/gserver/gameplayer"
 	"github.com/fish-tennis/gserver/gen"
 	. "github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
-	"github.com/fish-tennis/gserver/util"
+	"github.com/fish-tennis/gentity"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"google.golang.org/protobuf/types/known/anypb"
@@ -64,7 +64,7 @@ func LoadGuild(guildId int64) *Guild {
 }
 
 // 公会db接口
-func GetGuildDb() db.EntityDb {
+func GetGuildDb() gentity.EntityDb {
 	return db.GetDbMgr().GetEntityDb("guild")
 }
 
@@ -179,7 +179,7 @@ func GuildRouteReqPacket(player *gameplayer.Player, guildId int64, packet *Proto
 // 实际项目也可以把列表数据加载到服务器中缓存起来,直接从内存中查询
 func OnGuildListReq(player *gameplayer.Player, req *pb.GuildListReq) {
 	logger.Debug("OnGuildListReq")
-	col := GetGuildDb().(*mongodb.MongoCollection).GetCollection()
+	col := GetGuildDb().(*gentity.MongoCollection).GetCollection()
 	pageSize := int64(10)
 	count, err := col.CountDocuments(context.Background(), bson.D{}, nil)
 	if err != nil {

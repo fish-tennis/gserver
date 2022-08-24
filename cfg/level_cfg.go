@@ -2,8 +2,8 @@ package cfg
 
 import (
 	"encoding/csv"
+	"github.com/fish-tennis/gentity/util"
 	"github.com/fish-tennis/gserver/logger"
-	"github.com/fish-tennis/gserver/util"
 	"os"
 )
 

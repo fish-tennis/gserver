@@ -1,6 +1,8 @@
 package game
 
 import (
+	"github.com/fish-tennis/gentity"
+	"github.com/fish-tennis/gentity/util"
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
 	"github.com/fish-tennis/gserver/db"
@@ -9,7 +11,6 @@ import (
 	. "github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
-	"github.com/fish-tennis/gserver/util"
 )
 
 // 玩家进游戏服的请求
@@ -156,7 +157,7 @@ func onCreatePlayerReq(connection Connection, packet *ProtoPacket) {
 	newPlayerSaveData["name"] = playerData.Name
 	newPlayerSaveData["accountid"] = playerData.AccountId
 	newPlayerSaveData["regionid"] = playerData.RegionId
-	GetEntitySaveData(newPlayer, newPlayerSaveData)
+	gentity.GetEntitySaveData(newPlayer, newPlayerSaveData)
 	err, isDuplicateKey := db.GetPlayerDb().InsertEntity(playerData.Id, newPlayerSaveData)
 	if err != nil {
 		result := "DbError"

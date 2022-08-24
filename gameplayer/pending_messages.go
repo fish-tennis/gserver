@@ -6,7 +6,7 @@ import (
 	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
-	"github.com/fish-tennis/gserver/util"
+	"github.com/fish-tennis/gentity/util"
 )
 
 // 待处理消息

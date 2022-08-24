@@ -2,21 +2,23 @@ package social
 
 import (
 	"context"
+	"github.com/fish-tennis/gentity/util"
 	. "github.com/fish-tennis/gnet"
+	"github.com/fish-tennis/gserver/cache"
 	"github.com/fish-tennis/gserver/gameplayer"
 	. "github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
-	"github.com/fish-tennis/gserver/util"
+	"github.com/fish-tennis/gentity"
 	"google.golang.org/protobuf/proto"
 	"sync"
 )
 
-var _ Entity = (*Guild)(nil)
+var _ gentity.Entity = (*Guild)(nil)
 
 // 公会
 type Guild struct {
-	BaseEntity
+	gentity.BaseEntity
 	messages chan *GuildMessage
 	stopChan chan struct{}
 	stopOnce sync.Once
@@ -94,7 +96,7 @@ func (this *Guild) RunProcessRoutine() bool {
 				//this.SaveCache()
 				// 这里演示一种直接保存数据库的用法,可以用于那些不经常修改的数据
 				// 这种方式,省去了要处理crash后从缓存恢复数据的步骤
-				SaveEntityChangedDataToDb(GetGuildDb(), this, false)
+				gentity.SaveEntityChangedDataToDb(GetGuildDb(), this, cache.Get(), false)
 			}
 		}
 
@@ -108,7 +110,7 @@ func (this *Guild) RunProcessRoutine() bool {
 				return
 			}
 			this.processMessage(message)
-			SaveEntityChangedDataToDb(GetGuildDb(), this, false)
+			gentity.SaveEntityChangedDataToDb(GetGuildDb(), this, cache.Get(), false)
 		}
 	}(GetServer().GetContext())
 	return true

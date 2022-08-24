@@ -2,13 +2,13 @@ package gameplayer
 
 import (
 	"fmt"
+	"github.com/fish-tennis/gentity"
 	. "github.com/fish-tennis/gnet"
-	"github.com/fish-tennis/gserver/util"
+	"github.com/fish-tennis/gentity/util"
 	"google.golang.org/protobuf/proto"
 	"reflect"
 	"strings"
 	"github.com/fish-tennis/gserver/logger"
-	. "github.com/fish-tennis/gserver/internal"
 )
 
 type PlayerPacketHandler func(player Player, connection Connection, packet *ProtoPacket)
@@ -19,7 +19,7 @@ type PlayerComponentPacketHandler func(component PlayerComponent, connection Con
 type playerComponentHandlerInfo struct {
 	componentName string
 	method        reflect.Method
-	handler       func(c Component, m proto.Message)
+	handler       func(c gentity.Component, m proto.Message)
 }
 
 var _playerComponentHandlerInfos = make(map[PacketCommand]*playerComponentHandlerInfo)
@@ -91,7 +91,7 @@ func AutoRegisterPlayerComponentProto(packetHandlerRegister PacketHandlerRegiste
 }
 
 // 用于proto_code_gen工具自动生成的消息注册代码
-func RegisterPlayerProtoCodeGen(packetHandlerRegister PacketHandlerRegister, componentName string, cmd PacketCommand, protoMessage proto.Message, handler func(c Component, m proto.Message)) {
+func RegisterPlayerProtoCodeGen(packetHandlerRegister PacketHandlerRegister, componentName string, cmd PacketCommand, protoMessage proto.Message, handler func(c gentity.Component, m proto.Message)) {
 	_playerComponentHandlerInfos[cmd] = &playerComponentHandlerInfo{
 		componentName: componentName,
 		handler: handler,

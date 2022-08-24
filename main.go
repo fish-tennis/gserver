@@ -5,6 +5,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/game"
 	"github.com/fish-tennis/gserver/internal"
@@ -42,6 +43,7 @@ func main() {
 
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	gnet.SetLogLevel(gnet.DebugLevel)
+	gentity.SetLogger(gnet.GetLogger())
 	rand.Seed(time.Now().UnixNano())
 
 	// 根据命令行参数 创建不同的服务器实例

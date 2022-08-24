@@ -2,6 +2,8 @@ package gameplayer
 
 import (
 	"context"
+	"github.com/fish-tennis/gentity"
+	"github.com/fish-tennis/gserver/cache"
 	"reflect"
 	"sync"
 
@@ -13,11 +15,11 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-var _ Entity = (*Player)(nil)
+var _ gentity.Entity = (*Player)(nil)
 
 // 玩家对象
 type Player struct {
-	BaseEntity
+	gentity.BaseEntity
 	// 玩家唯一id
 	id int64
 	// 玩家名(unique)
@@ -34,7 +36,7 @@ type Player struct {
 	stopChan chan struct{}
 	stopOnce sync.Once
 	// 倒计时管理
-	timerEntries *TimerEntries
+	timerEntries *gentity.TimerEntries
 }
 
 // 玩家唯一id
@@ -58,7 +60,7 @@ func (this *Player) GetRegionId() int32 {
 }
 
 // 获取组件
-func (this *Player) GetComponent(componentName string) Component {
+func (this *Player) GetComponent(componentName string) gentity.Component {
 	index := GetComponentIndex(componentName)
 	if index >= 0 {
 		return this.GetComponentByIndex(index)
@@ -68,7 +70,7 @@ func (this *Player) GetComponent(componentName string) Component {
 
 // 玩家数据保存数据库
 func (this *Player) SaveDb(removeCacheAfterSaveDb bool) error {
-	return SaveEntityChangedDataToDb(db.GetPlayerDb(), this, removeCacheAfterSaveDb)
+	return gentity.SaveEntityChangedDataToDb(db.GetPlayerDb(), this, cache.Get(), removeCacheAfterSaveDb)
 }
 
 // 设置关联的连接
@@ -108,8 +110,8 @@ func (this *Player) SendErrorRes(errorReqCmd PacketCommand, errorMsg string) boo
 func (this *Player) FireEvent(event interface{}) {
 	logger.Debug("%v FireEvent:%v", this.GetId(), event)
 	// TODO:建一个事件类型和组件的映射表 eventType -> component list
-	this.RangeComponent(func(component Component) bool {
-		if eventReceiver, ok := component.(EventReceiver); ok {
+	this.RangeComponent(func(component gentity.Component) bool {
+		if eventReceiver, ok := component.(gentity.EventReceiver); ok {
 			eventReceiver.OnEvent(event)
 		}
 		return true
@@ -139,7 +141,7 @@ func (this *Player) GetGuild() *Guild {
 	return this.GetComponent("Guild").(*Guild)
 }
 
-func (this *Player) GetTimerEntries() *TimerEntries {
+func (this *Player) GetTimerEntries() *gentity.TimerEntries {
 	return this.timerEntries
 }
 
@@ -180,7 +182,7 @@ func (this *Player) RunProcessRoutine() bool {
 				// 计时器的回调在玩家协程里执行,所以是协程安全的
 				if this.timerEntries.Run(timeNow) {
 					// 如果有需要保存的数据修改了,即时保存数据库
-					this.SaveCache()
+					this.SaveCache(cache.Get())
 				}
 			}
 		}
@@ -223,7 +225,7 @@ func (this *Player) processMessage(message *ProtoPacket) {
 					reflect.ValueOf(message.Message())})
 			}
 			// 如果有需要保存的数据修改了,即时保存缓存
-			this.SaveCache()
+			this.SaveCache(cache.Get())
 			return
 		}
 	}
@@ -232,7 +234,7 @@ func (this *Player) processMessage(message *ProtoPacket) {
 	if packetHandler != nil {
 		packetHandler(this.GetConnection(), message)
 		// 如果有需要保存的数据修改了,即时保存缓存
-		this.SaveCache()
+		this.SaveCache(cache.Get())
 		return
 	}
 	logger.Error("unhandle message:%v", message.Command())
@@ -260,7 +262,7 @@ func CreatePlayerFromData(playerData *pb.PlayerData) *Player {
 		regionId:     playerData.RegionId,
 		messages:     make(chan *ProtoPacket, 8),
 		stopChan:     make(chan struct{}, 1),
-		timerEntries: NewTimerEntries(),
+		timerEntries: gentity.NewTimerEntries(),
 	}
 	// 初始化玩家的各个模块
 	player.AddComponent(NewBaseInfo(player, playerData.BaseInfo), nil)

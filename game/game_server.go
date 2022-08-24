@@ -3,6 +3,7 @@ package game
 import (
 	"context"
 	"encoding/json"
+	"github.com/fish-tennis/gentity"
 	"os"
 	"reflect"
 	"sync"
@@ -12,7 +13,6 @@ import (
 	"github.com/fish-tennis/gserver/cache"
 	"github.com/fish-tennis/gserver/cfg"
 	"github.com/fish-tennis/gserver/db"
-	"github.com/fish-tennis/gserver/db/mongodb"
 	"github.com/fish-tennis/gserver/gameplayer"
 	. "github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
@@ -111,7 +111,7 @@ func (this *GameServer) Exit() {
 	logger.Info("GameServer.Exit")
 	dbMgr := db.GetDbMgr()
 	if dbMgr != nil {
-		dbMgr.(*mongodb.MongoDb).Disconnect()
+		dbMgr.(*gentity.MongoDb).Disconnect()
 	}
 }
 
@@ -144,7 +144,7 @@ func (this *GameServer) loadCfgs() {
 // 初始化数据库
 func (this *GameServer) initDb() {
 	// 使用mongodb来演示
-	mongoDb := mongodb.NewMongoDb(this.config.MongoUri, "testdb")
+	mongoDb := gentity.NewMongoDb(this.config.MongoUri, "testdb")
 	mongoDb.RegisterPlayerPb("player", "id", "name", "accountid", "regionid")
 	mongoDb.RegisterEntityDb("guild", "id", "name")
 	//mongoDb.SetAccountColumnNames("accountid","")
@@ -181,13 +181,13 @@ func (this *GameServer) repairPlayerCache(playerId, accountId int64) error {
 	}()
 	tmpPlayer := gameplayer.CreateTempPlayer(playerId, accountId)
 	for _, component := range tmpPlayer.GetComponents() {
-		structCache := GetSaveableStruct(reflect.TypeOf(component))
+		structCache := gentity.GetSaveableStruct(reflect.TypeOf(component))
 		if structCache == nil {
 			continue
 		}
 		if structCache.IsSingleField() {
-			cacheKey := GetPlayerComponentCacheKey(playerId, component.GetName())
-			hasCache, err := LoadFromCache(component, cacheKey)
+			cacheKey := gentity.GetPlayerComponentCacheKey(playerId, component.GetName())
+			hasCache, err := gentity.LoadFromCache(component, cache.Get(), cacheKey)
 			if !hasCache {
 				continue
 			}
@@ -195,7 +195,7 @@ func (this *GameServer) repairPlayerCache(playerId, accountId int64) error {
 				logger.Error("LoadFromCache %v error:%v", cacheKey, err.Error())
 				continue
 			}
-			saveData, err := GetComponentSaveData(component)
+			saveData, err := gentity.GetComponentSaveData(component)
 			if err != nil {
 				logger.Error("%v Save %v err %v", playerId, component.GetName(), err.Error())
 				continue
@@ -222,8 +222,8 @@ func (this *GameServer) repairPlayerCache(playerId, accountId int64) error {
 					logger.Debug("new %v", fieldCache.Name)
 				}
 				fieldInterface := val.Interface()
-				cacheKey := GetPlayerComponentChildCacheKey(playerId, component.GetName(), fieldCache.Name)
-				hasCache, err := LoadFromCache(fieldInterface, cacheKey)
+				cacheKey := gentity.GetPlayerComponentChildCacheKey(playerId, component.GetName(), fieldCache.Name)
+				hasCache, err := gentity.LoadFromCache(fieldInterface, cache.Get(), cacheKey)
 				if !hasCache {
 					continue
 				}
@@ -232,7 +232,7 @@ func (this *GameServer) repairPlayerCache(playerId, accountId int64) error {
 					continue
 				}
 				logger.Debug("%v", fieldInterface)
-				saveData, err := GetSaveData(fieldInterface, component.GetNameLower())
+				saveData, err := gentity.GetSaveData(fieldInterface, component.GetNameLower())
 				if err != nil {
 					logger.Error("%v Save %v.%v err %v", playerId, component.GetName(), fieldCache.Name, err.Error())
 					continue

@@ -1,13 +1,14 @@
 package gameplayer
 
 import (
+	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cfg"
 	"github.com/fish-tennis/gserver/gen"
 	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
-	"github.com/fish-tennis/gserver/util"
+	"github.com/fish-tennis/gentity/util"
 )
 
 // 任务模块
@@ -23,7 +24,7 @@ type Quest struct {
 
 // 已完成的任务
 type FinishedQuests struct {
-	internal.BaseDirtyMark
+	gentity.BaseDirtyMark
 	quest *Quest
 	// struct tag里面没有设置保存字段名,会默认使用字段名的全小写形式
 	Finished []int32 `db:"plain"` // 基础类型,设置明文存储
@@ -40,7 +41,7 @@ func (f *FinishedQuests) Add(finishedQuestId int32) {
 
 // 当前任务列表
 type CurQuests struct {
-	internal.BaseMapDirtyMark
+	gentity.BaseMapDirtyMark
 	quest  *Quest
 	// struct tag里面没有设置保存字段名,会默认使用字段名的全小写形式
 	Quests map[int32]*pb.QuestData `db:""`

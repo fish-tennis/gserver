@@ -1,9 +1,9 @@
 package gameplayer
 
 import (
+	"github.com/fish-tennis/gentity/util"
 	"github.com/fish-tennis/gserver/cfg"
 	"github.com/fish-tennis/gserver/pb"
-	"github.com/fish-tennis/gserver/util"
 )
 
 // 背包模块

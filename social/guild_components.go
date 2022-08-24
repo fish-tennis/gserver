@@ -1,21 +1,21 @@
 package social
 
 import (
-	. "github.com/fish-tennis/gserver/internal"
+	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 )
 
-var _ SaveableDirtyMark = (*GuildBaseInfo)(nil)
+var _ gentity.SaveableDirtyMark = (*GuildBaseInfo)(nil)
 // 公会基础信息
 type GuildBaseInfo struct {
-	DataComponent
+	gentity.DataComponent
 	Data *pb.GuildInfo `db:"baseinfo;plain"`
 }
 
-func NewGuildBaseInfo(entity Entity, data *pb.GuildInfo) *GuildBaseInfo {
+func NewGuildBaseInfo(entity gentity.Entity, data *pb.GuildInfo) *GuildBaseInfo {
 	c := &GuildBaseInfo{
-		DataComponent: *NewDataComponent(entity,"BaseInfo"),
+		DataComponent: *gentity.NewDataComponent(entity,"BaseInfo"),
 		Data:          data,
 	}
 	if c.Data == nil {
@@ -31,13 +31,13 @@ func (g *GuildBaseInfo) SetMemberCount(memberCount int32) {
 
 // 公会成员数据
 type GuildMembers struct {
-	MapDataComponent
+	gentity.MapDataComponent
 	Data map[int64]*pb.GuildMemberData `db:"members;plain"`
 }
 
-func NewGuildMembers(entity Entity, data map[int64]*pb.GuildMemberData) *GuildMembers {
+func NewGuildMembers(entity gentity.Entity, data map[int64]*pb.GuildMemberData) *GuildMembers {
 	c := &GuildMembers{
-		MapDataComponent: *NewMapDataComponent(entity,"Members"),
+		MapDataComponent: *gentity.NewMapDataComponent(entity,"Members"),
 		Data:             data,
 	}
 	if c.Data == nil {
@@ -65,13 +65,13 @@ func (g *GuildMembers) Remove(playerId int64) {
 
 // 公会加入请求
 type GuildJoinRequests struct {
-	MapDataComponent
+	gentity.MapDataComponent
 	Data map[int64]*pb.GuildJoinRequest `db:"joinrequests"`
 }
 
-func NewGuildJoinRequests(entity Entity) *GuildJoinRequests {
+func NewGuildJoinRequests(entity gentity.Entity) *GuildJoinRequests {
 	c := &GuildJoinRequests{
-		MapDataComponent: *NewMapDataComponent(entity,"JoinRequests"),
+		MapDataComponent: *gentity.NewMapDataComponent(entity,"JoinRequests"),
 		Data:             make(map[int64]*pb.GuildJoinRequest),
 	}
 	return c

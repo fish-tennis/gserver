@@ -1,14 +1,14 @@
 package gameplayer
 
 import (
-	"github.com/fish-tennis/gserver/internal"
+	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 )
 
 // 不可叠加的物品背包
 type BagUniqueItem struct {
-	internal.BaseMapDirtyMark
+	gentity.BaseMapDirtyMark
 	Items map[int64]*pb.UniqueItem `db:"UniqueItem"`
 }
 

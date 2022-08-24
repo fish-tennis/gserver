@@ -3,12 +3,12 @@ package game
 import (
 	"strings"
 
+	"github.com/fish-tennis/gentity/util"
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cfg"
 	"github.com/fish-tennis/gserver/gameplayer"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
-	"github.com/fish-tennis/gserver/util"
 )
 
 // 客户端字符串形式的测试命令,仅用于测试环境!

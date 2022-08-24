@@ -1,7 +1,7 @@
 package gameplayer
 
 import (
-	"github.com/fish-tennis/gserver/internal"
+	"github.com/fish-tennis/gentity"
 	"reflect"
 )
 
@@ -17,7 +17,7 @@ func InitPlayerComponentMap() {
 	player := CreateTempPlayer(0,0)
 	for idx,component := range player.GetComponents() {
 		_playerComponentNameMap[component.GetName()] = idx
-		internal.GetSaveableStruct(reflect.TypeOf(component))
+		gentity.GetSaveableStruct(reflect.TypeOf(component))
 	}
 }
 

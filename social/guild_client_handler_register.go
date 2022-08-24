@@ -1,11 +1,12 @@
 package social
 
 import (
+	"github.com/fish-tennis/gentity/util"
 	. "github.com/fish-tennis/gnet"
+	"github.com/fish-tennis/gserver/cache"
 	"github.com/fish-tennis/gserver/gameplayer"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
-	"github.com/fish-tennis/gserver/util"
 	"google.golang.org/protobuf/proto"
 	"reflect"
 )
@@ -17,7 +18,7 @@ func GuildClientHandlerRegister(handler PacketHandlerRegister, playerMgr gamepla
 			player := playerMgr.GetPlayer(connection.GetTag().(int64))
 			if player != nil {
 				OnGuildListReq(player, packet.Message().(*pb.GuildListReq))
-				player.SaveCache()
+				player.SaveCache(cache.Get())
 			}
 		}
 	}, new(pb.GuildListReq))
@@ -27,7 +28,7 @@ func GuildClientHandlerRegister(handler PacketHandlerRegister, playerMgr gamepla
 			player := playerMgr.GetPlayer(connection.GetTag().(int64))
 			if player != nil {
 				OnGuildCreateReq(player, packet.Message().(*pb.GuildCreateReq))
-				player.SaveCache()
+				player.SaveCache(cache.Get())
 			}
 		}
 	}, new(pb.GuildCreateReq))

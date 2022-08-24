@@ -2,10 +2,10 @@ package gameplayer
 
 import (
 	"fmt"
+	"github.com/fish-tennis/gentity"
+	"github.com/fish-tennis/gentity/util"
 	"github.com/fish-tennis/gserver/cfg"
-	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/pb"
-	"github.com/fish-tennis/gserver/util"
 	"testing"
 )
 
@@ -18,7 +18,7 @@ func TestSaveable(t *testing.T) {
 	// 明文保存的proto
 	baseInfo := player.GetComponentByName("BaseInfo").(*BaseInfo)
 	baseInfo.IncExp(1001)
-	saveData,err := internal.GetComponentSaveData(baseInfo)
+	saveData,err := gentity.GetComponentSaveData(baseInfo)
 	if err != nil {
 		t.Error(err)
 	}
@@ -28,7 +28,7 @@ func TestSaveable(t *testing.T) {
 	money := player.GetComponentByName("Money").(*Money)
 	money.IncCoin(10)
 	money.IncDiamond(100)
-	saveData,err = internal.GetComponentSaveData(money)
+	saveData,err = gentity.GetComponentSaveData(money)
 	if err != nil {
 		t.Error(err)
 	}
@@ -39,7 +39,7 @@ func TestSaveable(t *testing.T) {
 	for i := 0; i < 3; i++ {
 		bag.AddItem(int32(i+1), int32((i+1)*10))
 	}
-	saveData,err = internal.GetComponentSaveData(bag)
+	saveData,err = gentity.GetComponentSaveData(bag)
 	if err != nil {
 		t.Error(err)
 	}
@@ -57,7 +57,7 @@ func TestSaveable(t *testing.T) {
 	})
 	quest.Finished.Add(3)
 	quest.Finished.Add(4)
-	saveData,err = internal.GetComponentSaveData(quest)
+	saveData,err = gentity.GetComponentSaveData(quest)
 	if err != nil {
 		t.Error(err)
 	}

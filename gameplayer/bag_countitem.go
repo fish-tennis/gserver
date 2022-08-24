@@ -1,14 +1,14 @@
 package gameplayer
 
 import (
-	"github.com/fish-tennis/gserver/internal"
+	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gserver/logger"
 	"math"
 )
 
 // 有数量的物品背包
 type BagCountItem struct {
-	internal.BaseMapDirtyMark
+	gentity.BaseMapDirtyMark
 	Items map[int32]int32 `db:"CountItem;plain"`
 }
 

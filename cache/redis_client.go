@@ -1,16 +1,19 @@
 package cache
 
-import "github.com/go-redis/redis/v8"
+import (
+	"github.com/fish-tennis/gentity"
+	"github.com/go-redis/redis/v8"
+)
 
 var (
 	// singleton
 	// redis.Cmdable兼容集群模式和单机模式
 	_redisClient redis.Cmdable
-	_redisCache KvCache
+	_redisCache gentity.KvCache
 )
 
 // 提供KvCache接口,便于更换不同的缓存系统
-func Get() KvCache {
+func Get() gentity.KvCache {
 	return _redisCache
 }
 
@@ -27,7 +30,7 @@ func NewRedis(addrs []string, password string, isCluster bool) redis.Cmdable {
 	} else {
 		redisCmdable = NewRedisSingleClient(addrs[0], password)
 	}
-	_redisCache = NewRedisCache(redisCmdable)
+	_redisCache = gentity.NewRedisCache(redisCmdable)
 	return redisCmdable
 }
 

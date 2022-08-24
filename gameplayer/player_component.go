@@ -1,14 +1,13 @@
 package gameplayer
 
 import (
+	"github.com/fish-tennis/gentity"
 	"strings"
-
-	. "github.com/fish-tennis/gserver/internal"
 )
 
 // 玩家组件接口
 type PlayerComponent interface {
-	Component
+	gentity.Component
 	// 关联的玩家对象
 	GetPlayer() *Player
 }
@@ -29,11 +28,11 @@ func (this *BasePlayerComponent) GetNameLower() string {
 	return strings.ToLower(this.name)
 }
 
-func (this *BasePlayerComponent) GetEntity() Entity {
+func (this *BasePlayerComponent) GetEntity() gentity.Entity {
 	return this.player
 }
 
-func (this *BasePlayerComponent) SetEntity(entity Entity) {
+func (this *BasePlayerComponent) SetEntity(entity gentity.Entity) {
 	if v,ok := entity.(*Player); ok {
 		this.player = v
 	}
@@ -54,7 +53,7 @@ func (this *BasePlayerComponent) GetPlayerId() int64 {
 
 // 组件缓存key
 func (this *BasePlayerComponent) GetCacheKey() string {
-	return GetPlayerComponentCacheKey(this.GetPlayerId(), this.GetName())
+	return gentity.GetPlayerComponentCacheKey(this.GetPlayerId(), this.GetName())
 }
 
 
@@ -62,7 +61,7 @@ func (this *BasePlayerComponent) GetCacheKey() string {
 // 当保存数据的任何一个字段更新时,作为一个整体进行缓存更新
 type PlayerDataComponent struct {
 	BasePlayerComponent
-	BaseDirtyMark
+	gentity.BaseDirtyMark
 }
 
 func NewPlayerDataComponent(player *Player, componentName string) *PlayerDataComponent {
@@ -79,7 +78,7 @@ func NewPlayerDataComponent(player *Player, componentName string) *PlayerDataCom
 // 当对map的某一项增删改时,只对那一项进行缓存更新
 type PlayerMapDataComponent struct {
 	BasePlayerComponent
-	BaseMapDirtyMark
+	gentity.BaseMapDirtyMark
 }
 
 func NewPlayerMapDataComponent(player *Player, componentName string) *PlayerMapDataComponent {
