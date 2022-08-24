@@ -20,7 +20,8 @@ message RoutePlayerMessage {
   int64 toPlayerId = 1; // 玩家id
   int32 packetCommand = 2; // 消息号
   bool directSendClient = 3; // 是否直接转发给客户端
-  google.protobuf.Any packetData = 4; // 转发的消息
+  int64 messageId = 4; // 消息id
+  google.protobuf.Any packetData = 5; // 转发的消息
 }
 
 // 路由转发玩家的公会请求消息

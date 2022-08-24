@@ -23,6 +23,8 @@ type EntityDb interface {
 	// 保存1个组件的一个字段(update entity's component.field)
 	SaveComponentField(entityId int64, componentName string, fieldName string, fieldData interface{}) error
 
+	// 删除1个组件的某些字段
+	DeleteComponentField(entityId int64, componentName string, fieldName... string) error
 	// TODO:需要一个有容量限制的列表接口,用于邮件或者离线操作之类的接口
 }
 

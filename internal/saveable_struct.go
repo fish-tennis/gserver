@@ -97,6 +97,10 @@ func GetSaveableStruct(reflectType reflect.Type) *SaveableStruct {
 		if util.HasString(dbSettings, "plain") {
 			isPlain = true
 		}
+		if ([]byte(fieldStruct.Name))[0] != ([]byte(strings.ToUpper(fieldStruct.Name)))[0] {
+			logger.Error("%v.%v field must export(start with upper char)", reflectType.Name(), fieldStruct.Name)
+			continue
+		}
 		// 默认使用字段名的全小写
 		name := strings.ToLower(fieldStruct.Name)
 		for _,n := range dbSettings {
@@ -133,6 +137,10 @@ func GetSaveableStruct(reflectType reflect.Type) *SaveableStruct {
 		// db字段和child字段不共存
 		if structCahce.Field != nil {
 			logger.Error("%v already have db field,%v cant work", reflectType.Name(), fieldStruct.Name)
+			continue
+		}
+		if ([]byte(fieldStruct.Name))[0] != ([]byte(strings.ToUpper(fieldStruct.Name)))[0] {
+			logger.Error("%v.%v field must export(start with upper char)", reflectType.Name(), fieldStruct.Name)
 			continue
 		}
 		// 默认使用字段名的全小写

@@ -9,6 +9,21 @@ import (
 // 参考https://github.com/robfig/cron
 // 与cron主要用于任务计划不同,TimerEntries主要用于倒计时的管理
 // 如果放在玩家的独立协程中使用,则倒计时的回调可以保证协程安全,使玩家的倒计时回调更简单
+//
+// example:
+//
+// go func() {
+//   defer timerEntries.Stop()
+//   timerEntries := NewTimerEntries()
+//   timerEntries.Start()
+//   for {
+//       select {
+//       case timeNow := <-timerEntries.TimerChan():
+//            timerEntries.Run(timeNow)
+//       case ...
+//       }
+//   }
+// }
 type TimerEntries struct {
 	entries []*timerEntry
 	Timer   *time.Timer

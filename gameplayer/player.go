@@ -107,6 +107,7 @@ func (this *Player) SendErrorRes(errorReqCmd PacketCommand, errorMsg string) boo
 // 分发事件给组件
 func (this *Player) FireEvent(event interface{}) {
 	logger.Debug("%v FireEvent:%v", this.GetId(), event)
+	// TODO:建一个事件类型和组件的映射表 eventType -> component list
 	this.RangeComponent(func(component Component) bool {
 		if eventReceiver, ok := component.(EventReceiver); ok {
 			eventReceiver.OnEvent(event)
@@ -267,6 +268,7 @@ func CreatePlayerFromData(playerData *pb.PlayerData) *Player {
 	player.AddComponent(NewBag(player), playerData.Bag)
 	player.AddComponent(NewQuest(player), playerData.Quest)
 	player.AddComponent(NewGuild(player), playerData.Guild)
+	player.AddComponent(NewPendingMessages(player), playerData.PendingMessages)
 	return player
 }
 

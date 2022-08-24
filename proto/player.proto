@@ -2,8 +2,6 @@ syntax = "proto3";
 
 option go_package = "./pb";
 
-import "item.proto";
-
 package gserver;
 
 // 玩家基础信息
@@ -54,4 +52,5 @@ message PlayerData {
   BagSaveData bag = 7;
   QuestSaveData quest = 8;
   bytes guild = 9; // (proto序列化)
+  map<int64,bytes> pendingMessages = 10;
 }

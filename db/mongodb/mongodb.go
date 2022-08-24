@@ -116,6 +116,25 @@ func (this *MongoCollection) SaveComponentField(entityId int64, componentName st
 	return nil
 }
 
+// 删除1个组件的某些字段
+func (this *MongoCollection) DeleteComponentField(entityId int64, componentName string, fieldName ...string) error {
+	if len(fieldName) == 0 {
+		return nil
+	}
+	col := this.mongoDatabase.Collection(this.collectionName)
+	fieldNames := bson.D{}
+	for _, name := range fieldName {
+		fieldNames = append(fieldNames, bson.E{Key: componentName + "." + name})
+	}
+	result, updateErr := col.UpdateOne(context.Background(), bson.D{{this.uniqueId, entityId}},
+		bson.D{{"$unset", fieldNames}})
+	if updateErr != nil {
+		return updateErr
+	}
+	logger.Debug("%v", result)
+	return nil
+}
+
 // db.PlayerDb的mongo实现
 type MongoCollectionPlayer struct {
 	MongoCollection
@@ -145,7 +164,7 @@ func (this *MongoCollectionPlayer) FindPlayerByAccountId(accountId int64, region
 func (this *MongoCollectionPlayer) FindPlayerIdByAccountId(accountId int64, regionId int32) (int64, error) {
 	col := this.mongoDatabase.Collection(this.collectionName)
 	opts := options.FindOne().
-		SetProjection(bson.D{{"id",1}})
+		SetProjection(bson.D{{"id", 1}})
 	result := col.FindOne(context.Background(), bson.D{{this.colAccountId, accountId}, {this.colRegionId, regionId}}, opts)
 	if result == nil || result.Err() == mongo.ErrNoDocuments {
 		return 0, nil
@@ -154,7 +173,7 @@ func (this *MongoCollectionPlayer) FindPlayerIdByAccountId(accountId int64, regi
 	if err != nil {
 		return 0, err
 	}
-	idValue,err := res.LookupErr(this.uniqueId)
+	idValue, err := res.LookupErr(this.uniqueId)
 	if err != nil {
 		return 0, err
 	}
@@ -164,7 +183,7 @@ func (this *MongoCollectionPlayer) FindPlayerIdByAccountId(accountId int64, regi
 func (this *MongoCollectionPlayer) FindAccountIdByPlayerId(playerId int64) (int64, error) {
 	col := this.mongoDatabase.Collection(this.collectionName)
 	opts := options.FindOne().
-		SetProjection(bson.D{{this.colAccountId,1}})
+		SetProjection(bson.D{{this.colAccountId, 1}})
 	result := col.FindOne(context.Background(), bson.D{{this.uniqueId, playerId}}, opts)
 	if result == nil || result.Err() == mongo.ErrNoDocuments {
 		return 0, nil
@@ -173,7 +192,7 @@ func (this *MongoCollectionPlayer) FindAccountIdByPlayerId(playerId int64) (int6
 	if err != nil {
 		return 0, err
 	}
-	idValue,err := res.LookupErr(this.colAccountId)
+	idValue, err := res.LookupErr(this.colAccountId)
 	if err != nil {
 		return 0, err
 	}
@@ -224,7 +243,7 @@ func (this *MongoDb) RegisterPlayerPb(collectionName string, playerId, playerNam
 			uniqueName:     playerName,
 		},
 		colAccountId: accountId,
-		colRegionId:    region,
+		colRegionId:  region,
 	}
 	this.entityDbs[collectionName] = col
 	logger.Info("RegisterPlayerPb %v %v %v", collectionName, playerId, playerName)

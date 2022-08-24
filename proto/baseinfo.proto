@@ -2,8 +2,6 @@ syntax = "proto3";
 
 option go_package = "./pb";
 
-import "player.proto";
-
 package gserver;
 
 // 消息号定义
