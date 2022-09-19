@@ -7,10 +7,10 @@ import (
 	"fmt"
 	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gnet"
-	"github.com/fish-tennis/gserver/game"
+	"github.com/fish-tennis/gserver/gameserver"
 	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
-	"github.com/fish-tennis/gserver/login"
+	"github.com/fish-tennis/gserver/loginserver"
 	"math/rand"
 	"os"
 	"os/exec"
@@ -118,9 +118,9 @@ func getServerTypeFromConfigFile(configFile string) string {
 func createServer(serverType string) internal.Server {
 	switch serverType {
 	case "login":
-		return new(login.LoginServer)
+		return new(loginserver.LoginServer)
 	case "game":
-		return new(game.GameServer)
+		return new(gameserver.GameServer)
 	}
 	panic("err server type")
 }

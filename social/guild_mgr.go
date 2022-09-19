@@ -6,7 +6,7 @@ import (
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
 	"github.com/fish-tennis/gserver/db"
-	"github.com/fish-tennis/gserver/gameplayer"
+	"github.com/fish-tennis/gserver/game"
 	"github.com/fish-tennis/gserver/gen"
 	. "github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
@@ -121,7 +121,7 @@ func deleteGuildServerLock() {
 
 // 根据公会id路由到对应的服务器id
 func GuildRoute(guildId int64) int32 {
-	servers := GetServerList().GetServersByType("game")
+	servers := GetServerList().GetServersByType("gameserver")
 	// 这里只演示了最简单的路由方式
 	// 实际项目可能采用一致性哈希等其他方式
 	index := guildId % int64(len(servers))
@@ -129,7 +129,7 @@ func GuildRoute(guildId int64) int32 {
 }
 
 // 根据公会id路由玩家的请求消息
-func GuildRouteReqPacket(player *gameplayer.Player, guildId int64, packet *ProtoPacket) bool {
+func GuildRouteReqPacket(player *game.Player, guildId int64, packet *ProtoPacket) bool {
 	routeServerId := GuildRoute(guildId)
 	logger.Debug("GuildRouteReqPacket %v -> %v", guildId, routeServerId)
 	if routeServerId <= 0 {
@@ -177,7 +177,7 @@ func GuildRouteReqPacket(player *gameplayer.Player, guildId int64, packet *Proto
 // 公会列表查询
 // 这里演示的直接从数据库查询
 // 实际项目也可以把列表数据加载到服务器中缓存起来,直接从内存中查询
-func OnGuildListReq(player *gameplayer.Player, req *pb.GuildListReq) {
+func OnGuildListReq(player *game.Player, req *pb.GuildListReq) {
 	logger.Debug("OnGuildListReq")
 	col := GetGuildDb().(*gentity.MongoCollection).GetCollection()
 	pageSize := int64(10)
@@ -212,7 +212,7 @@ func OnGuildListReq(player *gameplayer.Player, req *pb.GuildListReq) {
 }
 
 // 创建公会
-func OnGuildCreateReq(player *gameplayer.Player, req *pb.GuildCreateReq) {
+func OnGuildCreateReq(player *game.Player, req *pb.GuildCreateReq) {
 	logger.Debug("OnGuildCreateReq")
 	playerGuild := player.GetGuild()
 	if playerGuild.GetGuildData().GuildId > 0 {

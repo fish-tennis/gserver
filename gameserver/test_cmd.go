@@ -1,18 +1,18 @@
-package game
+package gameserver
 
 import (
+	"github.com/fish-tennis/gserver/game"
 	"strings"
 
 	"github.com/fish-tennis/gentity/util"
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cfg"
-	"github.com/fish-tennis/gserver/gameplayer"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 )
 
 // 客户端字符串形式的测试命令,仅用于测试环境!
-func onTestCmd(player *gameplayer.Player, packet *ProtoPacket) {
+func onTestCmd(player *game.Player, packet *ProtoPacket) {
 	logger.Debug("onTestCmd %v", packet.Message())
 	req := packet.Message().(*pb.TestCmd)
 	cmdStrs := strings.Split(req.GetCmd(), " ")

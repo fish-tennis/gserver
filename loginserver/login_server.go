@@ -1,4 +1,4 @@
-package login
+package loginserver
 
 import (
 	"context"
@@ -58,7 +58,7 @@ func (this *LoginServer) Init(ctx context.Context, configFile string) bool {
 
 	// 连接其他服务器
 	this.BaseServer.SetDefaultServerConnectorConfig(this.config.ServerConnConfig)
-	this.BaseServer.GetServerList().SetFetchAndConnectServerTypes("game")
+	this.BaseServer.GetServerList().SetFetchAndConnectServerTypes("gameserver")
 	logger.Info("LoginServer.Init")
 	return true
 }
@@ -91,7 +91,7 @@ func (this *LoginServer) readConfig() {
 	}
 	logger.Debug("%v", this.config)
 	this.BaseServer.GetServerInfo().ServerId = this.config.ServerId
-	this.BaseServer.GetServerInfo().ServerType = "login"
+	this.BaseServer.GetServerInfo().ServerType = "loginserver"
 	this.BaseServer.GetServerInfo().ClientListenAddr = this.config.ClientListenAddr
 }
 

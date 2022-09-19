@@ -1,4 +1,4 @@
-package gameplayer
+package game
 
 import (
 	. "github.com/fish-tennis/gnet"
@@ -22,7 +22,7 @@ func NewClientConnectionHandler(protoCodec *ProtoCodec) *ClientConnectionHandler
 
 func (this *ClientConnectionHandler) OnRecvPacket(connection Connection, packet Packet) {
 	if connection.GetTag() != nil && packet.Command() != PacketCommand(pb.CmdInner_Cmd_HeartBeatReq) {
-		player := GetPlayerMgr().GetPlayer(connection.GetTag().(int64))
+		player := GetPlayer(connection.GetTag().(int64))
 		if player != nil {
 			// 在线玩家的消息,转到玩家消息处理协程去处理
 			if protoPacket, ok := packet.(*ProtoPacket); ok {

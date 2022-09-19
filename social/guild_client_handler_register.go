@@ -1,24 +1,26 @@
 package social
 
 import (
+	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gentity/util"
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
-	"github.com/fish-tennis/gserver/gameplayer"
+	"github.com/fish-tennis/gserver/game"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 	"google.golang.org/protobuf/proto"
 	"reflect"
 )
 
-func GuildClientHandlerRegister(handler PacketHandlerRegister, playerMgr gameplayer.PlayerMgr) {
+func GuildClientHandlerRegister(handler PacketHandlerRegister, playerMgr gentity.PlayerMgr) {
 	logger.Debug("GuildClientHandlerRegister")
 	handler.Register(PacketCommand(pb.CmdGuild_Cmd_GuildListReq), func(connection Connection, packet *ProtoPacket) {
 		if connection.GetTag() != nil {
 			player := playerMgr.GetPlayer(connection.GetTag().(int64))
 			if player != nil {
-				OnGuildListReq(player, packet.Message().(*pb.GuildListReq))
-				player.SaveCache(cache.Get())
+				gamePlayer := player.(*game.Player)
+				OnGuildListReq(gamePlayer, packet.Message().(*pb.GuildListReq))
+				gamePlayer.SaveCache(cache.Get())
 			}
 		}
 	}, new(pb.GuildListReq))
@@ -27,8 +29,9 @@ func GuildClientHandlerRegister(handler PacketHandlerRegister, playerMgr gamepla
 		if connection.GetTag() != nil {
 			player := playerMgr.GetPlayer(connection.GetTag().(int64))
 			if player != nil {
-				OnGuildCreateReq(player, packet.Message().(*pb.GuildCreateReq))
-				player.SaveCache(cache.Get())
+				gamePlayer := player.(*game.Player)
+				OnGuildCreateReq(gamePlayer, packet.Message().(*pb.GuildCreateReq))
+				gamePlayer.SaveCache(cache.Get())
 			}
 		}
 	}, new(pb.GuildCreateReq))
@@ -37,12 +40,13 @@ func GuildClientHandlerRegister(handler PacketHandlerRegister, playerMgr gamepla
 		if connection.GetTag() != nil {
 			player := playerMgr.GetPlayer(connection.GetTag().(int64))
 			if player != nil {
-				if player.GetGuild().GetGuildData().GuildId > 0 {
-					logger.Error("CantJoinGuild %v", player.GetId())
+				gamePlayer := player.(*game.Player)
+				if gamePlayer.GetGuild().GetGuildData().GuildId > 0 {
+					logger.Error("CantJoinGuild %v", gamePlayer.GetId())
 					return
 				}
 				req := packet.Message().(*pb.GuildJoinReq)
-				GuildRouteReqPacket(player, req.Id, packet)
+				GuildRouteReqPacket(gamePlayer, req.Id, packet)
 			}
 		}
 	}, new(pb.GuildJoinReq))
@@ -52,19 +56,20 @@ func GuildClientHandlerRegister(handler PacketHandlerRegister, playerMgr gamepla
 }
 
 // 注册玩家公会消息回调
-func RegisterPlayerGuildHandler(handler PacketHandlerRegister, playerMgr gameplayer.PlayerMgr, message proto.Message) {
+func RegisterPlayerGuildHandler(handler PacketHandlerRegister, playerMgr gentity.PlayerMgr, message proto.Message) {
 	messageName := message.ProtoReflect().Descriptor().Name()
 	cmd := util.GetMessageIdByComponentMessageName("gserver", "Guild", string(messageName))
 	handler.Register(PacketCommand(uint16(cmd)), func(connection Connection, packet *ProtoPacket) {
 		if connection.GetTag() != nil {
 			player := playerMgr.GetPlayer(connection.GetTag().(int64))
 			if player != nil {
-				guildId := player.GetGuild().GetGuildData().GuildId
+				gamePlayer := player.(*game.Player)
+				guildId := gamePlayer.GetGuild().GetGuildData().GuildId
 				if guildId == 0 {
-					logger.Error("no guild %v", player.GetId())
+					logger.Error("no guild %v", gamePlayer.GetId())
 					return
 				}
-				GuildRouteReqPacket(player, guildId, packet)
+				GuildRouteReqPacket(gamePlayer, guildId, packet)
 			}
 		}
 	}, reflect.New(reflect.TypeOf(message).Elem()).Interface().(proto.Message))

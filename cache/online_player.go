@@ -13,7 +13,7 @@ func keyOnlinePlayer(playerId int64) string {
 }
 
 func keyGameServerPlayer(gameServerId int32) string {
-	return fmt.Sprintf("gameplayer:%v", gameServerId)
+	return fmt.Sprintf("game:%v", gameServerId)
 }
 
 // 添加一个在线玩家

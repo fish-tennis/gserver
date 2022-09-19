@@ -1,9 +1,11 @@
-package game
+package gameserver
 
 import (
 	"context"
 	"encoding/json"
 	"github.com/fish-tennis/gentity"
+	"github.com/fish-tennis/gserver/game"
+	"github.com/fish-tennis/gserver/social"
 	"os"
 	"sync"
 	"time"
@@ -12,12 +14,10 @@ import (
 	"github.com/fish-tennis/gserver/cache"
 	"github.com/fish-tennis/gserver/cfg"
 	"github.com/fish-tennis/gserver/db"
-	"github.com/fish-tennis/gserver/gameplayer"
 	. "github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/misc"
 	"github.com/fish-tennis/gserver/pb"
-	"github.com/fish-tennis/gserver/social"
 )
 
 var (
@@ -41,20 +41,20 @@ type GameServerConfig struct {
 
 // 初始化
 func (this *GameServer) Init(ctx context.Context, configFile string) bool {
-	gameplayer.SetPlayerMgr(this)
+	game.SetPlayerMgr(this)
 	if !this.BaseServer.Init(ctx, configFile) {
 		return false
 	}
 	this.readConfig()
 	this.loadCfgs()
-	gameplayer.InitPlayerComponentMap()
+	game.InitPlayerComponentMap()
 	this.initDb()
 	this.initCache()
 
 	netMgr := GetNetMgr()
 	// 客户端的codec和handler
 	clientCodec := NewProtoCodec(nil)
-	clientHandler := gameplayer.NewClientConnectionHandler(clientCodec)
+	clientHandler := game.NewClientConnectionHandler(clientCodec)
 	this.registerClientPacket(clientHandler)
 
 	// 服务器的codec和handler
@@ -77,14 +77,14 @@ func (this *GameServer) Init(ctx context.Context, configFile string) bool {
 
 	// 连接其他服务器
 	this.BaseServer.SetDefaultServerConnectorConfig(this.config.ServerConnConfig)
-	this.BaseServer.GetServerList().SetFetchAndConnectServerTypes("game")
+	this.BaseServer.GetServerList().SetFetchAndConnectServerTypes("gameserver")
 
 	// 其他模块初始化
 	this.AddServerHook(&social.Hook{})
 	serverInitArg := &misc.GameServerInitArg{
 		ClientHandler: clientHandler,
 		ServerHandler: serverHandler,
-		PlayerMgr:     gameplayer.GetPlayerMgr(),
+		PlayerMgr:     game.GetPlayerMgr(),
 	}
 	for _, hook := range this.BaseServer.GetServerHooks() {
 		hook.OnServerInit(serverInitArg)
@@ -102,7 +102,7 @@ func (this *GameServer) Run(ctx context.Context) {
 // 退出
 func (this *GameServer) Exit() {
 	this.playerMap.Range(func(key, value interface{}) bool {
-		player := value.(*gameplayer.Player)
+		player := value.(*game.Player)
 		player.Stop()
 		return true
 	})
@@ -127,14 +127,14 @@ func (this *GameServer) readConfig() {
 	}
 	logger.Debug("%v", this.config)
 	this.BaseServer.GetServerInfo().ServerId = this.config.ServerId
-	this.BaseServer.GetServerInfo().ServerType = "game"
+	this.BaseServer.GetServerInfo().ServerType = "gameserver"
 	this.BaseServer.GetServerInfo().ClientListenAddr = this.config.ClientListenAddr
 	this.BaseServer.GetServerInfo().ServerListenAddr = this.config.ServerListenAddr
 }
 
 // 加载配置数据
 func (this *GameServer) loadCfgs() {
-	cfg.GetQuestCfgMgr().SetConditionMgr(gameplayer.RegisterConditionCheckers())
+	cfg.GetQuestCfgMgr().SetConditionMgr(game.RegisterConditionCheckers())
 	cfg.GetQuestCfgMgr().Load("cfgdata/questcfg.json")
 	cfg.GetLevelCfgMgr().Load("cfgdata/levelcfg.csv")
 	cfg.GetItemCfgMgr().Load("cfgdata/itemcfg.json")
@@ -178,26 +178,26 @@ func (this *GameServer) repairPlayerCache(playerId, accountId int64) error {
 			LogStack()
 		}
 	}()
-	tmpPlayer := gameplayer.CreateTempPlayer(playerId, accountId)
+	tmpPlayer := game.CreateTempPlayer(playerId, accountId)
 	gentity.FixEntityDataFromCache(tmpPlayer, db.GetPlayerDb(), cache.Get(), "p")
 	return nil
 }
 
 // 注册客户端消息回调
-func (this *GameServer) registerClientPacket(clientHandler *gameplayer.ClientConnectionHandler) {
+func (this *GameServer) registerClientPacket(clientHandler *game.ClientConnectionHandler) {
 	// 手动注册消息回调
 	clientHandler.Register(PacketCommand(pb.CmdInner_Cmd_HeartBeatReq), onHeartBeatReq, new(pb.HeartBeatReq))
 	clientHandler.Register(PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameReq), onPlayerEntryGameReq, new(pb.PlayerEntryGameReq))
 	clientHandler.Register(PacketCommand(pb.CmdLogin_Cmd_CreatePlayerReq), onCreatePlayerReq, new(pb.CreatePlayerReq))
 	clientHandler.Register(PacketCommand(pb.CmdInner_Cmd_TestCmd), wrapPlayerHandler(onTestCmd), new(pb.TestCmd))
 	// 通过反射自动注册消息回调
-	gameplayer.AutoRegisterPlayerComponentProto(clientHandler)
+	game.AutoRegisterPlayerComponentProto(clientHandler)
 	// 自动注册消息回调的另一种方案: proto_code_gen工具生成的回调函数
 	// 因为已经用了反射自动注册,所以这里注释了
-	// player_component_handler_auto_register(clientHandler)
+	// player_component_handler_gen(clientHandler)
 }
 
-func wrapPlayerHandler(fn func(player *gameplayer.Player, packet *ProtoPacket)) func(connection Connection, packet *ProtoPacket) {
+func wrapPlayerHandler(fn func(player *game.Player, packet *ProtoPacket)) func(connection Connection, packet *ProtoPacket) {
 	return func(connection Connection, packet *ProtoPacket) {
 		if connection.GetTag() == nil {
 			return
@@ -206,7 +206,7 @@ func wrapPlayerHandler(fn func(player *gameplayer.Player, packet *ProtoPacket)) 
 		if !ok {
 			return
 		}
-		player := gameplayer.GetPlayerMgr().GetPlayer(playerId)
+		player := game.GetPlayer(playerId)
 		if player == nil {
 			return
 		}
@@ -232,24 +232,24 @@ func (this *GameServer) registerServerPacket(serverHandler *DefaultConnectionHan
 }
 
 // 添加一个在线玩家
-func (this *GameServer) AddPlayer(player *gameplayer.Player) {
+func (this *GameServer) AddPlayer(player gentity.Player) {
 	this.playerMap.Store(player.GetId(), player)
 	cache.AddOnlinePlayer(player.GetId(), player.GetAccountId(), this.GetServerId())
 }
 
 // 删除一个在线玩家
-func (this *GameServer) RemovePlayer(player *gameplayer.Player) {
+func (this *GameServer) RemovePlayer(player gentity.Player) {
 	// 先保存数据库 再移除cache
-	player.SaveDb(true)
+	player.(*game.Player).SaveDb(true)
 	this.playerMap.Delete(player.GetId())
 	cache.RemoveOnlineAccount(player.GetAccountId())
 	cache.RemoveOnlinePlayer(player.GetId(), this.GetServerId())
 }
 
 // 获取一个在线玩家
-func (this *GameServer) GetPlayer(playerId int64) *gameplayer.Player {
+func (this *GameServer) GetPlayer(playerId int64) gentity.Player {
 	if v, ok := this.playerMap.Load(playerId); ok {
-		return v.(*gameplayer.Player)
+		return v.(gentity.Player)
 	}
 	return nil
 }
@@ -257,7 +257,7 @@ func (this *GameServer) GetPlayer(playerId int64) *gameplayer.Player {
 // 踢玩家下线
 func (this *GameServer) onKickPlayer(connection Connection, packet *ProtoPacket) {
 	req := packet.Message().(*pb.KickPlayer)
-	player := this.GetPlayer(req.GetPlayerId())
+	player := game.GetPlayer(req.GetPlayerId())
 	if player != nil {
 		player.SetConnection(nil)
 		player.Stop()
@@ -274,7 +274,7 @@ func (this *GameServer) onKickPlayer(connection Connection, packet *ProtoPacket)
 func (this *GameServer) onRoutePlayerMessage(connection Connection, packet *ProtoPacket) {
 	req := packet.Message().(*pb.RoutePlayerMessage)
 	logger.Debug("onRoutePlayerMessage %v", req)
-	player := this.GetPlayer(req.ToPlayerId)
+	player := game.GetPlayer(req.ToPlayerId)
 	if player == nil {
 		// NOTE: 由于是异步消息,这里的player有很低的概率可能不在线了,如果是重要的不能丢弃的消息,需要保存该消息,留待后续处理
 		// 演示程序暂不处理,这里就直接丢弃了

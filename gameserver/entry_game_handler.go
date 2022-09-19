@@ -1,4 +1,4 @@
-package game
+package gameserver
 
 import (
 	"github.com/fish-tennis/gentity"
@@ -6,7 +6,7 @@ import (
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
 	"github.com/fish-tennis/gserver/db"
-	"github.com/fish-tennis/gserver/gameplayer"
+	"github.com/fish-tennis/gserver/game"
 	"github.com/fish-tennis/gserver/gen"
 	. "github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
@@ -40,7 +40,7 @@ func onPlayerEntryGameReq(connection Connection, packet *ProtoPacket) {
 		logger.Error(err.Error())
 		return
 	}
-	var entryPlayer *gameplayer.Player
+	var entryPlayer *game.Player
 	isReconnect := false
 	if playerId == 0 {
 		connection.Send(PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameRes), &pb.PlayerEntryGameRes{
@@ -51,7 +51,7 @@ func onPlayerEntryGameReq(connection Connection, packet *ProtoPacket) {
 		return
 	} else {
 		// 检查该账号是否已经有对应的在线玩家
-		entryPlayer = gameplayer.GetPlayerMgr().GetPlayer(playerId)
+		entryPlayer = game.GetPlayer(playerId)
 		if entryPlayer != nil {
 			// 重连
 			isReconnect = true
@@ -101,9 +101,9 @@ func onPlayerEntryGameReq(connection Connection, packet *ProtoPacket) {
 			})
 			return
 		}
-		entryPlayer = gameplayer.CreatePlayerFromData(playerData)
+		entryPlayer = game.CreatePlayerFromData(playerData)
 		// 加入在线玩家表
-		gameplayer.GetPlayerMgr().AddPlayer(entryPlayer)
+		game.GetPlayerMgr().AddPlayer(entryPlayer)
 		// 玩家和连接设置关联
 		connection.SetTag(entryPlayer.GetId())
 		entryPlayer.SetConnection(connection)
@@ -151,7 +151,7 @@ func onCreatePlayerReq(connection Connection, packet *ProtoPacket) {
 			Exp:    0,
 		},
 	}
-	newPlayer := gameplayer.CreatePlayerFromData(playerData)
+	newPlayer := game.CreatePlayerFromData(playerData)
 	newPlayerSaveData := make(map[string]interface{})
 	newPlayerSaveData["id"] = playerData.Id
 	newPlayerSaveData["name"] = playerData.Name

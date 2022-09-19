@@ -1,13 +1,13 @@
-package gameplayer
+package game
 
 import (
+	"github.com/fish-tennis/gentity/util"
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
 	"github.com/fish-tennis/gserver/db"
 	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
-	"github.com/fish-tennis/gentity/util"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 )
@@ -77,7 +77,7 @@ func RoutePlayerPacket(playerId int64, cmd PacketCommand, message proto.Message,
 		//toServerId = opt.ToServerId
 		saveDb = opt.SaveDb
 	}
-	player := GetPlayerMgr().GetPlayer(playerId)
+	player := GetPlayer(playerId)
 	if player != nil {
 		if directSendClient {
 			return player.Send(cmd, message)

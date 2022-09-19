@@ -1,4 +1,4 @@
-package gameplayer
+package game
 
 import (
 	"github.com/fish-tennis/gserver/cache"

@@ -1,4 +1,4 @@
-package login
+package loginserver
 
 import (
 	"github.com/fish-tennis/gentity/util"
@@ -70,7 +70,7 @@ func onLoginReq(connection Connection, packet *ProtoPacket) {
 // 选择一个游戏服给登录成功的客户端
 // NOTE:可以在这里做游戏服的负载均衡
 func selectGameServer(account *pb.Account) *pb.ServerInfo {
-	gameServerInfos := _loginServer.GetServerList().GetServersByType("game")
+	gameServerInfos := _loginServer.GetServerList().GetServersByType("gameserver")
 	if len(gameServerInfos) > 0 {
 		// 作为演示,这里随机一个
 		selectGameServerInfo := gameServerInfos[rand.Intn(len(gameServerInfos))]
