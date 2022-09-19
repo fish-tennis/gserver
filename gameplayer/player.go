@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gserver/cache"
-	"reflect"
 	"sync"
 
 	. "github.com/fish-tennis/gnet"
@@ -211,24 +210,30 @@ func (this *Player) processMessage(message *ProtoPacket) {
 	}()
 	logger.Debug("processMessage %v", proto.MessageName(message.Message()).Name())
 	// 先找组件接口
-	handlerInfo := _playerComponentHandlerInfos[message.Command()]
-	if handlerInfo != nil {
-		// 在线玩家的消息,自动路由到对应的玩家组件上
-		component := this.GetComponent(handlerInfo.componentName)
-		if component != nil {
-			if handlerInfo.handler != nil {
-				handlerInfo.handler(component, message.Message())
-			} else {
-				// 反射调用函数
-				handlerInfo.method.Func.Call([]reflect.Value{reflect.ValueOf(component),
-					reflect.ValueOf(message.Command()),
-					reflect.ValueOf(message.Message())})
-			}
-			// 如果有需要保存的数据修改了,即时保存缓存
-			this.SaveCache(cache.Get())
-			return
-		}
+	if gentity.ProcessComponentHandler(this, message.Command(), message.Message()) {
+		// 如果有需要保存的数据修改了,即时保存缓存
+		this.SaveCache(cache.Get())
+		return
 	}
+	//// 先找组件接口
+	//handlerInfo := _playerComponentHandlerInfos[message.Command()]
+	//if handlerInfo != nil {
+	//	// 在线玩家的消息,自动路由到对应的玩家组件上
+	//	component := this.GetComponent(handlerInfo.componentName)
+	//	if component != nil {
+	//		if handlerInfo.handler != nil {
+	//			handlerInfo.handler(component, message.Message())
+	//		} else {
+	//			// 反射调用函数
+	//			handlerInfo.method.Func.Call([]reflect.Value{reflect.ValueOf(component),
+	//				reflect.ValueOf(message.Command()),
+	//				reflect.ValueOf(message.Message())})
+	//		}
+	//		// 如果有需要保存的数据修改了,即时保存缓存
+	//		this.SaveCache(cache.Get())
+	//		return
+	//	}
+	//}
 	// 再找普通接口
 	packetHandler := _clientConnectionHandler.GetPacketHandler(message.Command())
 	if packetHandler != nil {

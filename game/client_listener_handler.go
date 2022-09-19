@@ -28,7 +28,7 @@ func (this *ClientListerHandler) OnConnectionDisconnect(listener Listener, conne
 		if player.GetConnection() == connection {
 			player.SetConnection(nil)
 			player.Stop()
+			logger.Debug("player %v exit", player.GetId())
 		}
-		logger.Debug("player %v exit", player.GetId())
 	}
 }

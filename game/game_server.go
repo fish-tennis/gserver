@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"github.com/fish-tennis/gentity"
 	"os"
-	"reflect"
 	"sync"
 	"time"
 
@@ -180,75 +179,7 @@ func (this *GameServer) repairPlayerCache(playerId, accountId int64) error {
 		}
 	}()
 	tmpPlayer := gameplayer.CreateTempPlayer(playerId, accountId)
-	for _, component := range tmpPlayer.GetComponents() {
-		structCache := gentity.GetSaveableStruct(reflect.TypeOf(component))
-		if structCache == nil {
-			continue
-		}
-		if structCache.IsSingleField() {
-			cacheKey := gentity.GetPlayerComponentCacheKey(playerId, component.GetName())
-			hasCache, err := gentity.LoadFromCache(component, cache.Get(), cacheKey)
-			if !hasCache {
-				continue
-			}
-			if err != nil {
-				logger.Error("LoadFromCache %v error:%v", cacheKey, err.Error())
-				continue
-			}
-			saveData, err := gentity.GetComponentSaveData(component)
-			if err != nil {
-				logger.Error("%v Save %v err %v", playerId, component.GetName(), err.Error())
-				continue
-			}
-			saveDbErr := db.GetPlayerDb().SaveComponent(playerId, component.GetNameLower(), saveData)
-			if saveDbErr != nil {
-				logger.Error("%v SaveDb %v err %v", playerId, component.GetNameLower(), saveDbErr.Error())
-				continue
-			}
-			logger.Info("%v -> %v", cacheKey, component.GetNameLower())
-			cache.Get().Del(cacheKey)
-			logger.Info("RemoveCache %v", cacheKey)
-		} else {
-			reflectVal := reflect.ValueOf(component).Elem()
-			for _, fieldCache := range structCache.Children {
-				val := reflectVal.Field(fieldCache.FieldIndex)
-				if val.IsNil() {
-					if !val.CanSet() {
-						logger.Error("%v CanSet false", fieldCache.Name)
-						continue
-					}
-					newElem := reflect.New(fieldCache.StructField.Type)
-					val.Set(newElem)
-					logger.Debug("new %v", fieldCache.Name)
-				}
-				fieldInterface := val.Interface()
-				cacheKey := gentity.GetPlayerComponentChildCacheKey(playerId, component.GetName(), fieldCache.Name)
-				hasCache, err := gentity.LoadFromCache(fieldInterface, cache.Get(), cacheKey)
-				if !hasCache {
-					continue
-				}
-				if err != nil {
-					logger.Error("LoadFromCache %v error:%v", cacheKey, err.Error())
-					continue
-				}
-				logger.Debug("%v", fieldInterface)
-				saveData, err := gentity.GetSaveData(fieldInterface, component.GetNameLower())
-				if err != nil {
-					logger.Error("%v Save %v.%v err %v", playerId, component.GetName(), fieldCache.Name, err.Error())
-					continue
-				}
-				logger.Debug("%v", saveData)
-				saveDbErr := db.GetPlayerDb().SaveComponentField(playerId, component.GetNameLower(), fieldCache.Name, saveData)
-				if saveDbErr != nil {
-					logger.Error("%v SaveDb %v.%v err %v", playerId, component.GetNameLower(), fieldCache.Name, saveDbErr.Error())
-					continue
-				}
-				logger.Info("%v -> %v.%v", cacheKey, component.GetNameLower(), fieldCache.Name)
-				cache.Get().Del(cacheKey)
-				logger.Info("RemoveCache %v", cacheKey)
-			}
-		}
-	}
+	gentity.FixEntityDataFromCache(tmpPlayer, db.GetPlayerDb(), cache.Get(), "p")
 	return nil
 }
 
@@ -260,7 +191,6 @@ func (this *GameServer) registerClientPacket(clientHandler *gameplayer.ClientCon
 	clientHandler.Register(PacketCommand(pb.CmdLogin_Cmd_CreatePlayerReq), onCreatePlayerReq, new(pb.CreatePlayerReq))
 	clientHandler.Register(PacketCommand(pb.CmdInner_Cmd_TestCmd), wrapPlayerHandler(onTestCmd), new(pb.TestCmd))
 	// 通过反射自动注册消息回调
-	//clientHandler.autoRegisterPlayerComponentProto()
 	gameplayer.AutoRegisterPlayerComponentProto(clientHandler)
 	// 自动注册消息回调的另一种方案: proto_code_gen工具生成的回调函数
 	// 因为已经用了反射自动注册,所以这里注释了

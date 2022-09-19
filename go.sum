@@ -5,8 +5,6 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f h1:lO4WD4F/rVNCu3HqELle0jiPLLBs70cWOduZpkS1E78=
 github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f/go.mod h1:cuUVRXasLTGF7a8hSLbxyZXjz+1KgoB3wDUb6vlszIc=
-github.com/fish-tennis/gentity v0.1.0 h1:bLLWEORsHdzLOW26RJul2pmd3dppCzjEDZSOtItGMdk=
-github.com/fish-tennis/gentity v0.1.0/go.mod h1:HTcK0gPn9xEirFw04uRkICsBiSm8r3aM7Vgo2zCt+qs=
 github.com/fish-tennis/gnet v0.2.0 h1:KCK473Pw8X+HLI7sB/URDsBriCvWAQIoIyH7e6DJOw0=
 github.com/fish-tennis/gnet v0.2.0/go.mod h1:aSOXFjpv0T3yWwhP110zk5BcKzCRHtNHDlOwJc6uqQA=
 github.com/fish-tennis/snowflake v1.0.0 h1:1nqzsgHVXV1NWrCyWgAFcGzdOpoqSITdAOaL15ahHWA=
