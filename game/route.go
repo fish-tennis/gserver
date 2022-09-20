@@ -1,6 +1,7 @@
 package game
 
 import (
+	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gentity/util"
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
@@ -115,7 +116,7 @@ func RoutePlayerPacket(playerId int64, cmd PacketCommand, message proto.Message,
 		if toServerId == 0 {
 			return false
 		}
-		if toServerId == internal.GetServer().GetServerId() {
+		if toServerId == gentity.GetServer().GetServerId() {
 			return false
 		}
 	}

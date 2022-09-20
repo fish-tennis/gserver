@@ -1,14 +1,12 @@
 package game
 
 import (
-	"context"
 	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gserver/cache"
-	"sync"
+	"time"
 
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/db"
-	. "github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 	"google.golang.org/protobuf/proto"
@@ -18,10 +16,8 @@ var _ gentity.Entity = (*Player)(nil)
 
 // 玩家对象
 type Player struct {
-	gentity.BaseEntity
-	// 玩家唯一id
-	id int64
-	// 玩家名(unique)
+	gentity.RoutineEntity
+	// 玩家名
 	name string
 	// 账号id
 	accountId int64
@@ -30,17 +26,6 @@ type Player struct {
 	//accountName string
 	// 关联的连接
 	connection Connection
-	// 消息队列
-	messages chan *ProtoPacket
-	stopChan chan struct{}
-	stopOnce sync.Once
-	// 倒计时管理
-	timerEntries *gentity.TimerEntries
-}
-
-// 玩家唯一id
-func (this *Player) GetId() int64 {
-	return this.id
 }
 
 // 玩家名(unique)
@@ -140,65 +125,24 @@ func (this *Player) GetGuild() *Guild {
 	return this.GetComponent("Guild").(*Guild)
 }
 
-func (this *Player) GetTimerEntries() *gentity.TimerEntries {
-	return this.timerEntries
-}
-
 // 开启消息处理协程
 // 每个玩家一个独立的消息处理协程
 // 除了登录消息,其他消息都在玩家自己的协程里处理,因此这里对本玩家的操作不需要加锁
 func (this *Player) RunProcessRoutine() bool {
-	GetServer().GetWaitGroup().Add(1)
-	go func(ctx context.Context) {
-		defer func() {
-			this.timerEntries.Stop()
+	logger.Debug("player RunProcessRoutine %v", this.GetId())
+	return this.RoutineEntity.RunProcessRoutine(&gentity.RoutineEntityRoutineArgs{
+		EndFunc: func(routineEntity gentity.Entity) {
 			// 协程结束的时候,移除玩家
 			GetPlayerMgr().RemovePlayer(this)
-			GetServer().GetWaitGroup().Done()
-			if err := recover(); err != nil {
-				logger.Error("recover:%v", err)
-				logger.LogStack()
-			}
-			logger.Debug("EndProcessRoutine %v", this.GetId())
-		}()
-
-		this.timerEntries.Start()
-		for {
-			select {
-			case <-ctx.Done():
-				logger.Info("exitNotify")
-				goto END
-			case <-this.stopChan:
-				logger.Debug("stop")
-				goto END
-			case message := <-this.messages:
-				// nil消息 表示这是需要处理的最后一条消息
-				if message == nil {
-					return
-				}
-				this.processMessage(message)
-			case timeNow := <-this.timerEntries.TimerChan():
-				// 计时器的回调在玩家协程里执行,所以是协程安全的
-				if this.timerEntries.Run(timeNow) {
-					// 如果有需要保存的数据修改了,即时保存数据库
-					this.SaveCache(cache.Get())
-				}
-			}
-		}
-
-		// 有可能还有未处理的消息
-	END:
-		messageLen := len(this.messages)
-		for i := 0; i < messageLen; i++ {
-			message := <-this.messages
-			// nil消息 表示这是需要处理的最后一条消息
-			if message == nil {
-				return
-			}
-			this.processMessage(message)
-		}
-	}(GetServer().GetContext())
-	return true
+		},
+		ProcessMessageFunc: func(routineEntity gentity.Entity, message interface{}) {
+			this.processMessage(message.(*ProtoPacket))
+		},
+		AfterTimerExecuteFunc: func(routineEntity gentity.Entity, t time.Time) {
+			// 如果有需要保存的数据修改了,即时保存数据库
+			this.SaveCache(cache.Get())
+		},
+	})
 }
 
 func (this *Player) processMessage(message *ProtoPacket) {
@@ -245,30 +189,22 @@ func (this *Player) processMessage(message *ProtoPacket) {
 	logger.Error("unhandle message:%v", message.Command())
 }
 
-// 收到网络消息,先放入消息队列
+// 放入消息队列
 func (this *Player) OnRecvPacket(packet *ProtoPacket) {
-	this.messages <- packet
 	logger.Debug("OnRecvPacket %v", proto.MessageName(packet.Message()).Name())
-}
-
-// 停止协程
-func (this *Player) Stop() {
-	this.stopOnce.Do(func() {
-		this.stopChan <- struct{}{}
-	})
+	//this.messages <- packet
+	this.RoutineEntity.PushMessage(packet)
 }
 
 // 从加载的数据构造出玩家对象
 func CreatePlayerFromData(playerData *pb.PlayerData) *Player {
 	player := &Player{
-		id:           playerData.Id,
 		name:         playerData.Name,
 		accountId:    playerData.AccountId,
 		regionId:     playerData.RegionId,
-		messages:     make(chan *ProtoPacket, 8),
-		stopChan:     make(chan struct{}, 1),
-		timerEntries: gentity.NewTimerEntries(),
+		RoutineEntity: *gentity.NewRoutineEntity(8),
 	}
+	player.Id = playerData.Id
 	// 初始化玩家的各个模块
 	player.AddComponent(NewBaseInfo(player, playerData.BaseInfo), nil)
 	player.AddComponent(NewMoney(player), playerData.Money)
@@ -282,13 +218,13 @@ func CreatePlayerFromData(playerData *pb.PlayerData) *Player {
 func CreateTempPlayer(playerId, accountId int64) *Player {
 	playerData := &pb.PlayerData{}
 	player := CreatePlayerFromData(playerData)
-	player.id = playerId
+	player.Id = playerId
 	player.accountId = accountId
 	return player
 }
 
 func NewEmptyPlayer(playerId int64) *Player {
-	return &Player{
-		id: playerId,
-	}
+	p := &Player{}
+	p.Id = playerId
+	return p
 }

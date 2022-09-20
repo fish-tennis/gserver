@@ -3,7 +3,6 @@ package social
 import (
 	"github.com/fish-tennis/gentity"
 	. "github.com/fish-tennis/gnet"
-	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 )
@@ -13,7 +12,7 @@ func GuildServerHandlerRegister(handler PacketHandlerRegister, playerMgr gentity
 	handler.Register(PacketCommand(pb.CmdRoute_Cmd_GuildRoutePlayerMessageReq), func(connection Connection, packet *ProtoPacket) {
 		req := packet.Message().(*pb.GuildRoutePlayerMessageReq)
 		// 再验证一次是否属于本服务器管理
-		if GuildRoute(req.FromGuildId) != internal.GetServer().GetServerId() {
+		if GuildRoute(req.FromGuildId) != gentity.GetServer().GetServerId() {
 			logger.Error("wrong guildid:%v", req.FromGuildId)
 			return
 		}

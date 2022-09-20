@@ -1,28 +1,23 @@
 package social
 
 import (
-	"context"
 	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gentity/util"
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
 	"github.com/fish-tennis/gserver/game"
-	. "github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 	"google.golang.org/protobuf/proto"
-	"sync"
+	"time"
 )
 
 var _ gentity.Entity = (*Guild)(nil)
 
 // 公会
 type Guild struct {
-	gentity.BaseEntity
-	messages chan *GuildMessage
-	stopChan chan struct{}
-	stopOnce sync.Once
-
+	gentity.RoutineEntity
+	
 	BaseInfo     *GuildBaseInfo     `child:"baseinfo"`
 	Members      *GuildMembers      `child:"members"`
 	JoinRequests *GuildJoinRequests `child:"joinrequests"`
@@ -38,9 +33,9 @@ type GuildMessage struct {
 
 func NewGuild(guildData *pb.GuildLoadData) *Guild {
 	guild := &Guild{
-		messages: make(chan *GuildMessage, 32),
-		stopChan: make(chan struct{}, 1),
+		RoutineEntity: *gentity.NewRoutineEntity(32),
 	}
+	guild.Id = guildData.Id
 	guild.BaseInfo = NewGuildBaseInfo(guild, guildData.BaseInfo)
 	guild.AddComponent(guild.BaseInfo, nil)
 	guild.Members = NewGuildMembers(guild, guildData.Members)
@@ -50,75 +45,37 @@ func NewGuild(guildData *pb.GuildLoadData) *Guild {
 	return guild
 }
 
-func (this *Guild) GetId() int64 {
-	return this.BaseInfo.Data.Id
-}
-
 func (this *Guild) PushMessage(guildMessage *GuildMessage) {
-	this.messages <- guildMessage
+	logger.Debug("PushMessage %v", guildMessage)
+	this.RoutineEntity.PushMessage(guildMessage)
+	//this.messages <- guildMessage
 }
 
 // 开启消息处理协程
 func (this *Guild) RunProcessRoutine() bool {
-	logger.Debug("RunProcessRoutine %v", this.GetId())
-	// redis实现的分布式锁,保证同一个公会的逻辑处理协程只会在一个服务器上
-	if !guildServerLock(this.GetId()) {
-		return false
-	}
-	GetServer().GetWaitGroup().Add(1)
-	go func(ctx context.Context) {
-		defer func() {
+	logger.Debug("guild RunProcessRoutine %v", this.GetId())
+	return this.RoutineEntity.RunProcessRoutine(&gentity.RoutineEntityRoutineArgs{
+		InitFunc: func(routineEntity gentity.Entity) bool {
+			// redis实现的分布式锁,保证同一个公会的逻辑处理协程只会在一个服务器上
+			if !guildServerLock(this.GetId()) {
+				return false
+			}
+			return true
+		},
+		EndFunc: func(routineEntity gentity.Entity) {
 			// 协程结束的时候,分布式锁UnLock
 			guildServerUnlock(this.GetId())
-			//SaveEntityToDb(GetGuildDb(), this, true)
-			GetServer().GetWaitGroup().Done()
-			if err := recover(); err != nil {
-				logger.Error("recover:%v", err)
-				logger.LogStack()
-			}
-			logger.Debug("EndProcessRoutine %v", this.GetId())
-		}()
-
-		for {
-			select {
-			case <-ctx.Done():
-				logger.Info("exitNotify %v", this.GetId())
-				goto END
-			case <-this.stopChan:
-				logger.Debug("stop %v", this.GetId())
-				goto END
-			case message := <-this.messages:
-				// nil消息 表示这是需要处理的最后一条消息
-				if message == nil {
-					return
-				}
-				this.processMessage(message)
-				//this.SaveCache()
-				// 这里演示一种直接保存数据库的用法,可以用于那些不经常修改的数据
-				// 这种方式,省去了要处理crash后从缓存恢复数据的步骤
-				gentity.SaveEntityChangedDataToDb(GetGuildDb(), this, cache.Get(), false)
-			}
-		}
-
-		// 有可能还有未处理的消息
-	END:
-		messageLen := len(this.messages)
-		for i := 0; i < messageLen; i++ {
-			message := <-this.messages
-			// nil消息 表示这是需要处理的最后一条消息
-			if message == nil {
-				return
-			}
-			this.processMessage(message)
-			gentity.SaveEntityChangedDataToDb(GetGuildDb(), this, cache.Get(), false)
-		}
-	}(GetServer().GetContext())
-	return true
-}
-
-func (this *Guild) Stop() {
-	this.stopOnce.Do(func() {
-		this.stopChan <- struct{}{}
+		},
+		ProcessMessageFunc: func(routineEntity gentity.Entity, message interface{}) {
+			this.processMessage(message.(*GuildMessage))
+			//this.SaveCache()
+			// 这里演示一种直接保存数据库的用法,可以用于那些不经常修改的数据
+			// 这种方式,省去了要处理crash后从缓存恢复数据的步骤
+			gentity.SaveEntityChangedDataToDb(GetGuildDb(), routineEntity, cache.Get(), false)
+		},
+		AfterTimerExecuteFunc: func(routineEntity gentity.Entity, t time.Time) {
+			gentity.SaveEntityChangedDataToDb(GetGuildDb(), routineEntity, cache.Get(), false)
+		},
 	})
 }
 

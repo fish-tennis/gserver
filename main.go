@@ -8,7 +8,6 @@ import (
 	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/gameserver"
-	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/loginserver"
 	"math/rand"
@@ -49,7 +48,7 @@ func main() {
 	// 根据命令行参数 创建不同的服务器实例
 	serverType := getServerTypeFromConfigFile(configFile)
 	server := createServer(serverType)
-	internal.SetServer(server)
+	gentity.SetServer(server)
 
 	// context实现优雅的协程关闭通知
 	ctx,cancel := context.WithCancel(context.Background())
@@ -115,7 +114,7 @@ func getServerTypeFromConfigFile(configFile string) string {
 }
 
 // 创建相应类型的服务器
-func createServer(serverType string) internal.Server {
+func createServer(serverType string) gentity.Server {
 	switch serverType {
 	case "login":
 		return new(loginserver.LoginServer)

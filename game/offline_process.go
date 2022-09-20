@@ -1,9 +1,9 @@
 package game
 
 import (
+	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gserver/cache"
 	"github.com/fish-tennis/gserver/db"
-	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 )
 
@@ -15,7 +15,7 @@ func OfflinePlayerProcess(playerId int64, data interface{}, f func(offlinePlayer
 		return false
 	}
 	// 防止离线数据处理期间,玩家上线,导致数据覆盖
-	if !cache.AddOnlineAccount(accountId, playerId, internal.GetServer().GetServerId()) {
+	if !cache.AddOnlineAccount(accountId, playerId, gentity.GetServer().GetServerId()) {
 		logger.Debug("OfflinePlayerProcess AddOnlineAccount failed playerId:%v accountId:%v", playerId, accountId)
 		return false
 	}

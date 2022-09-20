@@ -21,7 +21,7 @@ import (
 )
 
 var (
-	_ Server = (*GameServer)(nil)
+	_ gentity.Server = (*GameServer)(nil)
 )
 
 // 游戏服

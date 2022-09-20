@@ -73,7 +73,7 @@ func onServerListUpdate(serverList map[string][]*pb.ServerInfo, oldServerList ma
 	_guildMapLock.RLock()
 	defer _guildMapLock.RUnlock()
 	for _, guild := range _guildMap {
-		if GuildRoute(guild.GetId()) != GetServer().GetServerId() {
+		if GuildRoute(guild.GetId()) != gentity.GetServer().GetServerId() {
 			// 通知已不属于本服务器管理的公会关闭协程
 			guild.Stop()
 			logger.Info("stop guild %v", guild.GetId())
@@ -85,7 +85,7 @@ func onServerListUpdate(serverList map[string][]*pb.ServerInfo, oldServerList ma
 func guildServerLock(guildId int64) bool {
 	// redis实现的分布式锁,保证同一个公会的逻辑处理协程只会在一个服务器上
 	// 锁的是公会id和服务器id的对应关系
-	lockOK, err := cache.GetRedis().HSetNX(context.Background(), "g.lock", util.Itoa(guildId), GetServer().GetServerId()).Result()
+	lockOK, err := cache.GetRedis().HSetNX(context.Background(), "g.lock", util.Itoa(guildId), gentity.GetServer().GetServerId()).Result()
 	if cache.IsRedisError(err) {
 		logger.Error("guild %v lock err:%v", guildId, err.Error())
 		return false
@@ -112,7 +112,7 @@ func deleteGuildServerLock() {
 		return
 	}
 	for guildIdStr, serverIdStr := range kv {
-		if util.Atoi(serverIdStr) == int(GetServer().GetServerId()) {
+		if util.Atoi(serverIdStr) == int(gentity.GetServer().GetServerId()) {
 			cache.GetRedis().HDel(context.Background(), "g.lock", guildIdStr)
 			logger.Debug("deleteGuildServerLock %v", guildIdStr)
 		}
@@ -136,7 +136,7 @@ func GuildRouteReqPacket(player *game.Player, guildId int64, packet *ProtoPacket
 		return false
 	}
 	// 属于本服务器管理的公会
-	if GetServer().GetServerId() == routeServerId {
+	if gentity.GetServer().GetServerId() == routeServerId {
 		// 先从内存中查找
 		guild := GetGuildById(guildId)
 		if guild == nil {
@@ -149,7 +149,7 @@ func GuildRouteReqPacket(player *game.Player, guildId int64, packet *ProtoPacket
 		}
 		guild.PushMessage(&GuildMessage{
 			fromPlayerId: player.GetId(),
-			fromServerId: GetServer().GetServerId(),
+			fromServerId: gentity.GetServer().GetServerId(),
 			fromPlayerName: player.GetName(),
 			cmd:          packet.Command(),
 			message:      packet.Message(),
@@ -165,7 +165,7 @@ func GuildRouteReqPacket(player *game.Player, guildId int64, packet *ProtoPacket
 		routePacket := &pb.GuildRoutePlayerMessageReq{
 			FromPlayerId:   player.GetId(),
 			FromGuildId:    guildId,
-			FromServerId:   GetServer().GetServerId(),
+			FromServerId:   gentity.GetServer().GetServerId(),
 			FromPlayerName: player.GetName(),
 			PacketCommand:  int32(packet.Command()),
 			PacketData:     any,
