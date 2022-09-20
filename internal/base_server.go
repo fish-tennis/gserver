@@ -27,6 +27,8 @@ type BaseServerConfig struct {
 	ServerConnConfig ConnectionConfig
 	// mongodb地址
 	MongoUri string
+	// mongodb db name
+	MongoDbName string
 	// redis地址
 	RedisUri []string
 	RedisPassword string

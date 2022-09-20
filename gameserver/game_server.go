@@ -143,7 +143,7 @@ func (this *GameServer) loadCfgs() {
 // 初始化数据库
 func (this *GameServer) initDb() {
 	// 使用mongodb来演示
-	mongoDb := gentity.NewMongoDb(this.config.MongoUri, "testdb")
+	mongoDb := gentity.NewMongoDb(this.config.MongoUri, this.config.MongoDbName)
 	mongoDb.RegisterPlayerPb("player", "id", "name", "accountid", "regionid")
 	mongoDb.RegisterEntityDb("guild", "id", "name")
 	//mongoDb.SetAccountColumnNames("accountid","")
