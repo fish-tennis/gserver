@@ -17,7 +17,7 @@ var _ gentity.Entity = (*Guild)(nil)
 // 公会
 type Guild struct {
 	gentity.RoutineEntity
-	
+
 	BaseInfo     *GuildBaseInfo     `child:"baseinfo"`
 	Members      *GuildMembers      `child:"members"`
 	JoinRequests *GuildJoinRequests `child:"joinrequests"`
@@ -48,7 +48,6 @@ func NewGuild(guildData *pb.GuildLoadData) *Guild {
 func (this *Guild) PushMessage(guildMessage *GuildMessage) {
 	logger.Debug("PushMessage %v", guildMessage)
 	this.RoutineEntity.PushMessage(guildMessage)
-	//this.messages <- guildMessage
 }
 
 // 开启消息处理协程
