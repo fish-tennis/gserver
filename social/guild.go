@@ -4,19 +4,17 @@ import (
 	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gentity/util"
 	. "github.com/fish-tennis/gnet"
-	"github.com/fish-tennis/gserver/cache"
 	"github.com/fish-tennis/gserver/game"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 	"google.golang.org/protobuf/proto"
-	"time"
 )
 
-var _ gentity.Entity = (*Guild)(nil)
+var _ gentity.RoutineEntity = (*Guild)(nil)
 
 // 公会
 type Guild struct {
-	gentity.RoutineEntity
+	gentity.BaseRoutineEntity
 
 	BaseInfo     *GuildBaseInfo     `child:"baseinfo"`
 	Members      *GuildMembers      `child:"members"`
@@ -33,7 +31,7 @@ type GuildMessage struct {
 
 func NewGuild(guildData *pb.GuildLoadData) *Guild {
 	guild := &Guild{
-		RoutineEntity: *gentity.NewRoutineEntity(32),
+		BaseRoutineEntity: *gentity.NewRoutineEntity(32),
 	}
 	guild.Id = guildData.Id
 	guild.BaseInfo = NewGuildBaseInfo(guild, guildData.BaseInfo)
@@ -45,37 +43,9 @@ func NewGuild(guildData *pb.GuildLoadData) *Guild {
 	return guild
 }
 
-func (this *Guild) PushMessage(guildMessage *GuildMessage) {
-	logger.Debug("PushMessage %v", guildMessage)
-	this.RoutineEntity.PushMessage(guildMessage)
-}
-
-// 开启消息处理协程
-func (this *Guild) RunProcessRoutine() bool {
-	logger.Debug("guild RunProcessRoutine %v", this.GetId())
-	return this.RoutineEntity.RunProcessRoutine(&gentity.RoutineEntityRoutineArgs{
-		InitFunc: func(routineEntity gentity.Entity) bool {
-			// redis实现的分布式锁,保证同一个公会的逻辑处理协程只会在一个服务器上
-			if !guildServerLock(this.GetId()) {
-				return false
-			}
-			return true
-		},
-		EndFunc: func(routineEntity gentity.Entity) {
-			// 协程结束的时候,分布式锁UnLock
-			guildServerUnlock(this.GetId())
-		},
-		ProcessMessageFunc: func(routineEntity gentity.Entity, message interface{}) {
-			this.processMessage(message.(*GuildMessage))
-			//this.SaveCache()
-			// 这里演示一种直接保存数据库的用法,可以用于那些不经常修改的数据
-			// 这种方式,省去了要处理crash后从缓存恢复数据的步骤
-			gentity.SaveEntityChangedDataToDb(GetGuildDb(), routineEntity, cache.Get(), false)
-		},
-		AfterTimerExecuteFunc: func(routineEntity gentity.Entity, t time.Time) {
-			gentity.SaveEntityChangedDataToDb(GetGuildDb(), routineEntity, cache.Get(), false)
-		},
-	})
+func (this *Guild) PushGuildMessage(guildMessage *GuildMessage) {
+	logger.Debug("PushGuildMessage %v", guildMessage)
+	this.PushMessage(guildMessage)
 }
 
 func (this *Guild) processMessage(message *GuildMessage) {

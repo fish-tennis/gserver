@@ -2,6 +2,7 @@ package social
 
 import (
 	"context"
+	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gentity/util"
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
@@ -11,12 +12,11 @@ import (
 	. "github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
-	"github.com/fish-tennis/gentity"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"google.golang.org/protobuf/types/known/anypb"
 	"math"
-	"sync"
+	"time"
 )
 
 // 公会功能演示:
@@ -27,15 +27,44 @@ import (
 // 实际项目需求也可能需要服务器启动的时候就把公会数据加载进服务器(不难实现)
 
 var (
-	_guildMap     = make(map[int64]*Guild)
-	_guildMapLock sync.RWMutex
+	_guildMgr *gentity.DistributedEntityMgr
 )
+
+func initGuildMgr() {
+	routineArgs := &gentity.RoutineEntityRoutineArgs{
+		ProcessMessageFunc: func(routineEntity gentity.RoutineEntity, message interface{}) {
+			guild := GetGuildById(routineEntity.GetId())
+			if guild == nil {
+				return
+			}
+			guild.processMessage(message.(*GuildMessage))
+			//this.SaveCache()
+			// 这里演示一种直接保存数据库的用法,可以用于那些不经常修改的数据
+			// 这种方式,省去了要处理crash后从缓存恢复数据的步骤
+			gentity.SaveEntityChangedDataToDb(_guildMgr.GetEntityDb(), guild, cache.Get(), false)
+		},
+		AfterTimerExecuteFunc: func(routineEntity gentity.RoutineEntity, t time.Time) {
+			guild := GetGuildById(routineEntity.GetId())
+			if guild == nil {
+				return
+			}
+			gentity.SaveEntityChangedDataToDb(_guildMgr.GetEntityDb(), guild, cache.Get(), false)
+		},
+	}
+	_guildMgr = gentity.NewDistributedEntityMgr("g.lock",
+		db.GetDbMgr().GetEntityDb("guild"),
+		cache.GetRedis(),
+		routineArgs,
+		GuildRoute)
+}
 
 // 获取本服上的公会
 func GetGuildById(guildId int64) *Guild {
-	_guildMapLock.RLock()
-	defer _guildMapLock.RUnlock()
-	return _guildMap[guildId]
+	guild := _guildMgr.GetEntity(guildId)
+	if guild == nil {
+		return nil
+	}
+	return guild.(*Guild)
 }
 
 // 从数据库加载公会数据
@@ -43,80 +72,18 @@ func LoadGuild(guildId int64) *Guild {
 	guildData := &pb.GuildLoadData{
 		Id: guildId,
 	}
-	exist, err := GetGuildDb().FindEntityById(guildId, guildData)
-	if err != nil {
-		logger.Error("LoadGuild err:%v", err)
+	guild := _guildMgr.LoadEntity(guildId, guildData, func(entityData interface{}) gentity.RoutineEntity {
+		return NewGuild(entityData.(*pb.GuildLoadData))
+	})
+	if guild == nil {
 		return nil
 	}
-	if !exist {
-		return nil
-	}
-	guild := NewGuild(guildData)
-	_guildMapLock.Lock()
-	defer _guildMapLock.Unlock()
-	if existGuild, ok := _guildMap[guildId]; ok {
-		return existGuild
-	}
-	if guild.RunProcessRoutine() {
-		_guildMap[guildId] = guild
-	}
-	return guild
-}
-
-// 公会db接口
-func GetGuildDb() gentity.EntityDb {
-	return db.GetDbMgr().GetEntityDb("guild")
+	return guild.(*Guild)
 }
 
 // 服务器动态扩缩容了,公会重新分配
 func onServerListUpdate(serverList map[string][]*pb.ServerInfo, oldServerList map[string][]*pb.ServerInfo) {
-	_guildMapLock.RLock()
-	defer _guildMapLock.RUnlock()
-	for _, guild := range _guildMap {
-		if GuildRoute(guild.GetId()) != gentity.GetServer().GetServerId() {
-			// 通知已不属于本服务器管理的公会关闭协程
-			guild.Stop()
-			logger.Info("stop guild %v", guild.GetId())
-		}
-	}
-}
-
-// redis实现的分布式锁,保证同一个公会的逻辑处理协程只会在一个服务器上
-func guildServerLock(guildId int64) bool {
-	// redis实现的分布式锁,保证同一个公会的逻辑处理协程只会在一个服务器上
-	// 锁的是公会id和服务器id的对应关系
-	lockOK, err := cache.GetRedis().HSetNX(context.Background(), "g.lock", util.Itoa(guildId), gentity.GetServer().GetServerId()).Result()
-	if cache.IsRedisError(err) {
-		logger.Error("guild %v lock err:%v", guildId, err.Error())
-		return false
-	}
-	if !lockOK {
-		logger.Error("guild %v lock failed", guildId)
-		return false
-	}
-	logger.Debug("guildServerLock %v", guildId)
-	return true
-}
-
-// 分布式锁UnLock
-func guildServerUnlock(guildId int64) {
-	cache.GetRedis().HDel(context.Background(), "g.lock", util.Itoa(guildId))
-	logger.Debug("guildServerUnlock %v", guildId)
-}
-
-// 删除跟本服关联的分布式锁
-func deleteGuildServerLock() {
-	kv, err := cache.GetRedis().HGetAll(context.Background(), "g.lock").Result()
-	if cache.IsRedisError(err) {
-		logger.Error("ResetGuildLock err:%v", err.Error())
-		return
-	}
-	for guildIdStr, serverIdStr := range kv {
-		if util.Atoi(serverIdStr) == int(gentity.GetServer().GetServerId()) {
-			cache.GetRedis().HDel(context.Background(), "g.lock", guildIdStr)
-			logger.Debug("deleteGuildServerLock %v", guildIdStr)
-		}
-	}
+	_guildMgr.ReBalance()
 }
 
 // 根据公会id路由到对应的服务器id
@@ -147,7 +114,7 @@ func GuildRouteReqPacket(player *game.Player, guildId int64, packet *ProtoPacket
 				return false
 			}
 		}
-		guild.PushMessage(&GuildMessage{
+		guild.PushGuildMessage(&GuildMessage{
 			fromPlayerId: player.GetId(),
 			fromServerId: gentity.GetServer().GetServerId(),
 			fromPlayerName: player.GetName(),
@@ -179,7 +146,7 @@ func GuildRouteReqPacket(player *game.Player, guildId int64, packet *ProtoPacket
 // 实际项目也可以把列表数据加载到服务器中缓存起来,直接从内存中查询
 func OnGuildListReq(player *game.Player, req *pb.GuildListReq) {
 	logger.Debug("OnGuildListReq")
-	col := GetGuildDb().(*gentity.MongoCollection).GetCollection()
+	col := _guildMgr.GetEntityDb().(*gentity.MongoCollection).GetCollection()
 	pageSize := int64(10)
 	count, err := col.CountDocuments(context.Background(), bson.D{}, nil)
 	if err != nil {
@@ -237,7 +204,7 @@ func OnGuildCreateReq(player *game.Player, req *pb.GuildCreateReq) {
 		Name:     player.GetName(),
 		Position: int32(pb.GuildPosition_Leader),
 	}
-	dbErr, isDuplicateName := GetGuildDb().InsertEntity(newGuildData.Id, newGuildData)
+	dbErr, isDuplicateName := _guildMgr.GetEntityDb().InsertEntity(newGuildData.Id, newGuildData)
 	if dbErr != nil {
 		logger.Error("OnGuildCreateReq dbErr:%v", dbErr)
 		gen.SendGuildCreateRes(player, &pb.GuildCreateRes{

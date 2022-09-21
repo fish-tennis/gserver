@@ -7,6 +7,10 @@ import (
 
 var logger = gnet.NewStdLogger(3)
 
+func GetLogger() gnet.Logger {
+	return logger
+}
+
 func Debug(format string, args ...interface{}) {
 	logger.Debug(format, args...)
 }

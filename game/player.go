@@ -12,11 +12,11 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-var _ gentity.Entity = (*Player)(nil)
+var _ gentity.RoutineEntity = (*Player)(nil)
 
 // 玩家对象
 type Player struct {
-	gentity.RoutineEntity
+	gentity.BaseRoutineEntity
 	// 玩家名
 	name string
 	// 账号id
@@ -128,17 +128,17 @@ func (this *Player) GetGuild() *Guild {
 // 开启消息处理协程
 // 每个玩家一个独立的消息处理协程
 // 除了登录消息,其他消息都在玩家自己的协程里处理,因此这里对本玩家的操作不需要加锁
-func (this *Player) RunProcessRoutine() bool {
-	logger.Debug("player RunProcessRoutine %v", this.GetId())
-	return this.RoutineEntity.RunProcessRoutine(&gentity.RoutineEntityRoutineArgs{
-		EndFunc: func(routineEntity gentity.Entity) {
+func (this *Player) RunRoutine() bool {
+	logger.Debug("player RunRoutine %v", this.GetId())
+	return this.RunProcessRoutine(&gentity.RoutineEntityRoutineArgs{
+		EndFunc: func(routineEntity gentity.RoutineEntity) {
 			// 协程结束的时候,移除玩家
 			GetPlayerMgr().RemovePlayer(this)
 		},
-		ProcessMessageFunc: func(routineEntity gentity.Entity, message interface{}) {
+		ProcessMessageFunc: func(routineEntity gentity.RoutineEntity, message interface{}) {
 			this.processMessage(message.(*ProtoPacket))
 		},
-		AfterTimerExecuteFunc: func(routineEntity gentity.Entity, t time.Time) {
+		AfterTimerExecuteFunc: func(routineEntity gentity.RoutineEntity, t time.Time) {
 			// 如果有需要保存的数据修改了,即时保存数据库
 			this.SaveCache(cache.Get())
 		},
@@ -173,7 +173,7 @@ func (this *Player) processMessage(message *ProtoPacket) {
 // 放入消息队列
 func (this *Player) OnRecvPacket(packet *ProtoPacket) {
 	logger.Debug("OnRecvPacket %v", proto.MessageName(packet.Message()).Name())
-	this.RoutineEntity.PushMessage(packet)
+	this.PushMessage(packet)
 }
 
 // 从加载的数据构造出玩家对象
@@ -182,7 +182,7 @@ func CreatePlayerFromData(playerData *pb.PlayerData) *Player {
 		name:         playerData.Name,
 		accountId:    playerData.AccountId,
 		regionId:     playerData.RegionId,
-		RoutineEntity: *gentity.NewRoutineEntity(8),
+		BaseRoutineEntity: *gentity.NewRoutineEntity(8),
 	}
 	player.Id = playerData.Id
 	// 初始化玩家的各个模块

@@ -36,7 +36,7 @@ func GuildServerHandlerRegister(handler PacketHandlerRegister, playerMgr gentity
 			logger.Error("UnmarshalTo %v err: %v", req.FromGuildId, err)
 			return
 		}
-		guild.PushMessage(&GuildMessage{
+		guild.PushGuildMessage(&GuildMessage{
 			fromPlayerId: req.FromPlayerId,
 			fromServerId: req.FromServerId,
 			fromPlayerName: req.FromPlayerName,

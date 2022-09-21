@@ -107,7 +107,7 @@ func onPlayerEntryGameReq(connection Connection, packet *ProtoPacket) {
 		connection.SetTag(entryPlayer.GetId())
 		entryPlayer.SetConnection(connection)
 		// 开启玩家独立线程
-		entryPlayer.RunProcessRoutine()
+		entryPlayer.RunRoutine()
 	}
 	logger.Debug("entry entryPlayer:%v %v", entryPlayer.GetId(), entryPlayer.GetName())
 	gen.SendPlayerEntryGameRes(entryPlayer, &pb.PlayerEntryGameRes{
