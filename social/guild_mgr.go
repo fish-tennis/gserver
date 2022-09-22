@@ -47,8 +47,16 @@ func initGuildMgr() {
 	_guildMgr = gentity.NewDistributedEntityMgr("g.lock",
 		db.GetDbMgr().GetEntityDb("guild"),
 		cache.GetRedis(),
-		routineArgs,
-		GuildRoute)
+		GetServerList(),
+		routineArgs)
+	_guildMgr.SetRouter(GuildRoute)
+	_guildMgr.SetCreator(func(entityId int64) interface{} {
+		return &pb.GuildLoadData{Id: entityId}
+	}, func(entityData interface{}) gentity.RoutineEntity {
+		return NewGuild(entityData.(*pb.GuildLoadData))
+	})
+
+	_guildMgr.SetPacketConvertor(packetToRoutineMessage, packetToRemotePacket, remotePacketToRoutineMessage)
 
 	tmpGuild := NewGuild(&pb.GuildLoadData{
 		Id: 0,
@@ -59,23 +67,62 @@ func initGuildMgr() {
 	})
 }
 
+// 消息转换成RoutineEntity的逻辑消息
+func packetToRoutineMessage(from gentity.Entity, packet Packet, to gentity.RoutineEntity) interface{} {
+	fromPlayer := from.(*game.Player)
+	return &GuildMessage{
+		fromPlayerId:   fromPlayer.GetId(),
+		fromPlayerName: fromPlayer.GetName(),
+		fromServerId:   gentity.GetServer().GetServerId(),
+		cmd:            packet.Command(),
+		message:        packet.Message(),
+	}
+}
+
+// 消息转换成路由消息
+func packetToRemotePacket(from gentity.Entity, packet Packet, toEntityId int64) Packet {
+	any, err := anypb.New(packet.Message())
+	if err != nil {
+		logger.Error("anypb err:%v", err)
+		return nil
+	}
+	fromPlayer := from.(*game.Player)
+	routePacket := &pb.GuildRoutePlayerMessageReq{
+		FromPlayerId:   fromPlayer.GetId(),
+		FromGuildId:    toEntityId,
+		FromServerId:   gentity.GetServer().GetServerId(),
+		FromPlayerName: fromPlayer.GetName(),
+		PacketCommand:  int32(packet.Command()),
+		PacketData:     any,
+	}
+	return NewProtoPacket(PacketCommand(pb.CmdRoute_Cmd_GuildRoutePlayerMessageReq), routePacket)
+}
+
+// 路由消息转换成RoutineEntity的逻辑消息
+func remotePacketToRoutineMessage(packet Packet, toEntityId int64) interface{} {
+	req := packet.Message().(*pb.GuildRoutePlayerMessageReq)
+	message, err := req.PacketData.UnmarshalNew()
+	if err != nil {
+		logger.Error("UnmarshalNew %v err: %v", req.FromGuildId, err)
+		return nil
+	}
+	err = req.PacketData.UnmarshalTo(message)
+	if err != nil {
+		logger.Error("UnmarshalTo %v err: %v", req.FromGuildId, err)
+		return nil
+	}
+	return &GuildMessage{
+		fromPlayerId:   req.FromPlayerId,
+		fromServerId:   req.FromServerId,
+		fromPlayerName: req.FromPlayerName,
+		cmd:            PacketCommand(uint16(req.PacketCommand)),
+		message:        message,
+	}
+}
+
 // 获取本服上的公会
 func GetGuildById(guildId int64) *Guild {
 	guild := _guildMgr.GetEntity(guildId)
-	if guild == nil {
-		return nil
-	}
-	return guild.(*Guild)
-}
-
-// 从数据库加载公会数据
-func LoadGuild(guildId int64) *Guild {
-	guildData := &pb.GuildLoadData{
-		Id: guildId,
-	}
-	guild := _guildMgr.LoadEntity(guildId, guildData, func(entityData interface{}) gentity.RoutineEntity {
-		return NewGuild(entityData.(*pb.GuildLoadData))
-	})
 	if guild == nil {
 		return nil
 	}
@@ -98,48 +145,7 @@ func GuildRoute(guildId int64) int32 {
 
 // 根据公会id路由玩家的请求消息
 func GuildRouteReqPacket(player *game.Player, guildId int64, packet *ProtoPacket) bool {
-	routeServerId := GuildRoute(guildId)
-	logger.Debug("GuildRouteReqPacket %v -> %v", guildId, routeServerId)
-	if routeServerId <= 0 {
-		return false
-	}
-	// 属于本服务器管理的公会
-	if gentity.GetServer().GetServerId() == routeServerId {
-		// 先从内存中查找
-		guild := GetGuildById(guildId)
-		if guild == nil {
-			// 再到数据库加载
-			guild = LoadGuild(guildId)
-			if guild == nil {
-				logger.Error("not find guild:%v", guildId)
-				return false
-			}
-		}
-		guild.PushGuildMessage(&GuildMessage{
-			fromPlayerId: player.GetId(),
-			fromServerId: gentity.GetServer().GetServerId(),
-			fromPlayerName: player.GetName(),
-			cmd:          packet.Command(),
-			message:      packet.Message(),
-		})
-		return true
-	} else {
-		// 不属于本服务器管理的公会,把消息转发到该公会对应的服务器
-		any, err := anypb.New(packet.Message())
-		if err != nil {
-			logger.Error("anypb err:%v", err)
-			return false
-		}
-		routePacket := &pb.GuildRoutePlayerMessageReq{
-			FromPlayerId:   player.GetId(),
-			FromGuildId:    guildId,
-			FromServerId:   gentity.GetServer().GetServerId(),
-			FromPlayerName: player.GetName(),
-			PacketCommand:  int32(packet.Command()),
-			PacketData:     any,
-		}
-		return GetServerList().SendToServer(routeServerId, PacketCommand(pb.CmdRoute_Cmd_GuildRoutePlayerMessageReq), routePacket)
-	}
+	return _guildMgr.RoutePacket(player, guildId, packet)
 }
 
 // 公会列表查询
@@ -173,7 +179,7 @@ func OnGuildListReq(player *game.Player, req *pb.GuildListReq) {
 		PageCount:  int32(math.Ceil(float64(count) / float64(pageSize))),
 		GuildInfos: make([]*pb.GuildInfo, len(guildInfos), len(guildInfos)),
 	}
-	for i,info := range guildInfos {
+	for i, info := range guildInfos {
 		res.GuildInfos[i] = info.BaseInfo
 	}
 	gen.SendGuildListRes(player, res)
