@@ -15,7 +15,7 @@ func OfflinePlayerProcess(playerId int64, data interface{}, f func(offlinePlayer
 		return false
 	}
 	// 防止离线数据处理期间,玩家上线,导致数据覆盖
-	if !cache.AddOnlineAccount(accountId, playerId, gentity.GetServer().GetServerId()) {
+	if !cache.AddOnlineAccount(accountId, playerId, gentity.GetApplication().GetId()) {
 		logger.Debug("OfflinePlayerProcess AddOnlineAccount failed playerId:%v accountId:%v", playerId, accountId)
 		return false
 	}

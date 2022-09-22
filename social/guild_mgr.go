@@ -73,7 +73,7 @@ func packetToRoutineMessage(from gentity.Entity, packet Packet, to gentity.Routi
 	return &GuildMessage{
 		fromPlayerId:   fromPlayer.GetId(),
 		fromPlayerName: fromPlayer.GetName(),
-		fromServerId:   gentity.GetServer().GetServerId(),
+		fromServerId:   gentity.GetApplication().GetId(),
 		cmd:            packet.Command(),
 		message:        packet.Message(),
 	}
@@ -90,7 +90,7 @@ func packetToRemotePacket(from gentity.Entity, packet Packet, toEntityId int64) 
 	routePacket := &pb.GuildRoutePlayerMessageReq{
 		FromPlayerId:   fromPlayer.GetId(),
 		FromGuildId:    toEntityId,
-		FromServerId:   gentity.GetServer().GetServerId(),
+		FromServerId:   gentity.GetApplication().GetId(),
 		FromPlayerName: fromPlayer.GetName(),
 		PacketCommand:  int32(packet.Command()),
 		PacketData:     any,

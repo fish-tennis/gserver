@@ -48,7 +48,7 @@ func main() {
 	// 根据命令行参数 创建不同的服务器实例
 	serverType := getServerTypeFromConfigFile(configFile)
 	server := createServer(serverType)
-	gentity.SetServer(server)
+	gentity.SetApplication(server)
 
 	// context实现优雅的协程关闭通知
 	ctx,cancel := context.WithCancel(context.Background())
@@ -114,7 +114,7 @@ func getServerTypeFromConfigFile(configFile string) string {
 }
 
 // 创建相应类型的服务器
-func createServer(serverType string) gentity.Server {
+func createServer(serverType string) gentity.Application {
 	switch serverType {
 	case "login":
 		return new(loginserver.LoginServer)

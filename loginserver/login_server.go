@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	_ gentity.Server = (*LoginServer)(nil)
+	_ gentity.Application = (*LoginServer)(nil)
 	// singleton
 	_loginServer *LoginServer
 )

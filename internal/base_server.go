@@ -56,14 +56,14 @@ type BaseServer struct {
 	defaultServerConnectorCodec *ProtoCodec
 	ctx context.Context
 	wg sync.WaitGroup
-	serverHooks []gentity.ServerHook
+	serverHooks []gentity.ApplicationHook
 }
 
 func (this *BaseServer) GetConfigFile() string {
 	return this.configFile
 }
 
-func (this *BaseServer) GetServerId() int32 {
+func (this *BaseServer) GetId() int32 {
 	return this.serverInfo.GetServerId()
 }
 
@@ -83,11 +83,11 @@ func (this *BaseServer) GetServerList() *ServerList {
 	return this.serverList
 }
 
-func (this *BaseServer) AddServerHook(hooks ...gentity.ServerHook) {
+func (this *BaseServer) AddServerHook(hooks ...gentity.ApplicationHook) {
 	this.serverHooks = append(this.serverHooks, hooks...)
 }
 
-func (this *BaseServer) GetServerHooks() []gentity.ServerHook {
+func (this *BaseServer) GetServerHooks() []gentity.ApplicationHook {
 	return this.serverHooks
 }
 
@@ -125,7 +125,7 @@ func (this *BaseServer) OnUpdate(ctx context.Context, updateCount int64) {
 func (this *BaseServer) Exit() {
 	logger.Info("BaseServer.Exit")
 	for _,hook := range this.serverHooks {
-		hook.OnServerExit()
+		hook.OnApplicationExit()
 	}
 	// 服务器管理的协程关闭
 	logger.Info("wait server goroutine close")

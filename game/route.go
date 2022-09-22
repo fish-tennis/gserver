@@ -116,7 +116,7 @@ func RoutePlayerPacket(playerId int64, cmd PacketCommand, message proto.Message,
 		if toServerId == 0 {
 			return false
 		}
-		if toServerId == gentity.GetServer().GetServerId() {
+		if toServerId == gentity.GetApplication().GetId() {
 			return false
 		}
 	}

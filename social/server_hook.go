@@ -9,7 +9,7 @@ type Hook struct {
 }
 
 // 服务器初始化回调
-func (h *Hook) OnServerInit(initArg interface{}) {
+func (h *Hook) OnApplicationInit(initArg interface{}) {
 	arg := initArg.(*misc.GameServerInitArg)
 	initGuildMgr()
 	// 注册客户端的消息回调
@@ -23,6 +23,6 @@ func (h *Hook) OnServerInit(initArg interface{}) {
 }
 
 // 服务器关闭回调
-func (h *Hook) OnServerExit() {
+func (h *Hook) OnApplicationExit() {
 	_guildMgr.StopAll()
 }

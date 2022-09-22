@@ -21,7 +21,7 @@ import (
 )
 
 var (
-	_ gentity.Server = (*GameServer)(nil)
+	_ gentity.Application = (*GameServer)(nil)
 )
 
 // 游戏服
@@ -87,7 +87,7 @@ func (this *GameServer) Init(ctx context.Context, configFile string) bool {
 		PlayerMgr:     game.GetPlayerMgr(),
 	}
 	for _, hook := range this.BaseServer.GetServerHooks() {
-		hook.OnServerInit(serverInitArg)
+		hook.OnApplicationInit(serverInitArg)
 	}
 	logger.Info("GameServer.Init")
 	return true
@@ -166,7 +166,7 @@ func (this *GameServer) initCache() {
 
 // 修复缓存,游戏服异常宕机重启后进行修复操作
 func (this *GameServer) repairCache() {
-	cache.ResetOnlinePlayer(this.GetServerId(), this.repairPlayerCache)
+	cache.ResetOnlinePlayer(this.GetId(), this.repairPlayerCache)
 }
 
 // 缓存中的玩家数据保存到数据库
@@ -234,7 +234,7 @@ func (this *GameServer) registerServerPacket(serverHandler *DefaultConnectionHan
 // 添加一个在线玩家
 func (this *GameServer) AddPlayer(player gentity.Player) {
 	this.playerMap.Store(player.GetId(), player)
-	cache.AddOnlinePlayer(player.GetId(), player.GetAccountId(), this.GetServerId())
+	cache.AddOnlinePlayer(player.GetId(), player.GetAccountId(), this.GetId())
 }
 
 // 删除一个在线玩家
@@ -243,7 +243,7 @@ func (this *GameServer) RemovePlayer(player gentity.Player) {
 	player.(*game.Player).SaveDb(true)
 	this.playerMap.Delete(player.GetId())
 	cache.RemoveOnlineAccount(player.GetAccountId())
-	cache.RemoveOnlinePlayer(player.GetId(), this.GetServerId())
+	cache.RemoveOnlinePlayer(player.GetId(), this.GetId())
 }
 
 // 获取一个在线玩家
@@ -262,10 +262,10 @@ func (this *GameServer) onKickPlayer(connection Connection, packet *ProtoPacket)
 		player.SetConnection(nil)
 		player.Stop()
 		logger.Debug("kick player account:%v playerId:%v gameServerId:%v",
-			req.GetAccountId(), req.GetPlayerId(), this.GetServerId())
+			req.GetAccountId(), req.GetPlayerId(), this.GetId())
 	} else {
 		logger.Error("kick player failed account:%v playerId:%v gameServerId:%v",
-			req.GetAccountId(), req.GetPlayerId(), this.GetServerId())
+			req.GetAccountId(), req.GetPlayerId(), this.GetId())
 	}
 }
 
