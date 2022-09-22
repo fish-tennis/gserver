@@ -16,6 +16,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"google.golang.org/protobuf/types/known/anypb"
 	"math"
+	"reflect"
 	"time"
 )
 
@@ -33,22 +34,14 @@ var (
 func initGuildMgr() {
 	routineArgs := &gentity.RoutineEntityRoutineArgs{
 		ProcessMessageFunc: func(routineEntity gentity.RoutineEntity, message interface{}) {
-			guild := GetGuildById(routineEntity.GetId())
-			if guild == nil {
-				return
-			}
-			guild.processMessage(message.(*GuildMessage))
+			routineEntity.(*Guild).processMessage(message.(*GuildMessage))
 			//this.SaveCache()
 			// 这里演示一种直接保存数据库的用法,可以用于那些不经常修改的数据
 			// 这种方式,省去了要处理crash后从缓存恢复数据的步骤
-			gentity.SaveEntityChangedDataToDb(_guildMgr.GetEntityDb(), guild, cache.Get(), false)
+			gentity.SaveEntityChangedDataToDb(_guildMgr.GetEntityDb(), routineEntity, cache.Get(), false)
 		},
 		AfterTimerExecuteFunc: func(routineEntity gentity.RoutineEntity, t time.Time) {
-			guild := GetGuildById(routineEntity.GetId())
-			if guild == nil {
-				return
-			}
-			gentity.SaveEntityChangedDataToDb(_guildMgr.GetEntityDb(), guild, cache.Get(), false)
+			gentity.SaveEntityChangedDataToDb(_guildMgr.GetEntityDb(), routineEntity, cache.Get(), false)
 		},
 	}
 	_guildMgr = gentity.NewDistributedEntityMgr("g.lock",
@@ -56,6 +49,14 @@ func initGuildMgr() {
 		cache.GetRedis(),
 		routineArgs,
 		GuildRoute)
+
+	tmpGuild := NewGuild(&pb.GuildLoadData{
+		Id: 0,
+	})
+	tmpGuild.RangeComponent(func(component gentity.Component) bool {
+		gentity.GetSaveableStruct(reflect.TypeOf(component))
+		return true
+	})
 }
 
 // 获取本服上的公会

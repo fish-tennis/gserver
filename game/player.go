@@ -130,7 +130,7 @@ func (this *Player) GetGuild() *Guild {
 // 除了登录消息,其他消息都在玩家自己的协程里处理,因此这里对本玩家的操作不需要加锁
 func (this *Player) RunRoutine() bool {
 	logger.Debug("player RunRoutine %v", this.GetId())
-	return this.RunProcessRoutine(&gentity.RoutineEntityRoutineArgs{
+	return this.RunProcessRoutine(this, &gentity.RoutineEntityRoutineArgs{
 		EndFunc: func(routineEntity gentity.RoutineEntity) {
 			// 协程结束的时候,移除玩家
 			GetPlayerMgr().RemovePlayer(this)
