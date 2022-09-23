@@ -125,7 +125,7 @@ func RoutePlayerPacket(playerId int64, cmd PacketCommand, message proto.Message,
 		logger.Error("RoutePlayerPacketWithServer %v err:%v", playerId, err)
 		return false
 	}
-	return internal.GetServerList().SendToServer(toServerId, PacketCommand(pb.CmdRoute_Cmd_RoutePlayerMessage), &pb.RoutePlayerMessage{
+	return internal.GetServerList().Send(toServerId, PacketCommand(pb.CmdRoute_Cmd_RoutePlayerMessage), &pb.RoutePlayerMessage{
 		ToPlayerId: playerId,
 		PacketCommand: int32(cmd),
 		DirectSendClient: directSendClient,

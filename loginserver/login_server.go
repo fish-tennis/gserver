@@ -47,6 +47,7 @@ func (this *LoginServer) Init(ctx context.Context, configFile string) bool {
 	this.readConfig()
 	this.initDb()
 	this.initCache()
+	this.GetServerList().SetCache(cache.Get())
 	netMgr := GetNetMgr()
 	clientCodec := NewProtoCodec(nil)
 	clientHandler := NewDefaultConnectionHandler(clientCodec)

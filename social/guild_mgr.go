@@ -49,6 +49,7 @@ func initGuildMgr() {
 		cache.GetRedis(),
 		GetServerList(),
 		routineArgs)
+	_guildMgr.SetLoadEntityWhenGetNil(true)
 	_guildMgr.SetRouter(GuildRoute)
 	_guildMgr.SetCreator(func(entityId int64) interface{} {
 		return &pb.GuildLoadData{Id: entityId}
@@ -130,7 +131,7 @@ func GetGuildById(guildId int64) *Guild {
 }
 
 // 服务器动态扩缩容了,公会重新分配
-func onServerListUpdate(serverList map[string][]*pb.ServerInfo, oldServerList map[string][]*pb.ServerInfo) {
+func onServerListUpdate(serverList map[string][]gentity.ServerInfo, oldServerList map[string][]gentity.ServerInfo) {
 	_guildMgr.ReBalance()
 }
 
@@ -140,7 +141,7 @@ func GuildRoute(guildId int64) int32 {
 	// 这里只演示了最简单的路由方式
 	// 实际项目可能采用一致性哈希等其他方式
 	index := guildId % int64(len(servers))
-	return servers[index].ServerId
+	return servers[index].GetServerId()
 }
 
 // 根据公会id路由玩家的请求消息

@@ -43,11 +43,6 @@ func NewGuild(guildData *pb.GuildLoadData) *Guild {
 	return guild
 }
 
-func (this *Guild) PushGuildMessage(guildMessage *GuildMessage) {
-	logger.Debug("PushGuildMessage %v", guildMessage)
-	this.PushMessage(guildMessage)
-}
-
 func (this *Guild) processMessage(message *GuildMessage) {
 	defer func() {
 		if err := recover(); err != nil {

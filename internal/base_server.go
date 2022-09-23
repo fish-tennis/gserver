@@ -97,8 +97,8 @@ func (this *BaseServer) Init(ctx context.Context, configFile string) bool {
 	this.configFile = configFile
 	this.serverInfo = new(pb.ServerInfo)
 	this.serverList = NewServerList()
-	this.serverList.localServerInfo = this.serverInfo
-	this.serverList.serverConnectorFunc = this.DefaultServerConnectorFunc
+	this.serverList.SetLocalServerInfo(this.serverInfo)
+	this.serverList.SetServerConnectorFunc(this.DefaultServerConnectorFunc)
 	this.updateInterval = time.Second
 	// 初始化id生成器
 	util.InitIdGenerator(uint16(this.serverInfo.ServerId))
@@ -118,7 +118,7 @@ func (this *BaseServer) OnUpdate(ctx context.Context, updateCount int64) {
 	//LogDebug("BaseServer.OnUpdate")
 	// 定时上传本地服务器的信息
 	this.serverInfo.LastActiveTime = util.GetCurrentMS()
-	this.GetServerList().Register(this.serverInfo)
+	this.GetServerList().RegisterLocalServerInfo()
 	this.GetServerList().FindAndConnectServers(ctx)
 }
 
@@ -190,12 +190,13 @@ func (this *BaseServer) SetDefaultServerConnectorConfig(config ConnectionConfig)
 }
 
 // 默认的服务器连接接口
-func (this *BaseServer) DefaultServerConnectorFunc(ctx context.Context, info *pb.ServerInfo) Connection {
-	return GetNetMgr().NewConnector(ctx, info.GetServerListenAddr(), &this.serverConnectorConfig,
+func (this *BaseServer) DefaultServerConnectorFunc(ctx context.Context, info gentity.ServerInfo) Connection {
+	serverInfo := info.(*pb.ServerInfo)
+	return GetNetMgr().NewConnector(ctx, serverInfo.GetServerListenAddr(), &this.serverConnectorConfig,
 		this.defaultServerConnectorCodec, this.defaultServerConnectorHandler, nil)
 }
 
 // 发消息给另一个服务器
 func (this *BaseServer) SendToServer(serverId int32, cmd PacketCommand, message proto.Message) bool {
-	return this.serverList.SendToServer(serverId, cmd, message)
+	return this.serverList.Send(serverId, cmd, message)
 }

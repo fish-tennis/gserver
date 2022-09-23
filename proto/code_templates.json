@@ -51,7 +51,7 @@
     "funcTemplate":[
       "{Comment}",
       "func Send{MessageName}(serverId int32, message *pb.{MessageName}) bool {",
-      "   return GetServerList().SendToServer(serverId, PacketCommand(pb.Cmd{ProtoName}_Cmd_{MessageName}), message)",
+      "   return GetServerList().Send(serverId, PacketCommand(pb.Cmd{ProtoName}_Cmd_{MessageName}), message)",
       "}",
       ""
     ]

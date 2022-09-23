@@ -50,6 +50,7 @@ func (this *GameServer) Init(ctx context.Context, configFile string) bool {
 	game.InitPlayerComponentMap()
 	this.initDb()
 	this.initCache()
+	this.GetServerList().SetCache(cache.Get())
 
 	netMgr := GetNetMgr()
 	// 客户端的codec和handler

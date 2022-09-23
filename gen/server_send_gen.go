@@ -21,6 +21,6 @@ import (
 // 踢玩家下线
 // @Server表示是服务器用的普通消息,工具会生成相应的辅助代码
 func SendKickPlayer(serverId int32, message *pb.KickPlayer) bool {
-   return GetServerList().SendToServer(serverId, PacketCommand(pb.CmdInner_Cmd_KickPlayer), message)
+   return GetServerList().Send(serverId, PacketCommand(pb.CmdInner_Cmd_KickPlayer), message)
 }
 
