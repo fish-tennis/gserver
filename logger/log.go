@@ -5,26 +5,30 @@ import (
 	"runtime"
 )
 
-var logger = gnet.NewStdLogger(3)
+var _logger = gnet.NewStdLogger(3)
 
 func GetLogger() gnet.Logger {
-	return logger
+	return _logger
+}
+
+func SetLogger(logger gnet.Logger) {
+	_logger = logger
 }
 
 func Debug(format string, args ...interface{}) {
-	logger.Debug(format, args...)
+	_logger.Debug(format, args...)
 }
 
 func Info(format string, args ...interface{}) {
-	logger.Info(format, args...)
+	_logger.Info(format, args...)
 }
 
 func Warn(format string, args ...interface{}) {
-	logger.Warn(format, args...)
+	_logger.Warn(format, args...)
 }
 
 func Error(format string, args ...interface{}) {
-	logger.Error(format, args...)
+	_logger.Error(format, args...)
 }
 
 func LogStack() {

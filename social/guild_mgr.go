@@ -46,7 +46,7 @@ func initGuildMgr() {
 	}
 	_guildMgr = gentity.NewDistributedEntityMgr("g.lock",
 		db.GetDbMgr().GetEntityDb("guild"),
-		cache.GetRedis(),
+		cache.Get(),
 		GetServerList(),
 		routineArgs)
 	_guildMgr.SetLoadEntityWhenGetNil(true)
