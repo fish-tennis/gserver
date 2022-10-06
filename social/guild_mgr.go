@@ -31,45 +31,32 @@ var (
 	_guildMgr *gentity.DistributedEntityMgr
 )
 
-func initGuildMgr() {
-	routineArgs := &gentity.RoutineEntityRoutineArgs{
-		ProcessMessageFunc: func(routineEntity gentity.RoutineEntity, message interface{}) {
-			routineEntity.(*Guild).processMessage(message.(*GuildMessage))
-			//this.SaveCache()
-			// 这里演示一种直接保存数据库的用法,可以用于那些不经常修改的数据
-			// 这种方式,省去了要处理crash后从缓存恢复数据的步骤
-			gentity.SaveEntityChangedDataToDb(_guildMgr.GetEntityDb(), routineEntity, cache.Get(), false)
-		},
-		AfterTimerExecuteFunc: func(routineEntity gentity.RoutineEntity, t time.Time) {
-			gentity.SaveEntityChangedDataToDb(_guildMgr.GetEntityDb(), routineEntity, cache.Get(), false)
-		},
-	}
-	_guildMgr = gentity.NewDistributedEntityMgr("g.lock",
-		db.GetDbMgr().GetEntityDb("guild"),
-		cache.Get(),
-		GetServerList(),
-		routineArgs)
-	_guildMgr.SetLoadEntityWhenGetNil(true)
-	_guildMgr.SetRouter(GuildRoute)
-	_guildMgr.SetCreator(func(entityId int64) interface{} {
-		return &pb.GuildLoadData{Id: entityId}
-	}, func(entityData interface{}) gentity.RoutineEntity {
-		return NewGuild(entityData.(*pb.GuildLoadData))
-	})
-
-	_guildMgr.SetPacketConvertor(packetToRoutineMessage, packetToRemotePacket, remotePacketToRoutineMessage)
-
-	tmpGuild := NewGuild(&pb.GuildLoadData{
-		Id: 0,
-	})
-	tmpGuild.RangeComponent(func(component gentity.Component) bool {
-		gentity.GetSaveableStruct(reflect.TypeOf(component))
-		return true
-	})
+// DistributedEntityHelper实现
+type GuildHelper struct {
 }
 
-// 消息转换成RoutineEntity的逻辑消息
-func packetToRoutineMessage(from gentity.Entity, packet Packet, to gentity.RoutineEntity) interface{} {
+// 加载公会实体
+// 加载成功后,开启独立协程
+func (g *GuildHelper) LoadEntity(entityId int64) gentity.RoutineEntity {
+	return _guildMgr.LoadEntity(entityId, &pb.GuildLoadData{Id: entityId})
+}
+
+// 创建公会实体
+func (g *GuildHelper) CreateEntity(entityData interface{}) gentity.RoutineEntity {
+	return NewGuild(entityData.(*pb.GuildLoadData))
+}
+
+// 根据公会id路由到对应的服务器id
+func (g *GuildHelper) RouteServerId(entityId int64) int32 {
+	servers := GetServerList().GetServersByType("gameserver")
+	// 这里只演示了最简单的路由方式
+	// 实际项目可能采用一致性哈希等其他方式
+	index := entityId % int64(len(servers))
+	return servers[index].GetServerId()
+}
+
+// 消息转换成公会的逻辑消息
+func (g *GuildHelper) PacketToRoutineMessage(from gentity.Entity, packet Packet, to gentity.RoutineEntity) interface{} {
 	fromPlayer := from.(*game.Player)
 	return &GuildMessage{
 		fromPlayerId:   fromPlayer.GetId(),
@@ -81,7 +68,7 @@ func packetToRoutineMessage(from gentity.Entity, packet Packet, to gentity.Routi
 }
 
 // 消息转换成路由消息
-func packetToRemotePacket(from gentity.Entity, packet Packet, toEntityId int64) Packet {
+func (g *GuildHelper) PacketToRoutePacket(from gentity.Entity, packet Packet, toEntityId int64) Packet {
 	any, err := anypb.New(packet.Message())
 	if err != nil {
 		logger.Error("anypb err:%v", err)
@@ -99,8 +86,8 @@ func packetToRemotePacket(from gentity.Entity, packet Packet, toEntityId int64) 
 	return NewProtoPacket(PacketCommand(pb.CmdRoute_Cmd_GuildRoutePlayerMessageReq), routePacket)
 }
 
-// 路由消息转换成RoutineEntity的逻辑消息
-func remotePacketToRoutineMessage(packet Packet, toEntityId int64) interface{} {
+// 路由消息转换成公会的逻辑消息
+func (g *GuildHelper) RoutePacketToRoutineMessage(packet Packet, toEntityId int64) interface{} {
 	req := packet.Message().(*pb.GuildRoutePlayerMessageReq)
 	message, err := req.PacketData.UnmarshalNew()
 	if err != nil {
@@ -121,6 +108,37 @@ func remotePacketToRoutineMessage(packet Packet, toEntityId int64) interface{} {
 	}
 }
 
+func initGuildMgr() {
+	routineArgs := &gentity.RoutineEntityRoutineArgs{
+		ProcessMessageFunc: func(routineEntity gentity.RoutineEntity, message interface{}) {
+			routineEntity.(*Guild).processMessage(message.(*GuildMessage))
+			//this.SaveCache()
+			// 这里演示一种直接保存数据库的用法,可以用于那些不经常修改的数据
+			// 这种方式,省去了要处理crash后从缓存恢复数据的步骤
+			gentity.SaveEntityChangedDataToDb(_guildMgr.GetEntityDb(), routineEntity, cache.Get(), false)
+		},
+		AfterTimerExecuteFunc: func(routineEntity gentity.RoutineEntity, t time.Time) {
+			gentity.SaveEntityChangedDataToDb(_guildMgr.GetEntityDb(), routineEntity, cache.Get(), false)
+		},
+	}
+	_guildMgr = gentity.NewDistributedEntityMgr("g.lock",
+		db.GetDbMgr().GetEntityDb("guild"),
+		cache.Get(),
+		GetServerList(),
+		routineArgs,
+		new(GuildHelper))
+	_guildMgr.SetLoadEntityWhenGetNil(true)
+
+	// 启动时,缓存Guild的结构信息
+	tmpGuild := NewGuild(&pb.GuildLoadData{
+		Id: 0,
+	})
+	tmpGuild.RangeComponent(func(component gentity.Component) bool {
+		gentity.GetSaveableStruct(reflect.TypeOf(component))
+		return true
+	})
+}
+
 // 获取本服上的公会
 func GetGuildById(guildId int64) *Guild {
 	guild := _guildMgr.GetEntity(guildId)
@@ -135,22 +153,13 @@ func onServerListUpdate(serverList map[string][]gentity.ServerInfo, oldServerLis
 	_guildMgr.ReBalance()
 }
 
-// 根据公会id路由到对应的服务器id
-func GuildRoute(guildId int64) int32 {
-	servers := GetServerList().GetServersByType("gameserver")
-	// 这里只演示了最简单的路由方式
-	// 实际项目可能采用一致性哈希等其他方式
-	index := guildId % int64(len(servers))
-	return servers[index].GetServerId()
-}
-
 // 根据公会id路由玩家的请求消息
 func GuildRouteReqPacket(player *game.Player, guildId int64, packet *ProtoPacket) bool {
 	return _guildMgr.RoutePacket(player, guildId, packet)
 }
 
 // 公会列表查询
-// 这里演示的直接从数据库查询
+// 这里演示的直接从mongodb查询(性能低,尤其是在集群模式下)
 // 实际项目也可以把列表数据加载到服务器中缓存起来,直接从内存中查询
 func OnGuildListReq(player *game.Player, req *pb.GuildListReq) {
 	logger.Debug("OnGuildListReq")
@@ -186,7 +195,7 @@ func OnGuildListReq(player *game.Player, req *pb.GuildListReq) {
 	gen.SendGuildListRes(player, res)
 }
 
-// 创建公会
+// 创建公会请求
 func OnGuildCreateReq(player *game.Player, req *pb.GuildCreateReq) {
 	logger.Debug("OnGuildCreateReq")
 	playerGuild := player.GetGuild()
