@@ -150,6 +150,7 @@ func (this *GameServer) initDb() {
 	if !mongoDb.Connect() {
 		panic("connect db error")
 	}
+	// 玩家数据库设置分片
 	mongoDb.ShardDatabase(this.config.MongoDbName)
 	playerDB.(*gentity.MongoCollectionPlayer).ShardCollection(true)
 	db.SetDbMgr(mongoDb)
