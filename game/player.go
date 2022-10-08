@@ -184,7 +184,7 @@ func CreatePlayerFromData(playerData *pb.PlayerData) *Player {
 		regionId:     playerData.RegionId,
 		BaseRoutineEntity: *gentity.NewRoutineEntity(8),
 	}
-	player.Id = playerData.Id
+	player.Id = playerData.XId
 	// 初始化玩家的各个模块
 	player.AddComponent(NewBaseInfo(player, playerData.BaseInfo), nil)
 	player.AddComponent(NewMoney(player), playerData.Money)

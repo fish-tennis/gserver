@@ -140,7 +140,7 @@ func onCreatePlayerReq(connection Connection, packet *ProtoPacket) {
 		return
 	}
 	playerData := &pb.PlayerData{
-		Id:        util.GenUniqueId(),
+		XId:        util.GenUniqueId(),
 		Name:      req.Name,
 		AccountId: req.AccountId,
 		RegionId:  req.RegionId,
@@ -152,12 +152,12 @@ func onCreatePlayerReq(connection Connection, packet *ProtoPacket) {
 	}
 	newPlayer := game.CreatePlayerFromData(playerData)
 	newPlayerSaveData := make(map[string]interface{})
-	newPlayerSaveData["id"] = playerData.Id
+	newPlayerSaveData["_id"] = playerData.XId
 	newPlayerSaveData["name"] = playerData.Name
 	newPlayerSaveData["accountid"] = playerData.AccountId
 	newPlayerSaveData["regionid"] = playerData.RegionId
 	gentity.GetEntitySaveData(newPlayer, newPlayerSaveData)
-	err, isDuplicateKey := db.GetPlayerDb().InsertEntity(playerData.Id, newPlayerSaveData)
+	err, isDuplicateKey := db.GetPlayerDb().InsertEntity(playerData.XId, newPlayerSaveData)
 	if err != nil {
 		result := "DbError"
 		if isDuplicateKey {
@@ -170,7 +170,7 @@ func onCreatePlayerReq(connection Connection, packet *ProtoPacket) {
 		logger.Error("CreatePlayer result:%v err:%v playerData:%v", result, err, playerData)
 		return
 	}
-	logger.Debug("CreatePlayer:%v %v", playerData.Id, playerData.Name)
+	logger.Debug("CreatePlayer:%v %v", playerData.XId, playerData.Name)
 	connection.Send(PacketCommand(pb.CmdLogin_Cmd_CreatePlayerRes), &pb.CreatePlayerRes{
 		AccountId: req.AccountId,
 		RegionId:  req.RegionId,

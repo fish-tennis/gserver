@@ -16,7 +16,7 @@ func keyLoginSession(accountId int64) string {
 func NewLoginSession(account *pb.Account) string {
 	session := fmt.Sprintf("%v", time.Now().UnixNano())
 	// 登录session存redis,供玩家登录游戏服时验证用,使登录服和游戏服可以解耦
-	_,err := GetRedis().SetEX(context.Background(), keyLoginSession(account.GetId()), session, time.Minute*10).Result()
+	_,err := GetRedis().SetEX(context.Background(), keyLoginSession(account.GetXId()), session, time.Minute*10).Result()
 	if IsRedisError(err) {
 		logger.Error("session err:%v", err)
 		return ""

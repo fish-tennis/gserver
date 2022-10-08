@@ -10,6 +10,8 @@ import (
 	. "github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
 	"os"
 	"time"
 )
@@ -81,7 +83,7 @@ func (this *LoginServer) Exit() {
 
 // 读取配置文件
 func (this *LoginServer) readConfig() {
-	fileData,err := os.ReadFile(this.GetConfigFile())
+	fileData, err := os.ReadFile(this.GetConfigFile())
 	if err != nil {
 		panic("read config file err")
 	}
@@ -99,26 +101,40 @@ func (this *LoginServer) readConfig() {
 // 初始化数据库
 func (this *LoginServer) initDb() {
 	// 使用mongodb来演示
-	mongoDb := gentity.NewMongoDb(this.config.MongoUri,this.config.MongoDbName)
-	this.accountDb = mongoDb.RegisterEntityDb("account","id", "name")
+	mongoDb := gentity.NewMongoDb(this.config.MongoUri, this.config.MongoDbName)
+	this.accountDb = mongoDb.RegisterEntityDb("account", "_id")
 	if !mongoDb.Connect() {
 		panic("connect db error")
 	}
+	this.accountDb.(*gentity.MongoCollection).CreateIndex("name", true)
 	db.SetDbMgr(mongoDb)
 }
 
 // 初始化redis缓存
 func (this *LoginServer) initCache() {
 	cache.NewRedis(this.config.RedisUri, this.config.RedisPassword, this.config.RedisCluster)
-	pong,err := cache.GetRedis().Ping(context.Background()).Result()
+	pong, err := cache.GetRedis().Ping(context.Background()).Result()
 	if err != nil || pong == "" {
 		panic("redis connect error")
 	}
 }
 
+func (this *LoginServer) getAccountData(accountName string, accountData interface{}) error {
+	col := this.GetAccountDb().(*gentity.MongoCollection).GetCollection()
+	result := col.FindOne(context.Background(), bson.D{{"name", accountName}})
+	if result == nil || result.Err() == mongo.ErrNoDocuments {
+		return nil
+	}
+	err := result.Decode(accountData)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // 注册客户端消息回调
 func (this *LoginServer) registerClientPacket(clientHandler *DefaultConnectionHandler) {
-	clientHandler.Register(PacketCommand(pb.CmdInner_Cmd_HeartBeatReq), onHeartBeatReq,  new(pb.HeartBeatReq))
+	clientHandler.Register(PacketCommand(pb.CmdInner_Cmd_HeartBeatReq), onHeartBeatReq, new(pb.HeartBeatReq))
 	clientHandler.Register(PacketCommand(pb.CmdLogin_Cmd_LoginReq), onLoginReq, new(pb.LoginReq))
 	clientHandler.Register(PacketCommand(pb.CmdLogin_Cmd_AccountReg), onAccountReg, new(pb.AccountReg))
 }
@@ -127,7 +143,7 @@ func (this *LoginServer) registerClientPacket(clientHandler *DefaultConnectionHa
 func onHeartBeatReq(connection Connection, packet *ProtoPacket) {
 	req := packet.Message().(*pb.HeartBeatReq)
 	connection.Send(PacketCommand(pb.CmdInner_Cmd_HeartBeatRes), &pb.HeartBeatRes{
-		RequestTimestamp: req.GetTimestamp(),
-		ResponseTimestamp: uint64(time.Now().UnixNano()/int64(time.Microsecond)),
+		RequestTimestamp:  req.GetTimestamp(),
+		ResponseTimestamp: uint64(time.Now().UnixNano() / int64(time.Microsecond)),
 	})
 }

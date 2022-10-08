@@ -43,7 +43,7 @@ message PlayerGuildData {
 // 玩家在mongo中的保存格式
 // 用于一次性把玩家数据加载进来
 message PlayerData {
-  int64 id = 1; // 玩家id
+  int64 _id = 1; // 玩家id
   string name = 2; // 玩家名
   int64 accountId = 3; // 账号id
   int32 regionId = 4; // 区服id

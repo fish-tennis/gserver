@@ -145,11 +145,13 @@ func (this *GameServer) loadCfgs() {
 func (this *GameServer) initDb() {
 	// 使用mongodb来演示
 	mongoDb := gentity.NewMongoDb(this.config.MongoUri, this.config.MongoDbName)
-	mongoDb.RegisterPlayerDb("player", "id", "name", "accountid", "regionid")
-	mongoDb.RegisterEntityDb("guild", "id", "name")
+	playerDB := mongoDb.RegisterPlayerDb("player", "_id", "accountid", "regionid")
+	mongoDb.RegisterEntityDb("guild", "_id")
 	if !mongoDb.Connect() {
 		panic("connect db error")
 	}
+	mongoDb.ShardDatabase(this.config.MongoDbName)
+	playerDB.(*gentity.MongoCollectionPlayer).ShardCollection(true)
 	db.SetDbMgr(mongoDb)
 }
 

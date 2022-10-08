@@ -9,3 +9,7 @@ require (
 	go.mongodb.org/mongo-driver v1.8.0
 	google.golang.org/protobuf v1.26.0
 )
+
+replace (
+	github.com/fish-tennis/gentity v0.4.0 => ./../gentity
+)
