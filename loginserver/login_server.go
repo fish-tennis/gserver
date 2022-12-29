@@ -119,8 +119,9 @@ func (this *LoginServer) initCache() {
 	}
 }
 
-func (this *LoginServer) getAccountData(accountName string, accountData interface{}) error {
-	col := this.GetAccountDb().(*gentity.MongoCollection).GetCollection()
+func (this *LoginServer) getAccountData(accountName string, accountData *pb.Account) error {
+	mongoCol := this.GetAccountDb().(*gentity.MongoCollection)
+	col := mongoCol.GetCollection()
 	result := col.FindOne(context.Background(), bson.D{{"name", accountName}})
 	if result == nil || result.Err() == mongo.ErrNoDocuments {
 		return nil
@@ -128,6 +129,18 @@ func (this *LoginServer) getAccountData(accountName string, accountData interfac
 	err := result.Decode(accountData)
 	if err != nil {
 		return err
+	}
+	// TODO:_id为什么不会赋值?
+	if accountData.XId == 0 {
+		raw,err := result.DecodeBytes()
+		if err != nil {
+			return err
+		}
+		idValue, err := raw.LookupErr("_id")
+		if err != nil {
+			return err
+		}
+		accountData.XId = idValue.Int64()
 	}
 	return nil
 }

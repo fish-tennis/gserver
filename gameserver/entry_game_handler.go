@@ -82,7 +82,7 @@ func onPlayerEntryGameReq(connection Connection, packet *ProtoPacket) {
 			return
 		}
 		playerData := &pb.PlayerData{}
-		hasData, err := db.GetPlayerDb().FindPlayerByAccountId(req.GetAccountId(), req.GetRegionId(), playerData)
+		hasData, err := db.GetPlayerDb().FindEntityById(playerId, playerData)
 		if err != nil {
 			cache.RemoveOnlineAccount(accountId)
 			connection.Send(PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameRes), &pb.PlayerEntryGameRes{
@@ -99,6 +99,10 @@ func onPlayerEntryGameReq(connection Connection, packet *ProtoPacket) {
 				RegionId:  req.GetRegionId(),
 			})
 			return
+		}
+		// TODO:_id为什么不会赋值?
+		if playerData.XId == 0 {
+			playerData.XId = playerId
 		}
 		entryPlayer = game.CreatePlayerFromData(playerData)
 		// 加入在线玩家表
