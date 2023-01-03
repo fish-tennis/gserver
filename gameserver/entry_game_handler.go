@@ -118,6 +118,7 @@ func onPlayerEntryGameReq(connection Connection, packet *ProtoPacket) {
 		AccountId: entryPlayer.GetAccountId(),
 		PlayerId:  entryPlayer.GetId(),
 		RegionId:  entryPlayer.GetRegionId(),
+		PlayerName: entryPlayer.GetName(),
 		GuildData: entryPlayer.GetGuild().GetGuildData(),
 	})
 	// 转到玩家协程中去处理

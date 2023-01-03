@@ -74,7 +74,8 @@ message PlayerEntryGameRes {
   int64 accountId = 2;
   int64 playerId = 3;
   int32 regionId = 4; // 区服id
-  PlayerGuildData guildData = 5; // 公会数据
+  string playerName = 5;
+  PlayerGuildData guildData = 6; // 公会数据
 }
 
 // 创建角色
