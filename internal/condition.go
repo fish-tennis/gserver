@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"math"
 	"reflect"
 )
 
@@ -196,6 +197,13 @@ func DefaultConditionChecker(event interface{}, conditionCfg *ConditionCfg) int3
 			eventFieldInt := eventFieldVal.Uint()
 			conditionFieldInt,_ := fieldValue.(int) // json的值类型
 			if eventFieldInt != uint64(conditionFieldInt) {
+				return 0
+			}
+		case reflect.Float32,reflect.Float64:
+			eventFieldFloat := eventFieldVal.Float()
+			conditionFieldFloat,_ := fieldValue.(float64) // json的值类型
+			// 浮点数比较大小,设置一个精度
+			if math.Abs(eventFieldFloat - conditionFieldFloat) >= 0.000001 {
 				return 0
 			}
 		case reflect.Bool:

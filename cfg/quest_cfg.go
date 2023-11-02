@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	. "github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
+	"github.com/fish-tennis/gserver/pb"
 	"os"
 )
 
@@ -17,13 +18,7 @@ type QuestCfg struct {
 	Name         string        `json:"name"`         // 任务名
 	Detail       string        `json:"detail"`       // 任务详情
 	ConditionCfg *ConditionCfg `json:"conditionCfg"` // 条件配置
-	Rewards      []*IdNum      `json:"rewards"`      // 奖励
-}
-
-// id + num
-type IdNum struct {
-	Id  int32 `json:"id"`
-	Num int32 `json:"num"`
+	Rewards      []*pb.ItemNum `json:"rewards"`      // 奖励
 }
 
 // 任务配置数据管理

@@ -1,24 +1,24 @@
 [
   {
-    "cfgId": 1,
-    "name": "普通物品1",
-    "detail": "普通物品1"
+    "CfgId": 1,
+    "Name": "普通物品1",
+    "Detail": "普通物品1"
   },
   {
-    "cfgId": 2,
-    "name": "普通物品2",
-    "detail": "普通物品2"
+    "CfgId": 2,
+    "Name": "普通物品2",
+    "Detail": "普通物品2"
   },
   {
-    "cfgId": 3,
-    "name": "装备3",
-    "detail": "装备3",
-    "unique": true
+    "CfgId": 3,
+    "Name": "装备3",
+    "Detail": "装备3",
+    "Unique": true
   },
   {
-    "cfgId": 4,
-    "name": "装备4",
-    "detail": "装备4",
-    "unique": true
+    "CfgId": 4,
+    "Name": "装备4",
+    "Detail": "装备4",
+    "Unique": true
   }
 ]

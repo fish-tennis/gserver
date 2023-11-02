@@ -2,7 +2,9 @@ package cfg
 
 import (
 	"encoding/json"
+	"github.com/fish-tennis/gserver/gen"
 	"github.com/fish-tennis/gserver/logger"
+	"github.com/fish-tennis/gserver/pb"
 	"os"
 )
 
@@ -10,30 +12,22 @@ var (
 	_itemCfgMgr *ItemCfgMgr
 )
 
-// 物品配置数据
-type ItemCfg struct {
-	CfgId  int32  `json:"cfgId"` // 配置id
-	Name   string `json:"name"`
-	Detail string `json:"detail"` // 详情
-	Unique bool   `json:"unique"` // 是否不可叠加
-}
-
 // 任务配置数据管理
 type ItemCfgMgr struct {
-	cfgs map[int32]*ItemCfg
+	cfgs map[int32]*pb.ItemCfg
 }
 
 func GetItemCfgMgr() *ItemCfgMgr {
 	if _itemCfgMgr == nil {
 		_itemCfgMgr = &ItemCfgMgr{
-			cfgs: make(map[int32]*ItemCfg),
+			cfgs: make(map[int32]*pb.ItemCfg),
 		}
 	}
 	return _itemCfgMgr
 }
 
-func (this *ItemCfgMgr) GetItemCfg(cfgId int32) *ItemCfg {
-	return this.cfgs[cfgId]
+func (this *ItemCfgMgr) GetItemCfg(cfgId int32) *gen.ItemCfgReader {
+	return gen.NewItemCfgReader(this.cfgs[cfgId])
 }
 
 func (this *ItemCfgMgr) Load(fileName string) bool {
@@ -42,13 +36,13 @@ func (this *ItemCfgMgr) Load(fileName string) bool {
 		logger.Error("%v", err)
 		return false
 	}
-	var cfgList []*ItemCfg
+	var cfgList []*pb.ItemCfg
 	err = json.Unmarshal(fileData, &cfgList)
 	if err != nil {
 		logger.Error("%v", err)
 		return false
 	}
-	cfgMap := make(map[int32]*ItemCfg, len(cfgList))
+	cfgMap := make(map[int32]*pb.ItemCfg, len(cfgList))
 	for _, cfg := range cfgList {
 		if _, exists := cfgMap[cfg.CfgId]; exists {
 			logger.Error("duplicate id:%v", cfg.CfgId)

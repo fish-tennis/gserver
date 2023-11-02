@@ -31,7 +31,7 @@ func (this *Bag) AddItem(cfgId int32, num int32) bool {
 	if itemCfg == nil {
 		return false
 	}
-	if itemCfg.Unique {
+	if itemCfg.GetUnique() {
 		for i := 0; i < int(num); i++ {
 			this.BagUniqueItem.AddUniqueItem(&pb.UniqueItem{
 				CfgId: cfgId,
