@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+option go_package = "./pb";
+
+package gserver;
+
+// 物品数量
+message ItemNum {
+  int32 CfgId = 1; // 物品配置id
+  int32 Num = 2; // 物品数量
+}
+
+// 物品配置
+message ItemCfg {
+  int32 CfgId = 1;
+  string Name = 2;
+  string Detail = 3;
+  bool Unique = 4; // 是否不可叠加
+}
+
+// 任务基础配置
+message BaseQuestCfg {
+  int32 CfgId = 1;
+  string Name = 2;
+  string Detail = 3;
+  repeated ItemNum Rewards = 4;
+}
+
+// 条件基础配置
+message BaseConditionCfg {
+  int32 ConditionType = 1;
+  int32 ProgressType = 2;
+  int32 Total = 3;
+}

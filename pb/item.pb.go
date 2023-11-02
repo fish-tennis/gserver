@@ -132,133 +132,6 @@ func (x *UniqueItem) GetCfgId() int32 {
 	return 0
 }
 
-// 物品数量
-type ItemNum struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	CfgId int32 `protobuf:"varint,1,opt,name=CfgId,proto3" json:"CfgId,omitempty"` // 物品配置id
-	Num   int32 `protobuf:"varint,2,opt,name=Num,proto3" json:"Num,omitempty"`     // 物品数量
-}
-
-func (x *ItemNum) Reset() {
-	*x = ItemNum{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_item_proto_msgTypes[2]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *ItemNum) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ItemNum) ProtoMessage() {}
-
-func (x *ItemNum) ProtoReflect() protoreflect.Message {
-	mi := &file_item_proto_msgTypes[2]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ItemNum.ProtoReflect.Descriptor instead.
-func (*ItemNum) Descriptor() ([]byte, []int) {
-	return file_item_proto_rawDescGZIP(), []int{2}
-}
-
-func (x *ItemNum) GetCfgId() int32 {
-	if x != nil {
-		return x.CfgId
-	}
-	return 0
-}
-
-func (x *ItemNum) GetNum() int32 {
-	if x != nil {
-		return x.Num
-	}
-	return 0
-}
-
-type ItemCfg struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	CfgId  int32  `protobuf:"varint,1,opt,name=CfgId,proto3" json:"CfgId,omitempty"`
-	Name   string `protobuf:"bytes,2,opt,name=Name,proto3" json:"Name,omitempty"`
-	Detail string `protobuf:"bytes,3,opt,name=Detail,proto3" json:"Detail,omitempty"`
-	Unique bool   `protobuf:"varint,4,opt,name=Unique,proto3" json:"Unique,omitempty"` // 是否不可叠加
-}
-
-func (x *ItemCfg) Reset() {
-	*x = ItemCfg{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_item_proto_msgTypes[3]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *ItemCfg) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ItemCfg) ProtoMessage() {}
-
-func (x *ItemCfg) ProtoReflect() protoreflect.Message {
-	mi := &file_item_proto_msgTypes[3]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ItemCfg.ProtoReflect.Descriptor instead.
-func (*ItemCfg) Descriptor() ([]byte, []int) {
-	return file_item_proto_rawDescGZIP(), []int{3}
-}
-
-func (x *ItemCfg) GetCfgId() int32 {
-	if x != nil {
-		return x.CfgId
-	}
-	return 0
-}
-
-func (x *ItemCfg) GetName() string {
-	if x != nil {
-		return x.Name
-	}
-	return ""
-}
-
-func (x *ItemCfg) GetDetail() string {
-	if x != nil {
-		return x.Detail
-	}
-	return ""
-}
-
-func (x *ItemCfg) GetUnique() bool {
-	if x != nil {
-		return x.Unique
-	}
-	return false
-}
-
 var File_item_proto protoreflect.FileDescriptor
 
 var file_item_proto_rawDesc = []byte{
@@ -270,18 +143,8 @@ var file_item_proto_rawDesc = []byte{
 	0x0a, 0x0a, 0x55, 0x6e, 0x69, 0x71, 0x75, 0x65, 0x49, 0x74, 0x65, 0x6d, 0x12, 0x1a, 0x0a, 0x08,
 	0x75, 0x6e, 0x69, 0x71, 0x75, 0x65, 0x49, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x03, 0x52, 0x08,
 	0x75, 0x6e, 0x69, 0x71, 0x75, 0x65, 0x49, 0x64, 0x12, 0x14, 0x0a, 0x05, 0x63, 0x66, 0x67, 0x49,
-	0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x05, 0x52, 0x05, 0x63, 0x66, 0x67, 0x49, 0x64, 0x22, 0x31,
-	0x0a, 0x07, 0x49, 0x74, 0x65, 0x6d, 0x4e, 0x75, 0x6d, 0x12, 0x14, 0x0a, 0x05, 0x43, 0x66, 0x67,
-	0x49, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x05, 0x52, 0x05, 0x43, 0x66, 0x67, 0x49, 0x64, 0x12,
-	0x10, 0x0a, 0x03, 0x4e, 0x75, 0x6d, 0x18, 0x02, 0x20, 0x01, 0x28, 0x05, 0x52, 0x03, 0x4e, 0x75,
-	0x6d, 0x22, 0x63, 0x0a, 0x07, 0x49, 0x74, 0x65, 0x6d, 0x43, 0x66, 0x67, 0x12, 0x14, 0x0a, 0x05,
-	0x43, 0x66, 0x67, 0x49, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x05, 0x52, 0x05, 0x43, 0x66, 0x67,
-	0x49, 0x64, 0x12, 0x12, 0x0a, 0x04, 0x4e, 0x61, 0x6d, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09,
-	0x52, 0x04, 0x4e, 0x61, 0x6d, 0x65, 0x12, 0x16, 0x0a, 0x06, 0x44, 0x65, 0x74, 0x61, 0x69, 0x6c,
-	0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x44, 0x65, 0x74, 0x61, 0x69, 0x6c, 0x12, 0x16,
-	0x0a, 0x06, 0x55, 0x6e, 0x69, 0x71, 0x75, 0x65, 0x18, 0x04, 0x20, 0x01, 0x28, 0x08, 0x52, 0x06,
-	0x55, 0x6e, 0x69, 0x71, 0x75, 0x65, 0x42, 0x06, 0x5a, 0x04, 0x2e, 0x2f, 0x70, 0x62, 0x62, 0x06,
-	0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x05, 0x52, 0x05, 0x63, 0x66, 0x67, 0x49, 0x64, 0x42, 0x06,
+	0x5a, 0x04, 0x2e, 0x2f, 0x70, 0x62, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -296,12 +159,10 @@ func file_item_proto_rawDescGZIP() []byte {
 	return file_item_proto_rawDescData
 }
 
-var file_item_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_item_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_item_proto_goTypes = []interface{}{
 	(*CountItem)(nil),  // 0: gserver.CountItem
 	(*UniqueItem)(nil), // 1: gserver.UniqueItem
-	(*ItemNum)(nil),    // 2: gserver.ItemNum
-	(*ItemCfg)(nil),    // 3: gserver.ItemCfg
 }
 var file_item_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type
@@ -341,30 +202,6 @@ func file_item_proto_init() {
 				return nil
 			}
 		}
-		file_item_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ItemNum); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_item_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ItemCfg); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -372,7 +209,7 @@ func file_item_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_item_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   4,
+			NumMessages:   2,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

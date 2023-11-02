@@ -121,12 +121,12 @@ func (this *Quest) OnFinishQuestReq(reqCmd gnet.PacketCommand, req *pb.FinishQue
 	logger.Debug("OnFinishQuestReq:%v", req)
 	if questData,ok := this.Quests.Quests[req.QuestCfgId]; ok {
 		questCfg := cfg.GetQuestCfgMgr().GetQuestCfg(questData.GetCfgId())
-		if questData.GetProgress() >= questCfg.ConditionCfg.Total {
+		if questData.GetProgress() >= questCfg.ConditionCfg.GetTotal() {
 			this.Quests.Remove(questData.GetCfgId())
 			this.Finished.Add(questData.GetCfgId())
 			// 任务奖励
-			for _,idNum := range questCfg.Rewards {
-				this.GetPlayer().GetBag().AddItem(idNum.Id, idNum.Num)
+			for _,idNum := range questCfg.GetRewards() {
+				this.GetPlayer().GetBag().AddItem(idNum.GetCfgId(), idNum.GetNum())
 			}
 			gen.SendFinishQuestRes(this.GetPlayer(), &pb.FinishQuestRes{
 				QuestCfgId: questData.GetCfgId(),

@@ -1,70 +1,70 @@
 [
   {
-    "cfgId": 1,
-    "name": "升到5级",
-    "detail": "升到5级,奖励xxx",
-    "conditionCfg": {
-      "conditionType": 1,
-      "progressType": 2,
-      "total": 5
+    "CfgId": 1,
+    "Name": "升到5级",
+    "Detail": "升到5级,奖励xxx",
+    "ConditionCfg": {
+      "ConditionType": 1,
+      "ProgressType": 2,
+      "Total": 5
     },
-    "rewards": [
+    "Rewards": [
       {
-        "id": 1,
-        "num": 2
+        "Id": 1,
+        "Num": 2
       }
     ]
   },
   {
-    "cfgId": 2,
-    "name": "2场战斗",
-    "detail": "2场战斗,奖励xxx",
-    "conditionCfg": {
-      "conditionType": 2,
-      "progressType": 1,
-      "total": 5
+    "CfgId": 2,
+    "Name": "2场战斗",
+    "Detail": "2场战斗,奖励xxx",
+    "ConditionCfg": {
+      "ConditionType": 2,
+      "ProgressType": 1,
+      "Total": 5
     },
-    "rewards": [
+    "Rewards": [
       {
-        "id": 1,
-        "num": 3
+        "Id": 1,
+        "Num": 3
       }
     ]
   },
   {
-    "cfgId": 3,
-    "name": "2场PVP",
-    "detail": "2场PVP,奖励xxx",
-    "conditionCfg": {
-      "conditionType": 2,
-      "total": 5,
-      "eventArgs": {
+    "CfgId": 3,
+    "Name": "2场PVP",
+    "Detail": "2场PVP,奖励xxx",
+    "ConditionCfg": {
+      "ConditionType": 2,
+      "Total": 5,
+      "EventArgs": {
         "IsPvp": true
       }
     },
-    "rewards": [
+    "Rewards": [
       {
-        "id": 1,
-        "num": 5
+        "Id": 1,
+        "Num": 5
       }
     ]
   },
   {
-    "cfgId": 4,
-    "name": "赢2场PVP",
-    "detail": "赢2场PVP,奖励xxx",
-    "conditionCfg": {
-      "conditionType": 2,
-      "total": 5,
-      "eventArgs": {
+    "CfgId": 4,
+    "Name": "赢2场PVP",
+    "Detail": "赢2场PVP,奖励xxx",
+    "ConditionCfg": {
+      "ConditionType": 2,
+      "Total": 5,
+      "EventArgs": {
         "IsPvp": true,
         "IsWin": true
       }
     },
-    "rewards": [
+    "Rewards": [
       {
-        "id": 3,
-        "num": 1
+        "Id": 3,
+        "Num": 1
       }
     ]
   }

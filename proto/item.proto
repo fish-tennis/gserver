@@ -15,17 +15,3 @@ message UniqueItem {
   int64 uniqueId = 1; // 唯一id
   int32 cfgId = 2; // 物品配置id
 }
-
-// 物品数量
-message ItemNum {
-  int32 CfgId = 1; // 物品配置id
-  int32 Num = 2; // 物品数量
-}
-
-// 物品配置
-message ItemCfg {
-  int32 CfgId = 1;
-  string Name = 2;
-  string Detail = 3;
-  bool Unique = 4; // 是否不可叠加
-}

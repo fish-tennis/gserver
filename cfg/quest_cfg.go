@@ -14,11 +14,8 @@ var (
 
 // 任务配置数据
 type QuestCfg struct {
-	CfgId        int32         `json:"cfgId"`        // 配置id
-	Name         string        `json:"name"`         // 任务名
-	Detail       string        `json:"detail"`       // 任务详情
-	ConditionCfg *ConditionCfg `json:"conditionCfg"` // 条件配置
-	Rewards      []*pb.ItemNum `json:"rewards"`      // 奖励
+	*pb.BaseQuestCfg
+	ConditionCfg *ConditionCfg `json:"ConditionCfg"` // 条件配置
 }
 
 // 任务配置数据管理

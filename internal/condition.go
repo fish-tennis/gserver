@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"github.com/fish-tennis/gserver/pb"
 	"math"
 	"reflect"
 )
@@ -21,10 +22,8 @@ const (
 
 // 条件配置数据
 type ConditionCfg struct {
-	ConditionType int32      `json:"conditionType"` // 条件类型
-	ProgressType  int32      `json:"progressType"`   // 进度类型
-	Total         int32      `json:"total"`	// 总的进度要求
-	EventArgs     map[string]interface{} `json:"eventArgs"` // 需要匹配的事件参数
+	*pb.BaseConditionCfg
+	EventArgs map[string]interface{} `json:"EventArgs"` // 需要匹配的事件参数
 }
 
 // 进度读取接口
@@ -46,7 +45,7 @@ type ConditionMgr struct {
 
 func NewConditionMgr() *ConditionMgr {
 	return &ConditionMgr{
-		eventMapping: make(map[reflect.Type]*eventMappingInfo),
+		eventMapping:   make(map[reflect.Type]*eventMappingInfo),
 		conditionInits: make(map[int32]ConditionInitFunc),
 	}
 }
@@ -87,10 +86,10 @@ func (this *ConditionMgr) Register(conditionType int32, event interface{}, check
 // checker可以为nil
 func (this *ConditionMgr) RegisterWithInit(conditionType int32, event interface{}, checker ConditionCheckFunc, init ConditionInitFunc) {
 	eventTyp := reflect.TypeOf(event).Elem()
-	info,ok := this.eventMapping[eventTyp]
+	info, ok := this.eventMapping[eventTyp]
 	if !ok {
 		info = &eventMappingInfo{
-			eventTyp: eventTyp,
+			eventTyp:          eventTyp,
 			conditionCheckers: make(map[int32]ConditionCheckFunc),
 		}
 		this.eventMapping[eventTyp] = info
@@ -109,28 +108,28 @@ func (this *ConditionMgr) RegisterDefault(conditionType int32, event interface{}
 // 检查事件是否关联某个条件
 func (this *ConditionMgr) IsMatchEvent(event interface{}, conditionType int32) bool {
 	eventTyp := reflect.TypeOf(event).Elem()
-	info,ok := this.eventMapping[eventTyp]
+	info, ok := this.eventMapping[eventTyp]
 	if !ok {
 		return false
 	}
-	_,has := info.conditionCheckers[conditionType]
+	_, has := info.conditionCheckers[conditionType]
 	return has
 }
 
 // 获取事件,条件对应的检查接口
-func (this *ConditionMgr) GetConditionChecker(event interface{}, conditionType int32) (ConditionCheckFunc,bool) {
+func (this *ConditionMgr) GetConditionChecker(event interface{}, conditionType int32) (ConditionCheckFunc, bool) {
 	eventTyp := reflect.TypeOf(event).Elem()
-	info,ok := this.eventMapping[eventTyp]
+	info, ok := this.eventMapping[eventTyp]
 	if !ok {
-		return nil,false
+		return nil, false
 	}
-	v,has := info.conditionCheckers[conditionType]
-	return v,has
+	v, has := info.conditionCheckers[conditionType]
+	return v, has
 }
 
 // 初始化条件,更新初始进度
 func (this *ConditionMgr) InitCondition(arg interface{}, conditionCfg *ConditionCfg, progressHolder ProgressHolder) bool {
-	initFunc,ok := this.conditionInits[conditionCfg.ConditionType]
+	initFunc, ok := this.conditionInits[conditionCfg.GetConditionType()]
 	if !ok {
 		return false
 	}
@@ -147,7 +146,7 @@ func (this *ConditionMgr) InitCondition(arg interface{}, conditionCfg *Condition
 
 // 检查事件是否触发进度的更新,并更新进度
 func (this *ConditionMgr) CheckEvent(event interface{}, conditionCfg *ConditionCfg, progressHolder ProgressHolder) bool {
-	checker,ok := this.GetConditionChecker(event, conditionCfg.ConditionType)
+	checker, ok := this.GetConditionChecker(event, conditionCfg.ConditionType)
 	if !ok {
 		return false
 	}
@@ -168,7 +167,7 @@ func (this *ConditionMgr) CheckEvent(event interface{}, conditionCfg *ConditionC
 		return false
 	}
 	if progress > 0 {
-		progressHolder.SetProgress(progressHolder.GetProgress()+progress)
+		progressHolder.SetProgress(progressHolder.GetProgress() + progress)
 		return true
 	}
 	return false
@@ -181,34 +180,34 @@ func DefaultConditionChecker(event interface{}, conditionCfg *ConditionCfg) int3
 	}
 	eventVal := reflect.ValueOf(event).Elem()
 	// 匹配事件参数
-	for fieldName,fieldValue := range conditionCfg.EventArgs {
+	for fieldName, fieldValue := range conditionCfg.EventArgs {
 		eventFieldVal := eventVal.FieldByName(fieldName)
 		if !eventFieldVal.IsValid() {
 			continue
 		}
-		switch eventFieldVal.Kind(){
-		case reflect.Int,reflect.Int8,reflect.Int16,reflect.Int32,reflect.Int64:
+		switch eventFieldVal.Kind() {
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 			eventFieldInt := eventFieldVal.Int()
-			conditionFieldInt,_ := fieldValue.(int) // json的值类型
+			conditionFieldInt, _ := fieldValue.(int) // json的值类型
 			if eventFieldInt != int64(conditionFieldInt) {
 				return 0
 			}
-		case reflect.Uint,reflect.Uint8,reflect.Uint16,reflect.Uint32,reflect.Uint64:
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 			eventFieldInt := eventFieldVal.Uint()
-			conditionFieldInt,_ := fieldValue.(int) // json的值类型
+			conditionFieldInt, _ := fieldValue.(int) // json的值类型
 			if eventFieldInt != uint64(conditionFieldInt) {
 				return 0
 			}
-		case reflect.Float32,reflect.Float64:
+		case reflect.Float32, reflect.Float64:
 			eventFieldFloat := eventFieldVal.Float()
-			conditionFieldFloat,_ := fieldValue.(float64) // json的值类型
+			conditionFieldFloat, _ := fieldValue.(float64) // json的值类型
 			// 浮点数比较大小,设置一个精度
-			if math.Abs(eventFieldFloat - conditionFieldFloat) >= 0.000001 {
+			if math.Abs(eventFieldFloat-conditionFieldFloat) >= 0.000001 {
 				return 0
 			}
 		case reflect.Bool:
 			eventFieldBool := eventFieldVal.Bool()
-			conditionFieldInt,_ := fieldValue.(bool) // json的值类型
+			conditionFieldInt, _ := fieldValue.(bool) // json的值类型
 			if eventFieldBool != conditionFieldInt {
 				return 0
 			}
