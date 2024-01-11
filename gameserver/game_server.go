@@ -28,6 +28,8 @@ var (
 type GameServer struct {
 	BaseServer
 	config *GameServerConfig
+	// 网关服务器listener
+	gateListener Listener
 	// 服务器listener
 	serverListener Listener
 	// 在线玩家
@@ -53,14 +55,12 @@ func (this *GameServer) Init(ctx context.Context, configFile string) bool {
 	this.GetServerList().SetCache(cache.Get())
 
 	netMgr := GetNetMgr()
+	// NOTE: 实际项目中,监听客户端和监听网关,二选一即可
+	// 这里为了演示,同时提供客户端直连和网关两种模式
 	// 客户端的codec和handler
 	clientCodec := NewProtoCodec(nil)
 	clientHandler := game.NewClientConnectionHandler(clientCodec)
 	this.registerClientPacket(clientHandler)
-
-	// 服务器的codec和handler
-	serverCodec := NewProtoCodec(nil)
-	serverHandler := NewDefaultConnectionHandler(serverCodec)
 
 	if netMgr.NewListener(ctx, this.config.ClientListenAddr, this.config.ClientConnConfig, clientCodec,
 		clientHandler, &ClientListerHandler{}) == nil {
@@ -68,6 +68,22 @@ func (this *GameServer) Init(ctx context.Context, configFile string) bool {
 		return false
 	}
 
+	// NOTE: 实际项目中,监听客户端和监听网关,二选一即可
+	// 这里为了演示,同时提供客户端直连和网关两种模式
+	// 服务器的codec和handler
+	gateCodec := NewGateCodec(nil)
+	gateHandler := NewDefaultConnectionHandler(gateCodec)
+	this.registerGatePacket(gateHandler)
+	this.gateListener = netMgr.NewListener(ctx, this.config.GateListenAddr, this.config.ServerConnConfig, gateCodec,
+		gateHandler, nil)
+	if this.gateListener == nil {
+		panic("listen gate failed")
+		return false
+	}
+
+	// 服务器的codec和handler
+	serverCodec := NewProtoCodec(nil)
+	serverHandler := NewDefaultConnectionHandler(serverCodec)
 	this.registerServerPacket(serverHandler)
 	this.serverListener = netMgr.NewListener(ctx, this.config.ServerListenAddr, this.config.ServerConnConfig, serverCodec,
 		serverHandler, nil)
@@ -77,8 +93,8 @@ func (this *GameServer) Init(ctx context.Context, configFile string) bool {
 	}
 
 	// 连接其他服务器
-	this.BaseServer.SetDefaultServerConnectorConfig(this.config.ServerConnConfig)
-	this.BaseServer.GetServerList().SetFetchAndConnectServerTypes("gameserver")
+	this.BaseServer.SetDefaultServerConnectorConfig(this.config.ServerConnConfig, NewProtoCodec(nil))
+	this.BaseServer.GetServerList().SetFetchAndConnectServerTypes(ServerType_Game)
 
 	// 其他模块初始化
 	this.AddServerHook(&social.Hook{})
@@ -128,8 +144,9 @@ func (this *GameServer) readConfig() {
 	}
 	logger.Debug("%v", this.config)
 	this.BaseServer.GetServerInfo().ServerId = this.config.ServerId
-	this.BaseServer.GetServerInfo().ServerType = "gameserver"
+	this.BaseServer.GetServerInfo().ServerType = ServerType_Game
 	this.BaseServer.GetServerInfo().ClientListenAddr = this.config.ClientListenAddr
+	this.BaseServer.GetServerInfo().GateListenAddr = this.config.GateListenAddr
 	this.BaseServer.GetServerInfo().ServerListenAddr = this.config.ServerListenAddr
 }
 
@@ -186,7 +203,7 @@ func (this *GameServer) repairPlayerCache(playerId, accountId int64) error {
 }
 
 // 注册客户端消息回调
-func (this *GameServer) registerClientPacket(clientHandler *game.ClientConnectionHandler) {
+func (this *GameServer) registerClientPacket(clientHandler PacketHandlerRegister) {
 	// 手动注册消息回调
 	clientHandler.Register(PacketCommand(pb.CmdInner_Cmd_HeartBeatReq), onHeartBeatReq, new(pb.HeartBeatReq))
 	clientHandler.Register(PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameReq), onPlayerEntryGameReq, new(pb.PlayerEntryGameReq))
@@ -199,30 +216,73 @@ func (this *GameServer) registerClientPacket(clientHandler *game.ClientConnectio
 	// player_component_handler_gen(clientHandler)
 }
 
-func wrapPlayerHandler(fn func(player *game.Player, packet *ProtoPacket)) func(connection Connection, packet *ProtoPacket) {
-	return func(connection Connection, packet *ProtoPacket) {
-		if connection.GetTag() == nil {
-			return
-		}
-		playerId, ok := connection.GetTag().(int64)
-		if !ok {
-			return
+func wrapPlayerHandler(fn func(player *game.Player, packet Packet)) func(connection Connection, packet Packet) {
+	return func(connection Connection, packet Packet) {
+		var playerId int64
+		if gatePacket,ok := packet.(*GatePacket); ok {
+			// 网关转发的消息,包含playerId
+			playerId = gatePacket.PlayerId()
+		} else {
+			// 客户端直连的模式
+			if connection.GetTag() == nil {
+				return
+			}
+			playerId, ok = connection.GetTag().(int64)
+			if !ok {
+				return
+			}
 		}
 		player := game.GetPlayer(playerId)
 		if player == nil {
 			return
 		}
-		fn(player, packet)
+		// 网关模式,使用的GatePacket
+		if gatePacket,ok := packet.(*GatePacket); ok {
+			// 转换成ProtoPacket,业务层统一接口
+			player.OnRecvPacket(gatePacket.ToProtoPacket())
+		} else {
+			// 客户端直连模式,使用的ProtoPacket
+			player.OnRecvPacket(packet.(*ProtoPacket))
+		}
 	}
 }
 
 // 心跳回复
-func onHeartBeatReq(connection Connection, packet *ProtoPacket) {
+func onHeartBeatReq(connection Connection, packet Packet) {
 	req := packet.Message().(*pb.HeartBeatReq)
-	connection.Send(PacketCommand(pb.CmdInner_Cmd_HeartBeatRes), &pb.HeartBeatRes{
+	SendPacketAdapt(connection, packet, PacketCommand(pb.CmdInner_Cmd_HeartBeatRes), &pb.HeartBeatRes{
 		RequestTimestamp:  req.GetTimestamp(),
 		ResponseTimestamp: uint64(time.Now().UnixNano() / int64(time.Microsecond)),
 	})
+}
+
+// 注册网关消息回调
+func (this *GameServer) registerGatePacket(gateHandler PacketHandlerRegister) {
+	// 手动注册消息回调
+	gateHandler.Register(PacketCommand(pb.CmdInner_Cmd_HeartBeatReq), onHeartBeatReq, new(pb.HeartBeatReq))
+	gateHandler.Register(PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameReq), onPlayerEntryGameReq, new(pb.PlayerEntryGameReq))
+	gateHandler.Register(PacketCommand(pb.CmdLogin_Cmd_CreatePlayerReq), onCreatePlayerReq, new(pb.CreatePlayerReq))
+	gateHandler.Register(PacketCommand(pb.CmdInner_Cmd_TestCmd), wrapPlayerHandler(onTestCmd), new(pb.TestCmd))
+	gateHandler.(*DefaultConnectionHandler).SetUnRegisterHandler(func(connection Connection, packet Packet) {
+		if gatePacket,ok := packet.(*GatePacket); ok {
+			playerId := gatePacket.PlayerId()
+			player := this.GetPlayer(playerId)
+			if player != nil {
+				if gamePlayer ,ok := player.(*game.Player); ok {
+					if gamePlayer.GetConnection() == connection {
+						// 在线玩家的消息,转到玩家消息处理协程去处理
+						gamePlayer.OnRecvPacket(gatePacket.ToProtoPacket())
+						logger.Debug("gate->player playerId:%v cmd:%v", playerId, packet.Command())
+					}
+				}
+			}
+		}
+	})
+	// 通过反射自动注册消息和proto.Message的映射
+	game.AutoRegisterPlayerComponentProto(gateHandler)
+	// 自动注册消息回调的另一种方案: proto_code_gen工具生成的回调函数
+	// 因为已经用了反射自动注册,所以这里注释了
+	// player_component_handler_gen(clientHandler)
 }
 
 // 注册服务器消息回调
@@ -257,11 +317,11 @@ func (this *GameServer) GetPlayer(playerId int64) gentity.Player {
 }
 
 // 踢玩家下线
-func (this *GameServer) onKickPlayer(connection Connection, packet *ProtoPacket) {
+func (this *GameServer) onKickPlayer(connection Connection, packet Packet) {
 	req := packet.Message().(*pb.KickPlayer)
 	player := game.GetPlayer(req.GetPlayerId())
 	if player != nil {
-		player.SetConnection(nil)
+		player.SetConnection(nil, false)
 		player.Stop()
 		logger.Debug("kick player account:%v playerId:%v gameServerId:%v",
 			req.GetAccountId(), req.GetPlayerId(), this.GetId())
@@ -273,7 +333,7 @@ func (this *GameServer) onKickPlayer(connection Connection, packet *ProtoPacket)
 
 // 转发玩家消息
 // otherServer -> thisServer -> player
-func (this *GameServer) onRoutePlayerMessage(connection Connection, packet *ProtoPacket) {
+func (this *GameServer) onRoutePlayerMessage(connection Connection, packet Packet) {
 	req := packet.Message().(*pb.RoutePlayerMessage)
 	logger.Debug("onRoutePlayerMessage %v", req)
 	player := game.GetPlayer(req.ToPlayerId)

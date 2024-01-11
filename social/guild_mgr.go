@@ -48,7 +48,7 @@ func (g *GuildHelper) CreateEntity(entityData interface{}) gentity.RoutineEntity
 
 // 根据公会id路由到对应的服务器id
 func (g *GuildHelper) RouteServerId(entityId int64) int32 {
-	servers := GetServerList().GetServersByType("gameserver")
+	servers := GetServerList().GetServersByType(ServerType_Game)
 	// 这里只演示了最简单的路由方式
 	// 实际项目可能采用一致性哈希等其他方式
 	index := entityId % int64(len(servers))
@@ -154,7 +154,7 @@ func onServerListUpdate(serverList map[string][]gentity.ServerInfo, oldServerLis
 }
 
 // 根据公会id路由玩家的请求消息
-func GuildRouteReqPacket(player *game.Player, guildId int64, packet *ProtoPacket) bool {
+func GuildRouteReqPacket(player *game.Player, guildId int64, packet Packet) bool {
 	return _guildMgr.RoutePacket(player, guildId, packet)
 }
 

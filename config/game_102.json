@@ -1,6 +1,6 @@
 {
   "ServerId": 102,
-  "ClientListenAddr": "127.0.0.1:10005",
+  "ClientListenAddr": "127.0.0.1:10201",
   "ClientConnConfig": {
     "SendPacketCacheCap": 32,
     "SendBufferSize": 20480,
@@ -9,7 +9,8 @@
     "RecvTimeout": 20,
     "HeartBeatInterval": 5
   },
-  "ServerListenAddr": "127.0.0.1:10006",
+  "GateListenAddr": "127.0.0.1:10202",
+  "ServerListenAddr": "127.0.0.1:10203",
   "ServerConnConfig": {
     "SendPacketCacheCap": 64,
     "SendBufferSize": 2097152,

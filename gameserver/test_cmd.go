@@ -12,7 +12,7 @@ import (
 )
 
 // 客户端字符串形式的测试命令,仅用于测试环境!
-func onTestCmd(player *game.Player, packet *ProtoPacket) {
+func onTestCmd(player *game.Player, packet Packet) {
 	logger.Debug("onTestCmd %v", packet.Message())
 	req := packet.Message().(*pb.TestCmd)
 	cmdStrs := strings.Split(req.GetCmd(), " ")

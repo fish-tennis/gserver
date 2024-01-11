@@ -40,7 +40,8 @@ message ServerInfo {
   string serverType = 2; // 服务器类型
   string serverListenAddr = 3; // 监听服务器地址
   string clientListenAddr = 4; // 监听客户端地址
-  int64 lastActiveTime = 5; // 最近上传信息的时间戳(毫秒)
+  string gateListenAddr = 5; // 监听网关地址
+  int64 lastActiveTime = 6; // 最近上传信息的时间戳(毫秒)
 }
 
 // 踢玩家下线

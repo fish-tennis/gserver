@@ -3,11 +3,11 @@ package internal
 import (
 	"context"
 	"github.com/fish-tennis/gentity"
+	"github.com/fish-tennis/gentity/util"
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
-	"github.com/fish-tennis/gentity/util"
 	"google.golang.org/protobuf/proto"
 	"io"
 	"sync"
@@ -21,7 +21,9 @@ type BaseServerConfig struct {
 	ClientListenAddr string
 	// 客户端连接配置
 	ClientConnConfig ConnectionConfig
-	// 服务器监听地址
+	// 网关监听地址
+	GateListenAddr string
+	// 其他服务器监听地址
 	ServerListenAddr string
 	// 服务器连接配置
 	ServerConnConfig ConnectionConfig
@@ -30,7 +32,7 @@ type BaseServerConfig struct {
 	// mongodb db name
 	MongoDbName string
 	// redis地址
-	RedisUri []string
+	RedisUri      []string
 	RedisPassword string
 	// 是否使用redis集群模式
 	RedisCluster bool
@@ -53,10 +55,10 @@ type BaseServer struct {
 	// 默认的服务器连接接口
 	defaultServerConnectorHandler ConnectionHandler
 	// 默认的服务器之间的编解码
-	defaultServerConnectorCodec *ProtoCodec
-	ctx context.Context
-	wg sync.WaitGroup
-	serverHooks []gentity.ApplicationHook
+	defaultServerConnectorCodec Codec
+	ctx                         context.Context
+	wg                          sync.WaitGroup
+	serverHooks                 []gentity.ApplicationHook
 }
 
 func (this *BaseServer) GetConfigFile() string {
@@ -89,6 +91,14 @@ func (this *BaseServer) AddServerHook(hooks ...gentity.ApplicationHook) {
 
 func (this *BaseServer) GetServerHooks() []gentity.ApplicationHook {
 	return this.serverHooks
+}
+
+func (this *BaseServer) GetDefaultServerConnectorHandler() ConnectionHandler {
+	return this.defaultServerConnectorHandler
+}
+
+func (this *BaseServer) GetDefaultServerConnectorCodec() Codec {
+	return this.defaultServerConnectorCodec
 }
 
 // 加载配置文件
@@ -124,7 +134,7 @@ func (this *BaseServer) OnUpdate(ctx context.Context, updateCount int64) {
 
 func (this *BaseServer) Exit() {
 	logger.Info("BaseServer.Exit")
-	for _,hook := range this.serverHooks {
+	for _, hook := range this.serverHooks {
 		hook.OnApplicationExit()
 	}
 	// 服务器管理的协程关闭
@@ -137,7 +147,7 @@ func (this *BaseServer) Exit() {
 	logger.Info("all net goroutine closed")
 	// 缓存关闭
 	if cache.GetRedis() != nil {
-		if closer,ok := cache.GetRedis().(io.Closer); ok {
+		if closer, ok := cache.GetRedis().(io.Closer); ok {
 			logger.Info("wait redis close")
 			closer.Close()
 			logger.Info("redis closed")
@@ -168,9 +178,9 @@ func (this *BaseServer) updateLoop(ctx context.Context) {
 }
 
 // 设置默认的服务器间的编解码和回调接口
-func (this *BaseServer) SetDefaultServerConnectorConfig(config ConnectionConfig) {
+func (this *BaseServer) SetDefaultServerConnectorConfig(config ConnectionConfig, defaultServerConnectorCodec Codec) {
 	this.serverConnectorConfig = config
-	this.defaultServerConnectorCodec = NewProtoCodec(nil)
+	this.defaultServerConnectorCodec = defaultServerConnectorCodec
 	handler := NewDefaultConnectionHandler(this.defaultServerConnectorCodec)
 	handler.SetOnDisconnectedFunc(func(connection Connection) {
 		if connection.GetTag() == nil {
@@ -179,12 +189,12 @@ func (this *BaseServer) SetDefaultServerConnectorConfig(config ConnectionConfig)
 		serverId := connection.GetTag().(int32)
 		this.serverList.OnServerConnectorDisconnect(serverId)
 	})
-	handler.RegisterHeartBeat(PacketCommand(pb.CmdInner_Cmd_HeartBeatReq), func() proto.Message {
-		return &pb.HeartBeatReq{
+	handler.RegisterHeartBeat(func() Packet {
+		return NewProtoPacket(PacketCommand(pb.CmdInner_Cmd_HeartBeatReq), &pb.HeartBeatReq{
 			Timestamp: uint64(util.GetCurrentMS()),
-		}
+		})
 	})
-	handler.Register(PacketCommand(pb.CmdInner_Cmd_HeartBeatRes), func(connection Connection, packet *ProtoPacket) {
+	handler.Register(PacketCommand(pb.CmdInner_Cmd_HeartBeatRes), func(connection Connection, packet Packet) {
 	}, new(pb.HeartBeatRes))
 	this.defaultServerConnectorHandler = handler
 }

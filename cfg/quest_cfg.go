@@ -15,6 +15,7 @@ var (
 // 任务配置数据
 type QuestCfg struct {
 	*pb.BaseQuestCfg
+	// 如果有多条件的任务需求,可以改成[]*ConditionCfg
 	ConditionCfg *ConditionCfg `json:"ConditionCfg"` // 条件配置
 }
 

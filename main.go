@@ -8,6 +8,7 @@ import (
 	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/gameserver"
+	"github.com/fish-tennis/gserver/gate"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/loginserver"
 	"math/rand"
@@ -108,7 +109,7 @@ func daemon() {
 
 // 从配置文件名解析出服务器类型
 func getServerTypeFromConfigFile(configFile string) string {
-	baseFileName := filepath.Base(configFile) // login_1.json
+	baseFileName := filepath.Base(configFile) // login_11.json
 	idx := strings.Index(baseFileName, "_")
 	return baseFileName[0:idx]
 }
@@ -116,6 +117,8 @@ func getServerTypeFromConfigFile(configFile string) string {
 // 创建相应类型的服务器
 func createServer(serverType string) gentity.Application {
 	switch serverType {
+	case "gate":
+		return new(gate.GateServer)
 	case "login":
 		return new(loginserver.LoginServer)
 	case "game":

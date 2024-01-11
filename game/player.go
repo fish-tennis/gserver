@@ -3,6 +3,7 @@ package game
 import (
 	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gserver/cache"
+	"github.com/fish-tennis/gserver/internal"
 	"time"
 
 	. "github.com/fish-tennis/gnet"
@@ -24,7 +25,10 @@ type Player struct {
 	// 区服id
 	regionId int32
 	//accountName string
-	// 关联的连接
+	// 是否使用网关
+	useGate bool
+	// 关联的连接,如果是网关模式,就是网关的连接
+	// 如果是客户端直连模式,就是客户端连接
 	connection Connection
 }
 
@@ -57,11 +61,18 @@ func (this *Player) SaveDb(removeCacheAfterSaveDb bool) error {
 	return gentity.SaveEntityChangedDataToDb(db.GetPlayerDb(), this, cache.Get(), removeCacheAfterSaveDb)
 }
 
-// 设置关联的连接
-func (this *Player) SetConnection(connection Connection) {
-	// 取消之前的连接和该玩家的关联
-	if this.connection != nil && this.connection != connection {
-		this.connection.SetTag(nil)
+// 设置关联的连接,支持客户端直连模式和网关模式
+func (this *Player) SetConnection(connection Connection, useGate bool) {
+	this.useGate = useGate
+	if !useGate {
+		// 取消之前的连接和该玩家的关联
+		if this.connection != nil && this.connection != connection {
+			this.connection.SetTag(nil)
+		}
+		// 客户端直连模式,设置连接和玩家的关联
+		if connection != nil {
+			connection.SetTag(this.GetId())
+		}
 	}
 	this.connection = connection
 }
@@ -74,7 +85,12 @@ func (this *Player) GetConnection() Connection {
 // NOTE:调用Send(command,message)之后,不要再对message进行读写!
 func (this *Player) Send(command PacketCommand, message proto.Message) bool {
 	if this.connection != nil {
-		return this.connection.Send(command, message)
+		if this.useGate {
+			// 网关模式,自动附加上playerId
+			return this.connection.SendPacket(internal.NewGatePacket(this.GetId(), command, message))
+		} else {
+			return this.connection.Send(command, message)
+		}
 	}
 	return false
 }

@@ -14,7 +14,7 @@ import (
 
 func GuildClientHandlerRegister(handler PacketHandlerRegister, playerMgr gentity.PlayerMgr) {
 	logger.Debug("GuildClientHandlerRegister")
-	handler.Register(PacketCommand(pb.CmdGuild_Cmd_GuildListReq), func(connection Connection, packet *ProtoPacket) {
+	handler.Register(PacketCommand(pb.CmdGuild_Cmd_GuildListReq), func(connection Connection, packet Packet) {
 		if connection.GetTag() != nil {
 			player := playerMgr.GetPlayer(connection.GetTag().(int64))
 			if player != nil {
@@ -25,7 +25,7 @@ func GuildClientHandlerRegister(handler PacketHandlerRegister, playerMgr gentity
 		}
 	}, new(pb.GuildListReq))
 
-	handler.Register(PacketCommand(pb.CmdGuild_Cmd_GuildCreateReq), func(connection Connection, packet *ProtoPacket) {
+	handler.Register(PacketCommand(pb.CmdGuild_Cmd_GuildCreateReq), func(connection Connection, packet Packet) {
 		if connection.GetTag() != nil {
 			player := playerMgr.GetPlayer(connection.GetTag().(int64))
 			if player != nil {
@@ -36,7 +36,7 @@ func GuildClientHandlerRegister(handler PacketHandlerRegister, playerMgr gentity
 		}
 	}, new(pb.GuildCreateReq))
 
-	handler.Register(PacketCommand(pb.CmdGuild_Cmd_GuildJoinReq), func(connection Connection, packet *ProtoPacket) {
+	handler.Register(PacketCommand(pb.CmdGuild_Cmd_GuildJoinReq), func(connection Connection, packet Packet) {
 		if connection.GetTag() != nil {
 			player := playerMgr.GetPlayer(connection.GetTag().(int64))
 			if player != nil {
@@ -59,7 +59,7 @@ func GuildClientHandlerRegister(handler PacketHandlerRegister, playerMgr gentity
 func RegisterPlayerGuildHandler(handler PacketHandlerRegister, playerMgr gentity.PlayerMgr, message proto.Message) {
 	messageName := message.ProtoReflect().Descriptor().Name()
 	cmd := util.GetMessageIdByComponentMessageName("gserver", "Guild", string(messageName))
-	handler.Register(PacketCommand(uint16(cmd)), func(connection Connection, packet *ProtoPacket) {
+	handler.Register(PacketCommand(uint16(cmd)), func(connection Connection, packet Packet) {
 		if connection.GetTag() != nil {
 			player := playerMgr.GetPlayer(connection.GetTag().(int64))
 			if player != nil {

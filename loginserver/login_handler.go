@@ -6,13 +6,14 @@ import (
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
 	"github.com/fish-tennis/gserver/gen"
+	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 	"math/rand"
 )
 
 // 客户端账号登录
-func onLoginReq(connection Connection, packet *ProtoPacket) {
+func onLoginReq(connection Connection, packet Packet) {
 	logger.Debug("onLoginReq:%v", packet.Message())
 	req := packet.Message().(*pb.LoginReq)
 	result := ""
@@ -65,13 +66,13 @@ func onLoginReq(connection Connection, packet *ProtoPacket) {
 		}
 		logger.Debug("%v(%v) -> %v", account.Name, account.GetXId(), loginRes.GameServer)
 	}
-	connection.Send(PacketCommand(pb.CmdLogin_Cmd_LoginRes), loginRes)
+	internal.SendPacketAdapt(connection, packet, PacketCommand(pb.CmdLogin_Cmd_LoginRes), loginRes)
 }
 
 // 选择一个游戏服给登录成功的客户端
 // NOTE:可以在这里做游戏服的负载均衡
 func selectGameServer(account *pb.Account) *pb.ServerInfo {
-	gameServerInfos := _loginServer.GetServerList().GetServersByType("gameserver")
+	gameServerInfos := _loginServer.GetServerList().GetServersByType(internal.ServerType_Game)
 	if len(gameServerInfos) > 0 {
 		// 作为演示,这里随机一个
 		selectGameServerInfo := gameServerInfos[rand.Intn(len(gameServerInfos))]
@@ -81,7 +82,7 @@ func selectGameServer(account *pb.Account) *pb.ServerInfo {
 }
 
 // 注册账号
-func onAccountReg(connection Connection, packet *ProtoPacket) {
+func onAccountReg(connection Connection, packet Packet) {
 	logger.Debug("onAccountReg:%v", packet.Message())
 	req := packet.Message().(*pb.AccountReg)
 	result := ""
@@ -103,7 +104,7 @@ func onAccountReg(connection Connection, packet *ProtoPacket) {
 		}
 		logger.Error("onAccountReg account:%v result:%v err:%v", account.Name, result, err.Error())
 	}
-	connection.Send(PacketCommand(pb.CmdLogin_Cmd_AccountRes), &pb.AccountRes{
+	internal.SendPacketAdapt(connection, packet, PacketCommand(pb.CmdLogin_Cmd_AccountRes), &pb.AccountRes{
 		Error: result,
 		AccountName: account.Name,
 		AccountId: account.XId,
