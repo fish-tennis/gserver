@@ -17,7 +17,7 @@
     "RecvTimeout": 20,
     "HeartBeatInterval": 5
   },
-  "MongoUri": "mongodb://192.168.8.169:20000",
+  "MongoUri": "mongodb://localhost:27017",
   "MongoDbName": "testdb",
   "RedisUri": ["127.0.0.1:6379"],
   "RedisCluster": true
