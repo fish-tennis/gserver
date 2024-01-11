@@ -97,13 +97,10 @@ func (this *Player) Send(command PacketCommand, message proto.Message) bool {
 
 // 通用的错误返回消息
 func (this *Player) SendErrorRes(errorReqCmd PacketCommand, errorMsg string) bool {
-	if this.connection != nil {
-		return this.connection.Send(PacketCommand(pb.CmdInner_Cmd_ErrorRes), &pb.ErrorRes{
-			Command:   int32(errorReqCmd),
-			ResultStr: errorMsg,
-		})
-	}
-	return false
+	return this.Send(PacketCommand(pb.CmdInner_Cmd_ErrorRes), &pb.ErrorRes{
+		Command:   int32(errorReqCmd),
+		ResultStr: errorMsg,
+	})
 }
 
 // 分发事件给组件
