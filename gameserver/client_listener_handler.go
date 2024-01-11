@@ -3,7 +3,6 @@ package gameserver
 import (
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/game"
-	"github.com/fish-tennis/gserver/logger"
 )
 
 // 客户端listener handler
@@ -25,10 +24,6 @@ func (this *ClientListerHandler) OnConnectionDisconnect(listener Listener, conne
 			return
 		}
 		//if atomic.CompareAndSwapPointer((*unsafe.Pointer)(unsafe.Pointer(&player.connection)), unsafe.Pointer(&connection), nil) {
-		if player.GetConnection() == connection {
-			player.SetConnection(nil, false)
-			player.Stop()
-			logger.Debug("player %v exit", player.GetId())
-		}
+		player.OnDisconnect(connection)
 	}
 }

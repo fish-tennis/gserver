@@ -77,8 +77,20 @@ func (this *Player) SetConnection(connection Connection, useGate bool) {
 	this.connection = connection
 }
 
+func (this *Player) ResetConnection() {
+	this.connection = nil
+}
+
 func (this *Player) GetConnection() Connection {
 	return this.connection
+}
+
+func (this *Player) OnDisconnect(connection Connection) {
+	if this.GetConnection() == connection {
+		this.ResetConnection()
+		this.Stop()
+		logger.Debug("player %v exit", this.GetId())
+	}
 }
 
 // 发包(protobuf)

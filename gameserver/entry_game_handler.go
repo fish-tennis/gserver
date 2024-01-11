@@ -179,3 +179,15 @@ func onCreatePlayerReq(connection Connection, packet Packet) {
 		Name:      req.Name,
 	})
 }
+
+// gate转发的客户端掉线消息
+func onClientDisconnect(connection Connection, packet Packet) {
+	if gatePacket,ok := packet.(*internal.GatePacket); ok {
+		playerId := gatePacket.PlayerId()
+		player := game.GetPlayer(playerId)
+		if player == nil {
+			return
+		}
+		player.OnDisconnect(connection)
+	}
+}

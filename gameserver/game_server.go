@@ -262,6 +262,7 @@ func (this *GameServer) registerGatePacket(gateHandler PacketHandlerRegister) {
 	gateHandler.Register(PacketCommand(pb.CmdInner_Cmd_HeartBeatReq), onHeartBeatReq, new(pb.HeartBeatReq))
 	gateHandler.Register(PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameReq), onPlayerEntryGameReq, new(pb.PlayerEntryGameReq))
 	gateHandler.Register(PacketCommand(pb.CmdLogin_Cmd_CreatePlayerReq), onCreatePlayerReq, new(pb.CreatePlayerReq))
+	gateHandler.Register(PacketCommand(pb.CmdInner_Cmd_ClientDisconnect), onClientDisconnect, new(pb.TestCmd))
 	gateHandler.Register(PacketCommand(pb.CmdInner_Cmd_TestCmd), wrapPlayerHandler(onTestCmd), new(pb.TestCmd))
 	gateHandler.(*DefaultConnectionHandler).SetUnRegisterHandler(func(connection Connection, packet Packet) {
 		if gatePacket,ok := packet.(*GatePacket); ok {
@@ -277,6 +278,15 @@ func (this *GameServer) registerGatePacket(gateHandler PacketHandlerRegister) {
 				}
 			}
 		}
+	})
+	// 网关服务器掉线,该网关上的所有玩家都掉线
+	gateHandler.(*DefaultConnectionHandler).SetOnDisconnectedFunc(func(connection Connection) {
+		this.playerMap.Range(func(key, value interface{}) bool {
+			if player,ok := value.(*game.Player); ok {
+				player.OnDisconnect(connection)
+			}
+			return true
+		})
 	})
 	// 通过反射自动注册消息和proto.Message的映射
 	game.AutoRegisterPlayerComponentProto(gateHandler)
@@ -321,7 +331,7 @@ func (this *GameServer) onKickPlayer(connection Connection, packet Packet) {
 	req := packet.Message().(*pb.KickPlayer)
 	player := game.GetPlayer(req.GetPlayerId())
 	if player != nil {
-		player.SetConnection(nil, false)
+		player.ResetConnection()
 		player.Stop()
 		logger.Debug("kick player account:%v playerId:%v gameServerId:%v",
 			req.GetAccountId(), req.GetPlayerId(), this.GetId())

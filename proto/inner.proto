@@ -14,6 +14,7 @@ enum CmdInner {
 	Cmd_ErrorRes     = 3; // 通用的错误返回消息
 	Cmd_KickPlayer   = 4; // 踢玩家下线
 	Cmd_TestCmd      = 5; // 测试命令
+	Cmd_ClientDisconnect = 6; // 客户端掉线
 }
 
 // 心跳包请求
@@ -55,4 +56,9 @@ message KickPlayer {
 // 测试命令
 message TestCmd {
   string cmd = 1;
+}
+
+// 客户端掉线
+message ClientDisconnect {
+  uint32 clientConnId = 1;
 }
