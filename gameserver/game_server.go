@@ -283,7 +283,9 @@ func (this *GameServer) registerGatePacket(gateHandler PacketHandlerRegister) {
 	gateHandler.(*DefaultConnectionHandler).SetOnDisconnectedFunc(func(connection Connection) {
 		this.playerMap.Range(func(key, value interface{}) bool {
 			if player,ok := value.(*game.Player); ok {
-				player.OnDisconnect(connection)
+				if player.GetConnection() == connection {
+					player.OnDisconnect(connection)
+				}
 			}
 			return true
 		})
