@@ -1,0 +1,201 @@
+[
+  {
+    "CfgId": 1,
+    "Name": "每日签到",
+    "Detail": "签到拿奖励,每天一次",
+    "Template": "default",
+    "RefreshType": 1,
+    "CycleType": 1,
+    "TimeType": 1,
+    "BeginTime": 0,
+    "EndTime": 0,
+    "Quests": [
+      {
+        "CfgId": 1,
+        "Name": "每日签到",
+        "Detail": "签到拿奖励,每天一次",
+        "ConditionCfg": {
+          "ConditionType": 3,
+          "ProgressType": 1,
+          "Total": 1,
+          "EventArgs": {
+            "PropertyName": "SignIn"
+          }
+        },
+        "Rewards": [
+          {
+            "Id": 1,
+            "Num": 1
+          }
+        ]
+      }
+    ]
+  },
+
+  {
+    "CfgId": 2,
+    "Name": "累充礼包",
+    "Detail": "累计充值达到100,奖励XXX",
+    "Template": "default",
+    "RefreshType": 1,
+    "CycleType": 1,
+    "TimeType": 1,
+    "BeginTime": 0,
+    "EndTime": 0,
+    "Quests": [
+      {
+        "CfgId": 1,
+        "Name": "累充礼包",
+        "Detail": "累计充值达到100,奖励XXX",
+        "ConditionCfg": {
+          "ConditionType": 3,
+          "ProgressType": 1,
+          "Total": 100,
+          "EventArgs": {
+            "PropertyName": "TotalPay"
+          }
+        },
+        "Rewards": [
+          {
+            "Id": 1,
+            "Num": 2
+          }
+        ]
+      }
+    ]
+  },
+
+  {
+    "CfgId": 3,
+    "Name": "3日目标",
+    "Detail": "每天一个小目标,3天一个大目标",
+    "Template": "default",
+    "RefreshType": 1,
+    "CycleType": 1,
+    "TimeType": 1,
+    "BeginTime": 0,
+    "EndTime": 0,
+    "Quests": [
+      {
+        "CfgId": 1,
+        "Name": "第1天",
+        "Detail": "",
+        "ConditionCfg": {
+          "ConditionType": 1,
+          "ProgressType": 1,
+          "Total": 1
+        },
+        "Rewards": [
+          {
+            "Id": 1,
+            "Num": 1
+          }
+        ]
+      },
+      {
+        "CfgId": 2,
+        "Name": "第2天",
+        "Detail": "",
+        "ConditionCfg": {
+          "ConditionType": 1,
+          "ProgressType": 1,
+          "Total": 1
+        },
+        "Rewards": [
+          {
+            "Id": 1,
+            "Num": 2
+          }
+        ]
+      },
+      {
+        "CfgId": 3,
+        "Name": "第3天",
+        "Detail": "",
+        "ConditionCfg": {
+          "ConditionType": 1,
+          "ProgressType": 1,
+          "Total": 1
+        },
+        "Rewards": [
+          {
+            "Id": 1,
+            "Num": 3
+          }
+        ]
+      }
+    ]
+  },
+
+  {
+    "CfgId": 4,
+    "Name": "在线奖励",
+    "Detail": "累计在线一定时长,即可领取礼包",
+    "Template": "default",
+    "RefreshType": 1,
+    "CycleType": 1,
+    "TimeType": 1,
+    "BeginTime": 0,
+    "EndTime": 0,
+    "Quests": [
+      {
+        "CfgId": 1,
+        "Name": "1分钟",
+        "Detail": "",
+        "ConditionCfg": {
+          "ConditionType": 3,
+          "ProgressType": 1,
+          "Total": 1,
+          "EventArgs": {
+            "PropertyName": "OnlineTime"
+          }
+        },
+        "Rewards": [
+          {
+            "Id": 1,
+            "Num": 1
+          }
+        ]
+      },
+      {
+        "CfgId": 2,
+        "Name": "5分钟",
+        "Detail": "",
+        "ConditionCfg": {
+          "ConditionType": 3,
+          "ProgressType": 1,
+          "Total": 5,
+          "EventArgs": {
+            "PropertyName": "OnlineTime"
+          }
+        },
+        "Rewards": [
+          {
+            "Id": 1,
+            "Num": 5
+          }
+        ]
+      },
+      {
+        "CfgId": 3,
+        "Name": "10分钟",
+        "Detail": "",
+        "ConditionCfg": {
+          "ConditionType": 3,
+          "ProgressType": 1,
+          "Total": 10,
+          "EventArgs": {
+            "PropertyName": "OnlineTime"
+          }
+        },
+        "Rewards": [
+          {
+            "Id": 1,
+            "Num": 10
+          }
+        ]
+      }
+    ]
+  }
+
+]

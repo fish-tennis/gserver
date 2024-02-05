@@ -32,3 +32,16 @@ message BaseConditionCfg {
   int32 ProgressType = 2;
   int32 Total = 3;
 }
+
+// 活动基础配置
+message BaseActivityCfg {
+  int32 CfgId = 1;
+  string Name = 2;
+  string Detail = 3;
+  string Template = 4; // 活动模板
+  int32 RefreshType = 5; // 刷新机制
+  int32 CycleType = 6; // 活动周期
+  int32 TimeType = 7; // 时间类型
+  int32 BeginTime = 8; // 开始时间
+  int32 EndTime = 9; // 结束时间
+}

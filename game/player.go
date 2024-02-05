@@ -130,8 +130,8 @@ func (this *Player) FireEvent(event interface{}) {
 // 分发条件相关事件
 func (this *Player) FireConditionEvent(event interface{}) {
 	logger.Debug("%v FireConditionEvent:%v", this.GetId(), event)
-	// 目前只有任务模块用了Condition
-	this.GetQuest().Quests.fireEvent(event)
+	this.GetQuest().Quests.OnEvent(event)
+	this.GetActivities().OnEvent(event)
 }
 
 func (this *Player) GetBaseInfo() *BaseInfo {
@@ -148,6 +148,10 @@ func (this *Player) GetQuest() *Quest {
 
 func (this *Player) GetGuild() *Guild {
 	return this.GetComponent("Guild").(*Guild)
+}
+
+func (this *Player) GetActivities() *Activities {
+	return this.GetComponent("Activities").(*Activities)
 }
 
 // 开启消息处理协程
@@ -207,7 +211,7 @@ func CreatePlayerFromData(playerData *pb.PlayerData) *Player {
 		name:         playerData.Name,
 		accountId:    playerData.AccountId,
 		regionId:     playerData.RegionId,
-		BaseRoutineEntity: *gentity.NewRoutineEntity(8),
+		BaseRoutineEntity: *gentity.NewRoutineEntity(32),
 	}
 	player.Id = playerData.XId
 	// 初始化玩家的各个模块
@@ -217,6 +221,9 @@ func CreatePlayerFromData(playerData *pb.PlayerData) *Player {
 	player.AddComponent(NewQuest(player), playerData.Quest)
 	player.AddComponent(NewGuild(player), playerData.Guild)
 	player.AddComponent(NewPendingMessages(player), playerData.PendingMessages)
+	activities := NewActivities(player)
+	player.AddComponent(activities, nil)
+	activities.LoadData(playerData.Activities)
 	return player
 }
 

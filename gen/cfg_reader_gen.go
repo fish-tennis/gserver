@@ -101,3 +101,48 @@ func (r *BaseConditionCfgReader) GetProgressType() int32 {
 func (r *BaseConditionCfgReader) GetTotal() int32 {
 	return r.v.GetTotal()
 }
+
+type BaseActivityCfgReader struct {
+	v *BaseActivityCfg
+}
+
+func NewBaseActivityCfgReader(src *BaseActivityCfg) *BaseActivityCfgReader {
+	return &BaseActivityCfgReader{v:src}
+}
+
+
+func (r *BaseActivityCfgReader) GetCfgId() int32 {
+	return r.v.GetCfgId()
+}
+
+func (r *BaseActivityCfgReader) GetName() string {
+	return r.v.GetName()
+}
+
+func (r *BaseActivityCfgReader) GetDetail() string {
+	return r.v.GetDetail()
+}
+
+func (r *BaseActivityCfgReader) GetTemplate() string {
+	return r.v.GetTemplate()
+}
+
+func (r *BaseActivityCfgReader) GetRefreshType() int32 {
+	return r.v.GetRefreshType()
+}
+
+func (r *BaseActivityCfgReader) GetCycleType() int32 {
+	return r.v.GetCycleType()
+}
+
+func (r *BaseActivityCfgReader) GetTimeType() int32 {
+	return r.v.GetTimeType()
+}
+
+func (r *BaseActivityCfgReader) GetBeginTime() int32 {
+	return r.v.GetBeginTime()
+}
+
+func (r *BaseActivityCfgReader) GetEndTime() int32 {
+	return r.v.GetEndTime()
+}

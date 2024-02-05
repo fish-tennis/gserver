@@ -152,10 +152,13 @@ func (this *GameServer) readConfig() {
 
 // 加载配置数据
 func (this *GameServer) loadCfgs() {
-	cfg.GetQuestCfgMgr().SetConditionMgr(game.RegisterConditionCheckers())
+	conditionMgr := game.RegisterConditionCheckers()
+	cfg.GetQuestCfgMgr().SetConditionMgr(conditionMgr)
 	cfg.GetQuestCfgMgr().Load("cfgdata/questcfg.json")
 	cfg.GetLevelCfgMgr().Load("cfgdata/levelcfg.csv")
 	cfg.GetItemCfgMgr().Load("cfgdata/itemcfg.json")
+	cfg.GetActivityCfgMgr().SetConditionMgr(conditionMgr)
+	cfg.GetActivityCfgMgr().Load("cfgdata/activitycfg.json")
 }
 
 // 初始化数据库

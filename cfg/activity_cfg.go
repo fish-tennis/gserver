@@ -1,0 +1,76 @@
+package cfg
+
+import (
+	"encoding/json"
+	. "github.com/fish-tennis/gserver/internal"
+	"github.com/fish-tennis/gserver/logger"
+	"github.com/fish-tennis/gserver/pb"
+	"os"
+)
+
+var (
+	_activityCfgMgr *ActivityCfgMgr
+)
+
+// 活动配置数据
+type ActivityCfg struct {
+	pb.BaseActivityCfg
+	Quests []*QuestCfg
+	Properties map[string]interface{} `json:"Properties"` // 动态属性
+}
+
+// 活动配置数据管理
+type ActivityCfgMgr struct {
+	cfgs         map[int32]*ActivityCfg
+	conditionMgr *ConditionMgr
+}
+
+func GetActivityCfgMgr() *ActivityCfgMgr {
+	if _activityCfgMgr == nil {
+		_activityCfgMgr = &ActivityCfgMgr{
+			cfgs: make(map[int32]*ActivityCfg),
+		}
+	}
+	return _activityCfgMgr
+}
+
+func (this *ActivityCfgMgr) GetActivityCfg(cfgId int32) *ActivityCfg {
+	return this.cfgs[cfgId]
+}
+
+func (this *ActivityCfgMgr) GetActivityCfgs() map[int32]*ActivityCfg {
+	return this.cfgs
+}
+
+func (this *ActivityCfgMgr) GetConditionMgr() *ConditionMgr {
+	return this.conditionMgr
+}
+
+func (this *ActivityCfgMgr) SetConditionMgr(conditionMgr *ConditionMgr) {
+	this.conditionMgr = conditionMgr
+}
+
+// 加载任务配置数据
+func (this *ActivityCfgMgr) Load(fileName string) bool {
+	fileData, err := os.ReadFile(fileName)
+	if err != nil {
+		logger.Error("%v", err)
+		return false
+	}
+	var cfgList []*ActivityCfg
+	err = json.Unmarshal(fileData, &cfgList)
+	if err != nil {
+		logger.Error("%v", err)
+		return false
+	}
+	cfgMap := make(map[int32]*ActivityCfg, len(cfgList))
+	for _, cfg := range cfgList {
+		if _, exists := cfgMap[cfg.CfgId]; exists {
+			logger.Error("duplicate id:%v", cfg.CfgId)
+		}
+		cfgMap[cfg.CfgId] = cfg
+	}
+	this.cfgs = cfgMap
+	logger.Info("count:%v", len(this.cfgs))
+	return true
+}

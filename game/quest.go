@@ -2,13 +2,13 @@ package game
 
 import (
 	"github.com/fish-tennis/gentity"
+	"github.com/fish-tennis/gentity/util"
 	"github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cfg"
 	"github.com/fish-tennis/gserver/gen"
 	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
-	"github.com/fish-tennis/gentity/util"
 )
 
 // 任务模块
@@ -65,7 +65,7 @@ func (c *CurQuests) Remove(questId int32) {
 }
 
 // 触发了事件,检查任务进度的更新
-func (c *CurQuests) fireEvent(event interface{}) {
+func (c *CurQuests) OnEvent(event interface{}) {
 	for _,questData := range c.Quests {
 		questCfg := cfg.GetQuestCfgMgr().GetQuestCfg(questData.GetCfgId())
 		if cfg.GetQuestCfgMgr().GetConditionMgr().CheckEvent(event, questCfg.ConditionCfg, questData) {
@@ -113,6 +113,7 @@ func (this *Quest) OnEvent(event interface{}) {
 			}
 		}
 	}
+	this.Quests.OnEvent(event)
 }
 
 // 完成任务的消息回调

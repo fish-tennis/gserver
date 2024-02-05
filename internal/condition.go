@@ -22,8 +22,26 @@ const (
 
 // 条件配置数据
 type ConditionCfg struct {
-	*pb.BaseConditionCfg
+	pb.BaseConditionCfg
 	EventArgs map[string]interface{} `json:"EventArgs"` // 需要匹配的事件参数
+}
+
+func (this *ConditionCfg) GetEventArg(name string) interface{} {
+	if len(this.EventArgs) == 0 {
+		return nil
+	}
+	return this.EventArgs[name]
+}
+
+func (this *ConditionCfg) GetEventArgString(name string) string {
+	value := this.GetEventArg(name)
+	if value == nil {
+		return ""
+	}
+	if str,ok := value.(string); ok {
+		return str
+	}
+	return ""
 }
 
 // 进度读取接口
@@ -83,7 +101,8 @@ func (this *ConditionMgr) Register(conditionType int32, event interface{}, check
 }
 
 // 注册事件和条件检查接口
-// checker可以为nil
+//  checker: 条件检查接口,可以为nil
+//  init: 初始化时,更新当前进度,可以为nil
 func (this *ConditionMgr) RegisterWithInit(conditionType int32, event interface{}, checker ConditionCheckFunc, init ConditionInitFunc) {
 	eventTyp := reflect.TypeOf(event).Elem()
 	info, ok := this.eventMapping[eventTyp]
@@ -154,12 +173,13 @@ func (this *ConditionMgr) CheckEvent(event interface{}, conditionCfg *ConditionC
 		return false
 	}
 	progress := int32(0)
+	if conditionCfg.ProgressType == ProgressType_Counter {
+		progress = 1
+	}
 	if checker != nil {
 		progress = checker(event, conditionCfg)
 	}
-	if conditionCfg.ProgressType == ProgressType_Counter {
-		progress = 1
-	} else if conditionCfg.ProgressType == ProgressType_Reset {
+	if conditionCfg.ProgressType == ProgressType_Reset {
 		if progressHolder.GetProgress() != progress {
 			progressHolder.SetProgress(progress)
 			return true

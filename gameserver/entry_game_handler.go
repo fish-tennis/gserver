@@ -49,15 +49,14 @@ func onPlayerEntryGameReq(connection Connection, packet Packet) {
 			RegionId:  req.GetRegionId(),
 		})
 		return
-	} else {
-		// 检查该账号是否已经有对应的在线玩家
-		entryPlayer = game.GetPlayer(playerId)
-		if entryPlayer != nil {
-			// 重连
-			isReconnect = true
-			entryPlayer.SetConnection(connection, internal.IsGatePacket(packet))
-			logger.Debug("reconnect %v %v", entryPlayer.GetId(), entryPlayer.GetName())
-		}
+	}
+	// 检查该账号是否已经有对应的在线玩家
+	entryPlayer = game.GetPlayer(playerId)
+	if entryPlayer != nil {
+		// 重连
+		isReconnect = true
+		entryPlayer.SetConnection(connection, internal.IsGatePacket(packet))
+		logger.Debug("reconnect %v %v", entryPlayer.GetId(), entryPlayer.GetName())
 	}
 	if !isReconnect {
 		// 分布式游戏服必须保证一个账号同时只在一个游戏服上登录,防止写数据覆盖

@@ -53,4 +53,5 @@ message PlayerData {
   QuestSaveData quest = 8;
   bytes guild = 9; // (proto序列化)
   map<int64,bytes> pendingMessages = 10;
+  map<int32,bytes> activities = 11;
 }

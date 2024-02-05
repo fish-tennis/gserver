@@ -12,4 +12,6 @@ func TestQuestCfgLoad(t *testing.T) {
 	t.Logf("%v", GetLevelCfgMgr().needExps)
 	GetItemCfgMgr().Load(dir + "itemcfg.json")
 	t.Logf("%v", GetItemCfgMgr().cfgs)
+	GetActivityCfgMgr().Load(dir + "activitycfg.json")
+	t.Logf("%v", GetActivityCfgMgr().cfgs)
 }
