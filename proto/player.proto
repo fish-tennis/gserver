@@ -9,6 +9,7 @@ message BaseInfo {
   int32 gender = 1; // 性别
   int32 level = 2; // 等级
   int32 exp = 3; // 经验值
+  int32 totalPay = 4; // 累计充值总额
 }
 
 // 玩家的钱财数据

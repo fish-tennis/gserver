@@ -8,7 +8,7 @@ func (this *Player) GetPropertyInt32(propertyName string) int32 {
 	case "Level":
 		return this.GetBaseInfo().Data.GetLevel()
 	case "TotalPay":
-		return 1
+		return this.GetBaseInfo().Data.GetTotalPay()
 	default:
 		logger.Error("Not support property %v %v", this.GetId(), propertyName)
 	}

@@ -91,6 +91,40 @@ func onTestCmd(player *game.Player, packet Packet) {
 		}
 		player.FireConditionEvent(evt)
 
+	case "signin":
+		evt := &pb.EventPlayerPropertyInc{
+			PlayerId:      player.GetId(),
+			PropertyName:  "SignIn", // 签到事件
+			PropertyValue: 1,
+		}
+		player.FireEvent(evt)
+
+	case "pay":
+		if len(cmdArgs) < 1 {
+			player.SendErrorRes(packet.Command(), "pay cmdArgs error")
+			return
+		}
+		payValue := int32(util.Atoi(cmdArgs[0]))
+		player.GetBaseInfo().Data.TotalPay += payValue
+		evt := &pb.EventPlayerPropertyInc{
+			PlayerId:      player.GetId(),
+			PropertyName:  "TotalPay",
+			PropertyValue: payValue,
+		}
+		player.FireEvent(evt)
+
+	case "playerpropertyinc":
+		if len(cmdArgs) < 2 {
+			player.SendErrorRes(packet.Command(), "playerpropertyinc cmdArgs error")
+			return
+		}
+		evt := &pb.EventPlayerPropertyInc{
+			PlayerId:      player.GetId(),
+			PropertyName:  cmdArgs[0],
+			PropertyValue: int32(util.Atoi(cmdArgs[1])),
+		}
+		player.FireEvent(evt)
+
 	default:
 		player.SendErrorRes(packet.Command(), "unsupport test cmd")
 	}
