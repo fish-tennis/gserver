@@ -8,6 +8,7 @@ import (
 	"github.com/fish-tennis/gserver/cfg"
 	"github.com/fish-tennis/gserver/pb"
 	"testing"
+	"time"
 )
 
 func TestSaveable(t *testing.T) {
@@ -113,6 +114,15 @@ func TestActivity(t *testing.T) {
 
 	for _, activityId := range activityIds {
 		activity := activities.GetActivity(activityId)
+		t.Log(fmt.Sprintf("%v %v", activityId, activity.(*ActivityDefault)))
+	}
+
+	now := time.Now()
+	oldDate := now.AddDate(0, 0, -1)
+	t.Logf("%v %v", oldDate.String(), now.String())
+	for _, activityId := range activityIds {
+		activity := activities.GetActivity(activityId)
+		activity.OnDateChange(oldDate, now)
 		t.Log(fmt.Sprintf("%v %v", activityId, activity.(*ActivityDefault)))
 	}
 }

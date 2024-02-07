@@ -14,9 +14,18 @@ var (
 
 // 活动配置数据
 type ActivityCfg struct {
-	pb.BaseActivityCfg
-	Quests []*QuestCfg
-	Properties map[string]interface{} `json:"Properties"` // 动态属性
+	pb.BaseActivityCfg                        // 活动基础数据
+	Quests             []*QuestCfg            // 一个活动可以包含N个子任务
+	Properties         map[string]interface{} `json:"Properties"` // 动态属性
+}
+
+func (this *ActivityCfg) GetQuestCfg(cfgId int32) *QuestCfg {
+	for _, questCfg := range this.Quests {
+		if questCfg.GetCfgId() == cfgId {
+			return questCfg
+		}
+	}
+	return nil
 }
 
 // 活动配置数据管理
@@ -38,8 +47,12 @@ func (this *ActivityCfgMgr) GetActivityCfg(cfgId int32) *ActivityCfg {
 	return this.cfgs[cfgId]
 }
 
-func (this *ActivityCfgMgr) GetActivityCfgs() map[int32]*ActivityCfg {
-	return this.cfgs
+func (this *ActivityCfgMgr) Range(f func(activityCfg *ActivityCfg) bool) {
+	for _, cfg := range this.cfgs {
+		if !f(cfg) {
+			return
+		}
+	}
 }
 
 func (this *ActivityCfgMgr) GetConditionMgr() *ConditionMgr {

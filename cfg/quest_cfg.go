@@ -16,7 +16,8 @@ var (
 type QuestCfg struct {
 	pb.BaseQuestCfg
 	// 如果有多条件的任务需求,可以改成[]*ConditionCfg
-	ConditionCfg *ConditionCfg `json:"ConditionCfg"` // 条件配置
+	ConditionCfg *ConditionCfg          `json:"ConditionCfg"` // 条件配置
+	Properties   map[string]interface{} `json:"Properties"`   // 动态属性
 }
 
 // 任务配置数据管理
@@ -38,8 +39,12 @@ func (this *QuestCfgMgr) GetQuestCfg(cfgId int32) *QuestCfg {
 	return this.cfgs[cfgId]
 }
 
-func (this *QuestCfgMgr) GetQuestCfgs() map[int32]*QuestCfg {
-	return this.cfgs
+func (this *QuestCfgMgr) Range(f func(questCfg *QuestCfg) bool) {
+	for _, cfg := range this.cfgs {
+		if !f(cfg) {
+			return
+		}
+	}
 }
 
 func (this *QuestCfgMgr) GetConditionMgr() *ConditionMgr {

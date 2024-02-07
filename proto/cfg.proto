@@ -24,6 +24,7 @@ message BaseQuestCfg {
   string Name = 2;
   string Detail = 3;
   repeated ItemNum Rewards = 4;
+  int32 PreQuest = 5; // 前置任务
 }
 
 // 条件基础配置
@@ -44,4 +45,13 @@ message BaseActivityCfg {
   int32 TimeType = 7; // 时间类型
   int32 BeginTime = 8; // 开始时间
   int32 EndTime = 9; // 结束时间
+  repeated ExchangeCfg Exchanges = 10; // 兑换配置
+}
+
+// 兑换配置
+message ExchangeCfg {
+  int32 CfgId = 1;
+  repeated ItemNum ConsumeItems = 2; // 需要消耗的物品
+  repeated ItemNum Rewards = 3; // 获得物品
+  int32 CountLimit = 4; // 兑换次数限制
 }

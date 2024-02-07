@@ -19,14 +19,19 @@ func NewBagCountItem() *BagCountItem {
 	return bag
 }
 
-func (this *BagCountItem) AddItem(itemCfgId, addCount int32) {
+func (this *BagCountItem) GetItemCount(itemCfgId int32) int32 {
+	return this.Items[itemCfgId]
+}
+
+func (this *BagCountItem) AddItem(itemCfgId, addCount int32) int32 {
 	if addCount <= 0 {
-		return
+		return 0
 	}
 	curCount, ok := this.Items[itemCfgId]
 	if ok {
 		// 检查数值溢出
 		if int64(curCount)+int64(addCount) > math.MaxInt32 {
+			addCount = math.MaxInt32 - curCount
 			curCount = math.MaxInt32
 		} else {
 			curCount += addCount
@@ -36,23 +41,27 @@ func (this *BagCountItem) AddItem(itemCfgId, addCount int32) {
 	}
 	this.Items[itemCfgId] = curCount
 	this.SetDirty(itemCfgId, true)
-	logger.Debug("AddItem cfgId:%v curCount:%v", itemCfgId, curCount)
+	logger.Debug("AddItem cfgId:%v curCount:%v addCount:%v", itemCfgId, curCount, addCount)
+	return addCount
 }
 
-func (this *BagCountItem) DelItem(itemCfgId, delCount int32) {
+func (this *BagCountItem) DelItem(itemCfgId, delCount int32) int32 {
 	if delCount <= 0 {
-		return
+		return 0
 	}
 	curCount, ok := this.Items[itemCfgId]
 	if !ok {
-		return
+		return 0
 	}
 	if delCount >= curCount {
 		delete(this.Items, itemCfgId)
 		this.SetDirty(itemCfgId, false)
+		logger.Debug("DelItem cfgId:%v delCount:%v/%v", itemCfgId, curCount, delCount)
+		return curCount
 	} else {
 		this.Items[itemCfgId] = curCount - delCount
 		this.SetDirty(itemCfgId, true)
+		logger.Debug("DelItem cfgId:%v delCount:%v", itemCfgId, delCount)
+		return delCount
 	}
-	logger.Debug("DelItem cfgId:%v curCount:%v", itemCfgId, curCount)
 }

@@ -81,6 +81,10 @@ func (r *BaseQuestCfgReader) GetRewards() []*ItemNumReader {
 	return sliceReader
 }
 
+func (r *BaseQuestCfgReader) GetPreQuest() int32 {
+	return r.v.GetPreQuest()
+}
+
 type BaseConditionCfgReader struct {
 	v *BaseConditionCfg
 }
@@ -145,4 +149,57 @@ func (r *BaseActivityCfgReader) GetBeginTime() int32 {
 
 func (r *BaseActivityCfgReader) GetEndTime() int32 {
 	return r.v.GetEndTime()
+}
+
+func (r *BaseActivityCfgReader) GetExchanges() []*ExchangeCfgReader {
+	src := r.v.GetExchanges()
+	if src == nil {
+		return nil
+	}
+	sliceReader := make([]*ExchangeCfgReader,len(src))
+	for i,v := range src {
+		sliceReader[i] = NewExchangeCfgReader(v)
+	}
+	return sliceReader
+}
+
+type ExchangeCfgReader struct {
+	v *ExchangeCfg
+}
+
+func NewExchangeCfgReader(src *ExchangeCfg) *ExchangeCfgReader {
+	return &ExchangeCfgReader{v:src}
+}
+
+
+func (r *ExchangeCfgReader) GetCfgId() int32 {
+	return r.v.GetCfgId()
+}
+
+func (r *ExchangeCfgReader) GetConsumeItems() []*ItemNumReader {
+	src := r.v.GetConsumeItems()
+	if src == nil {
+		return nil
+	}
+	sliceReader := make([]*ItemNumReader,len(src))
+	for i,v := range src {
+		sliceReader[i] = NewItemNumReader(v)
+	}
+	return sliceReader
+}
+
+func (r *ExchangeCfgReader) GetRewards() []*ItemNumReader {
+	src := r.v.GetRewards()
+	if src == nil {
+		return nil
+	}
+	sliceReader := make([]*ItemNumReader,len(src))
+	for i,v := range src {
+		sliceReader[i] = NewItemNumReader(v)
+	}
+	return sliceReader
+}
+
+func (r *ExchangeCfgReader) GetCountLimit() int32 {
+	return r.v.GetCountLimit()
 }

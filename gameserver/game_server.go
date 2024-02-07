@@ -6,6 +6,7 @@ import (
 	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gserver/game"
 	"github.com/fish-tennis/gserver/social"
+	"google.golang.org/protobuf/proto"
 	"os"
 	"sync"
 	"time"
@@ -211,43 +212,12 @@ func (this *GameServer) registerClientPacket(clientHandler PacketHandlerRegister
 	clientHandler.Register(PacketCommand(pb.CmdInner_Cmd_HeartBeatReq), onHeartBeatReq, new(pb.HeartBeatReq))
 	clientHandler.Register(PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameReq), onPlayerEntryGameReq, new(pb.PlayerEntryGameReq))
 	clientHandler.Register(PacketCommand(pb.CmdLogin_Cmd_CreatePlayerReq), onCreatePlayerReq, new(pb.CreatePlayerReq))
-	clientHandler.Register(PacketCommand(pb.CmdInner_Cmd_TestCmd), wrapPlayerHandler(onTestCmd), new(pb.TestCmd))
+	this.registerGatePlayerPacket(clientHandler, PacketCommand(pb.CmdInner_Cmd_TestCmd), onTestCmd, new(pb.TestCmd))
 	// 通过反射自动注册消息回调
 	game.AutoRegisterPlayerComponentProto(clientHandler)
 	// 自动注册消息回调的另一种方案: proto_code_gen工具生成的回调函数
 	// 因为已经用了反射自动注册,所以这里注释了
 	// player_component_handler_gen(clientHandler)
-}
-
-func wrapPlayerHandler(fn func(player *game.Player, packet Packet)) func(connection Connection, packet Packet) {
-	return func(connection Connection, packet Packet) {
-		var playerId int64
-		if gatePacket,ok := packet.(*GatePacket); ok {
-			// 网关转发的消息,包含playerId
-			playerId = gatePacket.PlayerId()
-		} else {
-			// 客户端直连的模式
-			if connection.GetTag() == nil {
-				return
-			}
-			playerId, ok = connection.GetTag().(int64)
-			if !ok {
-				return
-			}
-		}
-		player := game.GetPlayer(playerId)
-		if player == nil {
-			return
-		}
-		// 网关模式,使用的GatePacket
-		if gatePacket,ok := packet.(*GatePacket); ok {
-			// 转换成ProtoPacket,业务层统一接口
-			player.OnRecvPacket(gatePacket.ToProtoPacket())
-		} else {
-			// 客户端直连模式,使用的ProtoPacket
-			player.OnRecvPacket(packet.(*ProtoPacket))
-		}
-	}
 }
 
 // 心跳回复
@@ -266,13 +236,13 @@ func (this *GameServer) registerGatePacket(gateHandler PacketHandlerRegister) {
 	gateHandler.Register(PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameReq), onPlayerEntryGameReq, new(pb.PlayerEntryGameReq))
 	gateHandler.Register(PacketCommand(pb.CmdLogin_Cmd_CreatePlayerReq), onCreatePlayerReq, new(pb.CreatePlayerReq))
 	gateHandler.Register(PacketCommand(pb.CmdInner_Cmd_ClientDisconnect), onClientDisconnect, new(pb.TestCmd))
-	gateHandler.Register(PacketCommand(pb.CmdInner_Cmd_TestCmd), wrapPlayerHandler(onTestCmd), new(pb.TestCmd))
+	this.registerGatePlayerPacket(gateHandler, PacketCommand(pb.CmdInner_Cmd_TestCmd), onTestCmd, new(pb.TestCmd))
 	gateHandler.(*DefaultConnectionHandler).SetUnRegisterHandler(func(connection Connection, packet Packet) {
-		if gatePacket,ok := packet.(*GatePacket); ok {
+		if gatePacket, ok := packet.(*GatePacket); ok {
 			playerId := gatePacket.PlayerId()
 			player := this.GetPlayer(playerId)
 			if player != nil {
-				if gamePlayer ,ok := player.(*game.Player); ok {
+				if gamePlayer, ok := player.(*game.Player); ok {
 					if gamePlayer.GetConnection() == connection {
 						// 在线玩家的消息,转到玩家消息处理协程去处理
 						gamePlayer.OnRecvPacket(gatePacket.ToProtoPacket())
@@ -285,7 +255,7 @@ func (this *GameServer) registerGatePacket(gateHandler PacketHandlerRegister) {
 	// 网关服务器掉线,该网关上的所有玩家都掉线
 	gateHandler.(*DefaultConnectionHandler).SetOnDisconnectedFunc(func(connection Connection) {
 		this.playerMap.Range(func(key, value interface{}) bool {
-			if player,ok := value.(*game.Player); ok {
+			if player, ok := value.(*game.Player); ok {
 				if player.GetConnection() == connection {
 					player.OnDisconnect(connection)
 				}
@@ -298,6 +268,39 @@ func (this *GameServer) registerGatePacket(gateHandler PacketHandlerRegister) {
 	// 自动注册消息回调的另一种方案: proto_code_gen工具生成的回调函数
 	// 因为已经用了反射自动注册,所以这里注释了
 	// player_component_handler_gen(clientHandler)
+}
+
+// 注册func(player *Player, packet Packet)格式的消息回调函数,支持网关模式和客户端直连模式
+func (this *GameServer) registerGatePlayerPacket(gateHandler PacketHandlerRegister, packetCommand PacketCommand, playerHandler func(player *game.Player, packet Packet), protoMessage proto.Message) {
+	gateHandler.Register(packetCommand, func(connection Connection, packet Packet) {
+		var playerId int64
+		if gatePacket, ok := packet.(*GatePacket); ok {
+			// 网关转发的消息,包含playerId
+			playerId = gatePacket.PlayerId()
+		} else {
+			// 客户端直连的模式
+			if connection.GetTag() == nil {
+				return
+			}
+			playerId, ok = connection.GetTag().(int64)
+			if !ok {
+				return
+			}
+		}
+		player := game.GetPlayer(playerId)
+		if player == nil {
+			return
+		}
+		// 网关模式,使用的GatePacket
+		if gatePacket, ok := packet.(*GatePacket); ok {
+			// 转换成ProtoPacket,业务层统一接口
+			player.OnRecvPacket(gatePacket.ToProtoPacket())
+		} else {
+			// 客户端直连模式,使用的ProtoPacket
+			player.OnRecvPacket(packet.(*ProtoPacket))
+		}
+	}, protoMessage)
+	game.RegisterPlayerHandler(packetCommand, playerHandler)
 }
 
 // 注册服务器消息回调

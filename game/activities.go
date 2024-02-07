@@ -58,6 +58,15 @@ func (this *Activities) AddNewActivity(activityCfgId int32) Activity {
 	return activity
 }
 
+func (this *Activities) AddAllActivities() {
+	cfg.GetActivityCfgMgr().Range(func(activityCfg *cfg.ActivityCfg) bool {
+		if this.GetActivity(activityCfg.CfgId) == nil {
+			this.AddNewActivity(activityCfg.CfgId)
+		}
+		return true
+	})
+}
+
 func (this *Activities) LoadData(sourceData map[int32][]byte) {
 	for activityId,bytes := range sourceData {
 		// 动态构建活动对象
@@ -75,6 +84,7 @@ func (this *Activities) LoadData(sourceData map[int32][]byte) {
 	}
 }
 
+// 事件分发
 func (this *Activities) OnEvent(event interface{}) {
 	for _,activity := range this.Data {
 		activity.OnEvent(event)
@@ -88,7 +98,13 @@ type ChildActivity struct {
 	Activities *Activities
 }
 
+// 子活动设置脏标记时,玩家活动模块也设置脏标记
 func (this *ChildActivity) SetDirty() {
 	this.BaseDirtyMark.SetDirty()
 	this.Activities.SetDirty(this.GetId(), false)
+}
+
+// 活动配置数据
+func (this *ChildActivity) GetActivityCfg() *cfg.ActivityCfg {
+	return cfg.GetActivityCfgMgr().GetActivityCfg(this.GetId())
 }

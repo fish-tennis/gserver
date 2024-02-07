@@ -3,7 +3,9 @@ package game
 import (
 	"github.com/fish-tennis/gentity/util"
 	"github.com/fish-tennis/gserver/cfg"
+	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
+	"math"
 )
 
 // 背包模块
@@ -40,6 +42,61 @@ func (this *Bag) AddItem(cfgId int32, num int32) bool {
 		}
 	} else {
 		this.BagCountItem.AddItem(cfgId, num)
+	}
+	return true
+}
+
+func (this *Bag) AddItems(items []*pb.ItemNum) {
+	for _,item := range items {
+		this.AddItem(item.CfgId, item.Num)
+	}
+}
+
+func (this *Bag) DelItems(items []*pb.ItemNum) {
+	for _,item := range items {
+		itemCfg := cfg.GetItemCfgMgr().GetItemCfg(item.CfgId)
+		if itemCfg == nil {
+			logger.Debug("itemCfg nil %v", item.CfgId)
+			continue
+		}
+		if itemCfg.GetUnique() {
+			this.BagUniqueItem.DelItem(item.CfgId, item.Num)
+		} else {
+			this.BagCountItem.DelItem(item.CfgId, item.Num)
+		}
+	}
+}
+
+func (this *Bag) IsEnough(items []*pb.ItemNum) bool {
+	// items可能有重复的物品,所以转换成map来统计总数量
+	itemNumMap := make(map[int32]int64)
+	for _,itemNum := range items {
+		if itemNum.Num <= 0 {
+			logger.Debug("wrong num %v", itemNum)
+			return false
+		}
+		itemNumMap[itemNum.CfgId] += int64(itemNum.Num)
+		// 检查int32数值溢出
+		if itemNumMap[itemNum.CfgId] > math.MaxInt32 {
+			logger.Debug("overflow num %v %v", itemNum, itemNumMap[itemNum.CfgId])
+			return false
+		}
+	}
+	for cfgId,num := range itemNumMap {
+		itemCfg := cfg.GetItemCfgMgr().GetItemCfg(cfgId)
+		if itemCfg == nil {
+			logger.Debug("itemCfg nil %v", cfgId)
+			return false
+		}
+		if itemCfg.GetUnique() {
+			if this.BagUniqueItem.GetItemCount(cfgId) < int32(num) {
+				return false
+			}
+		} else {
+			if this.BagCountItem.GetItemCount(cfgId) < int32(num) {
+				return false
+			}
+		}
 	}
 	return true
 }

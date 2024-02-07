@@ -10,6 +10,7 @@ message BaseInfo {
   int32 level = 2; // 等级
   int32 exp = 3; // 经验值
   int32 totalPay = 4; // 累计充值总额
+  int32 lastUpdateDate = 5; // 上次刷新日期,格式:yyyymmdd
 }
 
 // 玩家的钱财数据
@@ -55,4 +56,18 @@ message PlayerData {
   bytes guild = 9; // (proto序列化)
   map<int64,bytes> pendingMessages = 10;
   map<int32,bytes> activities = 11;
+}
+
+// 默认活动模板的基础数据
+message ActivityDefaultBaseData {
+  int32 LastUpdateTime = 1; // 刷新时间(秒)
+  map<int32,ActivityProgressData> Progresses = 2; // 进度数据
+  map<int32,int32> ExchangeRecord = 3; // 兑换记录
+}
+
+// 活动任务进度数据
+message ActivityProgressData {
+  int32 cfgId = 1; // 配置id
+  int32 progress = 2; // 进度
+  bool isReceiveReward = 3; // 是否领取了奖励
 }

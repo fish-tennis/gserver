@@ -107,10 +107,11 @@ func (this *Quest) OnEvent(event interface{}) {
 	case *internal.EventPlayerEntryGame:
 		// 测试代码:给新玩家添加初始任务
 		if len(this.Quests.Quests) == 0 && len(this.Finished.Finished) == 0 {
-			for _,questCfg := range cfg.GetQuestCfgMgr().GetQuestCfgs() {
+			cfg.GetQuestCfgMgr().Range(func(questCfg *cfg.QuestCfg) bool {
 				questData := &pb.QuestData{CfgId: questCfg.CfgId}
 				this.Quests.Add(questData)
-			}
+				return true
+			})
 		}
 	}
 	this.Quests.OnEvent(event)

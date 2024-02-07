@@ -23,29 +23,29 @@ func onTestCmd(player *game.Player, packet Packet) {
 	cmdKey := strings.ToLower(cmdStrs[0])
 	cmdArgs := cmdStrs[1:]
 	switch cmdKey {
-	case "addexp":
+	case strings.ToLower("AddExp"):
 		// 加经验值
 		if len(cmdArgs) != 1 {
-			player.SendErrorRes(packet.Command(), "addexp cmdArgs error")
+			player.SendErrorRes(packet.Command(), "AddExp cmdArgs error")
 			return
 		}
 		value := int32(util.Atoi(cmdArgs[0]))
 		if value < 1 {
-			player.SendErrorRes(packet.Command(), "addexp value error")
+			player.SendErrorRes(packet.Command(), "AddExp value error")
 			return
 		}
 		player.GetBaseInfo().IncExp(value)
 
-	case "additem":
+	case strings.ToLower("AddItem"):
 		// 加物品
 		if len(cmdArgs) < 1 {
-			player.SendErrorRes(packet.Command(), "additem cmdArgs error")
+			player.SendErrorRes(packet.Command(), "AddItem cmdArgs error")
 			return
 		}
 		itemCfgId := int32(util.Atoi(cmdArgs[0]))
 		itemCfg := cfg.GetItemCfgMgr().GetItemCfg(itemCfgId)
 		if itemCfg == nil {
-			player.SendErrorRes(packet.Command(), "additem itemCfgId error")
+			player.SendErrorRes(packet.Command(), "AddItem itemCfgId error")
 			return
 		}
 		itemNum := int32(1)
@@ -53,14 +53,14 @@ func onTestCmd(player *game.Player, packet Packet) {
 			itemNum = int32(util.Atoi(cmdArgs[1]))
 		}
 		if itemNum < 1 {
-			player.SendErrorRes(packet.Command(), "additem itemNum error")
+			player.SendErrorRes(packet.Command(), "AddItem itemNum error")
 			return
 		}
 		player.GetBag().AddItem(itemCfgId, itemNum)
 
-	case "finishquest", "finishquests":
+	case strings.ToLower("FinishQuest"), strings.ToLower("FinishQuests"):
 		if len(cmdArgs) < 1 {
-			player.SendErrorRes(packet.Command(), "finishquest cmdArgs error")
+			player.SendErrorRes(packet.Command(), "FinishQuest cmdArgs error")
 			return
 		}
 		// 完成所有任务
@@ -78,7 +78,7 @@ func onTestCmd(player *game.Player, packet Packet) {
 			})
 		}
 
-	case "fight":
+	case strings.ToLower("Fight"):
 		// 模拟一个战斗事件
 		evt := &pb.EventFight{
 			PlayerId: player.GetId(),
@@ -91,7 +91,7 @@ func onTestCmd(player *game.Player, packet Packet) {
 		}
 		player.FireConditionEvent(evt)
 
-	case "signin":
+	case strings.ToLower("SignIn"):
 		evt := &pb.EventPlayerPropertyInc{
 			PlayerId:      player.GetId(),
 			PropertyName:  "SignIn", // 签到事件
@@ -99,9 +99,9 @@ func onTestCmd(player *game.Player, packet Packet) {
 		}
 		player.FireEvent(evt)
 
-	case "pay":
+	case strings.ToLower("Pay"):
 		if len(cmdArgs) < 1 {
-			player.SendErrorRes(packet.Command(), "pay cmdArgs error")
+			player.SendErrorRes(packet.Command(), "Pay cmdArgs error")
 			return
 		}
 		payValue := int32(util.Atoi(cmdArgs[0]))
@@ -113,9 +113,9 @@ func onTestCmd(player *game.Player, packet Packet) {
 		}
 		player.FireEvent(evt)
 
-	case "playerpropertyinc":
+	case strings.ToLower("PlayerPropertyInc"):
 		if len(cmdArgs) < 2 {
-			player.SendErrorRes(packet.Command(), "playerpropertyinc cmdArgs error")
+			player.SendErrorRes(packet.Command(), "PlayerPropertyInc cmdArgs error")
 			return
 		}
 		evt := &pb.EventPlayerPropertyInc{
@@ -124,6 +124,49 @@ func onTestCmd(player *game.Player, packet Packet) {
 			PropertyValue: int32(util.Atoi(cmdArgs[1])),
 		}
 		player.FireEvent(evt)
+
+	case strings.ToLower("AddActivity"):
+		if len(cmdArgs) < 1 {
+			player.SendErrorRes(packet.Command(), "AddActivity cmdArgs error")
+			return
+		}
+		arg := cmdArgs[0]
+		if arg == "all" {
+			player.GetActivities().AddAllActivities()
+		} else {
+			activityId := util.Atoi(arg)
+			player.GetActivities().AddNewActivity(int32(activityId))
+		}
+
+	case strings.ToLower("ActivityReceiveReward"):
+		if len(cmdArgs) < 2 {
+			player.SendErrorRes(packet.Command(), "ActivityReceiveReward cmdArgs error")
+			return
+		}
+		activityId := int32(util.Atoi(cmdArgs[0]))
+		cfgId := int32(util.Atoi(cmdArgs[1]))
+		activity := player.GetActivities().GetActivity(activityId)
+		if activity == nil {
+			return
+		}
+		if activityDefault,ok := activity.(*game.ActivityDefault); ok {
+			activityDefault.ReceiveReward(cfgId)
+		}
+
+	case strings.ToLower("ActivityExchange"):
+		if len(cmdArgs) < 2 {
+			player.SendErrorRes(packet.Command(), "ActivityExchange cmdArgs error")
+			return
+		}
+		activityId := int32(util.Atoi(cmdArgs[0]))
+		cfgId := int32(util.Atoi(cmdArgs[1]))
+		activity := player.GetActivities().GetActivity(activityId)
+		if activity == nil {
+			return
+		}
+		if activityDefault,ok := activity.(*game.ActivityDefault); ok {
+			activityDefault.Exchange(cfgId)
+		}
 
 	default:
 		player.SendErrorRes(packet.Command(), "unsupport test cmd")

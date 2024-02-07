@@ -1,8 +1,11 @@
 package internal
 
+import "time"
+
 type Activity interface {
 	GetId() int32
 	OnEvent(event interface{})
+	OnDateChange(oldDate time.Time, curDate time.Time)
 }
 
 type ActivityMgr interface {

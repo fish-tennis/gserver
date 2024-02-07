@@ -147,6 +147,8 @@ func (this *ConditionMgr) GetConditionChecker(event interface{}, conditionType i
 }
 
 // 初始化条件,更新初始进度
+//  examples:
+//  任务举例:玩家升级到10级,当5级玩家接任务时,初始进度就是5/10
 func (this *ConditionMgr) InitCondition(arg interface{}, conditionCfg *ConditionCfg, progressHolder ProgressHolder) bool {
 	initFunc, ok := this.conditionInits[conditionCfg.GetConditionType()]
 	if !ok {

@@ -188,7 +188,12 @@ func (this *Player) processMessage(message *ProtoPacket) {
 		this.SaveCache(cache.Get())
 		return
 	}
-	// 再找普通接口
+	// 再找func(player *Player, packet Packet)格式的回调接口
+	if playerHandler,ok := _playerHandler[message.Command()]; ok {
+		playerHandler(this, message)
+		return
+	}
+	// 再找func(connection Connection, packet Packet)的回调接口
 	packetHandler := _clientConnectionHandler.GetPacketHandler(message.Command())
 	if packetHandler != nil {
 		packetHandler(this.GetConnection(), message)
