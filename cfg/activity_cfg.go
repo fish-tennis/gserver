@@ -31,6 +31,7 @@ func (this *ActivityCfg) GetQuestCfg(cfgId int32) *QuestCfg {
 // 活动配置数据管理
 type ActivityCfgMgr struct {
 	cfgs         map[int32]*ActivityCfg
+	progressMgr  *ProgressMgr
 	conditionMgr *ConditionMgr
 }
 
@@ -53,6 +54,14 @@ func (this *ActivityCfgMgr) Range(f func(activityCfg *ActivityCfg) bool) {
 			return
 		}
 	}
+}
+
+func (this *ActivityCfgMgr) GetProgressMgr() *ProgressMgr {
+	return this.progressMgr
+}
+
+func (this *ActivityCfgMgr) SetProgressMgr(progressMgr *ProgressMgr) {
+	this.progressMgr = progressMgr
 }
 
 func (this *ActivityCfgMgr) GetConditionMgr() *ConditionMgr {

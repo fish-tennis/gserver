@@ -14,11 +14,11 @@
         "CfgId": 1,
         "Name": "每日签到",
         "Detail": "签到拿奖励,每天一次",
-        "ConditionCfg": {
-          "ConditionType": 3,
-          "ProgressType": 1,
+        "ProgressCfg": {
+          "Type": 3,
+          "CountType": 1,
           "Total": 1,
-          "EventArgs": {
+          "Properties": {
             "PropertyName": "SignIn"
           }
         },
@@ -47,11 +47,11 @@
         "CfgId": 1,
         "Name": "累充礼包",
         "Detail": "累计充值达到100,奖励XXX",
-        "ConditionCfg": {
-          "ConditionType": 3,
-          "ProgressType": 1,
+        "ProgressCfg": {
+          "Type": 3,
+          "CountType": 1,
           "Total": 100,
-          "EventArgs": {
+          "Properties": {
             "PropertyName": "TotalPay"
           }
         },
@@ -80,9 +80,19 @@
         "CfgId": 1,
         "Name": "第1天",
         "Detail": "",
-        "ConditionCfg": {
-          "ConditionType": 1,
-          "ProgressType": 1,
+		"Conditions":[
+          {
+            "Type": 2,
+            "Arg": 1,
+            "Op": ">=",
+            "Properties": {
+              "PropertyName": "DayCount"
+            }
+          }
+		],
+        "ProgressCfg": {
+          "Type": 1,
+          "CountType": 1,
           "Total": 1
         },
         "Rewards": [
@@ -96,9 +106,19 @@
         "CfgId": 2,
         "Name": "第2天",
         "Detail": "",
-        "ConditionCfg": {
-          "ConditionType": 1,
-          "ProgressType": 1,
+        "Conditions":[
+          {
+            "Type": 1,
+            "Arg": 2,
+            "Op": ">=",
+            "Properties": {
+              "PropertyName": "DayCount"
+            }
+          }
+        ],
+        "ProgressCfg": {
+          "Type": 1,
+          "CountType": 1,
           "Total": 1
         },
         "Rewards": [
@@ -112,9 +132,19 @@
         "CfgId": 3,
         "Name": "第3天",
         "Detail": "",
-        "ConditionCfg": {
-          "ConditionType": 1,
-          "ProgressType": 1,
+        "Conditions":[
+          {
+            "Type": 1,
+            "Arg": 3,
+            "Op": ">=",
+            "Properties": {
+              "PropertyName": "DayCount"
+            }
+          }
+        ],
+        "ProgressCfg": {
+          "Type": 1,
+          "CountType": 1,
           "Total": 1
         },
         "Rewards": [
@@ -142,11 +172,11 @@
         "CfgId": 1,
         "Name": "1分钟",
         "Detail": "",
-        "ConditionCfg": {
-          "ConditionType": 3,
-          "ProgressType": 1,
+        "ProgressCfg": {
+          "Type": 3,
+          "CountType": 1,
           "Total": 1,
-          "EventArgs": {
+          "Properties": {
             "PropertyName": "OnlineTime"
           }
         },
@@ -161,11 +191,11 @@
         "CfgId": 2,
         "Name": "5分钟",
         "Detail": "",
-        "ConditionCfg": {
-          "ConditionType": 3,
-          "ProgressType": 1,
+        "ProgressCfg": {
+          "Type": 3,
+          "CountType": 1,
           "Total": 5,
-          "EventArgs": {
+          "Properties": {
             "PropertyName": "OnlineTime"
           }
         },
@@ -180,11 +210,11 @@
         "CfgId": 3,
         "Name": "10分钟",
         "Detail": "",
-        "ConditionCfg": {
-          "ConditionType": 3,
-          "ProgressType": 1,
+        "ProgressCfg": {
+          "Type": 3,
+          "CountType": 1,
           "Total": 10,
-          "EventArgs": {
+          "Properties": {
             "PropertyName": "OnlineTime"
           }
         },

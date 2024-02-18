@@ -94,15 +94,36 @@ func NewBaseConditionCfgReader(src *BaseConditionCfg) *BaseConditionCfgReader {
 }
 
 
-func (r *BaseConditionCfgReader) GetConditionType() int32 {
-	return r.v.GetConditionType()
+func (r *BaseConditionCfgReader) GetType() int32 {
+	return r.v.GetType()
 }
 
-func (r *BaseConditionCfgReader) GetProgressType() int32 {
-	return r.v.GetProgressType()
+func (r *BaseConditionCfgReader) GetArg() int32 {
+	return r.v.GetArg()
 }
 
-func (r *BaseConditionCfgReader) GetTotal() int32 {
+func (r *BaseConditionCfgReader) GetOp() string {
+	return r.v.GetOp()
+}
+
+type BaseProgressCfgReader struct {
+	v *BaseProgressCfg
+}
+
+func NewBaseProgressCfgReader(src *BaseProgressCfg) *BaseProgressCfgReader {
+	return &BaseProgressCfgReader{v:src}
+}
+
+
+func (r *BaseProgressCfgReader) GetType() int32 {
+	return r.v.GetType()
+}
+
+func (r *BaseProgressCfgReader) GetCountType() int32 {
+	return r.v.GetCountType()
+}
+
+func (r *BaseProgressCfgReader) GetTotal() int32 {
 	return r.v.GetTotal()
 }
 

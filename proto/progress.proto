@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+option go_package = "./pb";
+
+package gserver;
+
+// 进度类型
+enum ProgressType {
+  ProgressType_None    = 0; // 解决"The first enum value must be zero in proto3."的报错
+  ProgressType_PlayerLevelup = 1; // 玩家升级
+  ProgressType_Fight         = 2; // 战斗
+  ProgressType_PlayerPropertyInc = 3; // 玩家属性值增加(int32)
+}
+
+// 玩家升级事件
+message EventPlayerLevelup {
+  int64 playerId = 1;
+  int32 level = 2;
+}
+
+// 战斗事件
+message EventFight {
+  int64 playerId = 1;
+  bool isPvp = 2;
+  bool isWin = 3;
+}
+
+// 玩家属性值增加(int32)
+message EventPlayerPropertyInc {
+  int64 playerId = 1;
+  string propertyName = 2;
+  int32 propertyValue = 3;
+}

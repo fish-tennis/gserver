@@ -15,14 +15,15 @@ var (
 // 任务配置数据
 type QuestCfg struct {
 	pb.BaseQuestCfg
-	// 如果有多条件的任务需求,可以改成[]*ConditionCfg
-	ConditionCfg *ConditionCfg          `json:"ConditionCfg"` // 条件配置
-	Properties   map[string]interface{} `json:"Properties"`   // 动态属性
+	Conditions     []*ConditionCfg `json:"Conditions"`  // 条件配置
+	ProgressCfg    *ProgressCfg    `json:"ProgressCfg"` // 进度配置
+	BaseProperties                                      // 动态属性
 }
 
 // 任务配置数据管理
 type QuestCfgMgr struct {
 	cfgs         map[int32]*QuestCfg
+	progressMgr  *ProgressMgr
 	conditionMgr *ConditionMgr
 }
 
@@ -45,6 +46,14 @@ func (this *QuestCfgMgr) Range(f func(questCfg *QuestCfg) bool) {
 			return
 		}
 	}
+}
+
+func (this *QuestCfgMgr) GetProgressMgr() *ProgressMgr {
+	return this.progressMgr
+}
+
+func (this *QuestCfgMgr) SetProgressMgr(progressMgr *ProgressMgr) {
+	this.progressMgr = progressMgr
 }
 
 func (this *QuestCfgMgr) GetConditionMgr() *ConditionMgr {

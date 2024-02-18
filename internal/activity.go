@@ -6,6 +6,9 @@ type Activity interface {
 	GetId() int32
 	OnEvent(event interface{})
 	OnDateChange(oldDate time.Time, curDate time.Time)
+
+	// 提供一个统一的属性值查询接口
+	GetPropertyInt32(propertyName string) int32
 }
 
 type ActivityMgr interface {

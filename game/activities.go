@@ -6,6 +6,7 @@ import (
 	"github.com/fish-tennis/gserver/cfg"
 	. "github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
+	"time"
 )
 
 var (
@@ -91,6 +92,23 @@ func (this *Activities) OnEvent(event interface{}) {
 	}
 }
 
+// 检查活动是否能参加
+func (this *Activities) CanParticipate(activityCfgId int32) bool {
+	activityCfg := cfg.GetActivityCfgMgr().GetActivityCfg(activityCfgId)
+	if activityCfg == nil {
+		logger.Error("activityCfg nil %v", activityCfgId)
+		return false
+	}
+	// 时间戳
+	if activityCfg.TimeType == 1 {
+		now := time.Now().Unix()
+		if now < int64(activityCfg.BeginTime) || now > int64(activityCfg.EndTime) {
+			return false
+		}
+	}
+	return true
+}
+
 // 子活动
 type ChildActivity struct {
 	gentity.BaseDirtyMark
@@ -107,4 +125,9 @@ func (this *ChildActivity) SetDirty() {
 // 活动配置数据
 func (this *ChildActivity) GetActivityCfg() *cfg.ActivityCfg {
 	return cfg.GetActivityCfgMgr().GetActivityCfg(this.GetId())
+}
+
+type ActivityConditionArg struct {
+	Activities *Activities
+	Activity Activity
 }

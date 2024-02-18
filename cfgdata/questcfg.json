@@ -3,9 +3,9 @@
     "CfgId": 1,
     "Name": "升到5级",
     "Detail": "升到5级,奖励xxx",
-    "ConditionCfg": {
-      "ConditionType": 1,
-      "ProgressType": 2,
+    "ProgressCfg": {
+      "Type": 1,
+      "CountType": 2,
       "Total": 5
     },
     "Rewards": [
@@ -19,9 +19,9 @@
     "CfgId": 2,
     "Name": "2场战斗",
     "Detail": "2场战斗,奖励xxx",
-    "ConditionCfg": {
-      "ConditionType": 2,
-      "ProgressType": 1,
+    "ProgressCfg": {
+      "Type": 2,
+      "CountType": 1,
       "Total": 5
     },
     "Rewards": [
@@ -35,10 +35,10 @@
     "CfgId": 3,
     "Name": "2场PVP",
     "Detail": "2场PVP,奖励xxx",
-    "ConditionCfg": {
-      "ConditionType": 2,
+    "ProgressCfg": {
+      "Type": 2,
       "Total": 5,
-      "EventArgs": {
+      "Properties": {
         "IsPvp": true
       }
     },
@@ -53,10 +53,10 @@
     "CfgId": 4,
     "Name": "赢2场PVP",
     "Detail": "赢2场PVP,奖励xxx",
-    "ConditionCfg": {
-      "ConditionType": 2,
+    "ProgressCfg": {
+      "Type": 2,
       "Total": 5,
-      "EventArgs": {
+      "Properties": {
         "IsPvp": true,
         "IsWin": true
       }

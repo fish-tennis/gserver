@@ -24,25 +24,22 @@ const (
 type ConditionType int32
 
 const (
-	ConditionType_ConditionType_None              ConditionType = 0 // 解决"The first enum value must be zero in proto3."的报错
-	ConditionType_ConditionType_PlayerLevelup     ConditionType = 1 // 玩家升级
-	ConditionType_ConditionType_Fight             ConditionType = 2 // 战斗
-	ConditionType_ConditionType_PlayerPropertyInc ConditionType = 3 // 玩家属性值增加(int32)
+	ConditionType_ConditionType_None                    ConditionType = 0 // 解决"The first enum value must be zero in proto3."的报错
+	ConditionType_ConditionType_PlayerPropertyCompare   ConditionType = 1 // 玩家属性值比较
+	ConditionType_ConditionType_ActivityPropertyCompare ConditionType = 2 // 活动属性值比较
 )
 
 // Enum value maps for ConditionType.
 var (
 	ConditionType_name = map[int32]string{
 		0: "ConditionType_None",
-		1: "ConditionType_PlayerLevelup",
-		2: "ConditionType_Fight",
-		3: "ConditionType_PlayerPropertyInc",
+		1: "ConditionType_PlayerPropertyCompare",
+		2: "ConditionType_ActivityPropertyCompare",
 	}
 	ConditionType_value = map[string]int32{
-		"ConditionType_None":              0,
-		"ConditionType_PlayerLevelup":     1,
-		"ConditionType_Fight":             2,
-		"ConditionType_PlayerPropertyInc": 3,
+		"ConditionType_None":                    0,
+		"ConditionType_PlayerPropertyCompare":   1,
+		"ConditionType_ActivityPropertyCompare": 2,
 	}
 )
 
@@ -73,223 +70,20 @@ func (ConditionType) EnumDescriptor() ([]byte, []int) {
 	return file_condition_proto_rawDescGZIP(), []int{0}
 }
 
-// 玩家升级事件
-type EventPlayerLevelup struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	PlayerId int64 `protobuf:"varint,1,opt,name=playerId,proto3" json:"playerId,omitempty"`
-	Level    int32 `protobuf:"varint,2,opt,name=level,proto3" json:"level,omitempty"`
-}
-
-func (x *EventPlayerLevelup) Reset() {
-	*x = EventPlayerLevelup{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_condition_proto_msgTypes[0]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *EventPlayerLevelup) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*EventPlayerLevelup) ProtoMessage() {}
-
-func (x *EventPlayerLevelup) ProtoReflect() protoreflect.Message {
-	mi := &file_condition_proto_msgTypes[0]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use EventPlayerLevelup.ProtoReflect.Descriptor instead.
-func (*EventPlayerLevelup) Descriptor() ([]byte, []int) {
-	return file_condition_proto_rawDescGZIP(), []int{0}
-}
-
-func (x *EventPlayerLevelup) GetPlayerId() int64 {
-	if x != nil {
-		return x.PlayerId
-	}
-	return 0
-}
-
-func (x *EventPlayerLevelup) GetLevel() int32 {
-	if x != nil {
-		return x.Level
-	}
-	return 0
-}
-
-// 战斗事件
-type EventFight struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	PlayerId int64 `protobuf:"varint,1,opt,name=playerId,proto3" json:"playerId,omitempty"`
-	IsPvp    bool  `protobuf:"varint,2,opt,name=isPvp,proto3" json:"isPvp,omitempty"`
-	IsWin    bool  `protobuf:"varint,3,opt,name=isWin,proto3" json:"isWin,omitempty"`
-}
-
-func (x *EventFight) Reset() {
-	*x = EventFight{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_condition_proto_msgTypes[1]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *EventFight) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*EventFight) ProtoMessage() {}
-
-func (x *EventFight) ProtoReflect() protoreflect.Message {
-	mi := &file_condition_proto_msgTypes[1]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use EventFight.ProtoReflect.Descriptor instead.
-func (*EventFight) Descriptor() ([]byte, []int) {
-	return file_condition_proto_rawDescGZIP(), []int{1}
-}
-
-func (x *EventFight) GetPlayerId() int64 {
-	if x != nil {
-		return x.PlayerId
-	}
-	return 0
-}
-
-func (x *EventFight) GetIsPvp() bool {
-	if x != nil {
-		return x.IsPvp
-	}
-	return false
-}
-
-func (x *EventFight) GetIsWin() bool {
-	if x != nil {
-		return x.IsWin
-	}
-	return false
-}
-
-// 玩家属性值增加(int32)
-type EventPlayerPropertyInc struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	PlayerId      int64  `protobuf:"varint,1,opt,name=playerId,proto3" json:"playerId,omitempty"`
-	PropertyName  string `protobuf:"bytes,2,opt,name=propertyName,proto3" json:"propertyName,omitempty"`
-	PropertyValue int32  `protobuf:"varint,3,opt,name=propertyValue,proto3" json:"propertyValue,omitempty"`
-}
-
-func (x *EventPlayerPropertyInc) Reset() {
-	*x = EventPlayerPropertyInc{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_condition_proto_msgTypes[2]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *EventPlayerPropertyInc) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*EventPlayerPropertyInc) ProtoMessage() {}
-
-func (x *EventPlayerPropertyInc) ProtoReflect() protoreflect.Message {
-	mi := &file_condition_proto_msgTypes[2]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use EventPlayerPropertyInc.ProtoReflect.Descriptor instead.
-func (*EventPlayerPropertyInc) Descriptor() ([]byte, []int) {
-	return file_condition_proto_rawDescGZIP(), []int{2}
-}
-
-func (x *EventPlayerPropertyInc) GetPlayerId() int64 {
-	if x != nil {
-		return x.PlayerId
-	}
-	return 0
-}
-
-func (x *EventPlayerPropertyInc) GetPropertyName() string {
-	if x != nil {
-		return x.PropertyName
-	}
-	return ""
-}
-
-func (x *EventPlayerPropertyInc) GetPropertyValue() int32 {
-	if x != nil {
-		return x.PropertyValue
-	}
-	return 0
-}
-
 var File_condition_proto protoreflect.FileDescriptor
 
 var file_condition_proto_rawDesc = []byte{
 	0x0a, 0x0f, 0x63, 0x6f, 0x6e, 0x64, 0x69, 0x74, 0x69, 0x6f, 0x6e, 0x2e, 0x70, 0x72, 0x6f, 0x74,
-	0x6f, 0x12, 0x07, 0x67, 0x73, 0x65, 0x72, 0x76, 0x65, 0x72, 0x22, 0x46, 0x0a, 0x12, 0x45, 0x76,
-	0x65, 0x6e, 0x74, 0x50, 0x6c, 0x61, 0x79, 0x65, 0x72, 0x4c, 0x65, 0x76, 0x65, 0x6c, 0x75, 0x70,
-	0x12, 0x1a, 0x0a, 0x08, 0x70, 0x6c, 0x61, 0x79, 0x65, 0x72, 0x49, 0x64, 0x18, 0x01, 0x20, 0x01,
-	0x28, 0x03, 0x52, 0x08, 0x70, 0x6c, 0x61, 0x79, 0x65, 0x72, 0x49, 0x64, 0x12, 0x14, 0x0a, 0x05,
-	0x6c, 0x65, 0x76, 0x65, 0x6c, 0x18, 0x02, 0x20, 0x01, 0x28, 0x05, 0x52, 0x05, 0x6c, 0x65, 0x76,
-	0x65, 0x6c, 0x22, 0x54, 0x0a, 0x0a, 0x45, 0x76, 0x65, 0x6e, 0x74, 0x46, 0x69, 0x67, 0x68, 0x74,
-	0x12, 0x1a, 0x0a, 0x08, 0x70, 0x6c, 0x61, 0x79, 0x65, 0x72, 0x49, 0x64, 0x18, 0x01, 0x20, 0x01,
-	0x28, 0x03, 0x52, 0x08, 0x70, 0x6c, 0x61, 0x79, 0x65, 0x72, 0x49, 0x64, 0x12, 0x14, 0x0a, 0x05,
-	0x69, 0x73, 0x50, 0x76, 0x70, 0x18, 0x02, 0x20, 0x01, 0x28, 0x08, 0x52, 0x05, 0x69, 0x73, 0x50,
-	0x76, 0x70, 0x12, 0x14, 0x0a, 0x05, 0x69, 0x73, 0x57, 0x69, 0x6e, 0x18, 0x03, 0x20, 0x01, 0x28,
-	0x08, 0x52, 0x05, 0x69, 0x73, 0x57, 0x69, 0x6e, 0x22, 0x7e, 0x0a, 0x16, 0x45, 0x76, 0x65, 0x6e,
-	0x74, 0x50, 0x6c, 0x61, 0x79, 0x65, 0x72, 0x50, 0x72, 0x6f, 0x70, 0x65, 0x72, 0x74, 0x79, 0x49,
-	0x6e, 0x63, 0x12, 0x1a, 0x0a, 0x08, 0x70, 0x6c, 0x61, 0x79, 0x65, 0x72, 0x49, 0x64, 0x18, 0x01,
-	0x20, 0x01, 0x28, 0x03, 0x52, 0x08, 0x70, 0x6c, 0x61, 0x79, 0x65, 0x72, 0x49, 0x64, 0x12, 0x22,
-	0x0a, 0x0c, 0x70, 0x72, 0x6f, 0x70, 0x65, 0x72, 0x74, 0x79, 0x4e, 0x61, 0x6d, 0x65, 0x18, 0x02,
-	0x20, 0x01, 0x28, 0x09, 0x52, 0x0c, 0x70, 0x72, 0x6f, 0x70, 0x65, 0x72, 0x74, 0x79, 0x4e, 0x61,
-	0x6d, 0x65, 0x12, 0x24, 0x0a, 0x0d, 0x70, 0x72, 0x6f, 0x70, 0x65, 0x72, 0x74, 0x79, 0x56, 0x61,
-	0x6c, 0x75, 0x65, 0x18, 0x03, 0x20, 0x01, 0x28, 0x05, 0x52, 0x0d, 0x70, 0x72, 0x6f, 0x70, 0x65,
-	0x72, 0x74, 0x79, 0x56, 0x61, 0x6c, 0x75, 0x65, 0x2a, 0x86, 0x01, 0x0a, 0x0d, 0x43, 0x6f, 0x6e,
-	0x64, 0x69, 0x74, 0x69, 0x6f, 0x6e, 0x54, 0x79, 0x70, 0x65, 0x12, 0x16, 0x0a, 0x12, 0x43, 0x6f,
-	0x6e, 0x64, 0x69, 0x74, 0x69, 0x6f, 0x6e, 0x54, 0x79, 0x70, 0x65, 0x5f, 0x4e, 0x6f, 0x6e, 0x65,
-	0x10, 0x00, 0x12, 0x1f, 0x0a, 0x1b, 0x43, 0x6f, 0x6e, 0x64, 0x69, 0x74, 0x69, 0x6f, 0x6e, 0x54,
-	0x79, 0x70, 0x65, 0x5f, 0x50, 0x6c, 0x61, 0x79, 0x65, 0x72, 0x4c, 0x65, 0x76, 0x65, 0x6c, 0x75,
-	0x70, 0x10, 0x01, 0x12, 0x17, 0x0a, 0x13, 0x43, 0x6f, 0x6e, 0x64, 0x69, 0x74, 0x69, 0x6f, 0x6e,
-	0x54, 0x79, 0x70, 0x65, 0x5f, 0x46, 0x69, 0x67, 0x68, 0x74, 0x10, 0x02, 0x12, 0x23, 0x0a, 0x1f,
-	0x43, 0x6f, 0x6e, 0x64, 0x69, 0x74, 0x69, 0x6f, 0x6e, 0x54, 0x79, 0x70, 0x65, 0x5f, 0x50, 0x6c,
-	0x61, 0x79, 0x65, 0x72, 0x50, 0x72, 0x6f, 0x70, 0x65, 0x72, 0x74, 0x79, 0x49, 0x6e, 0x63, 0x10,
-	0x03, 0x42, 0x06, 0x5a, 0x04, 0x2e, 0x2f, 0x70, 0x62, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f,
-	0x33,
+	0x6f, 0x12, 0x07, 0x67, 0x73, 0x65, 0x72, 0x76, 0x65, 0x72, 0x2a, 0x7b, 0x0a, 0x0d, 0x43, 0x6f,
+	0x6e, 0x64, 0x69, 0x74, 0x69, 0x6f, 0x6e, 0x54, 0x79, 0x70, 0x65, 0x12, 0x16, 0x0a, 0x12, 0x43,
+	0x6f, 0x6e, 0x64, 0x69, 0x74, 0x69, 0x6f, 0x6e, 0x54, 0x79, 0x70, 0x65, 0x5f, 0x4e, 0x6f, 0x6e,
+	0x65, 0x10, 0x00, 0x12, 0x27, 0x0a, 0x23, 0x43, 0x6f, 0x6e, 0x64, 0x69, 0x74, 0x69, 0x6f, 0x6e,
+	0x54, 0x79, 0x70, 0x65, 0x5f, 0x50, 0x6c, 0x61, 0x79, 0x65, 0x72, 0x50, 0x72, 0x6f, 0x70, 0x65,
+	0x72, 0x74, 0x79, 0x43, 0x6f, 0x6d, 0x70, 0x61, 0x72, 0x65, 0x10, 0x01, 0x12, 0x29, 0x0a, 0x25,
+	0x43, 0x6f, 0x6e, 0x64, 0x69, 0x74, 0x69, 0x6f, 0x6e, 0x54, 0x79, 0x70, 0x65, 0x5f, 0x41, 0x63,
+	0x74, 0x69, 0x76, 0x69, 0x74, 0x79, 0x50, 0x72, 0x6f, 0x70, 0x65, 0x72, 0x74, 0x79, 0x43, 0x6f,
+	0x6d, 0x70, 0x61, 0x72, 0x65, 0x10, 0x02, 0x42, 0x06, 0x5a, 0x04, 0x2e, 0x2f, 0x70, 0x62, 0x62,
+	0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -305,12 +99,8 @@ func file_condition_proto_rawDescGZIP() []byte {
 }
 
 var file_condition_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_condition_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_condition_proto_goTypes = []interface{}{
-	(ConditionType)(0),             // 0: gserver.ConditionType
-	(*EventPlayerLevelup)(nil),     // 1: gserver.EventPlayerLevelup
-	(*EventFight)(nil),             // 2: gserver.EventFight
-	(*EventPlayerPropertyInc)(nil), // 3: gserver.EventPlayerPropertyInc
+	(ConditionType)(0), // 0: gserver.ConditionType
 }
 var file_condition_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type
@@ -325,58 +115,19 @@ func file_condition_proto_init() {
 	if File_condition_proto != nil {
 		return
 	}
-	if !protoimpl.UnsafeEnabled {
-		file_condition_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*EventPlayerLevelup); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_condition_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*EventFight); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_condition_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*EventPlayerPropertyInc); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_condition_proto_rawDesc,
 			NumEnums:      1,
-			NumMessages:   3,
+			NumMessages:   0,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
 		GoTypes:           file_condition_proto_goTypes,
 		DependencyIndexes: file_condition_proto_depIdxs,
 		EnumInfos:         file_condition_proto_enumTypes,
-		MessageInfos:      file_condition_proto_msgTypes,
 	}.Build()
 	File_condition_proto = out.File
 	file_condition_proto_rawDesc = nil

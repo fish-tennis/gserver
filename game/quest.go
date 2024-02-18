@@ -48,12 +48,16 @@ type CurQuests struct {
 }
 
 func (c *CurQuests) Add(questData *pb.QuestData) {
+	questCfg := cfg.GetQuestCfgMgr().GetQuestCfg(questData.GetCfgId())
+	if questCfg == nil {
+		logger.Error("questCfg nil %v", questData.GetCfgId())
+		return
+	}
 	c.Quests[questData.CfgId] = questData
 	c.SetDirty(questData.CfgId, true)
-	questCfg := cfg.GetQuestCfgMgr().GetQuestCfg(questData.GetCfgId())
-	// 有些条件需要初始化进度
-	if questCfg != nil && questCfg.ConditionCfg != nil {
-		cfg.GetQuestCfgMgr().GetConditionMgr().InitCondition(c.quest.GetPlayer(), questCfg.ConditionCfg, questData)
+	// 初始化进度
+	if questCfg.ProgressCfg != nil {
+		cfg.GetQuestCfgMgr().GetProgressMgr().InitProgress(c.quest.GetPlayer(), questCfg.ProgressCfg, questData)
 	}
 	logger.Debug("add quest:%v", questData)
 }
@@ -68,7 +72,7 @@ func (c *CurQuests) Remove(questId int32) {
 func (c *CurQuests) OnEvent(event interface{}) {
 	for _,questData := range c.Quests {
 		questCfg := cfg.GetQuestCfgMgr().GetQuestCfg(questData.GetCfgId())
-		if cfg.GetQuestCfgMgr().GetConditionMgr().CheckEvent(event, questCfg.ConditionCfg, questData) {
+		if cfg.GetQuestCfgMgr().GetProgressMgr().CheckProgress(event, questCfg.ProgressCfg, questData) {
 			c.SetDirty(questData.GetCfgId(), true)
 			logger.Debug("quest %v progress:%v", questData.GetCfgId(), questData.GetProgress())
 		}
@@ -108,6 +112,9 @@ func (this *Quest) OnEvent(event interface{}) {
 		// 测试代码:给新玩家添加初始任务
 		if len(this.Quests.Quests) == 0 && len(this.Finished.Finished) == 0 {
 			cfg.GetQuestCfgMgr().Range(func(questCfg *cfg.QuestCfg) bool {
+				if !cfg.GetQuestCfgMgr().GetConditionMgr().CheckConditions(this.GetPlayer(), questCfg.Conditions) {
+					return false
+				}
 				questData := &pb.QuestData{CfgId: questCfg.CfgId}
 				this.Quests.Add(questData)
 				return true
@@ -123,7 +130,7 @@ func (this *Quest) OnFinishQuestReq(reqCmd gnet.PacketCommand, req *pb.FinishQue
 	logger.Debug("OnFinishQuestReq:%v", req)
 	if questData,ok := this.Quests.Quests[req.QuestCfgId]; ok {
 		questCfg := cfg.GetQuestCfgMgr().GetQuestCfg(questData.GetCfgId())
-		if questData.GetProgress() >= questCfg.ConditionCfg.GetTotal() {
+		if questData.GetProgress() >= questCfg.ProgressCfg.GetTotal() {
 			this.Quests.Remove(questData.GetCfgId())
 			this.Finished.Add(questData.GetCfgId())
 			// 任务奖励

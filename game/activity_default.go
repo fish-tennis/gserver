@@ -38,13 +38,19 @@ func (this *ActivityDefault) getProgress(cfgId int32) *pb.ActivityProgressData {
 
 // 添加一个活动进度
 func (this *ActivityDefault) addProgress(questCfg *cfg.QuestCfg) *pb.ActivityProgressData {
+	if !cfg.GetActivityCfgMgr().GetConditionMgr().CheckConditions(&ActivityConditionArg{
+		Activities: this.Activities,
+		Activity:   this,
+	}, questCfg.Conditions) {
+		return nil
+	}
 	if this.Base.Progresses == nil {
 		this.Base.Progresses = make(map[int32]*pb.ActivityProgressData)
 	}
 	progress := &pb.ActivityProgressData{
 		CfgId: questCfg.CfgId,
 	}
-	cfg.GetActivityCfgMgr().GetConditionMgr().InitCondition(this.Activities.GetPlayer(), questCfg.ConditionCfg, progress)
+	cfg.GetActivityCfgMgr().GetProgressMgr().InitProgress(this.Activities.GetPlayer(), questCfg.ProgressCfg, progress)
 	this.Base.Progresses[progress.CfgId] = progress
 	this.SetDirty()
 	return progress
@@ -66,7 +72,7 @@ func (this *ActivityDefault) OnEvent(event interface{}) {
 			progress = this.addProgress(questCfg)
 		}
 		// 检查进度更新
-		if cfg.GetActivityCfgMgr().GetConditionMgr().CheckEvent(event, questCfg.ConditionCfg, progress) {
+		if cfg.GetActivityCfgMgr().GetProgressMgr().CheckProgress(event, questCfg.ProgressCfg, progress) {
 			this.SetDirty()
 			logger.Debug("Activity %v progress:%v", this.GetId(), progress.GetProgress())
 		}
@@ -118,9 +124,9 @@ func (this *ActivityDefault) ReceiveReward(cfgId int32) {
 		logger.Debug("%v ReceiveReward questCfg nil %v %v", this.Activities.GetPlayer().GetId(), this.GetId(), cfgId)
 		return
 	}
-	if progress.Progress < questCfg.ConditionCfg.GetTotal() {
+	if progress.Progress < questCfg.ProgressCfg.GetTotal() {
 		logger.Debug("%v ReceiveReward progress err %v %v (%v < %v)", this.Activities.GetPlayer().GetId(), this.GetId(), cfgId,
-			progress.Progress, questCfg.ConditionCfg.GetTotal())
+			progress.Progress, questCfg.ProgressCfg.GetTotal())
 		return
 	}
 	progress.IsReceiveReward = true
@@ -169,4 +175,20 @@ func (this *ActivityDefault) addExchangeCount(exchangeCfgId, exchangeCount int32
 	}
 	this.Base.ExchangeRecord[exchangeCfgId] += exchangeCount
 	this.SetDirty()
+}
+
+func (this *ActivityDefault) GetPropertyInt32(propertyName string) int32 {
+	switch propertyName {
+	case "DayCount":
+		// 当前是参加这个活动的第几天,从1开始
+		y, m, d := time.Now().Date()
+		initY, initM, initD := time.Unix(int64(this.Base.InitTime), 0).Date()
+		nowDate := time.Date(y, m, d, 0, 0, 0, 0, time.Local)
+		initDate := time.Date(initY, initM, initD, 0, 0, 0, 0, time.Local)
+		days := nowDate.Sub(initDate) / (time.Hour * 24)
+		return int32(days)
+	default:
+		logger.Error("Not support property %v %v", this.GetId(), propertyName)
+	}
+	return 0
 }

@@ -52,7 +52,7 @@ func main() {
 	gentity.SetApplication(server)
 
 	// context实现优雅的协程关闭通知
-	ctx,cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.Background())
 	// 服务器初始化
 	if !server.Init(ctx, configFile) {
 		panic("server init error")

@@ -29,9 +29,16 @@ message BaseQuestCfg {
 
 // 条件基础配置
 message BaseConditionCfg {
-  int32 ConditionType = 1;
-  int32 ProgressType = 2;
-  int32 Total = 3;
+  int32 Type = 1;
+  int32 Arg = 2;
+  string Op = 3;
+}
+
+// 进度基础配置
+message BaseProgressCfg {
+  int32 Type = 1; // 进度类型
+  int32 CountType = 2; // 计数类型
+  int32 Total = 3; // 总进度要求
 }
 
 // 活动基础配置

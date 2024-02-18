@@ -7,27 +7,6 @@ package gserver;
 // 条件类型
 enum ConditionType {
   ConditionType_None    = 0; // 解决"The first enum value must be zero in proto3."的报错
-  ConditionType_PlayerLevelup = 1; // 玩家升级
-  ConditionType_Fight         = 2; // 战斗
-  ConditionType_PlayerPropertyInc = 3; // 玩家属性值增加(int32)
-}
-
-// 玩家升级事件
-message EventPlayerLevelup {
-  int64 playerId = 1;
-  int32 level = 2;
-}
-
-// 战斗事件
-message EventFight {
-  int64 playerId = 1;
-  bool isPvp = 2;
-  bool isWin = 3;
-}
-
-// 玩家属性值增加(int32)
-message EventPlayerPropertyInc {
-  int64 playerId = 1;
-  string propertyName = 2;
-  int32 propertyValue = 3;
+  ConditionType_PlayerPropertyCompare = 1; // 玩家属性值比较
+  ConditionType_ActivityPropertyCompare = 2; // 活动属性值比较
 }
