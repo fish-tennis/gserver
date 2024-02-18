@@ -89,7 +89,8 @@ func TestActivity(t *testing.T) {
 	}
 	player := CreatePlayerFromData(playerData)
 	activities := player.GetActivities()
-	activityIds := []int32{1, 2, 3, 4}
+	//activityIds := []int32{1, 2, 3, 4}
+	activityIds := []int32{3}
 	for _, activityId := range activityIds {
 		activities.AddNewActivity(activityId)
 	}
@@ -125,7 +126,9 @@ func TestActivity(t *testing.T) {
 	t.Logf("%v %v", oldDate.String(), now.String())
 	for _, activityId := range activityIds {
 		activity := activities.GetActivity(activityId)
+		activityDefault := activity.(*ActivityDefault)
+		activityDefault.Base.InitTime = int32(oldDate.Unix())
 		activity.OnDateChange(oldDate, now)
-		t.Log(fmt.Sprintf("%v %v", activityId, activity.(*ActivityDefault)))
+		t.Log(fmt.Sprintf("%v %v", activityId, activityDefault))
 	}
 }

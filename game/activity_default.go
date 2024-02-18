@@ -13,6 +13,7 @@ func init() {
 	_activityTemplateCtorMap["default"] = func(activities ActivityMgr, activityCfg *cfg.ActivityCfg, args interface{}) Activity {
 		newActivity := &ActivityDefault{
 			Base: &pb.ActivityDefaultBaseData{
+				InitTime: int32(time.Now().Unix()),
 			},
 		}
 		newActivity.Id = activityCfg.CfgId
@@ -70,6 +71,9 @@ func (this *ActivityDefault) OnEvent(event interface{}) {
 		progress := this.getProgress(questCfg.CfgId)
 		if progress == nil {
 			progress = this.addProgress(questCfg)
+			if progress == nil {
+				continue
+			}
 		}
 		// 检查进度更新
 		if cfg.GetActivityCfgMgr().GetProgressMgr().CheckProgress(event, questCfg.ProgressCfg, progress) {
@@ -186,7 +190,7 @@ func (this *ActivityDefault) GetPropertyInt32(propertyName string) int32 {
 		nowDate := time.Date(y, m, d, 0, 0, 0, 0, time.Local)
 		initDate := time.Date(initY, initM, initD, 0, 0, 0, 0, time.Local)
 		days := nowDate.Sub(initDate) / (time.Hour * 24)
-		return int32(days)
+		return int32(days) + 1
 	default:
 		logger.Error("Not support property %v %v", this.GetId(), propertyName)
 	}
