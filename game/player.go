@@ -134,6 +134,10 @@ func (this *Player) FireConditionEvent(event interface{}) {
 	this.GetActivities().OnEvent(event)
 }
 
+func (this *Player) GetLevel() int32 {
+	return this.GetBaseInfo().Data.Level
+}
+
 func (this *Player) GetBaseInfo() *BaseInfo {
 	return this.GetComponent("BaseInfo").(*BaseInfo)
 }
@@ -159,7 +163,7 @@ func (this *Player) GetActivities() *Activities {
 // 除了登录消息,其他消息都在玩家自己的协程里处理,因此这里对本玩家的操作不需要加锁
 func (this *Player) RunRoutine() bool {
 	logger.Debug("player RunRoutine %v", this.GetId())
-	return this.RunProcessRoutine(this, &gentity.RoutineEntityRoutineArgs{
+	ok := this.RunProcessRoutine(this, &gentity.RoutineEntityRoutineArgs{
 		EndFunc: func(routineEntity gentity.RoutineEntity) {
 			// 协程结束的时候,移除玩家
 			GetPlayerMgr().RemovePlayer(this)
@@ -172,6 +176,19 @@ func (this *Player) RunRoutine() bool {
 			this.SaveCache(cache.Get())
 		},
 	})
+	if ok {
+		// 每分钟执行一次,刷新在线时间
+		this.GetTimerEntries().After(time.Minute, func() time.Duration {
+			evt := &pb.EventPlayerPropertyInc{
+				PlayerId:      this.GetId(),
+				PropertyName:  "OnlineMinute",
+				PropertyValue: 1,
+			}
+			this.FireEvent(evt)
+			return time.Minute
+		})
+	}
+	return ok
 }
 
 func (this *Player) processMessage(message *ProtoPacket) {

@@ -3,9 +3,11 @@ package game
 import (
 	"fmt"
 	"github.com/fish-tennis/gentity"
+	"github.com/fish-tennis/gentity/util"
 	"github.com/fish-tennis/gserver/cfg"
 	. "github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
+	"github.com/fish-tennis/gserver/pb"
 	"time"
 )
 
@@ -29,49 +31,56 @@ func NewActivities(player *Player) *Activities {
 }
 
 // 根据模板创建活动对象
-func CreateNewActivity(activityCfgId int32, activities ActivityMgr) Activity {
+func CreateNewActivity(activityCfgId int32, activities ActivityMgr, t time.Time) Activity {
 	activityCfg := cfg.GetActivityCfgMgr().GetActivityCfg(activityCfgId)
 	if activityCfg == nil {
 		logger.Error("activityCfg nil %v", activityCfgId)
 		return nil
 	}
-	if activityCtor,ok := _activityTemplateCtorMap[activityCfg.GetTemplate()]; ok {
-		return activityCtor(activities, activityCfg, nil)
+	if activityCtor, ok := _activityTemplateCtorMap[activityCfg.GetTemplate()]; ok {
+		return activityCtor(activities, activityCfg, t)
 	}
 	logger.Error("activityCfg nil %v", activityCfgId)
 	return nil
 }
 
 func (this *Activities) GetActivity(activityId int32) Activity {
-	activity,_ := this.Data[activityId]
+	activity, _ := this.Data[activityId]
 	return activity
 }
 
-func (this *Activities) AddNewActivity(activityCfgId int32) Activity {
-	activity := CreateNewActivity(activityCfgId, this)
+func (this *Activities) AddNewActivity(activityCfg *cfg.ActivityCfg, t time.Time) Activity {
+	activity := CreateNewActivity(activityCfg.CfgId, this, t)
 	if activity == nil {
-		logger.Error("activity nil %v", activityCfgId)
+		logger.Error("activity nil %v", activityCfg.CfgId)
 		return nil
 	}
-	this.Data[activityCfgId] = activity
-	this.SetDirty(activityCfgId, true)
-	logger.Debug("AddNewActivity playerId:%v activityId:%v", this.GetPlayer().GetId(), activityCfgId)
+	this.Data[activityCfg.CfgId] = activity
+	this.SetDirty(activityCfg.CfgId, true)
+	logger.Debug("AddNewActivity playerId:%v activityId:%v", this.GetPlayer().GetId(), activityCfg.CfgId)
 	return activity
 }
 
-func (this *Activities) AddAllActivities() {
+func (this *Activities) RemoveActivity(activityId int32) {
+	delete(this.Data, activityId)
+	this.SetDirty(activityId, false)
+}
+
+func (this *Activities) AddAllActivities(t time.Time) {
 	cfg.GetActivityCfgMgr().Range(func(activityCfg *cfg.ActivityCfg) bool {
 		if this.GetActivity(activityCfg.CfgId) == nil {
-			this.AddNewActivity(activityCfg.CfgId)
+			if this.CanJoin(activityCfg, t) {
+				this.AddNewActivity(activityCfg, t)
+			}
 		}
 		return true
 	})
 }
 
 func (this *Activities) LoadData(sourceData map[int32][]byte) {
-	for activityId,bytes := range sourceData {
+	for activityId, bytes := range sourceData {
 		// 动态构建活动对象
-		activity := CreateNewActivity(activityId, this)
+		activity := CreateNewActivity(activityId, this, this.GetPlayer().GetTimerEntries().Now())
 		if activity == nil {
 			logger.Error(fmt.Sprintf("activity nil id:%v", activityId))
 			continue
@@ -87,26 +96,75 @@ func (this *Activities) LoadData(sourceData map[int32][]byte) {
 
 // 事件分发
 func (this *Activities) OnEvent(event interface{}) {
-	for _,activity := range this.Data {
+	for _, activity := range this.Data {
 		activity.OnEvent(event)
 	}
 }
 
 // 检查活动是否能参加
-func (this *Activities) CanParticipate(activityCfgId int32) bool {
-	activityCfg := cfg.GetActivityCfgMgr().GetActivityCfg(activityCfgId)
-	if activityCfg == nil {
-		logger.Error("activityCfg nil %v", activityCfgId)
+func (this *Activities) CanJoin(activityCfg *cfg.ActivityCfg, t time.Time) bool {
+	if activityCfg.IsOff {
 		return false
 	}
-	// 时间戳
-	if activityCfg.TimeType == 1 {
-		now := time.Now().Unix()
+	if activityCfg.MinPlayerLevel > 0 && this.GetPlayer().GetLevel() < activityCfg.MinPlayerLevel {
+		return false
+	}
+	if activityCfg.MaxPlayerLevel > 0 && this.GetPlayer().GetLevel() > activityCfg.MaxPlayerLevel {
+		return false
+	}
+	if !this.CheckJoinTime(activityCfg, t) {
+		return false
+	}
+	return true
+}
+
+// 检查活动时间能否参加
+func (this *Activities) CheckJoinTime(activityCfg *cfg.ActivityCfg, t time.Time) bool {
+	switch activityCfg.TimeType {
+	case int32(pb.TimeType_TimeType_Timestamp):
+		now := t.Unix()
 		if now < int64(activityCfg.BeginTime) || now > int64(activityCfg.EndTime) {
+			return false
+		}
+
+	case int32(pb.TimeType_TimeType_Date):
+		nowDateInt := util.ToDateInt(t)
+		if nowDateInt < activityCfg.BeginTime || nowDateInt > activityCfg.EndTime {
 			return false
 		}
 	}
 	return true
+}
+
+// 检查活动时间是否结束
+func (this *Activities) CheckEndTime(activityCfg *cfg.ActivityCfg, t time.Time) bool {
+	switch activityCfg.TimeType {
+	case int32(pb.TimeType_TimeType_Timestamp):
+		now := t.Unix()
+		if now > int64(activityCfg.EndTime) {
+			return true
+		}
+
+	case int32(pb.TimeType_TimeType_Date):
+		nowDateInt := util.ToDateInt(t)
+		if nowDateInt > activityCfg.EndTime {
+			return true
+		}
+	}
+	return false
+}
+
+// 检查已经结束的活动
+func (this *Activities) CheckEnd(t time.Time) {
+	for activityId, activity := range this.Data {
+		activityCfg := cfg.GetActivityCfgMgr().GetActivityCfg(activityId)
+		if activityCfg == nil {
+			continue
+		}
+		if this.CheckEndTime(activityCfg, t) {
+			activity.OnEnd(t)
+		}
+	}
 }
 
 // 子活动
@@ -129,5 +187,5 @@ func (this *ChildActivity) GetActivityCfg() *cfg.ActivityCfg {
 
 type ActivityConditionArg struct {
 	Activities *Activities
-	Activity Activity
+	Activity   Activity
 }

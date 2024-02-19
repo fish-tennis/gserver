@@ -10,7 +10,7 @@
     },
     "Rewards": [
       {
-        "Id": 1,
+        "CfgId": 1,
         "Num": 2
       }
     ]
@@ -26,7 +26,7 @@
     },
     "Rewards": [
       {
-        "Id": 1,
+        "CfgId": 1,
         "Num": 3
       }
     ]
@@ -44,7 +44,7 @@
     },
     "Rewards": [
       {
-        "Id": 1,
+        "CfgId": 1,
         "Num": 5
       }
     ]
@@ -63,7 +63,7 @@
     },
     "Rewards": [
       {
-        "Id": 3,
+        "CfgId": 3,
         "Num": 1
       }
     ]

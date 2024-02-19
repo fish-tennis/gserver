@@ -63,7 +63,7 @@ message ActivityDefaultBaseData {
   int32 LastUpdateTime = 1; // 刷新时间戳
   map<int32,ActivityProgressData> Progresses = 2; // 进度数据
   map<int32,int32> ExchangeRecord = 3; // 兑换记录
-  int32 InitTime = 4; // 初始化时间戳
+  int32 JoinTime = 4; // 参加活动的时间(时间戳)
 }
 
 // 活动任务进度数据

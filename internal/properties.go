@@ -28,3 +28,7 @@ func (this *BaseProperties) GetPropertyString(name string) string {
 	}
 	return ""
 }
+
+type PropertyInt32 interface {
+	GetPropertyInt32(propertyName string) int32
+}

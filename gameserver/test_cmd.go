@@ -1,14 +1,13 @@
 package gameserver
 
 import (
-	"github.com/fish-tennis/gserver/game"
-	"strings"
-
 	"github.com/fish-tennis/gentity/util"
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cfg"
+	"github.com/fish-tennis/gserver/game"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
+	"strings"
 )
 
 // 客户端字符串形式的测试命令,仅用于测试环境!
@@ -132,10 +131,11 @@ func onTestCmd(player *game.Player, packet Packet) {
 		}
 		arg := cmdArgs[0]
 		if arg == "all" {
-			player.GetActivities().AddAllActivities()
+			player.GetActivities().AddAllActivities(player.GetTimerEntries().Now())
 		} else {
-			activityId := util.Atoi(arg)
-			player.GetActivities().AddNewActivity(int32(activityId))
+			activityId := int32(util.Atoi(arg))
+			activityCfg := cfg.GetActivityCfgMgr().GetActivityCfg(activityId)
+			player.GetActivities().AddNewActivity(activityCfg, player.GetTimerEntries().Now())
 		}
 
 	case strings.ToLower("ActivityReceiveReward"):
@@ -149,7 +149,7 @@ func onTestCmd(player *game.Player, packet Packet) {
 		if activity == nil {
 			return
 		}
-		if activityDefault,ok := activity.(*game.ActivityDefault); ok {
+		if activityDefault, ok := activity.(*game.ActivityDefault); ok {
 			activityDefault.ReceiveReward(cfgId)
 		}
 
@@ -164,7 +164,7 @@ func onTestCmd(player *game.Player, packet Packet) {
 		if activity == nil {
 			return
 		}
-		if activityDefault,ok := activity.(*game.ActivityDefault); ok {
+		if activityDefault, ok := activity.(*game.ActivityDefault); ok {
 			activityDefault.Exchange(cfgId)
 		}
 

@@ -89,10 +89,13 @@ func TestActivity(t *testing.T) {
 	}
 	player := CreatePlayerFromData(playerData)
 	activities := player.GetActivities()
-	//activityIds := []int32{1, 2, 3, 4}
-	activityIds := []int32{3}
+	activityIds := []int32{1, 2, 3, 4, 5}
 	for _, activityId := range activityIds {
-		activities.AddNewActivity(activityId)
+		activityCfg := cfg.GetActivityCfgMgr().GetActivityCfg(activityId)
+		if activityCfg == nil {
+			continue
+		}
+		activities.AddNewActivity(activityCfg, time.Now())
 	}
 
 	eventSignIn := &pb.EventPlayerPropertyInc{
@@ -111,7 +114,7 @@ func TestActivity(t *testing.T) {
 
 	eventOnlineTime := &pb.EventPlayerPropertyInc{
 		PlayerId:      player.GetId(),
-		PropertyName:  "OnlineTime", //在线时长
+		PropertyName:  "OnlineMinute", //在线时长
 		PropertyValue: 2,
 	}
 	player.FireEvent(eventOnlineTime)
@@ -121,14 +124,37 @@ func TestActivity(t *testing.T) {
 		t.Log(fmt.Sprintf("%v %v", activityId, activity.(*ActivityDefault)))
 	}
 
-	now := time.Now()
-	oldDate := now.AddDate(0, 0, -1)
-	t.Logf("%v %v", oldDate.String(), now.String())
-	for _, activityId := range activityIds {
-		activity := activities.GetActivity(activityId)
-		activityDefault := activity.(*ActivityDefault)
-		activityDefault.Base.InitTime = int32(oldDate.Unix())
-		activity.OnDateChange(oldDate, now)
-		t.Log(fmt.Sprintf("%v %v", activityId, activityDefault))
+	exchangeActivity := activities.GetActivity(5)
+	if exchangeActivity != nil {
+		if activity,ok := exchangeActivity.(*ActivityDefault); ok {
+			player.GetBag().AddItem(1,100)
+			t.Log(fmt.Sprintf("item1 count:%v", player.GetBag().BagCountItem.GetItemCount(1)))
+			t.Log(fmt.Sprintf("item2 count:%v", player.GetBag().BagCountItem.GetItemCount(2)))
+			for i := 0; i < 3; i++ {
+				activity.Exchange(1)
+			}
+			t.Log(fmt.Sprintf("item1 count:%v", player.GetBag().BagCountItem.GetItemCount(1)))
+			t.Log(fmt.Sprintf("item2 count:%v", player.GetBag().BagCountItem.GetItemCount(2)))
+		}
+	}
+
+	for i := 1; i <= 3; i++ {
+		now := time.Now()
+		oldDate := now.AddDate(0, 0, -i)
+		t.Logf("%v %v", oldDate.String(), now.String())
+		for _, activityId := range activityIds {
+			activity := activities.GetActivity(activityId)
+			if activity == nil {
+				continue
+			}
+			activityDefault,ok := activity.(*ActivityDefault)
+			if !ok {
+				continue
+			}
+			// 参加活动的时间回退到i天前
+			activityDefault.Base.JoinTime = int32(oldDate.Unix())
+			activity.OnDateChange(oldDate, now)
+			t.Log(fmt.Sprintf("%v %v", activityId, activityDefault.Base.Progresses))
+		}
 	}
 }

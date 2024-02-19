@@ -24,7 +24,7 @@
         },
         "Rewards": [
           {
-            "Id": 1,
+            "CfgId": 1,
             "Num": 1
           }
         ]
@@ -57,7 +57,7 @@
         },
         "Rewards": [
           {
-            "Id": 1,
+            "CfgId": 1,
             "Num": 2
           }
         ]
@@ -97,7 +97,7 @@
         },
         "Rewards": [
           {
-            "Id": 1,
+            "CfgId": 1,
             "Num": 1
           }
         ]
@@ -123,7 +123,7 @@
         },
         "Rewards": [
           {
-            "Id": 1,
+            "CfgId": 1,
             "Num": 2
           }
         ]
@@ -149,7 +149,7 @@
         },
         "Rewards": [
           {
-            "Id": 1,
+            "CfgId": 1,
             "Num": 3
           }
         ]
@@ -177,12 +177,12 @@
           "CountType": 1,
           "Total": 1,
           "Properties": {
-            "PropertyName": "OnlineTime"
+            "PropertyName": "OnlineMinute"
           }
         },
         "Rewards": [
           {
-            "Id": 1,
+            "CfgId": 1,
             "Num": 1
           }
         ]
@@ -196,12 +196,12 @@
           "CountType": 1,
           "Total": 5,
           "Properties": {
-            "PropertyName": "OnlineTime"
+            "PropertyName": "OnlineMinute"
           }
         },
         "Rewards": [
           {
-            "Id": 1,
+            "CfgId": 1,
             "Num": 5
           }
         ]
@@ -215,17 +215,46 @@
           "CountType": 1,
           "Total": 10,
           "Properties": {
-            "PropertyName": "OnlineTime"
+            "PropertyName": "OnlineMinute"
           }
         },
         "Rewards": [
           {
-            "Id": 1,
+            "CfgId": 1,
             "Num": 10
           }
         ]
       }
     ]
-  }
+  },
 
+  {
+    "CfgId": 5,
+    "Name": "活动商店",
+    "Detail": "活动商店",
+    "Template": "default",
+    "RefreshType": 1,
+    "CycleType": 1,
+    "TimeType": 1,
+    "BeginTime": 0,
+    "EndTime": 0,
+    "Exchanges": [
+      {
+        "CfgId": 1,
+        "ConsumeItems": [
+          {
+            "CfgId": 1,
+            "Num": 2
+          }
+        ],
+        "Rewards": [
+          {
+            "CfgId": 2,
+            "Num": 1
+          }
+        ],
+        "CountLimit": 2
+      }
+    ]
+  }
 ]

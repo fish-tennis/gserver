@@ -4,8 +4,12 @@ import "time"
 
 type Activity interface {
 	GetId() int32
+	// 响应事件
 	OnEvent(event interface{})
+	// 日期更新
 	OnDateChange(oldDate time.Time, curDate time.Time)
+	// 活动结束时的处理
+	OnEnd(t time.Time)
 
 	// 提供一个统一的属性值查询接口
 	GetPropertyInt32(propertyName string) int32

@@ -127,6 +127,16 @@ func (r *BaseProgressCfgReader) GetTotal() int32 {
 	return r.v.GetTotal()
 }
 
+func (r *BaseProgressCfgReader) GetEvents() []string {
+	src := r.v.GetEvents()
+	if src == nil {
+		return nil
+	}
+	copySlice := make([]string,len(src))
+	copy(copySlice, src)
+	return copySlice
+}
+
 type BaseActivityCfgReader struct {
 	v *BaseActivityCfg
 }
@@ -182,6 +192,22 @@ func (r *BaseActivityCfgReader) GetExchanges() []*ExchangeCfgReader {
 		sliceReader[i] = NewExchangeCfgReader(v)
 	}
 	return sliceReader
+}
+
+func (r *BaseActivityCfgReader) GetIsOff() bool {
+	return r.v.GetIsOff()
+}
+
+func (r *BaseActivityCfgReader) GetRemoveDataWhenEnd() bool {
+	return r.v.GetRemoveDataWhenEnd()
+}
+
+func (r *BaseActivityCfgReader) GetMinPlayerLevel() int32 {
+	return r.v.GetMinPlayerLevel()
+}
+
+func (r *BaseActivityCfgReader) GetMaxPlayerLevel() int32 {
+	return r.v.GetMaxPlayerLevel()
 }
 
 type ExchangeCfgReader struct {

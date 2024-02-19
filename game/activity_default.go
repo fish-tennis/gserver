@@ -1,6 +1,7 @@
 package game
 
 import (
+	"github.com/fish-tennis/gentity/util"
 	"github.com/fish-tennis/gserver/cfg"
 	. "github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
@@ -11,9 +12,10 @@ import (
 func init() {
 	// 自动注册默认活动模板构造函数
 	_activityTemplateCtorMap["default"] = func(activities ActivityMgr, activityCfg *cfg.ActivityCfg, args interface{}) Activity {
+		t := args.(time.Time)
 		newActivity := &ActivityDefault{
 			Base: &pb.ActivityDefaultBaseData{
-				InitTime: int32(time.Now().Unix()),
+				JoinTime: int32(t.Unix()),
 			},
 		}
 		newActivity.Id = activityCfg.CfgId
@@ -90,7 +92,7 @@ func (this *ActivityDefault) OnDateChange(oldDate time.Time, curDate time.Time) 
 		return
 	}
 	// 每日刷新
-	if activityCfg.RefreshType == 1 {
+	if activityCfg.RefreshType == int32(pb.RefreshType_RefreshType_Day) {
 		this.Reset()
 	}
 }
@@ -105,6 +107,13 @@ func (this *ActivityDefault) Reset() {
 	this.Base.ExchangeRecord = nil
 	this.SetDirty()
 	logger.Debug("%v Reset %v", this.Activities.GetPlayer().GetId(), this.GetId())
+}
+
+func (this *ActivityDefault) OnEnd(t time.Time) {
+	activityCfg := this.GetActivityCfg()
+	if activityCfg.RemoveDataWhenEnd {
+		this.Activities.RemoveActivity(this.GetId())
+	}
 }
 
 // 领取活动任务奖励
@@ -185,11 +194,7 @@ func (this *ActivityDefault) GetPropertyInt32(propertyName string) int32 {
 	switch propertyName {
 	case "DayCount":
 		// 当前是参加这个活动的第几天,从1开始
-		y, m, d := time.Now().Date()
-		initY, initM, initD := time.Unix(int64(this.Base.InitTime), 0).Date()
-		nowDate := time.Date(y, m, d, 0, 0, 0, 0, time.Local)
-		initDate := time.Date(initY, initM, initD, 0, 0, 0, 0, time.Local)
-		days := nowDate.Sub(initDate) / (time.Hour * 24)
+		days := util.DayCount(this.Activities.GetPlayer().GetTimerEntries().Now(), time.Unix(int64(this.Base.JoinTime), 0))
 		return int32(days) + 1
 	default:
 		logger.Error("Not support property %v %v", this.GetId(), propertyName)
