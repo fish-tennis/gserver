@@ -1,6 +1,6 @@
 module github.com/fish-tennis/gserver
 
-go 1.18
+go 1.16
 
 require (
 	github.com/fish-tennis/gentity v0.6.1
