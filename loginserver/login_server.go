@@ -58,7 +58,12 @@ func (this *LoginServer) Init(ctx context.Context, configFile string) bool {
 	clientCodec := NewProtoCodec(nil)
 	clientHandler := NewDefaultConnectionHandler(clientCodec)
 	this.registerClientPacket(clientHandler)
-	if netMgr.NewListener(ctx, this.config.ClientListenAddr, this.config.ClientConnConfig, clientCodec, clientHandler, nil) == nil {
+	this.config.ClientConnConfig.Codec = clientCodec
+	this.config.ClientConnConfig.Handler = clientHandler
+	listenerConfig := &ListenerConfig{
+		AcceptConfig: this.config.ClientConnConfig,
+	}
+	if netMgr.NewListener(ctx, this.config.ClientListenAddr, listenerConfig) == nil {
 		panic("listen failed")
 		return false
 	}
@@ -69,8 +74,12 @@ func (this *LoginServer) Init(ctx context.Context, configFile string) bool {
 	serverCodec := NewGateCodec(nil)
 	serverHandler := NewDefaultConnectionHandler(serverCodec)
 	this.registerServerPacket(serverHandler)
-	this.gateListener = netMgr.NewListener(ctx, this.config.GateListenAddr, this.config.ServerConnConfig, serverCodec,
-		serverHandler, nil)
+	gateListenerConfig := &ListenerConfig{
+		AcceptConfig: this.config.ServerConnConfig,
+	}
+	gateListenerConfig.AcceptConfig.Codec = serverCodec
+	gateListenerConfig.AcceptConfig.Handler = serverHandler
+	this.gateListener = netMgr.NewListener(ctx, this.config.GateListenAddr, gateListenerConfig)
 	if this.gateListener == nil {
 		panic("listen gate failed")
 		return false
@@ -133,7 +142,7 @@ func (this *LoginServer) initDb() {
 
 // 初始化redis缓存
 func (this *LoginServer) initCache() {
-	cache.NewRedis(this.config.RedisUri, this.config.RedisPassword, this.config.RedisCluster)
+	cache.NewRedis(this.config.RedisUri, this.config.RedisUsername, this.config.RedisPassword, this.config.RedisCluster)
 	pong, err := cache.GetRedis().Ping(context.Background()).Result()
 	if err != nil || pong == "" {
 		panic("redis connect error")
@@ -153,7 +162,7 @@ func (this *LoginServer) getAccountData(accountName string, accountData *pb.Acco
 	}
 	// TODO:_id为什么不会赋值?
 	if accountData.XId == 0 {
-		raw,err := result.DecodeBytes()
+		raw, err := result.DecodeBytes()
 		if err != nil {
 			return err
 		}

@@ -16,6 +16,17 @@
     "RecvTimeout": 20,
     "HeartBeatInterval": 5
   },
+  "WsClientListenAddr": "127.0.0.1:8080",
+  "WsClientListenerConfig":{
+    "AcceptConfig": {
+      "SendPacketCacheCap": 8,
+      "SendBufferSize": 10240,
+      "RecvBufferSize": 10240,
+      "MaxPacketSize": 10240,
+      "RecvTimeout": 20
+    },
+    "Path": "/ws"
+  },
   "RedisUri": ["127.0.0.1:6379"],
   "RedisCluster": true
 }

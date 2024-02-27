@@ -25,12 +25,17 @@ type GateServer struct {
 	BaseServer
 	config         *GateServerConfig
 	clientListener Listener
-	clients        map[int64]*ClientData
+	// WebSocket测试
+	wsClientListener Listener
+	clients          map[int64]*ClientData
 }
 
 // gate服配置
 type GateServerConfig struct {
 	BaseServerConfig
+	// WebSocket测试
+	WsClientListenAddr     string
+	WsClientListenerConfig ListenerConfig
 }
 
 // 客户端绑定数据
@@ -59,11 +64,32 @@ func (this *GateServer) Init(ctx context.Context, configFile string) bool {
 	this.registerClientPacket(clientHandler)
 
 	// 监听客户端
-	this.clientListener = netMgr.NewListener(ctx, this.config.ClientListenAddr, this.config.ClientConnConfig, clientCodec,
-		clientHandler, &ClientListerHandler{})
+	clientListenerConfig := &ListenerConfig{
+		AcceptConfig: this.config.ClientConnConfig,
+	}
+	clientListenerConfig.AcceptConfig.Codec = clientCodec
+	clientListenerConfig.AcceptConfig.Handler = clientHandler
+	clientListenerConfig.ListenerHandler = &ClientListerHandler{}
+	this.clientListener = netMgr.NewListener(ctx, this.config.ClientListenAddr, clientListenerConfig)
 	if this.clientListener == nil {
 		panic("listen client failed")
 		return false
+	}
+
+	if this.config.WsClientListenAddr != "" {
+		// WebSocket测试
+		// WebSocket不使用RingBuffer,所以使用SimpleProtoCodec
+		wsCodec := NewWsClientCodec()
+		wsClientHandler := NewClientConnectionHandler(wsCodec)
+		this.registerClientPacket(wsClientHandler)
+		this.config.WsClientListenerConfig.AcceptConfig.Codec = wsCodec
+		this.config.WsClientListenerConfig.AcceptConfig.Handler = wsClientHandler
+		this.config.WsClientListenerConfig.ListenerHandler = &ClientListerHandler{}
+		this.wsClientListener = netMgr.NewWsListener(ctx, this.config.WsClientListenAddr, &this.config.WsClientListenerConfig)
+		if this.wsClientListener == nil {
+			panic("listen websocket client failed")
+			return false
+		}
 	}
 
 	// 连接其他服务器
@@ -72,10 +98,9 @@ func (this *GateServer) Init(ctx context.Context, configFile string) bool {
 	// gate连接其他服务器
 	this.BaseServer.GetServerList().SetServerConnectorFunc(func(ctx context.Context, info gentity.ServerInfo) Connection {
 		serverInfo := info.(*pb.ServerInfo)
-		return GetNetMgr().NewConnector(ctx, serverInfo.GetGateListenAddr(), &this.config.ServerConnConfig,
-			this.GetDefaultServerConnectorCodec(), this.GetDefaultServerConnectorHandler(), nil)
+		return GetNetMgr().NewConnector(ctx, serverInfo.GetGateListenAddr(), this.BaseServer.GetDefaultServerConnectorConfig(), nil)
 	})
-	defaultServerHandler := this.BaseServer.GetDefaultServerConnectorHandler().(*DefaultConnectionHandler)
+	defaultServerHandler := this.BaseServer.GetDefaultServerConnectorConfig().Handler.(*DefaultConnectionHandler)
 	// gate和其他服务器之间使用GatePacket
 	defaultServerHandler.RegisterHeartBeat(func() Packet {
 		return NewGatePacket(0, PacketCommand(pb.CmdInner_Cmd_HeartBeatReq), &pb.HeartBeatReq{
@@ -107,7 +132,7 @@ func (this *GateServer) readConfig() {
 
 // 初始化redis缓存
 func (this *GateServer) initCache() {
-	cache.NewRedis(this.config.RedisUri, this.config.RedisPassword, this.config.RedisCluster)
+	cache.NewRedis(this.config.RedisUri, this.config.RedisUsername, this.config.RedisPassword, this.config.RedisCluster)
 	pong, err := cache.GetRedis().Ping(context.Background()).Result()
 	if err != nil || pong == "" {
 		panic("redis connect error")
@@ -216,7 +241,7 @@ func (this *GateServer) registerServerPacket(serverHandler *DefaultConnectionHan
 // 登录期间,playerId还没确定,这时候GatePacket.PlayerId用来存储connId
 func (this *GateServer) routeToClientWithConnId(connection Connection, packet Packet) {
 	gatePacket, _ := packet.(*GatePacket)
-	clientConn := this.clientListener.GetConnection(uint32(gatePacket.PlayerId()))
+	clientConn := this.getClientConnectionByConnId(uint32(gatePacket.PlayerId()))
 	if clientConn == nil {
 		return
 	}
@@ -227,7 +252,7 @@ func (this *GateServer) onLoginRes(connection Connection, packet Packet) {
 	res := packet.Message().(*pb.LoginRes)
 	gatePacket, _ := packet.(*GatePacket)
 	clientConnId := uint32(gatePacket.PlayerId())
-	clientConn := this.clientListener.GetConnection(clientConnId)
+	clientConn := this.getClientConnectionByConnId(clientConnId)
 	if clientConn == nil {
 		logger.Debug("onLoginRes clientConnNil connId:%v account:%v err:%v", clientConnId,
 			res.AccountName, res.Error)
@@ -251,7 +276,7 @@ func (this *GateServer) onPlayerEntryGameRes(connection Connection, packet Packe
 	res := packet.Message().(*pb.PlayerEntryGameRes)
 	gatePacket, _ := packet.(*GatePacket)
 	clientConnId := uint32(gatePacket.PlayerId())
-	clientConn := this.clientListener.GetConnection(clientConnId)
+	clientConn := this.getClientConnectionByConnId(clientConnId)
 	if clientConn == nil {
 		logger.Debug("onPlayerEntryGameRes clientConnNil connId:%v accountId:%v err:%v", clientConnId,
 			res.AccountId, res.Error)
@@ -272,10 +297,21 @@ func (this *GateServer) onPlayerEntryGameRes(connection Connection, packet Packe
 func (this *GateServer) routeToClient(connection Connection, packet Packet) {
 	gatePacket, _ := packet.(*GatePacket)
 	if clientData, ok := this.clients[gatePacket.PlayerId()]; ok {
-		clientConn := this.clientListener.GetConnection(clientData.ConnId)
+		clientConn := this.getClientConnectionByConnId(clientData.ConnId)
 		if clientConn == nil {
 			return
 		}
 		clientConn.Send(packet.Command(), packet.Message())
 	}
+}
+
+func (this *GateServer) getClientConnectionByConnId(clientConnId uint32) Connection {
+	// Tcp和WebSocket的客户端分别由各自的Listener管理,但是ConnectionId是唯一的
+	// 所以这里分别从不同的Listener查找
+	// 当然,实际项目一般不会同时出现Tcp和WebSocket共存的情况
+	clientConn := this.clientListener.GetConnection(clientConnId)
+	if clientConn == nil && this.wsClientListener != nil {
+		clientConn = this.wsClientListener.GetConnection(clientConnId)
+	}
+	return clientConn
 }

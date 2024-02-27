@@ -9,7 +9,7 @@ var (
 	// singleton
 	// redis.Cmdable兼容集群模式和单机模式
 	_redisClient redis.Cmdable
-	_redisCache gentity.KvCache
+	_redisCache  gentity.KvCache
 )
 
 // 提供KvCache接口,便于更换不同的缓存系统
@@ -23,12 +23,12 @@ func GetRedis() redis.Cmdable {
 	return _redisClient
 }
 
-func NewRedis(addrs []string, password string, isCluster bool) redis.Cmdable {
+func NewRedis(addrs []string, userName, password string, isCluster bool) redis.Cmdable {
 	var redisCmdable redis.Cmdable
 	if isCluster {
-		redisCmdable = NewRedisClient(addrs, password)
+		redisCmdable = NewRedisClient(addrs, userName, password)
 	} else {
-		redisCmdable = NewRedisSingleClient(addrs[0], password)
+		redisCmdable = NewRedisSingleClient(addrs[0], userName, password)
 	}
 	_redisCache = gentity.NewRedisCache(redisCmdable)
 	return redisCmdable
@@ -36,18 +36,20 @@ func NewRedis(addrs []string, password string, isCluster bool) redis.Cmdable {
 
 // 初始化redis集群
 // 集群不支持事务,但是可以用lua script实现同节点上的原子操作,达到类似事务的效果
-func NewRedisClient(addrs []string, password string) redis.Cmdable {
+func NewRedisClient(addrs []string, userName, password string) redis.Cmdable {
 	_redisClient = redis.NewClusterClient(&redis.ClusterOptions{
-		Addrs:addrs,
+		Addrs:    addrs,
+		Username: userName,
 		Password: password,
 	})
 	return _redisClient
 }
 
 // 单机模式的redis
-func NewRedisSingleClient(addr string, password string) redis.Cmdable {
+func NewRedisSingleClient(addr string, userName, password string) redis.Cmdable {
 	_redisClient = redis.NewClient(&redis.Options{
-		Addr:addr,
+		Addr:     addr,
+		Username: userName,
 		Password: password,
 	})
 	return _redisClient

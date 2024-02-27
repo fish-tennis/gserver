@@ -12,7 +12,7 @@ type ClientConnectionHandler struct {
 	DefaultConnectionHandler
 }
 
-func NewClientConnectionHandler(protoCodec *ClientCodec) *ClientConnectionHandler {
+func NewClientConnectionHandler(protoCodec Codec) *ClientConnectionHandler {
 	_clientConnectionHandler = &ClientConnectionHandler{
 		DefaultConnectionHandler: *NewDefaultConnectionHandler(protoCodec),
 	}

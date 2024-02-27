@@ -9,7 +9,7 @@ import (
 	"reflect"
 )
 
-// 客户端和gate之间的编解码
+// Tcp客户端和gate之间的编解码
 type ClientCodec struct {
 	RingBufferCodec
 
@@ -36,7 +36,8 @@ func NewClientCodec() *ClientCodec {
 }
 
 // 注册消息和proto.Message的映射
-//  protoMessage can be nil
+//
+//	protoMessage can be nil
 func (this *ClientCodec) Register(command PacketCommand, protoMessage proto.Message) {
 	if protoMessage == nil {
 		this.MessageCreatorMap[command] = nil
@@ -100,7 +101,7 @@ func (this *ClientCodec) DecodePacket(connection Connection, packetHeader Packet
 		}
 	}
 	// 其他消息,gate直接转发,附加上playerId
-	if clientData,ok := connection.GetTag().(*ClientData); ok {
+	if clientData, ok := connection.GetTag().(*ClientData); ok {
 		return internal.NewGatePacketWithData(clientData.PlayerId, PacketCommand(command), decodedPacketData[2:])
 	}
 	logger.Error("unSupport command:%v", command)

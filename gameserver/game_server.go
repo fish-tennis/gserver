@@ -63,8 +63,13 @@ func (this *GameServer) Init(ctx context.Context, configFile string) bool {
 	clientHandler := game.NewClientConnectionHandler(clientCodec)
 	this.registerClientPacket(clientHandler)
 
-	if netMgr.NewListener(ctx, this.config.ClientListenAddr, this.config.ClientConnConfig, clientCodec,
-		clientHandler, &ClientListerHandler{}) == nil {
+	clientListenerConfig := &ListenerConfig{
+		AcceptConfig: this.config.ClientConnConfig,
+	}
+	clientListenerConfig.AcceptConfig.Codec = clientCodec
+	clientListenerConfig.AcceptConfig.Handler = clientHandler
+	clientListenerConfig.ListenerHandler = &ClientListerHandler{}
+	if netMgr.NewListener(ctx, this.config.ClientListenAddr, clientListenerConfig) == nil {
 		panic("listen client failed")
 		return false
 	}
@@ -75,8 +80,12 @@ func (this *GameServer) Init(ctx context.Context, configFile string) bool {
 	gateCodec := NewGateCodec(nil)
 	gateHandler := NewDefaultConnectionHandler(gateCodec)
 	this.registerGatePacket(gateHandler)
-	this.gateListener = netMgr.NewListener(ctx, this.config.GateListenAddr, this.config.ServerConnConfig, gateCodec,
-		gateHandler, nil)
+	gateListenerConfig := &ListenerConfig{
+		AcceptConfig: this.config.ServerConnConfig,
+	}
+	gateListenerConfig.AcceptConfig.Codec = gateCodec
+	gateListenerConfig.AcceptConfig.Handler = gateHandler
+	this.gateListener = netMgr.NewListener(ctx, this.config.GateListenAddr, gateListenerConfig)
 	if this.gateListener == nil {
 		panic("listen gate failed")
 		return false
@@ -86,8 +95,12 @@ func (this *GameServer) Init(ctx context.Context, configFile string) bool {
 	serverCodec := NewProtoCodec(nil)
 	serverHandler := NewDefaultConnectionHandler(serverCodec)
 	this.registerServerPacket(serverHandler)
-	this.serverListener = netMgr.NewListener(ctx, this.config.ServerListenAddr, this.config.ServerConnConfig, serverCodec,
-		serverHandler, nil)
+	serverListenerConfig := &ListenerConfig{
+		AcceptConfig: this.config.ServerConnConfig,
+	}
+	serverListenerConfig.AcceptConfig.Codec = serverCodec
+	serverListenerConfig.AcceptConfig.Handler = serverHandler
+	this.serverListener = netMgr.NewListener(ctx, this.config.ServerListenAddr, serverListenerConfig)
 	if this.serverListener == nil {
 		panic("listen server failed")
 		return false
@@ -182,7 +195,7 @@ func (this *GameServer) initDb() {
 
 // 初始化redis缓存
 func (this *GameServer) initCache() {
-	cache.NewRedis(this.config.RedisUri, this.config.RedisPassword, this.config.RedisCluster)
+	cache.NewRedis(this.config.RedisUri, this.config.RedisUsername, this.config.RedisPassword, this.config.RedisCluster)
 	pong, err := cache.GetRedis().Ping(context.Background()).Result()
 	if err != nil || pong == "" {
 		panic("redis connect error")

@@ -19,7 +19,7 @@ type BaseServerConfig struct {
 	ServerId int32
 	// 客户端监听地址
 	ClientListenAddr string
-	// 客户端连接配置
+	// 客户端监听配置
 	ClientConnConfig ConnectionConfig
 	// 网关监听地址
 	GateListenAddr string
@@ -33,6 +33,7 @@ type BaseServerConfig struct {
 	MongoDbName string
 	// redis地址
 	RedisUri      []string
+	RedisUsername string
 	RedisPassword string
 	// 是否使用redis集群模式
 	RedisCluster bool
@@ -52,13 +53,9 @@ type BaseServer struct {
 	updateCount int64
 	// 服务器连接配置
 	serverConnectorConfig ConnectionConfig
-	// 默认的服务器连接接口
-	defaultServerConnectorHandler ConnectionHandler
-	// 默认的服务器之间的编解码
-	defaultServerConnectorCodec Codec
-	ctx                         context.Context
-	wg                          sync.WaitGroup
-	serverHooks                 []gentity.ApplicationHook
+	ctx                   context.Context
+	wg                    sync.WaitGroup
+	serverHooks           []gentity.ApplicationHook
 }
 
 func (this *BaseServer) GetConfigFile() string {
@@ -91,14 +88,6 @@ func (this *BaseServer) AddServerHook(hooks ...gentity.ApplicationHook) {
 
 func (this *BaseServer) GetServerHooks() []gentity.ApplicationHook {
 	return this.serverHooks
-}
-
-func (this *BaseServer) GetDefaultServerConnectorHandler() ConnectionHandler {
-	return this.defaultServerConnectorHandler
-}
-
-func (this *BaseServer) GetDefaultServerConnectorCodec() Codec {
-	return this.defaultServerConnectorCodec
 }
 
 // 加载配置文件
@@ -177,11 +166,14 @@ func (this *BaseServer) updateLoop(ctx context.Context) {
 	}
 }
 
+func (this *BaseServer) GetDefaultServerConnectorConfig() *ConnectionConfig {
+	return &this.serverConnectorConfig
+}
+
 // 设置默认的服务器间的编解码和回调接口
 func (this *BaseServer) SetDefaultServerConnectorConfig(config ConnectionConfig, defaultServerConnectorCodec Codec) {
 	this.serverConnectorConfig = config
-	this.defaultServerConnectorCodec = defaultServerConnectorCodec
-	handler := NewDefaultConnectionHandler(this.defaultServerConnectorCodec)
+	handler := NewDefaultConnectionHandler(defaultServerConnectorCodec)
 	handler.SetOnDisconnectedFunc(func(connection Connection) {
 		if connection.GetTag() == nil {
 			return
@@ -196,14 +188,14 @@ func (this *BaseServer) SetDefaultServerConnectorConfig(config ConnectionConfig,
 	})
 	handler.Register(PacketCommand(pb.CmdInner_Cmd_HeartBeatRes), func(connection Connection, packet Packet) {
 	}, new(pb.HeartBeatRes))
-	this.defaultServerConnectorHandler = handler
+	this.serverConnectorConfig.Codec = defaultServerConnectorCodec
+	this.serverConnectorConfig.Handler = handler
 }
 
 // 默认的服务器连接接口
 func (this *BaseServer) DefaultServerConnectorFunc(ctx context.Context, info gentity.ServerInfo) Connection {
 	serverInfo := info.(*pb.ServerInfo)
-	return GetNetMgr().NewConnector(ctx, serverInfo.GetServerListenAddr(), &this.serverConnectorConfig,
-		this.defaultServerConnectorCodec, this.defaultServerConnectorHandler, nil)
+	return GetNetMgr().NewConnector(ctx, serverInfo.GetServerListenAddr(), &this.serverConnectorConfig, nil)
 }
 
 // 发消息给另一个服务器
