@@ -4,7 +4,12 @@ import "time"
 
 // 玩家进游戏事件
 type EventPlayerEntryGame struct {
-	IsReconnect bool
+	IsReconnect    bool
+	OfflineSeconds int32 // 离线时长
+}
+
+// 玩家退出游戏
+type EventPlayerExit struct {
 }
 
 // 日期更新

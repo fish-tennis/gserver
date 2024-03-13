@@ -165,6 +165,8 @@ func (this *Player) RunRoutine() bool {
 	logger.Debug("player RunRoutine %v", this.GetId())
 	ok := this.RunProcessRoutine(this, &gentity.RoutineEntityRoutineArgs{
 		EndFunc: func(routineEntity gentity.RoutineEntity) {
+			// 分发事件:玩家退出游戏
+			this.FireEvent(&internal.EventPlayerExit{})
 			// 协程结束的时候,移除玩家
 			GetPlayerMgr().RemovePlayer(this)
 		},
@@ -206,7 +208,7 @@ func (this *Player) processMessage(message *ProtoPacket) {
 		return
 	}
 	// 再找func(player *Player, packet Packet)格式的回调接口
-	if playerHandler,ok := _playerHandler[message.Command()]; ok {
+	if playerHandler, ok := _playerHandler[message.Command()]; ok {
 		playerHandler(this, message)
 		return
 	}
@@ -230,9 +232,9 @@ func (this *Player) OnRecvPacket(packet *ProtoPacket) {
 // 从加载的数据构造出玩家对象
 func CreatePlayerFromData(playerData *pb.PlayerData) *Player {
 	player := &Player{
-		name:         playerData.Name,
-		accountId:    playerData.AccountId,
-		regionId:     playerData.RegionId,
+		name:              playerData.Name,
+		accountId:         playerData.AccountId,
+		regionId:          playerData.RegionId,
 		BaseRoutineEntity: *gentity.NewRoutineEntity(32),
 	}
 	player.Id = playerData.XId

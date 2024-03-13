@@ -3,6 +3,7 @@ package loginserver
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"github.com/fish-tennis/gentity"
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
@@ -153,16 +154,20 @@ func (this *LoginServer) getAccountData(accountName string, accountData *pb.Acco
 	mongoCol := this.GetAccountDb().(*gentity.MongoCollection)
 	col := mongoCol.GetCollection()
 	result := col.FindOne(context.Background(), bson.D{{"name", accountName}})
-	if result == nil || result.Err() == mongo.ErrNoDocuments {
+	if result == nil || errors.Is(result.Err(), mongo.ErrNoDocuments) {
 		return nil
 	}
 	err := result.Decode(accountData)
 	if err != nil {
 		return err
 	}
-	// TODO:_id为什么不会赋值?
+	// Q:_id为什么不会赋值?
+	// A:因为protobuf自动生成的struct tag,无法适配mongodb的_id字段
+	// 解决方案: 使用工具生成自定义的struct tag,如github.com/favadi/protoc-go-inject-tag
+	// 如果能生成下面这种struct tag,就可以直接把mongodb的_id的值赋值到accountData.XId了
+	// XId int64 `protobuf:"varint,1,opt,name=_id,json=Id,proto3" json:"_id,omitempty" bson:"_id"`
 	if accountData.XId == 0 {
-		raw, err := result.DecodeBytes()
+		raw, err := result.Raw()
 		if err != nil {
 			return err
 		}

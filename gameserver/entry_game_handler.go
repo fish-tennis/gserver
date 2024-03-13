@@ -98,7 +98,11 @@ func onPlayerEntryGameReq(connection Connection, packet Packet) {
 			})
 			return
 		}
-		// TODO:_id为什么不会赋值?
+		// Q:_id为什么不会赋值?
+		// A:因为protobuf自动生成的struct tag,无法适配mongodb的_id字段
+		// 解决方案: 使用工具生成自定义的struct tag,如github.com/favadi/protoc-go-inject-tag
+		// 如果能生成下面这种struct tag,就可以直接把mongodb的_id的值赋值到playerData.XId了
+		// XId int64 `protobuf:"varint,1,opt,name=_id,json=Id,proto3" json:"_id,omitempty" bson:"_id"`
 		if playerData.XId == 0 {
 			playerData.XId = playerId
 		}
@@ -111,11 +115,11 @@ func onPlayerEntryGameReq(connection Connection, packet Packet) {
 	}
 	logger.Debug("entry entryPlayer:%v %v", entryPlayer.GetId(), entryPlayer.GetName())
 	internal.SendPacketAdapt(connection, packet, PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameRes), &pb.PlayerEntryGameRes{
-		AccountId: entryPlayer.GetAccountId(),
-		PlayerId:  entryPlayer.GetId(),
-		RegionId:  entryPlayer.GetRegionId(),
+		AccountId:  entryPlayer.GetAccountId(),
+		PlayerId:   entryPlayer.GetId(),
+		RegionId:   entryPlayer.GetRegionId(),
 		PlayerName: entryPlayer.GetName(),
-		GuildData: entryPlayer.GetGuild().GetGuildData(),
+		GuildData:  entryPlayer.GetGuild().GetGuildData(),
 	})
 	// 转到玩家协程中去处理
 	entryPlayer.OnRecvPacket(NewProtoPacket(PacketCommand(pb.CmdBaseInfo_Cmd_PlayerEntryGameOk), &pb.PlayerEntryGameOk{
@@ -141,7 +145,7 @@ func onCreatePlayerReq(connection Connection, packet Packet) {
 		return
 	}
 	playerData := &pb.PlayerData{
-		XId:        util.GenUniqueId(),
+		XId:       util.GenUniqueId(),
 		Name:      req.Name,
 		AccountId: req.AccountId,
 		RegionId:  req.RegionId,
@@ -181,7 +185,7 @@ func onCreatePlayerReq(connection Connection, packet Packet) {
 
 // gate转发的客户端掉线消息
 func onClientDisconnect(connection Connection, packet Packet) {
-	if gatePacket,ok := packet.(*internal.GatePacket); ok {
+	if gatePacket, ok := packet.(*internal.GatePacket); ok {
 		playerId := gatePacket.PlayerId()
 		player := game.GetPlayer(playerId)
 		if player == nil {

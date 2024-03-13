@@ -11,6 +11,9 @@ message BaseInfo {
   int32 exp = 3; // 经验值
   int32 totalPay = 4; // 累计充值总额
   int32 lastUpdateDate = 5; // 上次刷新日期,格式:yyyymmdd
+  int64 lastLoginTimestamp = 6; // 最近一次登录时间戳
+  int64 lastLogoutTimestamp = 7; // 最近一次退出时间戳
+  int32 totalOnlineSeconds = 8; // 总在线时长(秒)
 }
 
 // 玩家的钱财数据

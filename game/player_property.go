@@ -9,6 +9,10 @@ func (this *Player) GetPropertyInt32(propertyName string) int32 {
 		return this.GetBaseInfo().Data.GetLevel()
 	case "TotalPay":
 		return this.GetBaseInfo().Data.GetTotalPay()
+	case "OnlineSecond":
+		return this.GetBaseInfo().GetTotalOnlineSeconds()
+	case "OnlineMinute":
+		return this.GetBaseInfo().GetTotalOnlineSeconds() / 60
 	default:
 		logger.Error("Not support property %v %v", this.GetId(), propertyName)
 	}

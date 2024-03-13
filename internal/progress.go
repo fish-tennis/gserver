@@ -55,9 +55,10 @@ func NewProgressMgr() *ProgressMgr {
 // 进度检查接口
 // 返回事件触发时的进度
 // example:
-//   进度: 抽卡100次
-//   事件: 抽卡(5连抽)
-//   进度+5
+//
+//	进度: 抽卡100次
+//	事件: 抽卡(5连抽)
+//	进度+5
 type ProgressCheckFunc func(event interface{}, progressCfg *ProgressCfg) int32
 
 // 进度初始化接口
@@ -85,8 +86,9 @@ func (this *ProgressMgr) Register(progressType int32, event interface{}, checker
 }
 
 // 注册事件和进度检查接口
-//  checker: 进度检查接口,可以为nil
-//  init: 初始化时,更新当前进度,可以为nil
+//
+//	checker: 进度检查接口,可以为nil
+//	init: 初始化时,更新当前进度,可以为nil
 func (this *ProgressMgr) RegisterWithInit(progressType int32, event interface{}, checker ProgressCheckFunc, init ProgressInitFunc) {
 	eventTyp := reflect.TypeOf(event).Elem()
 	info, ok := this.eventMapping[eventTyp]
@@ -131,8 +133,9 @@ func (this *ProgressMgr) GetProgressChecker(event interface{}, progressType int3
 }
 
 // 初始化进度,更新初始进度
-//  examples:
-//  任务举例:玩家升级到10级,当5级玩家接任务时,初始进度就是5/10
+//
+//	examples:
+//	任务举例:玩家升级到10级,当5级玩家接任务时,初始进度就是5/10
 func (this *ProgressMgr) InitProgress(arg interface{}, progressCfg *ProgressCfg, progressHolder ProgressHolder) bool {
 	initFunc, ok := this.progressInits[progressCfg.Type]
 	if !ok {
@@ -189,7 +192,7 @@ func DefaultProgressChecker(event interface{}, progressCfg *ProgressCfg) int32 {
 	for fieldName, fieldValue := range progressCfg.Properties {
 		eventFieldVal := eventVal.FieldByName(fieldName)
 		if !eventFieldVal.IsValid() {
-			continue
+			return 0
 		}
 		switch eventFieldVal.Kind() {
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
