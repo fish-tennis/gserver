@@ -137,6 +137,9 @@ func (this *GameServer) Exit() {
 		player.Stop()
 		return true
 	})
+	game.GetGlobalEntity().PushMessage(NewProtoPacket(PacketCommand(pb.CmdGlobalEntity_Cmd_ShutdownReq), &pb.ShutdownReq{
+		Timestamp: game.GetGlobalEntity().GetTimerEntries().Now().Unix(),
+	}))
 	this.BaseServer.Exit()
 	logger.Info("GameServer.Exit")
 	dbMgr := db.GetDbMgr()
@@ -187,7 +190,7 @@ func (this *GameServer) initDb() {
 	// 公会数据库
 	mongoDb.RegisterEntityDb("guild", "_id")
 	// 全局对象数据库(如GlobalEntity)
-	mongoDb.RegisterEntityDb("global", "key")
+	mongoDb.RegisterEntityDb(game.GlobalEntityCollectionName, game.GlobalEntityCollectionKeyName)
 	if !mongoDb.Connect() {
 		panic("connect db error")
 	}

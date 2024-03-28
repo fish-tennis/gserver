@@ -20,6 +20,55 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type CmdGlobalEntity int32
+
+const (
+	CmdGlobalEntity_CmdGlobalEntity_None CmdGlobalEntity = 0 // 解决"The first enum value must be zero in proto3."的报错
+	CmdGlobalEntity_Cmd_StartupReq       CmdGlobalEntity = 4001
+	CmdGlobalEntity_Cmd_ShutdownReq      CmdGlobalEntity = 4002
+)
+
+// Enum value maps for CmdGlobalEntity.
+var (
+	CmdGlobalEntity_name = map[int32]string{
+		0:    "CmdGlobalEntity_None",
+		4001: "Cmd_StartupReq",
+		4002: "Cmd_ShutdownReq",
+	}
+	CmdGlobalEntity_value = map[string]int32{
+		"CmdGlobalEntity_None": 0,
+		"Cmd_StartupReq":       4001,
+		"Cmd_ShutdownReq":      4002,
+	}
+)
+
+func (x CmdGlobalEntity) Enum() *CmdGlobalEntity {
+	p := new(CmdGlobalEntity)
+	*p = x
+	return p
+}
+
+func (x CmdGlobalEntity) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (CmdGlobalEntity) Descriptor() protoreflect.EnumDescriptor {
+	return file_global_entity_proto_enumTypes[0].Descriptor()
+}
+
+func (CmdGlobalEntity) Type() protoreflect.EnumType {
+	return &file_global_entity_proto_enumTypes[0]
+}
+
+func (x CmdGlobalEntity) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use CmdGlobalEntity.Descriptor instead.
+func (CmdGlobalEntity) EnumDescriptor() ([]byte, []int) {
+	return file_global_entity_proto_rawDescGZIP(), []int{0}
+}
+
 // 进程统计信息
 type ProcessStatInfo struct {
 	state         protoimpl.MessageState
@@ -141,6 +190,100 @@ func (x *GlobalEntityData) GetProcessStatInfo() *ProcessStatInfo {
 	return nil
 }
 
+type StartupReq struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Timestamp int64 `protobuf:"varint,1,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+}
+
+func (x *StartupReq) Reset() {
+	*x = StartupReq{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_global_entity_proto_msgTypes[2]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *StartupReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StartupReq) ProtoMessage() {}
+
+func (x *StartupReq) ProtoReflect() protoreflect.Message {
+	mi := &file_global_entity_proto_msgTypes[2]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StartupReq.ProtoReflect.Descriptor instead.
+func (*StartupReq) Descriptor() ([]byte, []int) {
+	return file_global_entity_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *StartupReq) GetTimestamp() int64 {
+	if x != nil {
+		return x.Timestamp
+	}
+	return 0
+}
+
+type ShutdownReq struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Timestamp int64 `protobuf:"varint,1,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+}
+
+func (x *ShutdownReq) Reset() {
+	*x = ShutdownReq{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_global_entity_proto_msgTypes[3]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *ShutdownReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ShutdownReq) ProtoMessage() {}
+
+func (x *ShutdownReq) ProtoReflect() protoreflect.Message {
+	mi := &file_global_entity_proto_msgTypes[3]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ShutdownReq.ProtoReflect.Descriptor instead.
+func (*ShutdownReq) Descriptor() ([]byte, []int) {
+	return file_global_entity_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *ShutdownReq) GetTimestamp() int64 {
+	if x != nil {
+		return x.Timestamp
+	}
+	return 0
+}
+
 var File_global_entity_proto protoreflect.FileDescriptor
 
 var file_global_entity_proto_rawDesc = []byte{
@@ -162,8 +305,19 @@ var file_global_entity_proto_rawDesc = []byte{
 	0x6f, 0x63, 0x65, 0x73, 0x73, 0x53, 0x74, 0x61, 0x74, 0x49, 0x6e, 0x66, 0x6f, 0x18, 0x02, 0x20,
 	0x01, 0x28, 0x0b, 0x32, 0x18, 0x2e, 0x67, 0x73, 0x65, 0x72, 0x76, 0x65, 0x72, 0x2e, 0x50, 0x72,
 	0x6f, 0x63, 0x65, 0x73, 0x73, 0x53, 0x74, 0x61, 0x74, 0x49, 0x6e, 0x66, 0x6f, 0x52, 0x0f, 0x70,
-	0x72, 0x6f, 0x63, 0x65, 0x73, 0x73, 0x53, 0x74, 0x61, 0x74, 0x49, 0x6e, 0x66, 0x6f, 0x42, 0x06,
-	0x5a, 0x04, 0x2e, 0x2f, 0x70, 0x62, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x72, 0x6f, 0x63, 0x65, 0x73, 0x73, 0x53, 0x74, 0x61, 0x74, 0x49, 0x6e, 0x66, 0x6f, 0x22, 0x2a,
+	0x0a, 0x0a, 0x53, 0x74, 0x61, 0x72, 0x74, 0x75, 0x70, 0x52, 0x65, 0x71, 0x12, 0x1c, 0x0a, 0x09,
+	0x74, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0x18, 0x01, 0x20, 0x01, 0x28, 0x03, 0x52,
+	0x09, 0x74, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0x22, 0x2b, 0x0a, 0x0b, 0x53, 0x68,
+	0x75, 0x74, 0x64, 0x6f, 0x77, 0x6e, 0x52, 0x65, 0x71, 0x12, 0x1c, 0x0a, 0x09, 0x74, 0x69, 0x6d,
+	0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0x18, 0x01, 0x20, 0x01, 0x28, 0x03, 0x52, 0x09, 0x74, 0x69,
+	0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0x2a, 0x56, 0x0a, 0x0f, 0x43, 0x6d, 0x64, 0x47, 0x6c,
+	0x6f, 0x62, 0x61, 0x6c, 0x45, 0x6e, 0x74, 0x69, 0x74, 0x79, 0x12, 0x18, 0x0a, 0x14, 0x43, 0x6d,
+	0x64, 0x47, 0x6c, 0x6f, 0x62, 0x61, 0x6c, 0x45, 0x6e, 0x74, 0x69, 0x74, 0x79, 0x5f, 0x4e, 0x6f,
+	0x6e, 0x65, 0x10, 0x00, 0x12, 0x13, 0x0a, 0x0e, 0x43, 0x6d, 0x64, 0x5f, 0x53, 0x74, 0x61, 0x72,
+	0x74, 0x75, 0x70, 0x52, 0x65, 0x71, 0x10, 0xa1, 0x1f, 0x12, 0x14, 0x0a, 0x0f, 0x43, 0x6d, 0x64,
+	0x5f, 0x53, 0x68, 0x75, 0x74, 0x64, 0x6f, 0x77, 0x6e, 0x52, 0x65, 0x71, 0x10, 0xa2, 0x1f, 0x42,
+	0x06, 0x5a, 0x04, 0x2e, 0x2f, 0x70, 0x62, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -178,13 +332,17 @@ func file_global_entity_proto_rawDescGZIP() []byte {
 	return file_global_entity_proto_rawDescData
 }
 
-var file_global_entity_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_global_entity_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_global_entity_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_global_entity_proto_goTypes = []interface{}{
-	(*ProcessStatInfo)(nil),  // 0: gserver.ProcessStatInfo
-	(*GlobalEntityData)(nil), // 1: gserver.GlobalEntityData
+	(CmdGlobalEntity)(0),     // 0: gserver.CmdGlobalEntity
+	(*ProcessStatInfo)(nil),  // 1: gserver.ProcessStatInfo
+	(*GlobalEntityData)(nil), // 2: gserver.GlobalEntityData
+	(*StartupReq)(nil),       // 3: gserver.StartupReq
+	(*ShutdownReq)(nil),      // 4: gserver.ShutdownReq
 }
 var file_global_entity_proto_depIdxs = []int32{
-	0, // 0: gserver.GlobalEntityData.processStatInfo:type_name -> gserver.ProcessStatInfo
+	1, // 0: gserver.GlobalEntityData.processStatInfo:type_name -> gserver.ProcessStatInfo
 	1, // [1:1] is the sub-list for method output_type
 	1, // [1:1] is the sub-list for method input_type
 	1, // [1:1] is the sub-list for extension type_name
@@ -222,19 +380,44 @@ func file_global_entity_proto_init() {
 				return nil
 			}
 		}
+		file_global_entity_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*StartupReq); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_global_entity_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*ShutdownReq); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_global_entity_proto_rawDesc,
-			NumEnums:      0,
-			NumMessages:   2,
+			NumEnums:      1,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
 		GoTypes:           file_global_entity_proto_goTypes,
 		DependencyIndexes: file_global_entity_proto_depIdxs,
+		EnumInfos:         file_global_entity_proto_enumTypes,
 		MessageInfos:      file_global_entity_proto_msgTypes,
 	}.Build()
 	File_global_entity_proto = out.File

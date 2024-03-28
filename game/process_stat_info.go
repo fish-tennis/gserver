@@ -2,6 +2,8 @@ package game
 
 import (
 	"github.com/fish-tennis/gentity"
+	. "github.com/fish-tennis/gnet"
+	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 )
 
@@ -23,12 +25,14 @@ func NewProcessStatInfo(globalEntity *GlobalEntity, data *pb.ProcessStatInfo) *P
 	return component
 }
 
-func (this *ProcessStatInfo) OnStartup() {
-	this.Data.LastStartupTimestamp = GetGlobalEntity().GetTimerEntries().Now().Unix()
+func (this *ProcessStatInfo) HandleStartupReq(cmd PacketCommand, req *pb.StartupReq) {
+	this.Data.LastStartupTimestamp = req.Timestamp
 	this.SetDirty()
+	logger.Debug("HandleStartupReq")
 }
 
-func (this *ProcessStatInfo) OnShutdown() {
-	this.Data.LastShutdownTimestamp = GetGlobalEntity().GetTimerEntries().Now().Unix()
+func (this *ProcessStatInfo) HandleShutdownReq(cmd PacketCommand, req *pb.ShutdownReq) {
+	this.Data.LastShutdownTimestamp = req.Timestamp
 	this.SetDirty()
+	logger.Debug("HandleShutdownReq")
 }

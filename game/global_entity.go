@@ -70,7 +70,6 @@ func (this *GlobalEntity) RunRoutine() bool {
 	logger.Debug("GlobalEntity RunRoutine %v", this.key)
 	ok := this.RunProcessRoutine(this, &gentity.RoutineEntityRoutineArgs{
 		EndFunc: func(routineEntity gentity.RoutineEntity) {
-			this.SaveDb(true)
 			logger.Debug("GlobalEntity Routine End %v", this.key)
 		},
 		ProcessMessageFunc: func(routineEntity gentity.RoutineEntity, message interface{}) {
@@ -94,7 +93,6 @@ func (this *GlobalEntity) processMessage(message *ProtoPacket) {
 	logger.Debug("processMessage %v", proto.MessageName(message.Message()).Name())
 	// 先找组件接口
 	if gentity.ProcessComponentHandler(this, message.Command(), message.Message()) {
-		this.checkDataDirty()
 		return
 	}
 	logger.Error("unhandle message:%v", message.Command())
@@ -136,7 +134,7 @@ func InitGlobalEntityStructAndHandler() {
 		return true
 	})
 	gentity.AutoRegisterComponentHandler(tmpGlobalEntity, nil,
-		"On", "Handle", "gserver")
+		"", "Handle", "gserver")
 }
 
 func (this *GlobalEntity) GetProcessStatInfo() *ProcessStatInfo {
