@@ -115,8 +115,8 @@ func (this *BaseInfo) HandlePlayerEntryGameOk(cmd gnet.PacketCommand, msg *pb.Pl
 
 [https://github.com/xxjwxc/uber_go_guide_cn](https://github.com/xxjwxc/uber_go_guide_cn)
 
-## TODO
-- 全局对象的数据绑定
+## 客户端网络库
+C#: [gnet_csharp](https://github.com/fish-tennis/gnet_csharp)
 
 ## 讨论
 QQ群: 764912827

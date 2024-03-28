@@ -111,7 +111,7 @@ func (this *GameServer) Init(ctx context.Context, configFile string) bool {
 	this.BaseServer.GetServerList().SetFetchAndConnectServerTypes(ServerType_Game)
 
 	// 其他模块初始化
-	this.AddServerHook(&social.Hook{})
+	this.AddServerHook(&game.Hook{}, &social.Hook{})
 	serverInitArg := &misc.GameServerInitArg{
 		ClientHandler: clientHandler,
 		ServerHandler: serverHandler,
@@ -182,8 +182,12 @@ func (this *GameServer) loadCfgs() {
 func (this *GameServer) initDb() {
 	// 使用mongodb来演示
 	mongoDb := gentity.NewMongoDb(this.config.MongoUri, this.config.MongoDbName)
+	// 玩家数据库
 	playerDB := mongoDb.RegisterPlayerDb("player", "_id", "accountid", "regionid")
+	// 公会数据库
 	mongoDb.RegisterEntityDb("guild", "_id")
+	// 全局对象数据库(如GlobalEntity)
+	mongoDb.RegisterEntityDb("global", "key")
 	if !mongoDb.Connect() {
 		panic("connect db error")
 	}
@@ -218,7 +222,7 @@ func (this *GameServer) repairPlayerCache(playerId, accountId int64) error {
 		}
 	}()
 	tmpPlayer := game.CreateTempPlayer(playerId, accountId)
-	gentity.FixEntityDataFromCache(tmpPlayer, db.GetPlayerDb(), cache.Get(), "p")
+	gentity.FixEntityDataFromCache(tmpPlayer, db.GetPlayerDb(), cache.Get(), game.PlayerCachePrefix, playerId)
 	return nil
 }
 

@@ -33,7 +33,7 @@ func (this *BasePlayerComponent) GetEntity() gentity.Entity {
 }
 
 func (this *BasePlayerComponent) SetEntity(entity gentity.Entity) {
-	if v,ok := entity.(*Player); ok {
+	if v, ok := entity.(*Player); ok {
 		this.player = v
 	}
 }
@@ -53,9 +53,8 @@ func (this *BasePlayerComponent) GetPlayerId() int64 {
 
 // 组件缓存key
 func (this *BasePlayerComponent) GetCacheKey() string {
-	return gentity.GetPlayerComponentCacheKey(this.GetPlayerId(), this.GetName())
+	return gentity.GetEntityComponentCacheKey(PlayerCachePrefix, this.GetPlayerId(), this.GetName())
 }
-
 
 // 保存数据作为一个整体的玩家组件
 // 当保存数据的任何一个字段更新时,作为一个整体进行缓存更新
@@ -72,7 +71,6 @@ func NewPlayerDataComponent(player *Player, componentName string) *PlayerDataCom
 		},
 	}
 }
-
 
 // 保存数据为map格式的玩家组件
 // 当对map的某一项增删改时,只对那一项进行缓存更新

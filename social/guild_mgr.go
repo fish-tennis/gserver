@@ -115,10 +115,10 @@ func initGuildMgr() {
 			//this.SaveCache()
 			// 这里演示一种直接保存数据库的用法,可以用于那些不经常修改的数据
 			// 这种方式,省去了要处理crash后从缓存恢复数据的步骤
-			gentity.SaveEntityChangedDataToDb(_guildMgr.GetEntityDb(), routineEntity, cache.Get(), false)
+			gentity.SaveEntityChangedDataToDb(_guildMgr.GetEntityDb(), routineEntity, cache.Get(), false, "")
 		},
 		AfterTimerExecuteFunc: func(routineEntity gentity.RoutineEntity, t time.Time) {
-			gentity.SaveEntityChangedDataToDb(_guildMgr.GetEntityDb(), routineEntity, cache.Get(), false)
+			gentity.SaveEntityChangedDataToDb(_guildMgr.GetEntityDb(), routineEntity, cache.Get(), false, "")
 		},
 	}
 	_guildMgr = gentity.NewDistributedEntityMgr("g.lock",

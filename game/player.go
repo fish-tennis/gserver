@@ -13,6 +13,11 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+const (
+	// Player在redis里的前缀
+	PlayerCachePrefix = "p"
+)
+
 var _ gentity.RoutineEntity = (*Player)(nil)
 
 // 玩家对象
@@ -58,7 +63,11 @@ func (this *Player) GetComponent(componentName string) gentity.Component {
 
 // 玩家数据保存数据库
 func (this *Player) SaveDb(removeCacheAfterSaveDb bool) error {
-	return gentity.SaveEntityChangedDataToDb(db.GetPlayerDb(), this, cache.Get(), removeCacheAfterSaveDb)
+	return gentity.SaveEntityChangedDataToDb(db.GetPlayerDb(), this, cache.Get(), removeCacheAfterSaveDb, PlayerCachePrefix)
+}
+
+func (this *Player) SaveCache(kvCache gentity.KvCache) error {
+	return this.BaseEntity.SaveCache(kvCache, PlayerCachePrefix, this.GetId())
 }
 
 // 设置关联的连接,支持客户端直连模式和网关模式
@@ -210,6 +219,7 @@ func (this *Player) processMessage(message *ProtoPacket) {
 	// 再找func(player *Player, packet Packet)格式的回调接口
 	if playerHandler, ok := _playerHandler[message.Command()]; ok {
 		playerHandler(this, message)
+		this.SaveCache(cache.Get())
 		return
 	}
 	// 再找func(connection Connection, packet Packet)的回调接口

@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+option go_package = "./pb";
+
+package gserver;
+
+// 进程统计信息
+message ProcessStatInfo {
+  int64 lastStartupTimestamp = 1; // 最近一次进程启动时间戳
+  int64 lastShutdownTimestamp = 2; // 最近一次进程关闭时间戳
+  int32 lastUpdateDate = 3; // 上次刷新日期,格式:yyyymmdd
+}
+
+// GlobalEntity在mongo中的保存格式
+// 用于一次性把数据加载进来
+message GlobalEntityData {
+  string key = 1;
+  ProcessStatInfo processStatInfo = 2;
+}
