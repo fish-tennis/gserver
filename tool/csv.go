@@ -102,9 +102,10 @@ func ReadCsvFromData[M ~map[K]V, K IntOrString, V any](rows [][]string, m M, opt
 	mType := reflect.TypeOf(m)
 	mVal := reflect.ValueOf(m)
 	keyType := mType.Key()    // key type of m, 如int
-	valueType := mType.Elem() // value type of m, 如*pb.ItemCfg
-	if valueType.Kind() != reflect.Ptr {
-		return errors.New("valueType must be Ptr")
+	valueType := mType.Elem() // value type of m, 如*pb.ItemCfg or pb.ItemCfg
+	valueItemType := valueType
+	if valueType.Kind() == reflect.Ptr {
+		valueItemType = valueType.Elem() // *pb.ItemCfg -> pb.ItemCfg
 	}
 	slog.Debug("types", "mType", mType.Kind(), "mVal", mVal.Kind(),
 		"keyType", keyType, "valueType", valueType)
@@ -113,8 +114,11 @@ func ReadCsvFromData[M ~map[K]V, K IntOrString, V any](rows [][]string, m M, opt
 		// 固定第一列是key
 		key := gentity.ConvertStringToRealType(keyType, row[0])
 
-		newItem := reflect.New(valueType.Elem()) // 如new(pb.ItemCfg)
+		newItem := reflect.New(valueItemType) // 如new(pb.ItemCfg)
 		newItemElem := newItem.Elem()
+		if valueType.Kind() == reflect.Struct {
+			newItem = newItem.Elem() // *pb.ItemCfg -> pb.ItemCfg
+		}
 		slog.Debug("newItem", "newItem", newItem.Kind(), "newItemElem", newItemElem.Kind())
 		for columnIndex := 0; columnIndex < len(columnNames); columnIndex++ {
 			columnName := columnNames[columnIndex]
@@ -138,6 +142,10 @@ func ReadCsvFromData[M ~map[K]V, K IntOrString, V any](rows [][]string, m M, opt
 				if fieldConverter != nil {
 					// 自定义的转换接口
 					v := fieldConverter(newItem.Interface(), columnName, fieldString)
+					if v == nil {
+						slog.Debug("field parse error", "columnName", columnName, "fieldString", fieldString)
+						continue
+					}
 					fieldVal.Set(reflect.ValueOf(v))
 					continue
 				}
@@ -228,7 +236,7 @@ func ReadCsvFromData[M ~map[K]V, K IntOrString, V any](rows [][]string, m M, opt
 		}
 		// 下面的代码会导致slog停止打印后续的日志,why?
 		//slog.Debug("parse row", "key", key, "newItem", fmt.Sprintf("%v", newItemIf))
-		mVal.SetMapIndex(reflect.ValueOf(key), reflect.ValueOf(newItem.Interface()))
+		mVal.SetMapIndex(reflect.ValueOf(key), newItem)
 	}
 	return nil
 }

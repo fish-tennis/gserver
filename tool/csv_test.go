@@ -66,7 +66,7 @@ func TestReadCsvFromDataStruct(t *testing.T) {
 		MapTest   map[string]int32
 	}
 	// map的key也可以是字符串
-	m := make(map[string]*testItemCfg)
+	m := make(map[string]testItemCfg)
 	err := ReadCsvFromData(rows, m, option)
 	if err != nil {
 		t.Fatal(err)
@@ -78,10 +78,10 @@ func TestReadCsvFromDataStruct(t *testing.T) {
 
 func TestReadCsvFromDataConverter(t *testing.T) {
 	rows := [][]string{
-		{"CfgId", "Name", "Item", "Items", "ColorFlags", "Color"},
-		{"1", "Name1", "123_1", "123_1;456_2", "Red;Green;Blue", "Red"},
-		{"2", "Name2", "456_5", "123_1", "Gray;Yellow", "Gray"},
-		{"3", "Name3", "789_10", "", "", ""},
+		{"CfgId", "Name", "Item", "Items", "ColorFlags", "Color", "ItemStruct"},
+		{"1", "Name1", "123_1", "123_1;456_2", "Red;Green;Blue", "Red", "123_1"},
+		{"2", "Name2", "456_5", "123_1", "Gray;Yellow", "Gray", "456_5"},
+		{"3", "Name3", "789_10", "", "", "", ""},
 	}
 	type testCfg struct {
 		CfgId      int32
@@ -90,6 +90,7 @@ func TestReadCsvFromDataConverter(t *testing.T) {
 		Items      []*pb.ItemNum
 		ColorFlags int32 // 颜色的组合值,如 Red | Green
 		Color      pb.Color
+		ItemStruct pb.ItemNum
 	}
 
 	option := &CsvOption{
@@ -122,6 +123,17 @@ func TestReadCsvFromDataConverter(t *testing.T) {
 			Num:   int32(util.Atoi(strs[1])),
 		}
 	})
+	// NOTE: pb.ItemNum{}和&pb.ItemNum{}是2个不同的type
+	option.RegisterConverterByType(reflect.TypeOf(pb.ItemNum{}), func(obj interface{}, columnName, fieldStr string) interface{} {
+		strs := strings.Split(fieldStr, "_")
+		if len(strs) != 2 {
+			return nil
+		}
+		return pb.ItemNum{
+			CfgId: int32(util.Atoi(strs[0])),
+			Num:   int32(util.Atoi(strs[1])),
+		}
+	})
 	// 注册颜色枚举的自定义解析接口,csv中可以直接填写颜色对应的字符串
 	option.RegisterConverterByType(reflect.TypeOf(pb.Color(0)), func(obj interface{}, columnName, fieldStr string) interface{} {
 		t.Logf("pb.Color parse columnName:%s,fieldStr:%s", columnName, fieldStr)
@@ -136,6 +148,27 @@ func TestReadCsvFromDataConverter(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	for _, cfg := range m {
+		t.Logf("%v", cfg)
+	}
+}
+
+func TestMapReflect(t *testing.T) {
+	type testStruct struct {
+		I int
+		S string
+	}
+	m := make(map[int]testStruct)
+	mType := reflect.TypeOf(m)
+	mVal := reflect.ValueOf(m)
+	//keyType := mType.Key()    // int
+	valueType := mType.Elem() // pb.ItemCfg
+	t.Logf("%v", valueType)
+	key := 1
+	newItem := reflect.New(valueType) // new(pb.ItemCfg)
+	newItem.Elem().FieldByName("I").SetInt(123)
+	newItem.Elem().FieldByName("S").SetString("abc")
+	mVal.SetMapIndex(reflect.ValueOf(key), newItem.Elem())
 	for _, cfg := range m {
 		t.Logf("%v", cfg)
 	}
