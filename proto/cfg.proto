@@ -4,6 +4,15 @@ option go_package = "./pb";
 
 package gserver;
 
+enum Color {
+  Color_None = 0;
+  Color_Red = 1;
+  Color_Green = 2;
+  Color_Blue = 3;
+  Color_Yellow = 4;
+  Color_Gray = 5;
+}
+
 // 刷新方式
 enum RefreshType {
   RefreshType_None    = 0; // 解决"The first enum value must be zero in proto3."的报错

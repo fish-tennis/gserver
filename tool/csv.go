@@ -12,6 +12,7 @@ import (
 	"strings"
 )
 
+// 字段转换接口
 type FieldConverter func(obj interface{}, columnName, fieldStr string) interface{}
 
 type CsvOption struct {
@@ -19,38 +20,52 @@ type CsvOption struct {
 	DataBeginRowIndex int
 
 	// 数组分隔符
+	// 如数组分隔符为;时,则1;2;3可以表示[1,2,3]的数组
 	SliceSeparator string
 
-	// Map的kv分隔符
+	// Map的分隔符
+	// 如MapKVSeparator为_ MapSeparator为;
+	// 则a_1;b_2;c_3可以表示{"a":1,"b":2,"c":3}的数组
 	MapKVSeparator string
-	// Map分隔符
-	MapSeparator string
+	MapSeparator   string
 
 	// 自定义转换函数
-	// 把csv的字符串转换成其他对象
-	customFieldConverters map[string]FieldConverter
+	// 把csv的字符串转换成其他对象 以列名作为关键字
+	// 基本类型int,string,bool不受此影响
+	customFieldConvertersByColumnName map[string]FieldConverter
+	// 把csv的字符串转换成其他对象 以字段类型作为关键字
+	// 基本类型int,string,bool不受此影响
+	customFieldConvertersByType map[reflect.Type]FieldConverter
 }
 
-func NewCsvOption(dataBeginRowIndex int) *CsvOption {
-	return &CsvOption{
-		DataBeginRowIndex:     dataBeginRowIndex,
-		customFieldConverters: make(map[string]FieldConverter),
+func (co *CsvOption) RegisterConverterByColumnName(columnName string, converter FieldConverter) *CsvOption {
+	if co.customFieldConvertersByColumnName == nil {
+		co.customFieldConvertersByColumnName = make(map[string]FieldConverter)
 	}
-}
-
-func (co *CsvOption) AddFieldConverter(fieldName string, converter FieldConverter) *CsvOption {
-	if co.customFieldConverters == nil {
-		co.customFieldConverters = make(map[string]FieldConverter)
-	}
-	co.customFieldConverters[fieldName] = converter
+	co.customFieldConvertersByColumnName[columnName] = converter
 	return co
 }
 
-func (co *CsvOption) GetFieldConverter(fieldName string) FieldConverter {
-	if co.customFieldConverters == nil {
+func (co *CsvOption) GetConverterByColumnName(columnName string) FieldConverter {
+	if co.customFieldConvertersByColumnName == nil {
 		return nil
 	}
-	return co.customFieldConverters[fieldName]
+	return co.customFieldConvertersByColumnName[columnName]
+}
+
+func (co *CsvOption) RegisterConverterByType(typ reflect.Type, converter FieldConverter) *CsvOption {
+	if co.customFieldConvertersByType == nil {
+		co.customFieldConvertersByType = make(map[reflect.Type]FieldConverter)
+	}
+	co.customFieldConvertersByType[typ] = converter
+	return co
+}
+
+func (co *CsvOption) GetConverterByType(typ reflect.Type) FieldConverter {
+	if co.customFieldConvertersByType == nil {
+		return nil
+	}
+	return co.customFieldConvertersByType[typ]
 }
 
 type IntOrString interface {
@@ -102,75 +117,114 @@ func ReadCsvFromData[M ~map[K]V, K IntOrString, V any](rows [][]string, m M, opt
 		newItemElem := newItem.Elem()
 		slog.Debug("newItem", "newItem", newItem.Kind(), "newItemElem", newItemElem.Kind())
 		for columnIndex := 0; columnIndex < len(columnNames); columnIndex++ {
-			fieldName := columnNames[columnIndex]
+			columnName := columnNames[columnIndex]
 			fieldString := row[columnIndex]
-			fieldVal := newItemElem.FieldByName(fieldName)
+			fieldVal := newItemElem.FieldByName(columnName)
 			if !fieldVal.IsValid() {
-				slog.Error("fieldVal error:", "fieldName", fieldName)
+				slog.Debug("unknown column", "columnName", columnName)
 				continue
 			}
 			if !fieldVal.CanSet() {
-				slog.Error("fieldVal cant set:", "fieldName", fieldName)
+				slog.Error("field cant set", "columnName", columnName)
 				continue
 			}
-			fieldConverter := option.GetFieldConverter(fieldName)
+			fieldConverter := option.GetConverterByColumnName(columnName)
 			if fieldConverter != nil {
 				// 自定义的转换接口
-				v := fieldConverter(newItem.Interface(), fieldName, fieldString)
+				v := fieldConverter(newItem.Interface(), columnName, fieldString)
 				fieldVal.Set(reflect.ValueOf(v))
 			} else {
+				fieldConverter = option.GetConverterByType(fieldVal.Type())
+				if fieldConverter != nil {
+					// 自定义的转换接口
+					v := fieldConverter(newItem.Interface(), columnName, fieldString)
+					fieldVal.Set(reflect.ValueOf(v))
+					continue
+				}
 				switch fieldVal.Type().Kind() {
 				case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 					fieldVal.SetInt(util.Atoi64(fieldString))
-					slog.Debug("SetInt", fieldName, fieldVal.Int())
 				case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 					fieldVal.SetUint(util.Atou(fieldString))
-					slog.Debug("SetUint", fieldName, fieldVal.Uint())
 				case reflect.String:
 					fieldVal.SetString(fieldString)
-					slog.Debug("SetString", fieldName, fieldVal.String())
+				case reflect.Float32:
+					f32, err := strconv.ParseFloat(fieldString, 32)
+					if err != nil {
+						slog.Error("float64 convert error:", "columnName", columnName, "fieldString", fieldString, "err", err)
+						break
+					}
+					fieldVal.SetFloat(f32)
 				case reflect.Float64:
 					f64, err := strconv.ParseFloat(fieldString, 64)
 					if err != nil {
-						slog.Debug("float64 convert error:", "fieldName", fieldName, "fieldString", fieldString, "err", err)
+						slog.Error("float64 convert error:", "columnName", columnName, "fieldString", fieldString, "err", err)
 						break
 					}
 					fieldVal.SetFloat(f64)
-					slog.Debug("SetFloat", fieldName, fieldVal.Float())
 				case reflect.Bool:
 					fieldVal.SetBool(fieldString == "true" || fieldString == "1")
-					slog.Debug("SetBool", fieldName, fieldVal.Bool())
 				case reflect.Slice:
 					// 常规数组解析
+					if fieldString == "" {
+						continue
+					}
 					newSlice := reflect.MakeSlice(fieldVal.Type(), 0, 0)
 					sliceElemType := fieldVal.Type().Elem()
+					converter := option.GetConverterByType(sliceElemType)
 					strs := strings.Split(fieldString, option.SliceSeparator)
 					for _, str := range strs {
-						sliceElemValue := gentity.ConvertStringToRealType(sliceElemType, str)
+						if str == "" {
+							continue
+						}
+						var sliceElemValue interface{}
+						if converter != nil {
+							sliceElemValue = converter(newItem.Interface(), columnName, str)
+						} else {
+							sliceElemValue = gentity.ConvertStringToRealType(sliceElemType, str)
+						}
+						if sliceElemValue == nil {
+							slog.Error("slice item parse error", "columnName", columnName, "fieldString", fieldString, "str", str)
+							continue
+						}
 						newSlice = reflect.Append(newSlice, reflect.ValueOf(sliceElemValue))
 					}
 					fieldVal.Set(newSlice)
 				case reflect.Map:
 					// 常规map解析
+					if fieldString == "" {
+						continue
+					}
 					newMap := reflect.MakeMap(fieldVal.Type())
 					fieldKeyType := fieldVal.Type().Key()
 					fieldValueType := fieldVal.Type().Elem()
+					converter := option.GetConverterByType(fieldValueType)
 					mapItemStrs := strings.Split(fieldString, option.MapSeparator)
 					for _, mapItemStr := range mapItemStrs {
 						kvStr := strings.Split(mapItemStr, option.MapKVSeparator)
 						if len(kvStr) == 2 {
 							fieldKeyValue := gentity.ConvertStringToRealType(fieldKeyType, kvStr[0])
-							fieldValueValue := gentity.ConvertStringToRealType(fieldValueType, kvStr[1])
+							var fieldValueValue interface{}
+							if converter != nil {
+								fieldValueValue = converter(newItem.Interface(), columnName, kvStr[1])
+							} else {
+								fieldValueValue = gentity.ConvertStringToRealType(fieldValueType, kvStr[1])
+							}
+							if fieldValueValue == nil {
+								slog.Error("map value parse error", "columnName", columnName, "fieldString", fieldString, "kvStr", kvStr)
+								continue
+							}
 							newMap.SetMapIndex(reflect.ValueOf(fieldKeyValue), reflect.ValueOf(fieldValueValue))
+						} else {
+							slog.Error("map kv len error", "columnName", columnName, "fieldString", fieldString, "kvStr", kvStr)
 						}
 					}
 					fieldVal.Set(newMap)
 				default:
-					slog.Debug("unsupported kind:", "fieldName", fieldName, "fieldVal", fieldVal, "kind", fieldVal.Type().Kind())
+					slog.Error("unsupported kind", "columnName", columnName, "fieldVal", fieldVal, "kind", fieldVal.Type().Kind())
 					continue
 				}
 			}
-
 		}
 		// 下面的代码会导致slog停止打印后续的日志,why?
 		//slog.Debug("parse row", "key", key, "newItem", fmt.Sprintf("%v", newItemIf))
