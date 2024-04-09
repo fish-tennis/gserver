@@ -35,7 +35,7 @@ func TestReadCsvFromDataProto(t *testing.T) {
 	}
 	// proto.Message格式的map
 	m := make(map[int32]*pb.ItemCfg)
-	err := ReadCsvFromData(rows, m, option)
+	err := ReadCsvFromDataMap(rows, m, option)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -67,7 +67,7 @@ func TestReadCsvFromDataStruct(t *testing.T) {
 	}
 	// map的key也可以是字符串
 	m := make(map[string]testItemCfg)
-	err := ReadCsvFromData(rows, m, option)
+	err := ReadCsvFromDataMap(rows, m, option)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -102,14 +102,14 @@ func TestReadCsvFromDataConverter(t *testing.T) {
 	// 注册列名对应的解析接口
 	// 这里的ColorFlags列演示了一种特殊需求: 颜色的组合值用更易读的方式在csv中填写
 	option.RegisterConverterByColumnName("ColorFlags", func(obj interface{}, columnName, fieldStr string) interface{} {
-		t.Logf("ColorFlags parse columnName:%s,fieldStr:%s", columnName, fieldStr)
 		colorStrs := strings.Split(fieldStr, ";")
 		flags := int32(0)
 		for _, colorStr := range colorStrs {
-			if colorValue, ok := pb.Color_value["Color_"+colorStr]; ok {
-				flags |= colorValue
+			if colorValue, ok := pb.Color_value["Color_"+colorStr]; ok && colorValue > 0 {
+				flags |= (1 << (colorValue - 1))
 			}
 		}
+		t.Logf("ColorFlags parse columnName:%v,fieldStr:%v flags:%v", columnName, fieldStr, flags)
 		return flags
 	})
 	// 注册pb.ItemNum的解析接口
@@ -136,7 +136,7 @@ func TestReadCsvFromDataConverter(t *testing.T) {
 	})
 	// 注册颜色枚举的自定义解析接口,csv中可以直接填写颜色对应的字符串
 	option.RegisterConverterByType(reflect.TypeOf(pb.Color(0)), func(obj interface{}, columnName, fieldStr string) interface{} {
-		t.Logf("pb.Color parse columnName:%s,fieldStr:%s", columnName, fieldStr)
+		t.Logf("pb.Color parse columnName:%v,fieldStr:%v", columnName, fieldStr)
 		if colorValue, ok := pb.Color_value["Color_"+fieldStr]; ok {
 			return pb.Color(colorValue)
 		}
@@ -144,7 +144,7 @@ func TestReadCsvFromDataConverter(t *testing.T) {
 	})
 
 	m := make(map[int]*testCfg)
-	err := ReadCsvFromData(rows, m, option)
+	err := ReadCsvFromDataMap(rows, m, option)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -172,4 +172,49 @@ func TestMapReflect(t *testing.T) {
 	for _, cfg := range m {
 		t.Logf("%v", cfg)
 	}
+}
+
+func TestReadCsvFromDataSlice(t *testing.T) {
+	rows := [][]string{
+		{"CfgId", "Name", "Detail", "Unique", "unknownColumnTest"},
+		{"1", "普通物品1", "普通物品1详细信息", "false", "123"},
+		{"2", "普通物品2", "普通物品2详细信息", "false", "test"},
+		{"3", "装备3", "装备3详细信息", "true", ""},
+	}
+	option := &CsvOption{
+		DataBeginRowIndex: 1,
+		SliceSeparator:    ";",
+		MapKVSeparator:    "_",
+		MapSeparator:      ";",
+	}
+	s := make([]*pb.ItemCfg, 0)
+	newSlice, err := ReadCsvFromDataSlice(rows, s, option)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i, item := range newSlice {
+		t.Logf("%v: %v", i, item)
+	}
+}
+
+func TestReadCsvFromDataObject(t *testing.T) {
+	rows := [][]string{
+		{"Key", "Value", "unknownColumnTest"},
+		{"CfgId", "123", "comment1"},
+		{"Name", "物品名", "comment2"},
+		{"Detail", "物品详情", "comment3"},
+		{"Unique", "true", "comment4"},
+	}
+	option := &CsvOption{
+		DataBeginRowIndex: 1,
+		SliceSeparator:    ";",
+		MapKVSeparator:    "_",
+		MapSeparator:      ";",
+	}
+	obj := new(pb.ItemCfg)
+	err := ReadCsvFromDataObject(rows, obj, option)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("%v", obj)
 }
