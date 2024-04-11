@@ -60,7 +60,7 @@ func TestReadCsvFromDataStruct(t *testing.T) {
 	// 测试非proto.Message的map格式
 	type testItemCfg struct {
 		Name      string
-		Detail    string
+		Detail    *string // 测试指针类型的字段
 		Unique    bool
 		SliceTest []int
 		MapTest   map[string]int32
@@ -73,45 +73,40 @@ func TestReadCsvFromDataStruct(t *testing.T) {
 	}
 	for _, item := range m {
 		t.Logf("%v", item)
+		t.Logf("Detail:%v", *item.Detail)
 	}
 }
 
 func TestReadCsvFromDataConverter(t *testing.T) {
 	rows := [][]string{
-		{"CfgId", "Name", "Item", "Items", "ColorFlags", "Color", "ItemStruct"},
-		{"1", "Name1", "123_1", "123_1;456_2", "Red;Green;Blue", "Red", "123_1"},
-		{"2", "Name2", "456_5", "123_1", "Gray;Yellow", "Gray", "456_5"},
-		{"3", "Name3", "789_10", "", "", "", ""},
+		{"CfgId", "Name", "Item", "Items", "ColorFlags", "Color", "ColorPtr", "ItemStruct", "ItemStructs", "ItemMap"},
+		{"1", "Name1", "123_1", "123_1;456_2", "Red;Green;Blue", "Red", "Red", "123_1", "321_1;654_2", "1#321_1;2#654_2"},
+		{"2", "Name2", "456_5", "123_1", "Gray;Yellow", "Gray", "Gray", "456_5", "321_1", "1#321_1"},
+		{"3", "Name3", "789_10", "", "", "", "", "", "", ""},
 	}
 	type testCfg struct {
 		CfgId      int32
 		Name       string
 		Item       *pb.ItemNum
-		Items      []*pb.ItemNum
-		ColorFlags int32 // 颜色的组合值,如 Red | Green
+		ItemStruct pb.ItemNum // 注册了&pb.ItemNum{}接口,pb.ItemNum也会被正确解析
+
+		Items       []*pb.ItemNum
+		ItemStructs []pb.ItemNum // 注册了&pb.ItemNum{}接口,pb.ItemNum也会被正确解析
+
+		ItemMap map[int32]*pb.ItemNum
+
 		Color      pb.Color
-		ItemStruct pb.ItemNum
+		ColorPtr   *pb.Color // 注册了pb.Color接口,*pb.Color也会被正确解析
+		ColorFlags int32     // 颜色的组合值,如 Red | Green
 	}
 
 	option := &CsvOption{
 		DataBeginRowIndex: 1,
 		SliceSeparator:    ";",
-		MapKVSeparator:    "_",
+		MapKVSeparator:    "#",
 		MapSeparator:      ";",
 	}
-	// 注册列名对应的解析接口
-	// 这里的ColorFlags列演示了一种特殊需求: 颜色的组合值用更易读的方式在csv中填写
-	option.RegisterConverterByColumnName("ColorFlags", func(obj interface{}, columnName, fieldStr string) interface{} {
-		colorStrs := strings.Split(fieldStr, ";")
-		flags := int32(0)
-		for _, colorStr := range colorStrs {
-			if colorValue, ok := pb.Color_value["Color_"+colorStr]; ok && colorValue > 0 {
-				flags |= (1 << (colorValue - 1))
-			}
-		}
-		t.Logf("ColorFlags parse columnName:%v,fieldStr:%v flags:%v", columnName, fieldStr, flags)
-		return flags
-	})
+
 	// 注册pb.ItemNum的解析接口
 	option.RegisterConverterByType(reflect.TypeOf(&pb.ItemNum{}), func(obj interface{}, columnName, fieldStr string) interface{} {
 		strs := strings.Split(fieldStr, "_")
@@ -123,17 +118,6 @@ func TestReadCsvFromDataConverter(t *testing.T) {
 			Num:   int32(util.Atoi(strs[1])),
 		}
 	})
-	// NOTE: pb.ItemNum{}和&pb.ItemNum{}是2个不同的type
-	option.RegisterConverterByType(reflect.TypeOf(pb.ItemNum{}), func(obj interface{}, columnName, fieldStr string) interface{} {
-		strs := strings.Split(fieldStr, "_")
-		if len(strs) != 2 {
-			return nil
-		}
-		return pb.ItemNum{
-			CfgId: int32(util.Atoi(strs[0])),
-			Num:   int32(util.Atoi(strs[1])),
-		}
-	})
 	// 注册颜色枚举的自定义解析接口,csv中可以直接填写颜色对应的字符串
 	option.RegisterConverterByType(reflect.TypeOf(pb.Color(0)), func(obj interface{}, columnName, fieldStr string) interface{} {
 		t.Logf("pb.Color parse columnName:%v,fieldStr:%v", columnName, fieldStr)
@@ -141,6 +125,19 @@ func TestReadCsvFromDataConverter(t *testing.T) {
 			return pb.Color(colorValue)
 		}
 		return pb.Color(0)
+	})
+	// 注册列名对应的解析接口
+	// 这里的ColorFlags列演示了一种特殊需求: 颜色的组合值用更易读的方式在csv中填写
+	option.RegisterConverterByColumnName("ColorFlags", func(obj interface{}, columnName, fieldStr string) interface{} {
+		colorStrs := strings.Split(fieldStr, ";")
+		flags := int32(0)
+		for _, colorStr := range colorStrs {
+			if colorValue, ok := pb.Color_value["Color_"+colorStr]; ok && colorValue > 0 {
+				flags |= 1 << (colorValue - 1)
+			}
+		}
+		t.Logf("ColorFlags parse columnName:%v,fieldStr:%v flags:%v", columnName, fieldStr, flags)
+		return flags
 	})
 
 	m := make(map[int]*testCfg)
@@ -211,10 +208,17 @@ func TestReadCsvFromDataObject(t *testing.T) {
 		MapKVSeparator:    "_",
 		MapSeparator:      ";",
 	}
-	obj := new(pb.ItemCfg)
+	type testCfg struct {
+		CfgId  int32
+		Name   string
+		Detail *string
+		Unique bool
+	}
+	obj := new(testCfg)
 	err := ReadCsvFromDataObject(rows, obj, option)
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Logf("%v", obj)
+	t.Logf("Detail:%v", *obj.Detail)
 }

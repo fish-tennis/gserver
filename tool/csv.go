@@ -69,6 +69,28 @@ func (co *CsvOption) GetConverterByType(typ reflect.Type) FieldConverter {
 	return co.customFieldConvertersByType[typ]
 }
 
+// 如果typ是Struct,但是注册的FieldConverter是同类型的Ptr,则会返回Ptr类型的FieldConverter,同时convertToElem返回true
+func (co *CsvOption) GetConverterByTypePtrOrStruct(typ reflect.Type) (converter FieldConverter, convertToElem bool) {
+	if co.customFieldConvertersByType == nil {
+		return
+	}
+	converter, _ = co.customFieldConvertersByType[typ]
+	if converter == nil {
+		if typ.Kind() == reflect.Struct {
+			converter = co.GetConverterByType(reflect.PtrTo(typ))
+			// 注册的是指针类型,转换后,需要把ptr转换成elem
+			convertToElem = converter != nil
+			return
+		}
+		//else if typ.Kind() == reflect.Ptr {
+		//	converter = co.GetConverterByType(typ.Elem())
+		//	convertToPtr = converter != nil
+		//	return
+		//}
+	}
+	return
+}
+
 type IntOrString interface {
 	~int | ~int8 | ~int16 | ~int32 | ~int64 |
 		~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64 | ~string
@@ -187,6 +209,11 @@ func ReadCsvFromDataObject[V any](rows [][]string, v V, option *CsvOption) error
 		columnName := row[0]
 		fieldString := row[1]
 		fieldVal := valElem.FieldByName(columnName)
+		if fieldVal.Kind() == reflect.Ptr { // 指针类型的字段,如 Name *string
+			fieldObj := reflect.New(fieldVal.Type().Elem()) // 如new(string)
+			fieldVal.Set(fieldObj)                          // 如 obj.Name = new(string)
+			fieldVal = fieldObj.Elem()                      // 如 *(obj.Name)
+		}
 		ConvertStringToFieldValue(val, fieldVal, columnName, fieldString, option)
 	}
 	return nil
@@ -208,7 +235,8 @@ func ConvertStringToFieldValue(object, fieldVal reflect.Value, columnName, field
 		v := fieldConverter(object.Interface(), columnName, fieldString)
 		fieldVal.Set(reflect.ValueOf(v))
 	} else {
-		fieldConverter = option.GetConverterByType(fieldVal.Type())
+		var convertToElem bool
+		fieldConverter, convertToElem = option.GetConverterByTypePtrOrStruct(fieldVal.Type())
 		if fieldConverter != nil {
 			// 自定义的转换接口
 			v := fieldConverter(object.Interface(), columnName, fieldString)
@@ -216,16 +244,23 @@ func ConvertStringToFieldValue(object, fieldVal reflect.Value, columnName, field
 				slog.Debug("field parse error", "columnName", columnName, "fieldString", fieldString)
 				return
 			}
-			fieldVal.Set(reflect.ValueOf(v))
+			if convertToElem {
+				fieldVal.Set(reflect.ValueOf(v).Elem())
+			} else {
+				fieldVal.Set(reflect.ValueOf(v))
+			}
 			return
 		}
 		switch fieldVal.Type().Kind() {
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 			fieldVal.SetInt(util.Atoi64(fieldString))
+
 		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 			fieldVal.SetUint(util.Atou(fieldString))
+
 		case reflect.String:
 			fieldVal.SetString(fieldString)
+
 		case reflect.Float32:
 			f32, err := strconv.ParseFloat(fieldString, 32)
 			if err != nil {
@@ -233,6 +268,7 @@ func ConvertStringToFieldValue(object, fieldVal reflect.Value, columnName, field
 				break
 			}
 			fieldVal.SetFloat(f32)
+
 		case reflect.Float64:
 			f64, err := strconv.ParseFloat(fieldString, 64)
 			if err != nil {
@@ -240,8 +276,10 @@ func ConvertStringToFieldValue(object, fieldVal reflect.Value, columnName, field
 				break
 			}
 			fieldVal.SetFloat(f64)
+
 		case reflect.Bool:
 			fieldVal.SetBool(fieldString == "true" || fieldString == "1")
+
 		case reflect.Slice:
 			// 常规数组解析
 			if fieldString == "" {
@@ -249,7 +287,7 @@ func ConvertStringToFieldValue(object, fieldVal reflect.Value, columnName, field
 			}
 			newSlice := reflect.MakeSlice(fieldVal.Type(), 0, 0)
 			sliceElemType := fieldVal.Type().Elem()
-			converter := option.GetConverterByType(sliceElemType)
+			converter, convertToElem := option.GetConverterByTypePtrOrStruct(sliceElemType)
 			strs := strings.Split(fieldString, option.SliceSeparator)
 			for _, str := range strs {
 				if str == "" {
@@ -265,9 +303,14 @@ func ConvertStringToFieldValue(object, fieldVal reflect.Value, columnName, field
 					slog.Error("slice item parse error", "columnName", columnName, "fieldString", fieldString, "str", str)
 					continue
 				}
-				newSlice = reflect.Append(newSlice, reflect.ValueOf(sliceElemValue))
+				if convertToElem {
+					newSlice = reflect.Append(newSlice, reflect.ValueOf(sliceElemValue).Elem())
+				} else {
+					newSlice = reflect.Append(newSlice, reflect.ValueOf(sliceElemValue))
+				}
 			}
 			fieldVal.Set(newSlice)
+
 		case reflect.Map:
 			// 常规map解析
 			if fieldString == "" {
@@ -276,7 +319,7 @@ func ConvertStringToFieldValue(object, fieldVal reflect.Value, columnName, field
 			newMap := reflect.MakeMap(fieldVal.Type())
 			fieldKeyType := fieldVal.Type().Key()
 			fieldValueType := fieldVal.Type().Elem()
-			converter := option.GetConverterByType(fieldValueType)
+			converter, convertToElem := option.GetConverterByTypePtrOrStruct(fieldValueType)
 			mapItemStrs := strings.Split(fieldString, option.MapSeparator)
 			for _, mapItemStr := range mapItemStrs {
 				kvStr := strings.Split(mapItemStr, option.MapKVSeparator)
@@ -292,12 +335,17 @@ func ConvertStringToFieldValue(object, fieldVal reflect.Value, columnName, field
 						slog.Error("map value parse error", "columnName", columnName, "fieldString", fieldString, "kvStr", kvStr)
 						continue
 					}
-					newMap.SetMapIndex(reflect.ValueOf(fieldKeyValue), reflect.ValueOf(fieldValueValue))
+					if convertToElem {
+						newMap.SetMapIndex(reflect.ValueOf(fieldKeyValue), reflect.ValueOf(fieldValueValue).Elem())
+					} else {
+						newMap.SetMapIndex(reflect.ValueOf(fieldKeyValue), reflect.ValueOf(fieldValueValue))
+					}
 				} else {
 					slog.Error("map kv len error", "columnName", columnName, "fieldString", fieldString, "kvStr", kvStr)
 				}
 			}
 			fieldVal.Set(newMap)
+
 		default:
 			slog.Error("unsupported kind", "columnName", columnName, "fieldVal", fieldVal, "kind", fieldVal.Type().Kind())
 			return
@@ -319,6 +367,11 @@ func ConvertCsvLineToValue(valueType reflect.Type, row []string, columnNames []s
 		columnName := columnNames[columnIndex]
 		fieldString := row[columnIndex]
 		fieldVal := newObjectElem.FieldByName(columnName)
+		if fieldVal.Kind() == reflect.Ptr { // 指针类型的字段,如 Name *string
+			fieldObj := reflect.New(fieldVal.Type().Elem()) // 如new(string)
+			fieldVal.Set(fieldObj)                          // 如 obj.Name = new(string)
+			fieldVal = fieldObj.Elem()                      // 如 *(obj.Name)
+		}
 		ConvertStringToFieldValue(newObject, fieldVal, columnName, fieldString, option)
 	}
 	return newObject
