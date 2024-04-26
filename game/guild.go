@@ -1,10 +1,30 @@
 package game
 
 import (
+	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 )
+
+const (
+	// 组件名
+	ComponentNameGuild = "Guild"
+)
+
+// 利用go的init进行组件的自动注册
+func init() {
+	RegisterPlayerComponentCtor(ComponentNameGuild, 100, func(player *Player, playerData *pb.PlayerData) gentity.Component {
+		component := &Guild{
+			PlayerDataComponent: *NewPlayerDataComponent(player, ComponentNameGuild),
+			Data: &pb.PlayerGuildData{
+				GuildId: 0,
+			},
+		}
+		gentity.LoadData(component, playerData.GetGuild())
+		return component
+	})
+}
 
 // 玩家的公会模块
 type Guild struct {
@@ -12,14 +32,8 @@ type Guild struct {
 	Data *pb.PlayerGuildData `db:"Guild"`
 }
 
-func NewGuild(player *Player) *Guild {
-	component := &Guild{
-		PlayerDataComponent: *NewPlayerDataComponent(player,"Guild"),
-		Data: &pb.PlayerGuildData{
-			GuildId: 0,
-		},
-	}
-	return component
+func (this *Player) GetGuild() *Guild {
+	return this.GetComponentByName(ComponentNameGuild).(*Guild)
 }
 
 func (this *Guild) GetGuildData() *pb.PlayerGuildData {

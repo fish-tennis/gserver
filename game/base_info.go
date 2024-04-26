@@ -1,12 +1,40 @@
 package game
 
 import (
+	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cfg"
 	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 )
+
+const (
+	// 组件名
+	ComponentNameBaseInfo = "BaseInfo"
+)
+
+// 利用go的init进行组件的自动注册
+func init() {
+	RegisterPlayerComponentCtor(ComponentNameBaseInfo, 0, func(player *Player, playerData *pb.PlayerData) gentity.Component {
+		component := &BaseInfo{
+			PlayerDataComponent: PlayerDataComponent{
+				BasePlayerComponent: BasePlayerComponent{
+					player: player,
+					name:   ComponentNameBaseInfo,
+				},
+			},
+			Data: &pb.BaseInfo{
+				Level: 1,
+				Exp:   0,
+			},
+		}
+		if playerData != nil && playerData.BaseInfo != nil {
+			component.Data = playerData.BaseInfo
+		}
+		return component
+	})
+}
 
 // 玩家基础信息组件
 type BaseInfo struct {
@@ -15,23 +43,8 @@ type BaseInfo struct {
 	Data *pb.BaseInfo `db:"BaseInfo;plain"`
 }
 
-func NewBaseInfo(player *Player, data *pb.BaseInfo) *BaseInfo {
-	component := &BaseInfo{
-		PlayerDataComponent: PlayerDataComponent{
-			BasePlayerComponent: BasePlayerComponent{
-				player: player,
-				name:   "BaseInfo",
-			},
-		},
-		Data: &pb.BaseInfo{
-			Level: 1,
-			Exp:   0,
-		},
-	}
-	if data != nil {
-		component.Data = data
-	}
-	return component
+func (this *Player) GetBaseInfo() *BaseInfo {
+	return this.GetComponentByName(ComponentNameBaseInfo).(*BaseInfo)
 }
 
 // 玩家进游戏服成功,非客户端消息

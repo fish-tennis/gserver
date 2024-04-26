@@ -1,11 +1,32 @@
 package game
 
 import (
+	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/gen"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 )
+
+const (
+	// 组件名
+	ComponentNameMoney = "Money"
+)
+
+// 利用go的init进行组件的自动注册
+func init() {
+	RegisterPlayerComponentCtor(ComponentNameMoney, 0, func(player *Player, playerData *pb.PlayerData) gentity.Component {
+		component := &Money{
+			PlayerDataComponent: *NewPlayerDataComponent(player, ComponentNameMoney),
+			Data: &pb.Money{
+				Coin:    0,
+				Diamond: 0,
+			},
+		}
+		gentity.LoadData(component, playerData.GetMoney())
+		return component
+	})
+}
 
 // 玩家的钱财组件
 type Money struct {
@@ -13,17 +34,6 @@ type Money struct {
 	// 该字段必须导出(首字母大写)
 	// 使用struct tag来标记该字段需要存数据库,可以设置存储字段名
 	Data *pb.Money `db:"Money"`
-}
-
-func NewMoney(player *Player) *Money {
-	component := &Money{
-		PlayerDataComponent: *NewPlayerDataComponent(player, "Money"),
-		Data: &pb.Money{
-			Coin:    0,
-			Diamond: 0,
-		},
-	}
-	return component
 }
 
 func (this *Money) IncCoin(coin int32) {

@@ -147,26 +147,6 @@ func (this *Player) GetLevel() int32 {
 	return this.GetBaseInfo().Data.Level
 }
 
-func (this *Player) GetBaseInfo() *BaseInfo {
-	return this.GetComponent("BaseInfo").(*BaseInfo)
-}
-
-func (this *Player) GetBag() *Bag {
-	return this.GetComponent("Bag").(*Bag)
-}
-
-func (this *Player) GetQuest() *Quest {
-	return this.GetComponent("Quest").(*Quest)
-}
-
-func (this *Player) GetGuild() *Guild {
-	return this.GetComponent("Guild").(*Guild)
-}
-
-func (this *Player) GetActivities() *Activities {
-	return this.GetComponent("Activities").(*Activities)
-}
-
 // 开启消息处理协程
 // 每个玩家一个独立的消息处理协程
 // 除了登录消息,其他消息都在玩家自己的协程里处理,因此这里对本玩家的操作不需要加锁
@@ -249,15 +229,21 @@ func CreatePlayerFromData(playerData *pb.PlayerData) *Player {
 	}
 	player.Id = playerData.XId
 	// 初始化玩家的各个模块
-	player.AddComponent(NewBaseInfo(player, playerData.BaseInfo), nil)
-	player.AddComponent(NewMoney(player), playerData.Money)
-	player.AddComponent(NewBag(player), playerData.Bag)
-	player.AddComponent(NewQuest(player), playerData.Quest)
-	player.AddComponent(NewGuild(player), playerData.Guild)
-	player.AddComponent(NewPendingMessages(player), playerData.PendingMessages)
-	activities := NewActivities(player)
-	player.AddComponent(activities, nil)
-	activities.LoadData(playerData.Activities)
+	for _, componentCtor := range _playerComponentRegister {
+		component := componentCtor.Ctor(player, playerData)
+		if component != nil && player.GetComponentByName(component.GetName()) == nil {
+			player.AddComponent(component, nil)
+		}
+	}
+	//player.AddComponent(NewBaseInfo(player, playerData.BaseInfo), nil)
+	//player.AddComponent(NewMoney(player), playerData.Money)
+	//player.AddComponent(NewBag(player), playerData.Bag)
+	//player.AddComponent(NewQuest(player), playerData.Quest)
+	//player.AddComponent(NewGuild(player), playerData.Guild)
+	//player.AddComponent(NewPendingMessages(player), playerData.PendingMessages)
+	//activities := NewActivities(player)
+	//player.AddComponent(activities, nil)
+	//activities.LoadData(playerData.Activities)
 	return player
 }
 

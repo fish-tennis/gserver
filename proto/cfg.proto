@@ -89,3 +89,9 @@ message ExchangeCfg {
   repeated ItemNum Rewards = 3; // 获得物品
   int32 CountLimit = 4; // 兑换次数限制
 }
+
+// 升级经验
+message LevelExp {
+	int32 Level = 1; // 等级
+	int32 NeedExp = 2; // 升到该等级需要的经验值
+}

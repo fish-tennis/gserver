@@ -16,18 +16,33 @@ var (
 	_activityTemplateCtorMap = make(map[string]func(activities ActivityMgr, activityCfg *cfg.ActivityCfg, args interface{}) Activity)
 )
 
+const (
+	// 组件名
+	ComponentNameActivities = "Activities"
+)
+
+// 利用go的init进行组件的自动注册
+func init() {
+	RegisterPlayerComponentCtor(ComponentNameActivities, 100, func(player *Player, playerData *pb.PlayerData) gentity.Component {
+		component := &Activities{
+			PlayerMapDataComponent: *NewPlayerMapDataComponent(player, ComponentNameActivities),
+			Data:                   make(map[int32]Activity),
+		}
+		// 活动组件使用了动态结构,不能使用gentity.LoadData来自动加载数据
+		// 自己解析出具体的子活动数据
+		component.LoadData(playerData.GetActivities())
+		return component
+	})
+}
+
 // 活动模块
 type Activities struct {
 	PlayerMapDataComponent
 	Data map[int32]Activity `db:"Data"`
 }
 
-func NewActivities(player *Player) *Activities {
-	component := &Activities{
-		PlayerMapDataComponent: *NewPlayerMapDataComponent(player, "Activities"),
-		Data:                   make(map[int32]Activity),
-	}
-	return component
+func (this *Player) GetActivities() *Activities {
+	return this.GetComponentByName(ComponentNameActivities).(*Activities)
 }
 
 // 根据模板创建活动对象
@@ -177,7 +192,7 @@ type ChildActivity struct {
 // 子活动设置脏标记时,玩家活动模块也设置脏标记
 func (this *ChildActivity) SetDirty() {
 	this.BaseDirtyMark.SetDirty()
-	this.Activities.SetDirty(this.GetId(), false)
+	this.Activities.SetDirty(this.GetId(), true)
 }
 
 // 活动配置数据

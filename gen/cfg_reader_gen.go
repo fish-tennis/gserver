@@ -250,3 +250,20 @@ func (r *ExchangeCfgReader) GetRewards() []*ItemNumReader {
 func (r *ExchangeCfgReader) GetCountLimit() int32 {
 	return r.v.GetCountLimit()
 }
+
+type LevelExpReader struct {
+	v *LevelExp
+}
+
+func NewLevelExpReader(src *LevelExp) *LevelExpReader {
+	return &LevelExpReader{v:src}
+}
+
+
+func (r *LevelExpReader) GetLevel() int32 {
+	return r.v.GetLevel()
+}
+
+func (r *LevelExpReader) GetNeedExp() int32 {
+	return r.v.GetNeedExp()
+}

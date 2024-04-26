@@ -367,8 +367,15 @@ func (this *GameServer) onKickPlayer(connection Connection, packet Packet) {
 		logger.Debug("kick player account:%v playerId:%v gameServerId:%v",
 			req.GetAccountId(), req.GetPlayerId(), this.GetId())
 	} else {
-		logger.Error("kick player failed account:%v playerId:%v gameServerId:%v",
-			req.GetAccountId(), req.GetPlayerId(), this.GetId())
+		playerId, gameServerId := cache.GetOnlineAccount(req.AccountId)
+		if playerId == req.PlayerId && gameServerId == this.GetId() {
+			cache.RemoveOnlineAccount(req.AccountId)
+			logger.Info("kick player2 account:%v playerId:%v gameServerId:%v",
+				req.GetAccountId(), req.GetPlayerId(), this.GetId())
+		} else {
+			logger.Error("kick player failed account:%v playerId:%v gameServerId:%v",
+				req.GetAccountId(), req.GetPlayerId(), this.GetId())
+		}
 	}
 }
 

@@ -1,9 +1,43 @@
 package game
 
 import (
+	"cmp"
 	"github.com/fish-tennis/gentity"
-	"strings"
+	"github.com/fish-tennis/gserver/pb"
+	"slices"
 )
+
+var (
+	// Player组件注册表
+	_playerComponentRegister = make([]*PlayerComponentCtor, 0)
+)
+
+func RegisterPlayerComponentCtor(componentName string, ctorOrder int, ctor func(player *Player, playerData *pb.PlayerData) gentity.Component) {
+	if slices.ContainsFunc(_playerComponentRegister, func(ctor *PlayerComponentCtor) bool {
+		return ctor.ComponentName == componentName
+	}) {
+		return
+	}
+	_playerComponentRegister = append(_playerComponentRegister, &PlayerComponentCtor{
+		ComponentName: componentName,
+		Ctor:          ctor,
+		CtorOrder:     ctorOrder,
+	})
+	slices.SortStableFunc(_playerComponentRegister, func(a, b *PlayerComponentCtor) int {
+		if a.CtorOrder == b.CtorOrder {
+			return cmp.Compare(a.ComponentName, b.ComponentName)
+		}
+		return cmp.Compare(a.CtorOrder, b.CtorOrder)
+	})
+}
+
+type PlayerComponentCtor struct {
+	ComponentName string
+	Ctor          func(player *Player, playerData *pb.PlayerData) gentity.Component
+	// 构造顺序,数值小的组件,先执行
+	// 因为有的组件有依赖关系
+	CtorOrder int
+}
 
 // 玩家组件接口
 type PlayerComponent interface {
@@ -22,10 +56,6 @@ type BasePlayerComponent struct {
 // 组件名
 func (this *BasePlayerComponent) GetName() string {
 	return this.name
-}
-
-func (this *BasePlayerComponent) GetNameLower() string {
-	return strings.ToLower(this.name)
 }
 
 func (this *BasePlayerComponent) GetEntity() gentity.Entity {

@@ -11,6 +11,30 @@ import (
 	"github.com/fish-tennis/gserver/pb"
 )
 
+const (
+	// 组件名
+	ComponentNameQuest = "Quest"
+)
+
+// 利用go的init进行组件的自动注册
+func init() {
+	RegisterPlayerComponentCtor(ComponentNameQuest, 0, func(player *Player, playerData *pb.PlayerData) gentity.Component {
+		component := &Quest{
+			BasePlayerComponent: BasePlayerComponent{
+				player: player,
+				name:   ComponentNameQuest,
+			},
+			Finished: &FinishedQuests{},
+			Quests:   &CurQuests{},
+		}
+		component.Finished.quest = component
+		component.Quests.quest = component
+		component.checkData()
+		gentity.LoadData(component, playerData.GetQuest())
+		return component
+	})
+}
+
 // 任务模块
 // 有多个子模块
 type Quest struct {
@@ -20,6 +44,10 @@ type Quest struct {
 	Finished *FinishedQuests `child:""`
 	// 保存数据的子模块:当前任务列表
 	Quests *CurQuests `child:""`
+}
+
+func (this *Player) GetQuest() *Quest {
+	return this.GetComponentByName(ComponentNameQuest).(*Quest)
 }
 
 // 已完成的任务
@@ -42,7 +70,7 @@ func (f *FinishedQuests) Add(finishedQuestId int32) {
 // 当前任务列表
 type CurQuests struct {
 	gentity.BaseMapDirtyMark
-	quest  *Quest
+	quest *Quest
 	// struct tag里面没有设置保存字段名,会默认使用字段名的全小写形式
 	Quests map[int32]*pb.QuestData `db:""`
 }
@@ -70,30 +98,13 @@ func (c *CurQuests) Remove(questId int32) {
 
 // 触发了事件,检查任务进度的更新
 func (c *CurQuests) OnEvent(event interface{}) {
-	for _,questData := range c.Quests {
+	for _, questData := range c.Quests {
 		questCfg := cfg.GetQuestCfgMgr().GetQuestCfg(questData.GetCfgId())
 		if cfg.GetQuestCfgMgr().GetProgressMgr().CheckProgress(event, questCfg.ProgressCfg, questData) {
 			c.SetDirty(questData.GetCfgId(), true)
 			logger.Debug("quest %v progress:%v", questData.GetCfgId(), questData.GetProgress())
 		}
 	}
-}
-
-func NewQuest(player *Player) *Quest {
-	component := &Quest{
-		BasePlayerComponent: BasePlayerComponent{
-			player: player,
-			name:   "Quest",
-		},
-		Finished: &FinishedQuests{
-		},
-		Quests: &CurQuests{
-		},
-	}
-	component.Finished.quest = component
-	component.Quests.quest = component
-	component.checkData()
-	return component
 }
 
 func (this *Quest) checkData() {
@@ -128,13 +139,13 @@ func (this *Quest) OnEvent(event interface{}) {
 // 这种格式写的函数可以自动注册客户端消息回调
 func (this *Quest) OnFinishQuestReq(reqCmd gnet.PacketCommand, req *pb.FinishQuestReq) {
 	logger.Debug("OnFinishQuestReq:%v", req)
-	if questData,ok := this.Quests.Quests[req.QuestCfgId]; ok {
+	if questData, ok := this.Quests.Quests[req.QuestCfgId]; ok {
 		questCfg := cfg.GetQuestCfgMgr().GetQuestCfg(questData.GetCfgId())
 		if questData.GetProgress() >= questCfg.ProgressCfg.GetTotal() {
 			this.Quests.Remove(questData.GetCfgId())
 			this.Finished.Add(questData.GetCfgId())
 			// 任务奖励
-			for _,idNum := range questCfg.GetRewards() {
+			for _, idNum := range questCfg.GetRewards() {
 				this.GetPlayer().GetBag().AddItem(idNum.GetCfgId(), idNum.GetNum())
 			}
 			gen.SendFinishQuestRes(this.GetPlayer(), &pb.FinishQuestRes{

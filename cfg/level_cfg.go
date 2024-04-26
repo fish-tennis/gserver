@@ -1,10 +1,9 @@
 package cfg
 
 import (
-	"encoding/csv"
-	"github.com/fish-tennis/gentity/util"
 	"github.com/fish-tennis/gserver/logger"
-	"os"
+	"github.com/fish-tennis/gserver/pb"
+	"github.com/fish-tennis/gserver/tool"
 )
 
 var (
@@ -14,13 +13,13 @@ var (
 // 等级配置数据管理
 type LevelCfgMgr struct {
 	// 每一级升级所需要的经验
-	needExps []int32
+	needExps []*pb.LevelExp
 }
 
 func GetLevelCfgMgr() *LevelCfgMgr {
 	if _levelCfgMgr == nil {
 		_levelCfgMgr = &LevelCfgMgr{
-			needExps: make([]int32, 0),
+			needExps: make([]*pb.LevelExp, 0),
 		}
 	}
 	return _levelCfgMgr
@@ -31,27 +30,19 @@ func (this *LevelCfgMgr) GetMaxLevel() int32 {
 }
 
 func (this *LevelCfgMgr) GetNeedExp(nextLevel int32) int32 {
-	return this.needExps[nextLevel-1]
+	return this.needExps[nextLevel-1].NeedExp
 }
 
 func (this *LevelCfgMgr) Load(fileName string) bool {
-	file, err := os.Open(fileName)
+	option := &tool.CsvOption{
+		DataBeginRowIndex: 1,
+	}
+	s := make([]*pb.LevelExp, 0)
+	var err error
+	this.needExps, err = tool.ReadCsvFileSlice(fileName, s, option)
 	if err != nil {
-		logger.Error("%v", err)
+		logger.Error("csv read err:%v", err)
 		return false
 	}
-	defer file.Close()
-	reader := csv.NewReader(file)
-	data, err := reader.ReadAll()
-	if err != nil {
-		logger.Error("%v", err)
-		return false
-	}
-	for _, line := range data {
-		if len(this.needExps)+1 != util.Atoi(line[0]) {
-			logger.Error("level cfg error: %v", line)
-		}
-		this.needExps = append(this.needExps, int32(util.Atoi(line[1])))
-	}
-	return false
+	return true
 }

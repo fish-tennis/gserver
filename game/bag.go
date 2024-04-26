@@ -1,12 +1,34 @@
 package game
 
 import (
+	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gentity/util"
 	"github.com/fish-tennis/gserver/cfg"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 	"math"
 )
+
+const (
+	// 组件名
+	ComponentNameBag = "Bag"
+)
+
+// 利用go的init进行组件的自动注册
+func init() {
+	RegisterPlayerComponentCtor(ComponentNameBag, 100, func(player *Player, playerData *pb.PlayerData) gentity.Component {
+		component := &Bag{
+			BasePlayerComponent: BasePlayerComponent{
+				player: player,
+				name:   ComponentNameBag,
+			},
+			BagCountItem:  NewBagCountItem(),
+			BagUniqueItem: NewBagUniqueItem(),
+		}
+		gentity.LoadData(component, playerData.GetBag())
+		return component
+	})
+}
 
 // 背包模块
 // 演示通过组合模式,整合多个不同的子背包模块,提供更高一级的背包接口
@@ -16,16 +38,8 @@ type Bag struct {
 	BagUniqueItem *BagUniqueItem `child:"UniqueItem"`
 }
 
-func NewBag(player *Player) *Bag {
-	component := &Bag{
-		BasePlayerComponent: BasePlayerComponent{
-			player: player,
-			name:   "Bag",
-		},
-		BagCountItem:  NewBagCountItem(),
-		BagUniqueItem: NewBagUniqueItem(),
-	}
-	return component
+func (this *Player) GetBag() *Bag {
+	return this.GetComponentByName(ComponentNameBag).(*Bag)
 }
 
 func (this *Bag) AddItem(cfgId int32, num int32) bool {
@@ -36,7 +50,7 @@ func (this *Bag) AddItem(cfgId int32, num int32) bool {
 	if itemCfg.GetUnique() {
 		for i := 0; i < int(num); i++ {
 			this.BagUniqueItem.AddUniqueItem(&pb.UniqueItem{
-				CfgId: cfgId,
+				CfgId:    cfgId,
 				UniqueId: util.GenUniqueId(),
 			})
 		}
@@ -47,13 +61,13 @@ func (this *Bag) AddItem(cfgId int32, num int32) bool {
 }
 
 func (this *Bag) AddItems(items []*pb.ItemNum) {
-	for _,item := range items {
+	for _, item := range items {
 		this.AddItem(item.CfgId, item.Num)
 	}
 }
 
 func (this *Bag) DelItems(items []*pb.ItemNum) {
-	for _,item := range items {
+	for _, item := range items {
 		itemCfg := cfg.GetItemCfgMgr().GetItemCfg(item.CfgId)
 		if itemCfg == nil {
 			logger.Debug("itemCfg nil %v", item.CfgId)
@@ -70,7 +84,7 @@ func (this *Bag) DelItems(items []*pb.ItemNum) {
 func (this *Bag) IsEnough(items []*pb.ItemNum) bool {
 	// items可能有重复的物品,所以转换成map来统计总数量
 	itemNumMap := make(map[int32]int64)
-	for _,itemNum := range items {
+	for _, itemNum := range items {
 		if itemNum.Num <= 0 {
 			logger.Debug("wrong num %v", itemNum)
 			return false
@@ -82,7 +96,7 @@ func (this *Bag) IsEnough(items []*pb.ItemNum) bool {
 			return false
 		}
 	}
-	for cfgId,num := range itemNumMap {
+	for cfgId, num := range itemNumMap {
 		itemCfg := cfg.GetItemCfgMgr().GetItemCfg(cfgId)
 		if itemCfg == nil {
 			logger.Debug("itemCfg nil %v", cfgId)
