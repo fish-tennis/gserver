@@ -9,15 +9,24 @@ import (
 )
 
 var (
-	_questCfgMgr *QuestCfgMgr
+	_questCfgMgr = &QuestCfgMgr{
+		cfgs: make(map[int32]*QuestCfg),
+	}
 )
+
+func init() {
+	RegisterCfgLoader(&CfgLoaderOption{
+		Loader:   _questCfgMgr,
+		FileName: "questcfg.json",
+	})
+}
 
 // 任务配置数据
 type QuestCfg struct {
 	pb.BaseQuestCfg
 	Conditions     []*ConditionCfg `json:"Conditions"`  // 条件配置
 	ProgressCfg    *ProgressCfg    `json:"ProgressCfg"` // 进度配置
-	BaseProperties                                      // 动态属性
+	BaseProperties                 // 动态属性
 }
 
 // 任务配置数据管理

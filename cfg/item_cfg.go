@@ -9,8 +9,17 @@ import (
 )
 
 var (
-	_itemCfgMgr *ItemCfgMgr
+	_itemCfgMgr = &ItemCfgMgr{
+		cfgs: make(map[int32]*pb.ItemCfg),
+	}
 )
+
+func init() {
+	RegisterCfgLoader(&CfgLoaderOption{
+		Loader:   _itemCfgMgr,
+		FileName: "itemcfg.json",
+	})
+}
 
 // 任务配置数据管理
 type ItemCfgMgr struct {
@@ -18,11 +27,6 @@ type ItemCfgMgr struct {
 }
 
 func GetItemCfgMgr() *ItemCfgMgr {
-	if _itemCfgMgr == nil {
-		_itemCfgMgr = &ItemCfgMgr{
-			cfgs: make(map[int32]*pb.ItemCfg),
-		}
-	}
 	return _itemCfgMgr
 }
 

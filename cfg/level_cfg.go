@@ -7,8 +7,17 @@ import (
 )
 
 var (
-	_levelCfgMgr *LevelCfgMgr
+	_levelCfgMgr = &LevelCfgMgr{
+		needExps: make([]*pb.LevelExp, 0),
+	}
 )
+
+func init() {
+	RegisterCfgLoader(&CfgLoaderOption{
+		Loader:   _levelCfgMgr,
+		FileName: "levelcfg.csv",
+	})
+}
 
 // 等级配置数据管理
 type LevelCfgMgr struct {
@@ -17,11 +26,6 @@ type LevelCfgMgr struct {
 }
 
 func GetLevelCfgMgr() *LevelCfgMgr {
-	if _levelCfgMgr == nil {
-		_levelCfgMgr = &LevelCfgMgr{
-			needExps: make([]*pb.LevelExp, 0),
-		}
-	}
 	return _levelCfgMgr
 }
 
@@ -44,5 +48,6 @@ func (this *LevelCfgMgr) Load(fileName string) bool {
 		logger.Error("csv read err:%v", err)
 		return false
 	}
+	logger.Info("count:%v", len(this.needExps))
 	return true
 }

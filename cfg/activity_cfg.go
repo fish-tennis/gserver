@@ -9,8 +9,17 @@ import (
 )
 
 var (
-	_activityCfgMgr *ActivityCfgMgr
+	_activityCfgMgr = &ActivityCfgMgr{
+		cfgs: make(map[int32]*ActivityCfg),
+	}
 )
+
+func init() {
+	RegisterCfgLoader(&CfgLoaderOption{
+		Loader:   _activityCfgMgr,
+		FileName: "activitycfg.json",
+	})
+}
 
 // 活动配置数据
 type ActivityCfg struct {
@@ -36,11 +45,6 @@ type ActivityCfgMgr struct {
 }
 
 func GetActivityCfgMgr() *ActivityCfgMgr {
-	if _activityCfgMgr == nil {
-		_activityCfgMgr = &ActivityCfgMgr{
-			cfgs: make(map[int32]*ActivityCfg),
-		}
-	}
 	return _activityCfgMgr
 }
 
