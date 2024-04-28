@@ -72,14 +72,7 @@ func TestActivity(t *testing.T) {
 	InitPlayerComponentMap()
 	progressMgr := RegisterProgressCheckers()
 	conditionMgr := RegisterConditionCheckers()
-	cfg.GetQuestCfgMgr().SetProgressMgr(progressMgr)
-	cfg.GetQuestCfgMgr().SetConditionMgr(conditionMgr)
-	cfg.GetQuestCfgMgr().Load("./../cfgdata/questcfg.json")
-	cfg.GetLevelCfgMgr().Load("./../cfgdata/levelcfg.csv")
-	cfg.GetItemCfgMgr().Load("./../cfgdata/itemcfg.json")
-	cfg.GetActivityCfgMgr().SetProgressMgr(progressMgr)
-	cfg.GetActivityCfgMgr().SetConditionMgr(conditionMgr)
-	cfg.GetActivityCfgMgr().Load("./../cfgdata/activitycfg.json")
+	cfg.LoadAllCfgs("./../cfgdata", progressMgr, conditionMgr)
 
 	playerData := &pb.PlayerData{
 		XId:       1,
@@ -126,8 +119,8 @@ func TestActivity(t *testing.T) {
 
 	exchangeActivity := activities.GetActivity(5)
 	if exchangeActivity != nil {
-		if activity,ok := exchangeActivity.(*ActivityDefault); ok {
-			player.GetBag().AddItem(1,100)
+		if activity, ok := exchangeActivity.(*ActivityDefault); ok {
+			player.GetBag().AddItem(1, 100)
 			t.Log(fmt.Sprintf("item1 count:%v", player.GetBag().BagCountItem.GetItemCount(1)))
 			t.Log(fmt.Sprintf("item2 count:%v", player.GetBag().BagCountItem.GetItemCount(2)))
 			for i := 0; i < 3; i++ {
@@ -147,7 +140,7 @@ func TestActivity(t *testing.T) {
 			if activity == nil {
 				continue
 			}
-			activityDefault,ok := activity.(*ActivityDefault)
+			activityDefault, ok := activity.(*ActivityDefault)
 			if !ok {
 				continue
 			}

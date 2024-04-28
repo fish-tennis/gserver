@@ -235,15 +235,6 @@ func CreatePlayerFromData(playerData *pb.PlayerData) *Player {
 			player.AddComponent(component, nil)
 		}
 	}
-	//player.AddComponent(NewBaseInfo(player, playerData.BaseInfo), nil)
-	//player.AddComponent(NewMoney(player), playerData.Money)
-	//player.AddComponent(NewBag(player), playerData.Bag)
-	//player.AddComponent(NewQuest(player), playerData.Quest)
-	//player.AddComponent(NewGuild(player), playerData.Guild)
-	//player.AddComponent(NewPendingMessages(player), playerData.PendingMessages)
-	//activities := NewActivities(player)
-	//player.AddComponent(activities, nil)
-	//activities.LoadData(playerData.Activities)
 	return player
 }
 

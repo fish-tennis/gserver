@@ -28,6 +28,8 @@ func init() {
 			PlayerMapDataComponent: *NewPlayerMapDataComponent(player, ComponentNameActivities),
 			Data:                   make(map[int32]Activity),
 		}
+		// 这里提前加入组件,因为后面的component.LoadData里,子活动可能需要用到player.GetActivities()
+		player.AddComponent(component, nil)
 		// 活动组件使用了动态结构,不能使用gentity.LoadData来自动加载数据
 		// 自己解析出具体的子活动数据
 		component.LoadData(playerData.GetActivities())
