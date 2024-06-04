@@ -5,6 +5,7 @@ import (
 	"github.com/fish-tennis/gserver/pb"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -16,6 +17,16 @@ func init() {
 	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
 		AddSource: true,
 		Level:     debugLevel,
+		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+			if a.Key == slog.SourceKey {
+				source := a.Value.Any().(*slog.Source)
+				// 让source简短些
+				if wd, err := os.Getwd(); err == nil {
+					source.File = strings.TrimPrefix(source.File, filepath.ToSlash(wd))
+				}
+			}
+			return a
+		},
 	})))
 	slog.Debug("test init")
 }

@@ -39,8 +39,10 @@ import (
 type GatePacket struct {
 	command  PacketCommand
 	playerId int64
-	message  proto.Message
-	data     []byte
+	// use for rpc call
+	rpcCallId uint32
+	message   proto.Message
+	data      []byte
 }
 
 func NewGatePacket(playerId int64, command PacketCommand, message proto.Message) *GatePacket {
@@ -75,8 +77,17 @@ func (this *GatePacket) Message() proto.Message {
 	return this.message
 }
 
+func (this *GatePacket) RpcCallId() uint32 {
+	return this.rpcCallId
+}
+
+func (this *GatePacket) SetRpcCallId(rpcCallId uint32) {
+	this.rpcCallId = rpcCallId
+}
+
 // 某些特殊需求会直接使用序列化好的数据
-//  support stream data
+//
+//	support stream data
 func (this *GatePacket) GetStreamData() []byte {
 	return this.data
 }
@@ -104,13 +115,13 @@ func (this *GatePacket) ToProtoPacket() *ProtoPacket {
 }
 
 func IsGatePacket(packet Packet) bool {
-	_,ok := packet.(*GatePacket)
+	_, ok := packet.(*GatePacket)
 	return ok
 }
 
 // 根据请求消息的类型,自动适配不同的发消息接口
 func SendPacketAdapt(connection Connection, reqPacket Packet, command PacketCommand, message proto.Message) bool {
-	if gatePacket,ok := reqPacket.(*GatePacket); ok {
+	if gatePacket, ok := reqPacket.(*GatePacket); ok {
 		return connection.SendPacket(NewGatePacket(gatePacket.PlayerId(), command, message))
 	} else {
 		return connection.Send(command, message)

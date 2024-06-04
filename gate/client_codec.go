@@ -46,19 +46,29 @@ func (this *ClientCodec) Register(command PacketCommand, protoMessage proto.Mess
 	this.MessageCreatorMap[command] = reflect.TypeOf(protoMessage).Elem()
 }
 
-func (this *ClientCodec) EncodePacket(connection Connection, packet Packet) [][]byte {
+func (this *ClientCodec) EncodePacket(connection Connection, packet Packet) ([][]byte, uint8) {
 	protoMessage := packet.Message()
+	headerFlags := uint8(0)
 	// 先写入消息号
 	// write PacketCommand
 	commandBytes := make([]byte, 2)
 	binary.LittleEndian.PutUint16(commandBytes, uint16(packet.Command()))
+	rpcCallId := packet.(*ProtoPacket).RpcCallId()
+	var rpcCallIdBytes []byte
+	// rpcCall才会写入rpcCallId
+	if rpcCallId > 0 {
+		rpcCallIdBytes = make([]byte, 4)
+		binary.LittleEndian.PutUint32(rpcCallIdBytes, rpcCallId)
+		headerFlags = RpcCall
+		//logger.Debug("write rpcCallId:%v", rpcCallId)
+	}
 	var messageBytes []byte
 	if protoMessage != nil {
 		var err error
 		messageBytes, err = proto.Marshal(protoMessage)
 		if err != nil {
 			logger.Error("proto encode err:%v cmd:%v", err, packet.Command())
-			return nil
+			return nil, 0
 		}
 	} else {
 		// 支持提前序列化好的数据
@@ -68,41 +78,67 @@ func (this *ClientCodec) EncodePacket(connection Connection, packet Packet) [][]
 	// 这里可以继续对messageBytes进行编码,如异或,加密,压缩等
 	// you can continue to encode messageBytes here, such as XOR, encryption, compression, etc
 	if this.ProtoPacketBytesEncoder != nil {
-		return this.ProtoPacketBytesEncoder([][]byte{commandBytes, messageBytes})
+		if rpcCallId > 0 {
+			return this.ProtoPacketBytesEncoder([][]byte{commandBytes, rpcCallIdBytes, messageBytes}), headerFlags
+		}
+		return this.ProtoPacketBytesEncoder([][]byte{commandBytes, messageBytes}), headerFlags
 	}
-	return [][]byte{commandBytes, messageBytes}
+	if rpcCallId > 0 {
+		return [][]byte{commandBytes, rpcCallIdBytes, messageBytes}, headerFlags
+	}
+	return [][]byte{commandBytes, messageBytes}, headerFlags
 }
 
 func (this *ClientCodec) DecodePacket(connection Connection, packetHeader PacketHeader, packetData []byte) Packet {
 	decodedPacketData := packetData
 	// Q:这里可以对packetData进行解码,如异或,解密,解压等
-	// you can decode packetData here, such as XOR, encryption, compression, etc
+	// you can decode packetData here, such as XOR, decryption, decompression, etc
 	if this.ProtoPacketBytesDecoder != nil {
 		decodedPacketData = this.ProtoPacketBytesDecoder(packetData)
 	}
 	if len(decodedPacketData) < 2 {
 		return nil
 	}
+	isRpcCall := false
+	if defaultPacketHeader, ok := packetHeader.(*DefaultPacketHeader); ok {
+		isRpcCall = defaultPacketHeader.HasFlag(RpcCall)
+	}
+	if isRpcCall && len(decodedPacketData) < 6 {
+		return nil
+	}
 	command := binary.LittleEndian.Uint16(decodedPacketData[:2])
+	offset := 2
+	rpcCallId := uint32(0)
+	if isRpcCall {
+		rpcCallId = binary.LittleEndian.Uint32(decodedPacketData[offset : offset+4])
+		offset += 4
+		//logger.Debug("read rpcCallId:%v", rpcCallId)
+	}
 	if protoMessageType, ok := this.MessageCreatorMap[PacketCommand(command)]; ok {
 		// 有一些客户端消息,是gate处理
 		if protoMessageType != nil {
 			newProtoMessage := reflect.New(protoMessageType).Interface().(proto.Message)
-			err := proto.Unmarshal(decodedPacketData[2:], newProtoMessage)
+			err := proto.Unmarshal(decodedPacketData[offset:], newProtoMessage)
 			if err != nil {
 				logger.Error("proto decode err:%v cmd:%v", err, command)
 				return nil
 			}
-			return NewProtoPacket(PacketCommand(command), newProtoMessage)
+			newPacket := NewProtoPacket(PacketCommand(command), newProtoMessage)
+			newPacket.SetRpcCallId(rpcCallId)
+			return newPacket
 		} else {
 			// 支持只注册了消息号,没注册proto结构体的用法
 			// support Register(command, nil), return the direct stream data to application layer
-			return NewProtoPacketWithData(PacketCommand(command), decodedPacketData[2:])
+			newPacket := NewProtoPacketWithData(PacketCommand(command), decodedPacketData[offset:])
+			newPacket.SetRpcCallId(rpcCallId)
+			return newPacket
 		}
 	}
 	// 其他消息,gate直接转发,附加上playerId
 	if clientData, ok := connection.GetTag().(*ClientData); ok {
-		return internal.NewGatePacketWithData(clientData.PlayerId, PacketCommand(command), decodedPacketData[2:])
+		newPacket := internal.NewGatePacketWithData(clientData.PlayerId, PacketCommand(command), decodedPacketData[offset:])
+		newPacket.SetRpcCallId(rpcCallId)
+		return newPacket
 	}
 	logger.Error("unSupport command:%v", command)
 	return nil
