@@ -1,7 +1,7 @@
 package internal
 
 const (
-	ServerType_Login = "LoginServer"
-	ServerType_Game  = "GameServer"
-	ServerType_Gate  = "GateServer"
+	ServerType_Login = "Login"
+	ServerType_Game  = "Game"
+	ServerType_Gate  = "Gate"
 )

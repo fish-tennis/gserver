@@ -9,8 +9,11 @@ import (
 	"github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/gameserver"
 	"github.com/fish-tennis/gserver/gate"
+	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/loginserver"
+	"gopkg.in/natefinch/lumberjack.v2"
+	"log/slog"
 	"math/rand"
 	"os"
 	"os/exec"
@@ -42,12 +45,12 @@ func main() {
 	}
 
 	runtime.GOMAXPROCS(runtime.NumCPU())
-	gnet.SetLogLevel(gnet.DebugLevel)
-	gentity.SetLogger(gnet.GetLogger())
 	rand.Seed(time.Now().UnixNano())
 
 	// 根据命令行参数 创建不同的服务器实例
+	baseFileName := filepath.Base(configFile) // login_test.json
 	serverType := getServerTypeFromConfigFile(configFile)
+	initLog(baseFileName)
 	server := createServer(serverType)
 	gentity.SetApplication(server)
 
@@ -107,21 +110,55 @@ func daemon() {
 	os.Exit(0)
 }
 
+func initLog(logFileName string) {
+	// TODO: 后续会把gnet,gentity的logger替换成slog,以统一日志接口
+	gnet.SetLogLevel(gnet.DebugLevel)
+	gentity.SetLogger(gnet.GetLogger())
+
+	os.Mkdir("log", 0750)
+	// 日志轮转与切割
+	fileLogger := &lumberjack.Logger{
+		Filename:   fmt.Sprintf("log/%v.log", logFileName),
+		MaxSize:    10,
+		MaxBackups: 100,
+		MaxAge:     7,
+		Compress:   false,
+		LocalTime:  true,
+	}
+	// 建议使用slog
+	debugLevel := &slog.LevelVar{}
+	debugLevel.Set(slog.LevelDebug)
+	slog.SetDefault(slog.New(slog.NewJSONHandler(fileLogger, &slog.HandlerOptions{
+		AddSource: true,
+		Level:     debugLevel,
+		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+			if a.Key == slog.SourceKey {
+				source := a.Value.Any().(*slog.Source)
+				// 让source简短些
+				if wd, err := os.Getwd(); err == nil {
+					source.File = strings.TrimPrefix(source.File, filepath.ToSlash(wd))
+				}
+			}
+			return a
+		},
+	})))
+}
+
 // 从配置文件名解析出服务器类型
 func getServerTypeFromConfigFile(configFile string) string {
-	baseFileName := filepath.Base(configFile) // login_11.json
+	baseFileName := filepath.Base(configFile) // login_test.json
 	idx := strings.Index(baseFileName, "_")
 	return baseFileName[0:idx]
 }
 
 // 创建相应类型的服务器
 func createServer(serverType string) gentity.Application {
-	switch serverType {
-	case "gate":
+	switch strings.ToLower(serverType) {
+	case strings.ToLower(internal.ServerType_Gate):
 		return new(gate.GateServer)
-	case "login":
+	case strings.ToLower(internal.ServerType_Login):
 		return new(loginserver.LoginServer)
-	case "game":
+	case strings.ToLower(internal.ServerType_Game):
 		return new(gameserver.GameServer)
 	}
 	panic("err server type")

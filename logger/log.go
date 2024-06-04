@@ -1,7 +1,9 @@
 package logger
 
 import (
+	"fmt"
 	"github.com/fish-tennis/gnet"
+	"log/slog"
 	"runtime"
 )
 
@@ -16,19 +18,23 @@ func SetLogger(logger gnet.Logger) {
 }
 
 func Debug(format string, args ...interface{}) {
-	_logger.Debug(format, args...)
+	//_logger.Debug(format, args...)
+	slog.Debug(fmt.Sprintf(format, args))
 }
 
 func Info(format string, args ...interface{}) {
-	_logger.Info(format, args...)
+	//_logger.Info(format, args...)
+	slog.Info(fmt.Sprintf(format, args))
 }
 
 func Warn(format string, args ...interface{}) {
-	_logger.Warn(format, args...)
+	//_logger.Warn(format, args...)
+	slog.Warn(fmt.Sprintf(format, args))
 }
 
 func Error(format string, args ...interface{}) {
-	_logger.Error(format, args...)
+	//_logger.Error(format, args...)
+	slog.Error(fmt.Sprintf(format, args))
 }
 
 func LogStack() {

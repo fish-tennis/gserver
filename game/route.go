@@ -70,10 +70,10 @@ func (this *RouteOptions) SetToServerId(toServerId int32) *RouteOptions {
 func RoutePlayerPacket(playerId int64, cmd PacketCommand, message proto.Message, opts ...*RouteOptions) bool {
 	var (
 		directSendClient = false
-		toServerId = int32(0)
-		saveDb = false
+		toServerId       = int32(0)
+		saveDb           = false
 	)
-	for _,opt := range opts {
+	for _, opt := range opts {
 		directSendClient = opt.DirectSendClient
 		//toServerId = opt.ToServerId
 		saveDb = opt.SaveDb
@@ -88,19 +88,19 @@ func RoutePlayerPacket(playerId int64, cmd PacketCommand, message proto.Message,
 		return true
 	}
 	if saveDb {
-		any,err := anypb.New(message)
+		any, err := anypb.New(message)
 		if err != nil {
 			logger.Error("RoutePlayerPacket %v err:%v", playerId, err)
 			return false
 		}
 		routePacket := &pb.RoutePlayerMessage{
-			ToPlayerId: playerId,
-			PacketCommand: int32(cmd),
+			ToPlayerId:       playerId,
+			PacketCommand:    int32(cmd),
 			DirectSendClient: false,
-			MessageId: util.GenUniqueId(), // 消息号生成唯一id
-			PacketData: any,
+			MessageId:        util.GenUniqueId(), // 消息号生成唯一id
+			PacketData:       any,
 		}
-		routePacketBytes,err := proto.Marshal(routePacket)
+		routePacketBytes, err := proto.Marshal(routePacket)
 		if err != nil {
 			logger.Error("RoutePlayerPacket %v err:%v", playerId, err)
 			return false
@@ -112,7 +112,7 @@ func RoutePlayerPacket(playerId int64, cmd PacketCommand, message proto.Message,
 		}
 	}
 	if toServerId == 0 {
-		_,toServerId = cache.GetOnlinePlayer(playerId)
+		_, toServerId = cache.GetOnlinePlayer(playerId)
 		if toServerId == 0 {
 			return false
 		}
@@ -120,15 +120,15 @@ func RoutePlayerPacket(playerId int64, cmd PacketCommand, message proto.Message,
 			return false
 		}
 	}
-	any,err := anypb.New(message)
+	anyPacket, err := anypb.New(message)
 	if err != nil {
 		logger.Error("RoutePlayerPacketWithServer %v err:%v", playerId, err)
 		return false
 	}
 	return internal.GetServerList().Send(toServerId, PacketCommand(pb.CmdRoute_Cmd_RoutePlayerMessage), &pb.RoutePlayerMessage{
-		ToPlayerId: playerId,
-		PacketCommand: int32(cmd),
+		ToPlayerId:       playerId,
+		PacketCommand:    int32(cmd),
 		DirectSendClient: directSendClient,
-		PacketData: any,
+		PacketData:       anyPacket,
 	})
 }
