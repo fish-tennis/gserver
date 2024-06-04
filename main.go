@@ -48,9 +48,10 @@ func main() {
 	rand.Seed(time.Now().UnixNano())
 
 	// 根据命令行参数 创建不同的服务器实例
-	baseFileName := filepath.Base(configFile) // login_test.json
+	baseFileName := filepath.Base(configFile)                                   // login_test.json
+	baseFileName = strings.TrimSuffix(baseFileName, filepath.Ext(baseFileName)) // login_test
 	serverType := getServerTypeFromConfigFile(configFile)
-	initLog(baseFileName)
+	initLog(baseFileName, !isDaemon)
 	server := createServer(serverType)
 	gentity.SetApplication(server)
 
@@ -110,7 +111,7 @@ func daemon() {
 	os.Exit(0)
 }
 
-func initLog(logFileName string) {
+func initLog(logFileName string, useStdOutput bool) {
 	// TODO: 后续会把gnet,gentity的logger替换成slog,以统一日志接口
 	gnet.SetLogLevel(gnet.DebugLevel)
 	gentity.SetLogger(gnet.GetLogger())
@@ -128,20 +129,24 @@ func initLog(logFileName string) {
 	// 建议使用slog
 	debugLevel := &slog.LevelVar{}
 	debugLevel.Set(slog.LevelDebug)
-	slog.SetDefault(slog.New(slog.NewJSONHandler(fileLogger, &slog.HandlerOptions{
+	slog.SetDefault(slog.New(logger.NewJsonHandlerWithStdOutput(fileLogger, &slog.HandlerOptions{
 		AddSource: true,
 		Level:     debugLevel,
 		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
 			if a.Key == slog.SourceKey {
 				source := a.Value.Any().(*slog.Source)
+				source.Function = ""
 				// 让source简短些
 				if wd, err := os.Getwd(); err == nil {
 					source.File = strings.TrimPrefix(source.File, filepath.ToSlash(wd))
+					if source.File[0] == '/' {
+						source.File = strings.TrimPrefix(source.File, "/")
+					}
 				}
 			}
 			return a
 		},
-	})))
+	}, useStdOutput)))
 }
 
 // 从配置文件名解析出服务器类型

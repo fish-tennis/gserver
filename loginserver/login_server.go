@@ -9,10 +9,10 @@ import (
 	"github.com/fish-tennis/gserver/cache"
 	"github.com/fish-tennis/gserver/db"
 	. "github.com/fish-tennis/gserver/internal"
-	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"log/slog"
 	"os"
 	"time"
 )
@@ -90,20 +90,20 @@ func (this *LoginServer) Init(ctx context.Context, configFile string) bool {
 	this.BaseServer.SetDefaultServerConnectorConfig(this.config.ServerConnConfig, NewProtoCodec(nil))
 	this.BaseServer.GetServerList().SetFetchAndConnectServerTypes(ServerType_Game)
 
-	logger.Info("LoginServer.Init")
+	slog.Info("LoginServer.Init")
 	return true
 }
 
 // 运行
 func (this *LoginServer) Run(ctx context.Context) {
 	this.BaseServer.Run(ctx)
-	logger.Info("LoginServer.Run")
+	slog.Info("LoginServer.Run")
 }
 
 // 退出
 func (this *LoginServer) Exit() {
 	this.BaseServer.Exit()
-	logger.Info("LoginServer.Exit")
+	slog.Info("LoginServer.Exit")
 	if db.GetDbMgr() != nil {
 		db.GetDbMgr().(*gentity.MongoDb).Disconnect()
 	}
@@ -120,7 +120,7 @@ func (this *LoginServer) readConfig() {
 	if err != nil {
 		panic("decode config file err")
 	}
-	logger.Debug("%v", this.config)
+	slog.Debug("readConfig", "config", this.config)
 	this.BaseServer.GetServerInfo().ServerId = this.config.ServerId
 	this.BaseServer.GetServerInfo().ServerType = ServerType_Login
 	// NOTE: 实际项目中,监听客户端和监听网关,二选一即可

@@ -2,6 +2,7 @@ package tool
 
 import (
 	"github.com/fish-tennis/gentity/util"
+	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 	"log/slog"
 	"os"
@@ -14,7 +15,7 @@ import (
 func init() {
 	debugLevel := &slog.LevelVar{}
 	debugLevel.Set(slog.LevelDebug)
-	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
+	slog.SetDefault(slog.New(logger.NewJsonHandlerWithStdOutput(os.Stdout, &slog.HandlerOptions{
 		AddSource: true,
 		Level:     debugLevel,
 		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
@@ -27,7 +28,7 @@ func init() {
 			}
 			return a
 		},
-	})))
+	}, true)))
 	slog.Debug("test init")
 }
 

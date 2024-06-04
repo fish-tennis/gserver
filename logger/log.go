@@ -1,39 +1,53 @@
 package logger
 
 import (
+	"context"
 	"fmt"
-	"github.com/fish-tennis/gnet"
 	"log/slog"
 	"runtime"
 )
 
-var _logger = gnet.NewStdLogger(3)
-
-func GetLogger() gnet.Logger {
-	return _logger
-}
-
-func SetLogger(logger gnet.Logger) {
-	_logger = logger
-}
-
 func Debug(format string, args ...interface{}) {
-	//_logger.Debug(format, args...)
+	if !slog.Default().Enabled(context.Background(), slog.LevelDebug) {
+		return
+	}
+	if len(args) == 0 {
+		slog.Debug(format)
+		return
+	}
 	slog.Debug(fmt.Sprintf(format, args))
 }
 
 func Info(format string, args ...interface{}) {
-	//_logger.Info(format, args...)
+	if !slog.Default().Enabled(context.Background(), slog.LevelInfo) {
+		return
+	}
+	if len(args) == 0 {
+		slog.Info(format)
+		return
+	}
 	slog.Info(fmt.Sprintf(format, args))
 }
 
 func Warn(format string, args ...interface{}) {
-	//_logger.Warn(format, args...)
+	if !slog.Default().Enabled(context.Background(), slog.LevelWarn) {
+		return
+	}
+	if len(args) == 0 {
+		slog.Warn(format)
+		return
+	}
 	slog.Warn(fmt.Sprintf(format, args))
 }
 
 func Error(format string, args ...interface{}) {
-	//_logger.Error(format, args...)
+	if !slog.Default().Enabled(context.Background(), slog.LevelError) {
+		return
+	}
+	if len(args) == 0 {
+		slog.Error(format)
+		return
+	}
 	slog.Error(fmt.Sprintf(format, args))
 }
 
