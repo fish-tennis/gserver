@@ -7,10 +7,10 @@ import (
 	"github.com/fish-tennis/gserver/cache"
 	"github.com/fish-tennis/gserver/db"
 	"github.com/fish-tennis/gserver/game"
-	"github.com/fish-tennis/gserver/gen"
 	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
+	"log/slog"
 )
 
 // 玩家进游戏服的请求
@@ -68,10 +68,15 @@ func onPlayerEntryGameReq(connection Connection, packet Packet) {
 				accountId, playerId, gameServerId)
 			if gameServerId > 0 {
 				// 通知目标游戏服踢掉玩家
-				gen.SendKickPlayer(gameServerId, &pb.KickPlayer{
+				kickReply := new(pb.KickPlayer)
+				rpcErr := internal.GetServerList().Rpc(gameServerId, NewProtoPacketEx(pb.CmdInner_Cmd_KickPlayer, &pb.KickPlayer{
 					AccountId: accountId,
 					PlayerId:  playerId,
-				})
+				}), kickReply)
+				if rpcErr != nil {
+					slog.Error("kick rpcErr", "accountId", accountId, "playerId", playerId,
+						"gameServerId", gameServerId, "rpcErr", rpcErr)
+				}
 			}
 			// 通知客户端稍后重新登录
 			internal.SendPacketAdapt(connection, packet, PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameRes), &pb.PlayerEntryGameRes{

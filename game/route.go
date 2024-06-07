@@ -1,7 +1,6 @@
 package game
 
 import (
-	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gentity/util"
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
@@ -11,13 +10,21 @@ import (
 	"github.com/fish-tennis/gserver/pb"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
+	"strings"
 )
 
-// 路由参数
-type RouteOptions struct {
+type RouteOption interface {
+	apply(*routeOptions)
+}
+
+// 路由消息的参数
+type routeOptions struct {
 	// true:消息直接发给客户端
 	// false:放入玩家消息队列,消息将在玩家协程中被处理
 	DirectSendClient bool
+
+	// 指定连接
+	Connection Connection
 
 	// 路由到指定的服务器
 	ToServerId int32
@@ -26,109 +33,117 @@ type RouteOptions struct {
 	SaveDb bool
 }
 
-func NewRouteOptions() *RouteOptions {
-	return &RouteOptions{}
+func defaultRouteOptions() *routeOptions {
+	return &routeOptions{}
 }
 
-func DirectSendClientRouteOptions() *RouteOptions {
-	return &RouteOptions{
-		DirectSendClient: true,
+// funcRouteOption wraps a function that modifies routeOptions into an
+// implementation of the RouteOption interface.
+type funcRouteOption struct {
+	f func(*routeOptions)
+}
+
+func (fro *funcRouteOption) apply(ro *routeOptions) {
+	fro.f(ro)
+}
+
+func newFuncRouteOption(f func(*routeOptions)) *funcRouteOption {
+	return &funcRouteOption{
+		f: f,
 	}
 }
 
-func SaveDbRouteOptions() *RouteOptions {
-	return &RouteOptions{
-		SaveDb: true,
-	}
+func WithDirectSendClient() RouteOption {
+	return newFuncRouteOption(func(options *routeOptions) {
+		options.DirectSendClient = true
+	})
 }
 
-// set DirectSendClient
-func (this *RouteOptions) SetDirectSendClient(directSendClient bool) *RouteOptions {
-	this.DirectSendClient = directSendClient
-	return this
+func WithSaveDb() RouteOption {
+	return newFuncRouteOption(func(options *routeOptions) {
+		options.SaveDb = true
+	})
 }
 
-// set ToServerId
-func (this *RouteOptions) SetToServerId(toServerId int32) *RouteOptions {
-	this.ToServerId = toServerId
-	return this
+func WithToServerId(toServerId int32) RouteOption {
+	return newFuncRouteOption(func(options *routeOptions) {
+		options.ToServerId = toServerId
+	})
+}
+
+func WithConnection(connection Connection) RouteOption {
+	return newFuncRouteOption(func(options *routeOptions) {
+		options.Connection = connection
+	})
 }
 
 // 路由玩家消息
-// 如果目标玩家在本服务器,则直接路由到本服务器上的玩家
-// 如果目标玩家在另一个服务器上,则转发到目标服务器 ServerA -> ServerB -> Player
+// ServerA -> ServerB -> Player
 //
-// DirectSendClientRouteOptions():
+// WithDirectSendClient():
 // 消息直接转发给客户端,不做逻辑处理 ServerA -> ServerB -> Client
 //
 // 举例:
 // 有人申请加入公会,公会广播该消息给公会成员,ServerB收到消息后,直接把消息发给客户端(Player.Send),而不需要放入玩家的逻辑消息队列(Player.OnRecvPacket)
 //
-// SaveDbRouteOptions(): 消息先保存数据库再转发,防止丢失
+// WithSaveDb(): 消息先保存数据库再转发,防止丢失
 // 举例:
 // 公会会长同意了玩家A的入会申请,此时玩家A可能不在线,就把该消息存入玩家的数据库,待玩家下次上线时,从数据库取出该消息,并进行相应的逻辑处理
-func RoutePlayerPacket(playerId int64, cmd PacketCommand, message proto.Message, opts ...*RouteOptions) bool {
-	var (
-		directSendClient = false
-		toServerId       = int32(0)
-		saveDb           = false
-	)
+func RoutePlayerPacket(playerId int64, packet Packet, opts ...RouteOption) bool {
+	routeOpts := defaultRouteOptions()
 	for _, opt := range opts {
-		directSendClient = opt.DirectSendClient
-		//toServerId = opt.ToServerId
-		saveDb = opt.SaveDb
+		opt.apply(routeOpts)
 	}
-	player := GetPlayer(playerId)
-	if player != nil {
-		if directSendClient {
-			return player.Send(cmd, message)
-		} else {
-			player.OnRecvPacket(NewProtoPacket(cmd, message))
-		}
-		return true
-	}
-	if saveDb {
-		any, err := anypb.New(message)
+	if routeOpts.SaveDb {
+		anyMessage, err := anypb.New(packet.Message())
 		if err != nil {
 			logger.Error("RoutePlayerPacket %v err:%v", playerId, err)
 			return false
 		}
 		routePacket := &pb.RoutePlayerMessage{
 			ToPlayerId:       playerId,
-			PacketCommand:    int32(cmd),
+			PacketCommand:    int32(packet.Command()),
 			DirectSendClient: false,
 			MessageId:        util.GenUniqueId(), // 消息号生成唯一id
-			PacketData:       any,
+			PacketData:       anyMessage,
 		}
 		routePacketBytes, err := proto.Marshal(routePacket)
 		if err != nil {
 			logger.Error("RoutePlayerPacket %v err:%v", playerId, err)
 			return false
 		}
-		err = db.GetPlayerDb().SaveComponentField(playerId, "pendingmessages", util.Itoa(routePacket.MessageId), routePacketBytes)
+		err = db.GetPlayerDb().SaveComponentField(playerId, strings.ToLower(ComponentNamePendingMessages),
+			util.Itoa(routePacket.MessageId), routePacketBytes)
 		if err != nil {
 			logger.Error("RoutePlayerPacket %v err:%v", playerId, err)
 			return false
 		}
 	}
-	if toServerId == 0 {
-		_, toServerId = cache.GetOnlinePlayer(playerId)
+	conn := routeOpts.Connection
+	if conn == nil {
+		toServerId := routeOpts.ToServerId
 		if toServerId == 0 {
-			return false
+			_, toServerId = cache.GetOnlinePlayer(playerId)
+			if toServerId == 0 {
+				logger.Error("RoutePlayerPacketErr %v", playerId)
+				return false
+			}
 		}
-		if toServerId == gentity.GetApplication().GetId() {
-			return false
-		}
+		conn = internal.GetServerList().GetServerConnection(toServerId)
 	}
-	anyPacket, err := anypb.New(message)
+	anyPacket, err := anypb.New(packet.Message())
 	if err != nil {
 		logger.Error("RoutePlayerPacketWithServer %v err:%v", playerId, err)
 		return false
 	}
-	return internal.GetServerList().Send(toServerId, PacketCommand(pb.CmdRoute_Cmd_RoutePlayerMessage), &pb.RoutePlayerMessage{
+	routePacket := NewProtoPacketEx(pb.CmdRoute_Cmd_RoutePlayerMessage, &pb.RoutePlayerMessage{
 		ToPlayerId:       playerId,
-		PacketCommand:    int32(cmd),
-		DirectSendClient: directSendClient,
+		PacketCommand:    int32(packet.Command()),
+		DirectSendClient: routeOpts.DirectSendClient,
 		PacketData:       anyPacket,
 	})
+	if protoPacket, ok := packet.(*ProtoPacket); ok {
+		routePacket.SetRpcCallId(protoPacket.RpcCallId())
+	}
+	return conn.SendPacket(routePacket)
 }

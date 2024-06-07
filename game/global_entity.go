@@ -72,7 +72,7 @@ func (this *GlobalEntity) RunRoutine() bool {
 		EndFunc: func(routineEntity gentity.RoutineEntity) {
 			logger.Debug("GlobalEntity Routine End %v", this.key)
 		},
-		ProcessMessageFunc: func(routineEntity gentity.RoutineEntity, message interface{}) {
+		ProcessMessageFunc: func(routineEntity gentity.RoutineEntity, message any) {
 			this.processMessage(message.(*ProtoPacket))
 			this.checkDataDirty()
 		},

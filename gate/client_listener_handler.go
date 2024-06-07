@@ -9,7 +9,6 @@ import (
 
 // 客户端listener handler
 type ClientListerHandler struct {
-
 }
 
 func (this *ClientListerHandler) OnConnectionConnected(listener Listener, acceptedConnection Connection) {
@@ -20,10 +19,12 @@ func (this *ClientListerHandler) OnConnectionDisconnect(listener Listener, conne
 	if connection.GetTag() == nil {
 		return
 	}
-	if clientData,ok := connection.GetTag().(*ClientData); ok {
+	if clientData, ok := connection.GetTag().(*ClientData); ok {
 		connection.SetTag(nil)
 		if clientData.PlayerId > 0 {
+			_gateServer.clientsMutex.Lock()
 			delete(_gateServer.clients, clientData.PlayerId)
+			_gateServer.clientsMutex.Unlock()
 			// 通知GameServer,玩家掉线了
 			_gateServer.GetServerList().SendPacket(clientData.GameServerId, internal.NewGatePacket(
 				clientData.PlayerId, PacketCommand(pb.CmdInner_Cmd_ClientDisconnect), &pb.ClientDisconnect{

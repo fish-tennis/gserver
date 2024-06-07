@@ -15,17 +15,19 @@ enum CmdInner {
 	Cmd_KickPlayer   = 4; // 踢玩家下线
 	Cmd_TestCmd      = 5; // 测试命令
 	Cmd_ClientDisconnect = 6; // 客户端掉线
+	
+	Cmd_ServerHello  = 10; // 服务器连接上其他服务器时,发的初始化信息
 }
 
 // 心跳包请求
 message HeartBeatReq {
-  fixed64 timestamp = 1; // 请求方的时间戳
+  int64 timestamp = 1; // 请求方的时间戳
 }
 
 // 心跳包回复
 message HeartBeatRes {
-  fixed64 requestTimestamp = 1; // 请求方的时间戳
-  fixed64 responseTimestamp = 2;// 回复方的时间戳
+  int64 requestTimestamp = 1; // 请求方的时间戳
+  int64 responseTimestamp = 2;// 回复方的时间戳
 }
 
 // 通用的错误返回消息
@@ -61,4 +63,10 @@ message TestCmd {
 // 客户端掉线
 message ClientDisconnect {
   uint32 clientConnId = 1;
+}
+
+// 服务器连接上其他服务器时,发的初始化信息
+message ServerHello {
+  int32 serverId = 1; // 服务器id
+  string serverType = 2; // 服务器类型
 }

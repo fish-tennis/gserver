@@ -1,21 +1,14 @@
 package social
 
 import (
-	"context"
 	"github.com/fish-tennis/gentity"
-	"github.com/fish-tennis/gentity/util"
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
 	"github.com/fish-tennis/gserver/db"
 	"github.com/fish-tennis/gserver/game"
-	"github.com/fish-tennis/gserver/gen"
 	. "github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo/options"
-	"google.golang.org/protobuf/types/known/anypb"
-	"math"
 	"reflect"
 	"time"
 )
@@ -48,46 +41,29 @@ func (g *GuildHelper) CreateEntity(entityData interface{}) gentity.RoutineEntity
 
 // 根据公会id路由到对应的服务器id
 func (g *GuildHelper) RouteServerId(entityId int64) int32 {
-	servers := GetServerList().GetServersByType(ServerType_Game)
-	// 这里只演示了最简单的路由方式
-	// 实际项目可能采用一致性哈希等其他方式
-	index := entityId % int64(len(servers))
-	return servers[index].GetServerId()
+	return RouteGuildServerId(entityId)
 }
 
-// 消息转换成公会的逻辑消息
-func (g *GuildHelper) PacketToRoutineMessage(from gentity.Entity, packet Packet, to gentity.RoutineEntity) interface{} {
-	fromPlayer := from.(*game.Player)
-	return &GuildMessage{
-		fromPlayerId:   fromPlayer.GetId(),
-		fromPlayerName: fromPlayer.GetName(),
-		fromServerId:   gentity.GetApplication().GetId(),
-		cmd:            packet.Command(),
-		message:        packet.Message(),
-	}
-}
+//// 消息转换成公会的逻辑消息
+//func (g *GuildHelper) PacketToRoutineMessage(from gentity.Entity, packet Packet, to gentity.RoutineEntity) interface{} {
+//	fromPlayer := from.(*game.Player)
+//	return &GuildMessage{
+//		fromPlayerId:   fromPlayer.GetId(),
+//		fromPlayerName: fromPlayer.GetName(),
+//		fromServerId:   gentity.GetApplication().GetId(),
+//		cmd:            packet.Command(),
+//		message:        packet.Message(),
+//	}
+//}
 
 // 消息转换成路由消息
 func (g *GuildHelper) PacketToRoutePacket(from gentity.Entity, packet Packet, toEntityId int64) Packet {
-	any, err := anypb.New(packet.Message())
-	if err != nil {
-		logger.Error("anypb err:%v", err)
-		return nil
-	}
 	fromPlayer := from.(*game.Player)
-	routePacket := &pb.GuildRoutePlayerMessageReq{
-		FromPlayerId:   fromPlayer.GetId(),
-		FromGuildId:    toEntityId,
-		FromServerId:   gentity.GetApplication().GetId(),
-		FromPlayerName: fromPlayer.GetName(),
-		PacketCommand:  int32(packet.Command()),
-		PacketData:     any,
-	}
-	return NewProtoPacket(PacketCommand(pb.CmdRoute_Cmd_GuildRoutePlayerMessageReq), routePacket)
+	return PacketToGuildRoutePacket(fromPlayer.GetId(), fromPlayer.GetName(), packet, toEntityId)
 }
 
 // 路由消息转换成公会的逻辑消息
-func (g *GuildHelper) RoutePacketToRoutineMessage(packet Packet, toEntityId int64) interface{} {
+func (g *GuildHelper) RoutePacketToRoutineMessage(connection Connection, packet Packet, toEntityId int64) interface{} {
 	req := packet.Message().(*pb.GuildRoutePlayerMessageReq)
 	message, err := req.PacketData.UnmarshalNew()
 	if err != nil {
@@ -105,13 +81,19 @@ func (g *GuildHelper) RoutePacketToRoutineMessage(packet Packet, toEntityId int6
 		fromPlayerName: req.FromPlayerName,
 		cmd:            PacketCommand(uint16(req.PacketCommand)),
 		message:        message,
+		srcPacket:      packet,
+		srcConnection:  connection,
 	}
 }
 
 func initGuildMgr() {
 	routineArgs := &gentity.RoutineEntityRoutineArgs{
-		ProcessMessageFunc: func(routineEntity gentity.RoutineEntity, message interface{}) {
-			routineEntity.(*Guild).processMessage(message.(*GuildMessage))
+		ProcessMessageFunc: func(routineEntity gentity.RoutineEntity, routineMessage any) {
+			guildMessage := routineMessage.(*GuildMessage)
+			//guildMessage.putReplyFn = func(reply Packet) {
+			//	routineMessage.PutReply(reply)
+			//}
+			routineEntity.(*Guild).processMessage(guildMessage)
 			//this.SaveCache()
 			// 这里演示一种直接保存数据库的用法,可以用于那些不经常修改的数据
 			// 这种方式,省去了要处理crash后从缓存恢复数据的步骤
@@ -122,7 +104,7 @@ func initGuildMgr() {
 		},
 	}
 	_guildMgr = gentity.NewDistributedEntityMgr("g.lock",
-		db.GetDbMgr().GetEntityDb("guild"),
+		db.GetDbMgr().GetEntityDb(db.GuildDbName),
 		cache.Get(),
 		GetServerList(),
 		routineArgs,
@@ -151,94 +133,4 @@ func GetGuildById(guildId int64) *Guild {
 // 服务器动态扩缩容了,公会重新分配
 func onServerListUpdate(serverList map[string][]gentity.ServerInfo, oldServerList map[string][]gentity.ServerInfo) {
 	_guildMgr.ReBalance()
-}
-
-// 根据公会id路由玩家的请求消息
-func GuildRouteReqPacket(player *game.Player, guildId int64, packet Packet) bool {
-	return _guildMgr.RoutePacket(player, guildId, packet)
-}
-
-// 公会列表查询
-// 这里演示的直接从mongodb查询(性能低,尤其是在集群模式下)
-// 实际项目也可以把列表数据加载到服务器中缓存起来,直接从内存中查询
-func OnGuildListReq(player *game.Player, req *pb.GuildListReq) {
-	logger.Debug("OnGuildListReq")
-	col := _guildMgr.GetEntityDb().(*gentity.MongoCollection).GetCollection()
-	pageSize := int64(10)
-	count, err := col.CountDocuments(context.Background(), bson.D{}, nil)
-	if err != nil {
-		logger.Error("db err:%v", err)
-		return
-	}
-	cursor, dbErr := col.Find(context.Background(), bson.D{}, options.Find().SetSkip(pageSize*int64(req.PageIndex)).SetLimit(pageSize))
-	if dbErr != nil {
-		logger.Error("db err:%v", dbErr)
-		return
-	}
-	type guildBaseInfo struct {
-		BaseInfo *pb.GuildInfo `json:"baseinfo"`
-	}
-	var guildInfos []*guildBaseInfo
-	err = cursor.All(context.Background(), &guildInfos)
-	if err != nil {
-		logger.Error("db err:%v", err)
-		return
-	}
-	res := &pb.GuildListRes{
-		PageIndex:  req.PageIndex,
-		PageCount:  int32(math.Ceil(float64(count) / float64(pageSize))),
-		GuildInfos: make([]*pb.GuildInfo, len(guildInfos), len(guildInfos)),
-	}
-	for i, info := range guildInfos {
-		res.GuildInfos[i] = info.BaseInfo
-	}
-	gen.SendGuildListRes(player, res)
-}
-
-// 创建公会请求
-func OnGuildCreateReq(player *game.Player, req *pb.GuildCreateReq) {
-	logger.Debug("OnGuildCreateReq")
-	playerGuild := player.GetGuild()
-	if playerGuild.GetGuildData().GuildId > 0 {
-		gen.SendGuildCreateRes(player, &pb.GuildCreateRes{
-			Error: "CantCreateGuild",
-		})
-		return
-	}
-	newId := util.GenUniqueId()
-	newGuildData := &pb.GuildData{
-		Id: newId,
-		BaseInfo: &pb.GuildInfo{
-			Id:          newId,
-			Name:        req.Name,
-			Intro:       req.Intro,
-			MemberCount: 1,
-		},
-		Members: make(map[int64]*pb.GuildMemberData),
-	}
-	newGuildData.Members[player.GetId()] = &pb.GuildMemberData{
-		Id:       player.GetId(),
-		Name:     player.GetName(),
-		Position: int32(pb.GuildPosition_Leader),
-	}
-	dbErr, isDuplicateName := _guildMgr.GetEntityDb().InsertEntity(newGuildData.Id, newGuildData)
-	if dbErr != nil {
-		logger.Error("OnGuildCreateReq dbErr:%v", dbErr)
-		gen.SendGuildCreateRes(player, &pb.GuildCreateRes{
-			Error: "DbError",
-		})
-		return
-	}
-	if isDuplicateName {
-		gen.SendGuildCreateRes(player, &pb.GuildCreateRes{
-			Error: "DuplicateName",
-		})
-		return
-	}
-	playerGuild.SetGuildId(newGuildData.Id)
-	gen.SendGuildCreateRes(player, &pb.GuildCreateRes{
-		Id:   newGuildData.Id,
-		Name: newGuildData.BaseInfo.Name,
-	})
-	logger.Debug("create guild:%v %v", newGuildData.Id, newGuildData.BaseInfo.Name)
 }

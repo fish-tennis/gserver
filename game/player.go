@@ -159,7 +159,7 @@ func (this *Player) RunRoutine() bool {
 			// 协程结束的时候,移除玩家
 			GetPlayerMgr().RemovePlayer(this)
 		},
-		ProcessMessageFunc: func(routineEntity gentity.RoutineEntity, message interface{}) {
+		ProcessMessageFunc: func(routineEntity gentity.RoutineEntity, message any) {
 			this.processMessage(message.(*ProtoPacket))
 		},
 		AfterTimerExecuteFunc: func(routineEntity gentity.RoutineEntity, t time.Time) {

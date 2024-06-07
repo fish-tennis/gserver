@@ -4,21 +4,19 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/fish-tennis/gentity"
-	"github.com/fish-tennis/gserver/game"
-	"github.com/fish-tennis/gserver/social"
-	"google.golang.org/protobuf/proto"
-	"os"
-	"sync"
-	"time"
-
+	"github.com/fish-tennis/gentity/util"
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
 	"github.com/fish-tennis/gserver/cfg"
 	"github.com/fish-tennis/gserver/db"
+	"github.com/fish-tennis/gserver/game"
 	. "github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
-	"github.com/fish-tennis/gserver/misc"
 	"github.com/fish-tennis/gserver/pb"
+	"github.com/fish-tennis/gserver/social"
+	"google.golang.org/protobuf/proto"
+	"os"
+	"sync"
 )
 
 var (
@@ -91,34 +89,18 @@ func (this *GameServer) Init(ctx context.Context, configFile string) bool {
 		return false
 	}
 
-	// 服务器的codec和handler
-	serverCodec := NewProtoCodec(nil)
-	serverHandler := NewDefaultConnectionHandler(serverCodec)
-	this.registerServerPacket(serverHandler)
-	serverListenerConfig := &ListenerConfig{
-		AcceptConfig: this.config.ServerConnConfig,
-	}
-	serverListenerConfig.AcceptConfig.Codec = serverCodec
-	serverListenerConfig.AcceptConfig.Handler = serverHandler
-	this.serverListener = netMgr.NewListener(ctx, this.config.ServerListenAddr, serverListenerConfig)
+	// 其他模块初始化接口
+	this.AddServerHook(&game.Hook{}, &social.Hook{})
+
+	this.serverListener = this.BaseServer.StartServer(ctx, this.config.ServerListenAddr, this.config.ServerConnConfig,
+		this.registerServerPacket, []string{ServerType_Game})
 	if this.serverListener == nil {
 		panic("listen server failed")
 		return false
 	}
 
-	// 连接其他服务器
-	this.BaseServer.SetDefaultServerConnectorConfig(this.config.ServerConnConfig, NewProtoCodec(nil))
-	this.BaseServer.GetServerList().SetFetchAndConnectServerTypes(ServerType_Game)
-
-	// 其他模块初始化
-	this.AddServerHook(&game.Hook{}, &social.Hook{})
-	serverInitArg := &misc.GameServerInitArg{
-		ClientHandler: clientHandler,
-		ServerHandler: serverHandler,
-		PlayerMgr:     game.GetPlayerMgr(),
-	}
 	for _, hook := range this.BaseServer.GetServerHooks() {
-		hook.OnApplicationInit(serverInitArg)
+		hook.OnApplicationInit(nil)
 	}
 	logger.Info("GameServer.Init")
 	return true
@@ -181,7 +163,7 @@ func (this *GameServer) initDb() {
 	// 玩家数据库
 	playerDB := mongoDb.RegisterPlayerDb("player", "_id", "accountid", "regionid")
 	// 公会数据库
-	mongoDb.RegisterEntityDb("guild", "_id")
+	mongoDb.RegisterEntityDb(db.GuildDbName, "_id")
 	// 全局对象数据库(如GlobalEntity)
 	mongoDb.RegisterEntityDb(game.GlobalEntityCollectionName, game.GlobalEntityCollectionKeyName)
 	if !mongoDb.Connect() {
@@ -241,7 +223,7 @@ func onHeartBeatReq(connection Connection, packet Packet) {
 	req := packet.Message().(*pb.HeartBeatReq)
 	SendPacketAdapt(connection, packet, PacketCommand(pb.CmdInner_Cmd_HeartBeatRes), &pb.HeartBeatRes{
 		RequestTimestamp:  req.GetTimestamp(),
-		ResponseTimestamp: uint64(time.Now().UnixNano() / int64(time.Microsecond)),
+		ResponseTimestamp: util.GetCurrentMS(),
 	})
 }
 
@@ -320,7 +302,8 @@ func (this *GameServer) registerGatePlayerPacket(gateHandler PacketHandlerRegist
 }
 
 // 注册服务器消息回调
-func (this *GameServer) registerServerPacket(serverHandler *DefaultConnectionHandler) {
+func (this *GameServer) registerServerPacket(handler ConnectionHandler) {
+	serverHandler := handler.(*DefaultConnectionHandler)
 	serverHandler.Register(PacketCommand(pb.CmdInner_Cmd_HeartBeatReq), onHeartBeatReq, new(pb.HeartBeatReq))
 	serverHandler.Register(PacketCommand(pb.CmdInner_Cmd_KickPlayer), this.onKickPlayer, new(pb.KickPlayer))
 	serverHandler.Register(PacketCommand(pb.CmdRoute_Cmd_RoutePlayerMessage), this.onRoutePlayerMessage, new(pb.RoutePlayerMessage))
@@ -370,13 +353,15 @@ func (this *GameServer) onKickPlayer(connection Connection, packet Packet) {
 				req.GetAccountId(), req.GetPlayerId(), this.GetId())
 		}
 	}
+	// rpc reply
+	connection.SendPacket(NewProtoPacket(packet.Command(), req).WithRpc(packet))
 }
 
 // 转发玩家消息
 // otherServer -> thisServer -> player
 func (this *GameServer) onRoutePlayerMessage(connection Connection, packet Packet) {
 	req := packet.Message().(*pb.RoutePlayerMessage)
-	logger.Debug("onRoutePlayerMessage %v", req)
+	logger.Debug("onRoutePlayerMessage %v", packet)
 	player := game.GetPlayer(req.ToPlayerId)
 	if player == nil {
 		// NOTE: 由于是异步消息,这里的player有很低的概率可能不在线了,如果是重要的不能丢弃的消息,需要保存该消息,留待后续处理

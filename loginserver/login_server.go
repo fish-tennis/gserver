@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/fish-tennis/gentity"
+	"github.com/fish-tennis/gentity/util"
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
 	"github.com/fish-tennis/gserver/db"
@@ -14,7 +15,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"log/slog"
 	"os"
-	"time"
 )
 
 var (
@@ -86,9 +86,7 @@ func (this *LoginServer) Init(ctx context.Context, configFile string) bool {
 		return false
 	}
 
-	// 连接其他服务器
-	this.BaseServer.SetDefaultServerConnectorConfig(this.config.ServerConnConfig, NewProtoCodec(nil))
-	this.BaseServer.GetServerList().SetFetchAndConnectServerTypes(ServerType_Game)
+	this.BaseServer.GetServerList().SetFetchServerTypes(ServerType_Game)
 
 	slog.Info("LoginServer.Init")
 	return true
@@ -192,7 +190,7 @@ func onHeartBeatReq(connection Connection, packet Packet) {
 	req := packet.Message().(*pb.HeartBeatReq)
 	SendPacketAdapt(connection, packet, PacketCommand(pb.CmdInner_Cmd_HeartBeatRes), &pb.HeartBeatRes{
 		RequestTimestamp:  req.GetTimestamp(),
-		ResponseTimestamp: uint64(time.Now().UnixNano() / int64(time.Microsecond)),
+		ResponseTimestamp: util.GetCurrentMS(),
 	})
 }
 
