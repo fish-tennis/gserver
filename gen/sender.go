@@ -6,5 +6,7 @@ import (
 )
 
 type Sender interface {
-	Send(command gnet.PacketCommand, message proto.Message) bool
+	Send(command gnet.PacketCommand, message proto.Message, opts ...gnet.SendOption) bool
+
+	SendPacket(packet gnet.Packet, opts ...gnet.SendOption) bool
 }

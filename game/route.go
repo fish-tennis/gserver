@@ -94,17 +94,19 @@ func RoutePlayerPacket(playerId int64, packet Packet, opts ...RouteOption) bool 
 	for _, opt := range opts {
 		opt.apply(routeOpts)
 	}
+	pendingMessageId := int64(0)
 	if routeOpts.SaveDb {
 		anyMessage, err := anypb.New(packet.Message())
 		if err != nil {
 			logger.Error("RoutePlayerPacket %v err:%v", playerId, err)
 			return false
 		}
+		pendingMessageId = util.GenUniqueId()
 		routePacket := &pb.RoutePlayerMessage{
 			ToPlayerId:       playerId,
 			PacketCommand:    int32(packet.Command()),
 			DirectSendClient: false,
-			MessageId:        util.GenUniqueId(), // 消息号生成唯一id
+			MessageId:        pendingMessageId, // 消息号生成唯一id
 			PacketData:       anyMessage,
 		}
 		routePacketBytes, err := proto.Marshal(routePacket)
@@ -118,6 +120,7 @@ func RoutePlayerPacket(playerId int64, packet Packet, opts ...RouteOption) bool 
 			logger.Error("RoutePlayerPacket %v err:%v", playerId, err)
 			return false
 		}
+		logger.Debug("save PendingMessages:%v playerId:%v cmd:%v", routePacket.MessageId, playerId, packet.Command())
 	}
 	conn := routeOpts.Connection
 	if conn == nil {
@@ -125,7 +128,7 @@ func RoutePlayerPacket(playerId int64, packet Packet, opts ...RouteOption) bool 
 		if toServerId == 0 {
 			_, toServerId = cache.GetOnlinePlayer(playerId)
 			if toServerId == 0 {
-				logger.Error("RoutePlayerPacketErr %v", playerId)
+				logger.Error("RoutePlayerPacketErr playerId:%v cmd:%v", playerId, packet.Command())
 				return false
 			}
 		}
@@ -140,6 +143,7 @@ func RoutePlayerPacket(playerId int64, packet Packet, opts ...RouteOption) bool 
 		ToPlayerId:       playerId,
 		PacketCommand:    int32(packet.Command()),
 		DirectSendClient: routeOpts.DirectSendClient,
+		MessageId:        pendingMessageId,
 		PacketData:       anyPacket,
 	})
 	if protoPacket, ok := packet.(*ProtoPacket); ok {

@@ -9,6 +9,7 @@ type Hook struct {
 }
 
 func (h *Hook) OnRegisterServerHandler(serverHandler gnet.ConnectionHandler) {
+	InitGuildStructAndHandler()
 	// 注册服务器之间的消息回调
 	GuildServerHandlerRegister(serverHandler.(gnet.PacketHandlerRegister))
 }

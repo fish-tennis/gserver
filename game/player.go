@@ -104,13 +104,26 @@ func (this *Player) OnDisconnect(connection Connection) {
 
 // 发包(protobuf)
 // NOTE:调用Send(command,message)之后,不要再对message进行读写!
-func (this *Player) Send(command PacketCommand, message proto.Message) bool {
+func (this *Player) Send(command PacketCommand, message proto.Message, opts ...SendOption) bool {
 	if this.connection != nil {
 		if this.useGate {
 			// 网关模式,自动附加上playerId
-			return this.connection.SendPacket(internal.NewGatePacket(this.GetId(), command, message))
+			return this.connection.SendPacket(internal.NewGatePacket(this.GetId(), command, message), opts...)
 		} else {
-			return this.connection.Send(command, message)
+			return this.connection.Send(command, message, opts...)
+		}
+	}
+	return false
+}
+
+func (this *Player) SendPacket(packet Packet, opts ...SendOption) bool {
+	if this.connection != nil {
+		if this.useGate {
+			// 网关模式,自动附加上playerId
+			return this.connection.SendPacket(internal.NewGatePacket(this.GetId(), packet.Command(), packet.Message()).
+				WithStreamData(packet.GetStreamData()).WithRpc(packet), opts...)
+		} else {
+			return this.connection.SendPacket(packet, opts...)
 		}
 	}
 	return false
@@ -210,7 +223,7 @@ func (this *Player) processMessage(message *ProtoPacket) {
 		this.SaveCache(cache.Get())
 		return
 	}
-	logger.Error("unhandle message:%v", message.Command())
+	logger.Error("unhandled cmd:%v message:%v", message.Command(), proto.MessageName(message.Message()).Name())
 }
 
 // 放入消息队列
@@ -229,12 +242,7 @@ func CreatePlayerFromData(playerData *pb.PlayerData) *Player {
 	}
 	player.Id = playerData.XId
 	// 初始化玩家的各个模块
-	for _, componentCtor := range _playerComponentRegister {
-		component := componentCtor.Ctor(player, playerData)
-		if component != nil && player.GetComponentByName(component.GetName()) == nil {
-			player.AddComponent(component, nil)
-		}
-	}
+	_playerComponentRegister.InitComponents(player, playerData)
 	return player
 }
 

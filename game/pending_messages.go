@@ -38,15 +38,8 @@ type PendingMessages struct {
 	Messages map[int64]*pb.RoutePlayerMessage `db:""`
 }
 
-func NewPendingMessages(player *Player) *PendingMessages {
-	component := &PendingMessages{
-		BasePlayerComponent: BasePlayerComponent{
-			player: player,
-			name:   "PendingMessages",
-		},
-		Messages: make(map[int64]*pb.RoutePlayerMessage),
-	}
-	return component
+func (this *Player) GetPendingMessages() *PendingMessages {
+	return this.GetComponentByName(ComponentNamePendingMessages).(*PendingMessages)
 }
 
 // 事件接口
@@ -70,4 +63,9 @@ func (this *PendingMessages) OnEvent(event interface{}) {
 			logger.Debug("%v delete pending message:%v", this.GetPlayerId(), req.MessageId)
 		}
 	}
+}
+
+func (this *PendingMessages) Remove(messageId int64) {
+	db.GetPlayerDb().DeleteComponentField(this.GetPlayerId(), strings.ToLower(this.GetName()), util.Itoa(messageId))
+	logger.Debug("%v delete pending message:%v", this.GetPlayerId(), messageId)
 }

@@ -2,6 +2,7 @@ package game
 
 import (
 	"context"
+	"fmt"
 	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gentity/util"
 	"github.com/fish-tennis/gnet"
@@ -157,19 +158,36 @@ func (this *Guild) OnGuildJoinReq(reqCmd gnet.PacketCommand, req *pb.GuildJoinRe
 	reply := new(pb.GuildJoinRes)
 	err := this.RouteRpcToTargetGuild(req.Id, reqCmd, req, reply)
 	if err != nil {
-		this.player.SendErrorRes(reqCmd, "server internal error")
+		this.player.SendErrorRes(reqCmd, fmt.Sprintf("server internal error:%v", err.Error()))
 		return
 	}
 	slog.Debug("OnGuildJoinReq reply", "reply", reply)
 	gen.SendGuildJoinRes(this.GetPlayer(), reply)
 }
 
-// 加入联盟的请求的回复结果
+// 公会管理员处理申请者的入会申请
+func (this *Guild) OnGuildJoinAgreeReq(reqCmd gnet.PacketCommand, req *pb.GuildJoinAgreeReq) {
+	if this.Data.GuildId == 0 {
+		this.player.SendErrorRes(reqCmd, "not a guild member")
+		return
+	}
+	// 向公会所在的服务器发rpc请求
+	reply := new(pb.GuildJoinAgreeRes)
+	err := this.RouteRpcToSelfGuild(reqCmd, req, reply)
+	if err != nil {
+		this.player.SendErrorRes(reqCmd, fmt.Sprintf("server internal error:%v", err.Error()))
+		return
+	}
+	slog.Debug("OnGuildJoinAgreeReq reply", "reply", reply)
+	gen.SendGuildJoinAgreeRes(this.GetPlayer(), reply)
+}
+
+// 自己的入会申请的操作结果
 //
 //	这种格式写的函数可以自动注册非客户端的消息回调
-func (this *Guild) HandleGuildJoinAgreeRes(cmd gnet.PacketCommand, msg *pb.GuildJoinAgreeRes) {
-	logger.Debug("HandleGuildJoinAgreeRes:%v", msg)
-	if msg.IsAgree {
+func (this *Guild) HandleGuildJoinReqOpResult(cmd gnet.PacketCommand, msg *pb.GuildJoinReqOpResult) {
+	logger.Debug("HandleGuildJoinReqOpResult:%v", msg)
+	if msg.Error == "" && msg.IsAgree {
 		this.SetGuildId(msg.GuildId)
 	}
 	this.GetPlayer().Send(cmd, msg)
@@ -214,5 +232,9 @@ func (this *Guild) RouteRpcToSelfGuild(cmd gnet.PacketCommand, message proto.Mes
 
 // 查看自己公会的信息
 func (this *Guild) OnGuildDataViewReq(reqCmd gnet.PacketCommand, req *pb.GuildDataViewReq) {
+	if this.Data.GuildId == 0 {
+		this.player.SendErrorRes(reqCmd, "not a guild member")
+		return
+	}
 	this.RoutePacketToGuild(reqCmd, req)
 }

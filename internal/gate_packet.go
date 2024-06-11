@@ -85,6 +85,21 @@ func (this *GatePacket) SetRpcCallId(rpcCallId uint32) {
 	this.rpcCallId = rpcCallId
 }
 
+func (this *GatePacket) WithStreamData(streamData []byte) *GatePacket {
+	this.data = streamData
+	return this
+}
+
+func (this *GatePacket) WithRpc(arg any) *GatePacket {
+	switch v := arg.(type) {
+	case uint32:
+		this.rpcCallId = v
+	case RpcCallIdSetter:
+		this.rpcCallId = v.RpcCallId()
+	}
+	return this
+}
+
 // 某些特殊需求会直接使用序列化好的数据
 //
 //	support stream data

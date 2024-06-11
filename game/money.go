@@ -36,6 +36,10 @@ type Money struct {
 	Data *pb.Money `db:"Money"`
 }
 
+func (this *Player) GetMoney() *Money {
+	return this.GetComponentByName(ComponentNameMoney).(*Money)
+}
+
 func (this *Money) IncCoin(coin int32) {
 	this.Data.Coin += coin
 	this.SetDirty()
