@@ -24,7 +24,7 @@ func init() {
 				player: player,
 				name:   ComponentNamePendingMessages,
 			},
-			Messages: make(map[int64]*pb.RoutePlayerMessage),
+			Messages: make(map[int64]*pb.PendingMessage),
 		}
 		gentity.LoadData(component, playerData.GetPendingMessages())
 		return component
@@ -35,7 +35,7 @@ func init() {
 // 该组件不会在玩家下线时保存数据库,也不保存缓存
 type PendingMessages struct {
 	BasePlayerComponent
-	Messages map[int64]*pb.RoutePlayerMessage `db:""`
+	Messages map[int64]*pb.PendingMessage `db:""`
 }
 
 func (this *Player) GetPendingMessages() *PendingMessages {
@@ -49,12 +49,12 @@ func (this *PendingMessages) OnEvent(event interface{}) {
 		for _, req := range this.Messages {
 			message, err := req.PacketData.UnmarshalNew()
 			if err != nil {
-				logger.Error("UnmarshalNew %v err:%v", req.ToPlayerId, err)
+				logger.Error("UnmarshalNew %v err:%v", this.GetPlayerId(), err)
 				continue
 			}
 			err = req.PacketData.UnmarshalTo(message)
 			if err != nil {
-				logger.Error("UnmarshalTo %v err:%v", req.ToPlayerId, err)
+				logger.Error("UnmarshalTo %v err:%v", this.GetPlayerId(), err)
 				continue
 			}
 			this.GetPlayer().processMessage(gnet.NewProtoPacket(gnet.PacketCommand(req.PacketCommand), message))

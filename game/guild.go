@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/fish-tennis/gentity"
-	"github.com/fish-tennis/gentity/util"
 	"github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/db"
 	"github.com/fish-tennis/gserver/gen"
@@ -106,11 +105,19 @@ func (this *Guild) OnGuildCreateReq(reqCmd gnet.PacketCommand, req *pb.GuildCrea
 	// TODO:如果玩家之前已经提交了一个加入其他联盟的请求,玩家又自己创建联盟
 	// 其他联盟的管理员又接受了该玩家的加入请求,如何防止该玩家同时存在于2个联盟?
 	// 利用mongodb加一个类似原子锁的操作?
-	newId := util.GenUniqueId()
+	newGuildIdValue, err := db.GetDbMgr().GetKvDb(db.KvDbName).Inc(db.GuildIdKeyName, int64(1), true)
+	if err != nil {
+		gen.SendGuildCreateRes(player, &pb.GuildCreateRes{
+			Error: "IdError",
+		})
+		logger.Error("OnGuildCreateReq err:%v", err)
+		return
+	}
+	newGuildId := newGuildIdValue.(int64)
 	newGuildData := &pb.GuildData{
-		Id: newId,
+		Id: newGuildId,
 		BaseInfo: &pb.GuildInfo{
-			Id:          newId,
+			Id:          newGuildId,
 			Name:        req.Name,
 			Intro:       req.Intro,
 			MemberCount: 1,
@@ -125,7 +132,7 @@ func (this *Guild) OnGuildCreateReq(reqCmd gnet.PacketCommand, req *pb.GuildCrea
 	guildDb := db.GetDbMgr().GetEntityDb(db.GuildDbName)
 	saveData := gentity.ConvertProtoToMap(newGuildData)
 	// mongodb _id特殊处理
-	saveData["_id"] = newGuildData.Id
+	saveData[db.UniqueIdName] = newGuildData.Id
 	dbErr, isDuplicateName := guildDb.InsertEntity(newGuildData.Id, saveData)
 	if dbErr != nil {
 		logger.Error("OnGuildCreateReq dbErr:%v", dbErr)

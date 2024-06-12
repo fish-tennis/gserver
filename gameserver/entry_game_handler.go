@@ -2,7 +2,6 @@ package gameserver
 
 import (
 	"github.com/fish-tennis/gentity"
-	"github.com/fish-tennis/gentity/util"
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
 	"github.com/fish-tennis/gserver/db"
@@ -149,8 +148,17 @@ func onCreatePlayerReq(connection Connection, packet Packet) {
 		})
 		return
 	}
+	newPlayerIdValue, err := db.GetDbMgr().GetKvDb(db.KvDbName).Inc(db.PlayerIdKeyName, int64(1), true)
+	if err != nil {
+		internal.SendPacketAdapt(connection, packet, PacketCommand(pb.CmdLogin_Cmd_CreatePlayerRes), &pb.CreatePlayerRes{
+			Error: "IdError",
+		})
+		logger.Error("onCreatePlayerReq err:%v", err)
+		return
+	}
+	newPlayerId := newPlayerIdValue.(int64)
 	playerData := &pb.PlayerData{
-		XId:       util.GenUniqueId(),
+		XId:       newPlayerId,
 		Name:      req.Name,
 		AccountId: req.AccountId,
 		RegionId:  req.RegionId,

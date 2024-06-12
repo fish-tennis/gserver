@@ -2,9 +2,9 @@ package loginserver
 
 import (
 	"github.com/fish-tennis/gentity"
-	"github.com/fish-tennis/gentity/util"
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
+	"github.com/fish-tennis/gserver/db"
 	"github.com/fish-tennis/gserver/gen"
 	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
@@ -33,13 +33,13 @@ func onLoginReq(connection Connection, packet Packet) {
 		}
 	}
 	loginRes := &pb.LoginRes{
-		Error: result,
-		AccountName: req.GetAccountName(),
-		AccountId: account.XId,
+		Error:        result,
+		AccountName:  req.GetAccountName(),
+		AccountId:    account.XId,
 		LoginSession: loginSession,
 	}
 	if result == "" {
-		onlinePlayerId,gameServerId := cache.GetOnlineAccount(account.GetXId())
+		onlinePlayerId, gameServerId := cache.GetOnlineAccount(account.GetXId())
 		if onlinePlayerId > 0 {
 			// 如果该账号还在游戏中,则需要先将其清理下线
 			logger.Error("exist online account:%v playerId:%v gameServerId:%v",
@@ -54,14 +54,14 @@ func onLoginReq(connection Connection, packet Packet) {
 				//}
 				gen.SendKickPlayer(gameServerId, &pb.KickPlayer{
 					AccountId: account.GetXId(),
-					PlayerId: onlinePlayerId,
+					PlayerId:  onlinePlayerId,
 				})
 			}
 		}
 		// 分配一个游戏服给客户端连接
 		gameServerInfo := selectGameServer(account)
 		loginRes.GameServer = &pb.GameServerInfo{
-			ServerId: gameServerInfo.GetServerId(),
+			ServerId:         gameServerInfo.GetServerId(),
 			ClientListenAddr: gameServerInfo.GetClientListenAddr(),
 		}
 		logger.Debug("%v(%v) -> %v", account.Name, account.GetXId(), loginRes.GameServer)
@@ -86,15 +86,24 @@ func onAccountReg(connection Connection, packet Packet) {
 	logger.Debug("onAccountReg:%v", packet.Message())
 	req := packet.Message().(*pb.AccountReg)
 	result := ""
+	newAccountIdValue, err := db.GetDbMgr().GetKvDb(db.KvDbName).Inc(db.AccountIdKeyName, int64(1), true)
+	if err != nil {
+		internal.SendPacketAdapt(connection, packet, PacketCommand(pb.CmdLogin_Cmd_AccountRes), &pb.AccountRes{
+			Error: "IdError",
+		})
+		logger.Error("onAccountReg err:%v", err)
+		return
+	}
+	newAccountId := newAccountIdValue.(int64)
 	account := &pb.Account{
-		XId: util.GenUniqueId(),
-		Name: req.GetAccountName(),
+		XId:      newAccountId,
+		Name:     req.GetAccountName(),
 		Password: req.GetPassword(),
 	}
 	accountMapData := gentity.ConvertProtoToMap(account)
-	accountMapData["_id"] = account.XId
+	accountMapData[db.UniqueIdName] = account.XId
 	delete(accountMapData, "xid")
-	err,isDuplicateKey := _loginServer.GetAccountDb().InsertEntity(account.XId, accountMapData)
+	err, isDuplicateKey := _loginServer.GetAccountDb().InsertEntity(account.XId, accountMapData)
 	if err != nil {
 		account.XId = 0
 		if isDuplicateKey {
@@ -105,8 +114,8 @@ func onAccountReg(connection Connection, packet Packet) {
 		logger.Error("onAccountReg account:%v result:%v err:%v", account.Name, result, err.Error())
 	}
 	internal.SendPacketAdapt(connection, packet, PacketCommand(pb.CmdLogin_Cmd_AccountRes), &pb.AccountRes{
-		Error: result,
+		Error:       result,
 		AccountName: account.Name,
-		AccountId: account.XId,
+		AccountId:   account.XId,
 	})
 }

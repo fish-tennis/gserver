@@ -9,7 +9,6 @@ import (
 	. "github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
-	"reflect"
 	"time"
 )
 
@@ -110,15 +109,6 @@ func initGuildMgr() {
 		routineArgs,
 		new(GuildHelper))
 	_guildMgr.SetLoadEntityWhenGetNil(true)
-
-	// 启动时,缓存Guild的结构信息
-	tmpGuild := NewGuild(&pb.GuildLoadData{
-		Id: 0,
-	})
-	tmpGuild.RangeComponent(func(component gentity.Component) bool {
-		gentity.GetSaveableStruct(reflect.TypeOf(component))
-		return true
-	})
 }
 
 // 获取本服上的公会

@@ -11,6 +11,7 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"strings"
+	"time"
 )
 
 type RouteOption interface {
@@ -102,25 +103,24 @@ func RoutePlayerPacket(playerId int64, packet Packet, opts ...RouteOption) bool 
 			return false
 		}
 		pendingMessageId = util.GenUniqueId()
-		routePacket := &pb.RoutePlayerMessage{
-			ToPlayerId:       playerId,
-			PacketCommand:    int32(packet.Command()),
-			DirectSendClient: false,
-			MessageId:        pendingMessageId, // 消息号生成唯一id
-			PacketData:       anyMessage,
+		pendingMessage := &pb.PendingMessage{
+			MessageId:     pendingMessageId, // 消息号生成唯一id
+			PacketCommand: int32(packet.Command()),
+			PacketData:    anyMessage,
+			Timestamp:     time.Now().Unix(),
 		}
-		routePacketBytes, err := proto.Marshal(routePacket)
+		pendingMessageBytes, err := proto.Marshal(pendingMessage)
 		if err != nil {
 			logger.Error("RoutePlayerPacket %v err:%v", playerId, err)
 			return false
 		}
 		err = db.GetPlayerDb().SaveComponentField(playerId, strings.ToLower(ComponentNamePendingMessages),
-			util.Itoa(routePacket.MessageId), routePacketBytes)
+			util.Itoa(pendingMessage.MessageId), pendingMessageBytes)
 		if err != nil {
 			logger.Error("RoutePlayerPacket %v err:%v", playerId, err)
 			return false
 		}
-		logger.Debug("save PendingMessages:%v playerId:%v cmd:%v", routePacket.MessageId, playerId, packet.Command())
+		logger.Debug("save PendingMessage:%v playerId:%v cmd:%v", pendingMessage.MessageId, playerId, packet.Command())
 	}
 	conn := routeOpts.Connection
 	if conn == nil {
@@ -128,7 +128,7 @@ func RoutePlayerPacket(playerId int64, packet Packet, opts ...RouteOption) bool 
 		if toServerId == 0 {
 			_, toServerId = cache.GetOnlinePlayer(playerId)
 			if toServerId == 0 {
-				logger.Error("RoutePlayerPacketErr playerId:%v cmd:%v", playerId, packet.Command())
+				logger.Error("RoutePlayerPacketErr player offline playerId:%v cmd:%v", playerId, packet.Command())
 				return false
 			}
 		}
@@ -143,7 +143,7 @@ func RoutePlayerPacket(playerId int64, packet Packet, opts ...RouteOption) bool 
 		ToPlayerId:       playerId,
 		PacketCommand:    int32(packet.Command()),
 		DirectSendClient: routeOpts.DirectSendClient,
-		MessageId:        pendingMessageId,
+		PendingMessageId: pendingMessageId,
 		PacketData:       anyPacket,
 	})
 	if protoPacket, ok := packet.(*ProtoPacket); ok {

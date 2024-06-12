@@ -166,6 +166,8 @@ func (this *GameServer) initDb() {
 	mongoDb.RegisterEntityDb(db.GuildDbName, "_id")
 	// 全局对象数据库(如GlobalEntity)
 	mongoDb.RegisterEntityDb(game.GlobalEntityCollectionName, game.GlobalEntityCollectionKeyName)
+	// kv数据库
+	mongoDb.RegisterKvDb(db.KvDbName, db.KvKeyName, db.KvValueName)
 	if !mongoDb.Connect() {
 		panic("connect db error")
 	}
@@ -386,8 +388,8 @@ func (this *GameServer) onRoutePlayerMessage(connection Connection, packet Packe
 		// 需要player处理的消息,放进player的消息队列,在玩家的逻辑协程中处理
 		player.OnRecvPacket(NewProtoPacket(PacketCommand(req.PacketCommand), message))
 	}
-	if req.MessageId > 0 {
+	if req.PendingMessageId > 0 {
 		// 消息保存到db了,处理完需要删除
-		player.GetPendingMessages().Remove(req.MessageId)
+		player.GetPendingMessages().Remove(req.PendingMessageId)
 	}
 }

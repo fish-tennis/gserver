@@ -2,6 +2,8 @@ syntax = "proto3";
 
 option go_package = "./pb";
 
+import "google/protobuf/any.proto";
+
 package gserver;
 
 // 玩家基础信息
@@ -74,4 +76,12 @@ message ActivityProgressData {
   int32 cfgId = 1; // 配置id
   int32 progress = 2; // 进度
   bool isReceiveReward = 3; // 是否领取了奖励
+}
+
+// 待处理消息
+message PendingMessage {
+  int64 messageId = 1; // 唯一id
+  int32 packetCommand = 2; // 消息号
+  google.protobuf.Any packetData = 3; // 消息内容
+  int64 timestamp = 4; // 时间戳
 }

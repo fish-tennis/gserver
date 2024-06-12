@@ -20,6 +20,9 @@ func RouteGuildServerId(guildId int64) int32 {
 }
 
 // 玩家对公会的请求消息转换成路由消息
+//
+//	原始消息基础上再加上一些附加数据
+//	client -> game.Guild -> social.Guild
 func PacketToGuildRoutePacket(fromPlayerId int64, fromPlayerName string, reqPacket gnet.Packet, guildId int64) gnet.Packet {
 	anyPacket, err := anypb.New(reqPacket.Message())
 	if err != nil {

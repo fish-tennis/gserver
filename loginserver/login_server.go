@@ -131,7 +131,10 @@ func (this *LoginServer) readConfig() {
 func (this *LoginServer) initDb() {
 	// 使用mongodb来演示
 	mongoDb := gentity.NewMongoDb(this.config.MongoUri, this.config.MongoDbName)
-	this.accountDb = mongoDb.RegisterEntityDb("account", "_id")
+	// 账号数据库
+	this.accountDb = mongoDb.RegisterEntityDb(db.AccountDbName, db.UniqueIdName)
+	// kv数据库
+	mongoDb.RegisterKvDb(db.KvDbName, db.KvKeyName, db.KvValueName)
 	if !mongoDb.Connect() {
 		panic("connect db error")
 	}

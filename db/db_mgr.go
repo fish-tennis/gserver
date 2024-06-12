@@ -3,8 +3,17 @@ package db
 import "github.com/fish-tennis/gentity"
 
 const (
-	PlayerDbName = "player" // 玩家数据库名
-	GuildDbName  = "guild"  // 公会数据库名
+	KvDbName         = "kv" // kv数据库名
+	KvKeyName        = "k"
+	KvValueName      = "v"
+	AccountIdKeyName = "AccountId"
+	PlayerIdKeyName  = "PlayerId"
+	GuildIdKeyName   = "GuildId"
+
+	AccountDbName = "account" // 账号数据库名
+	PlayerDbName  = "player"  // 玩家数据库名
+	GuildDbName   = "guild"   // 公会数据库名
+	UniqueIdName  = "_id"     // 数据库id列名
 )
 
 var (
