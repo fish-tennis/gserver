@@ -26,8 +26,7 @@ type GuildMessage struct {
 	cmd            PacketCommand
 	message        proto.Message
 	srcPacket      Packet     // 来源packet
-	srcConnection  Connection // 来源连接
-	//putReplyFn     func(reply Packet)
+	srcConnection  Connection // 来源连接,返回消息"原路返回",才能实现rpc功能
 }
 
 func NewGuild(guildLoadData *pb.GuildLoadData) *Guild {
@@ -52,7 +51,7 @@ func (this *Guild) processMessage(guildMessage *GuildMessage) {
 		component := this.GetComponentByName(handlerInfo.ComponentName)
 		if component != nil {
 			// 反射调用函数
-			slog.Info("processMessage", "cmd", guildMessage.cmd, "message", proto.MessageName(guildMessage.message))
+			slog.Debug("processMessage", "cmd", guildMessage.cmd, "message", proto.MessageName(guildMessage.message))
 			handlerInfo.Method.Func.Call([]reflect.Value{reflect.ValueOf(component),
 				reflect.ValueOf(guildMessage),
 				reflect.ValueOf(guildMessage.message)})

@@ -6,6 +6,7 @@ import (
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
 	"github.com/fish-tennis/gserver/db"
+	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 	"google.golang.org/protobuf/proto"
@@ -92,7 +93,7 @@ func (this *GlobalEntity) processMessage(message *ProtoPacket) {
 	}()
 	logger.Debug("processMessage %v", proto.MessageName(message.Message()).Name())
 	// 先找组件接口
-	if gentity.ProcessComponentHandler(this, message.Command(), message.Message()) {
+	if _globalEntityComponentHandlerRegister.Invoke(this, message) {
 		return
 	}
 	logger.Error("unhandle message:%v", message.Command())
@@ -114,7 +115,7 @@ func CreateGlobalEntityFromDb() *GlobalEntity {
 	return globalEntity
 }
 
-func CreateTempGlobalEntity() *GlobalEntity {
+func createTempGlobalEntity() *GlobalEntity {
 	globalEntity := NewGlobalEntity()
 	globalEntityData := &pb.GlobalEntityData{}
 	return createGlobalEntityFromData(globalEntity, globalEntityData)
@@ -122,21 +123,17 @@ func CreateTempGlobalEntity() *GlobalEntity {
 
 func createGlobalEntityFromData(globalEntity *GlobalEntity, globalEntityData *pb.GlobalEntityData) *GlobalEntity {
 	// 初始化各个模块
-	globalEntity.AddComponent(NewProcessStatInfo(globalEntity, globalEntityData.ProcessStatInfo), nil)
+	_globalEntityComponentRegister.InitComponents(globalEntity, globalEntityData)
 	return globalEntity
 }
 
 // 注册GlobalEntity的结构体和消息回调
 func InitGlobalEntityStructAndHandler() {
-	tmpGlobalEntity := CreateTempGlobalEntity()
+	tmpGlobalEntity := createTempGlobalEntity()
 	tmpGlobalEntity.RangeComponent(func(component gentity.Component) bool {
 		gentity.GetSaveableStruct(reflect.TypeOf(component))
 		return true
 	})
-	gentity.AutoRegisterComponentHandler(tmpGlobalEntity, nil,
-		"", "Handle", "gserver")
-}
-
-func (this *GlobalEntity) GetProcessStatInfo() *ProcessStatInfo {
-	return this.GetComponentByName("ProcessStatInfo").(*ProcessStatInfo)
+	_globalEntityComponentHandlerRegister.AutoRegisterComponentHandler(tmpGlobalEntity,
+		internal.HandlerMethodNamePrefix, internal.ProtoPackageName)
 }

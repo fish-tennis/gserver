@@ -89,9 +89,6 @@ func initGuildMgr() {
 	routineArgs := &gentity.RoutineEntityRoutineArgs{
 		ProcessMessageFunc: func(routineEntity gentity.RoutineEntity, routineMessage any) {
 			guildMessage := routineMessage.(*GuildMessage)
-			//guildMessage.putReplyFn = func(reply Packet) {
-			//	routineMessage.PutReply(reply)
-			//}
 			routineEntity.(*Guild).processMessage(guildMessage)
 			//this.SaveCache()
 			// 这里演示一种直接保存数据库的用法,可以用于那些不经常修改的数据
@@ -120,7 +117,7 @@ func GetGuildById(guildId int64) *Guild {
 	return guild.(*Guild)
 }
 
-// 服务器动态扩缩容了,公会重新分配
+// 服务器列表,触发公会重新分配
 func onServerListUpdate(serverList map[string][]gentity.ServerInfo, oldServerList map[string][]gentity.ServerInfo) {
 	_guildMgr.ReBalance()
 }

@@ -7,6 +7,23 @@ import (
 	"github.com/fish-tennis/gserver/pb"
 )
 
+const (
+	// 组件名
+	ComponentNameProcessStatInfo = "ProcessStatInfo"
+)
+
+// 利用go的init进行组件的自动注册
+func init() {
+	RegisterGlobalEntityComponentCtor(ComponentNameProcessStatInfo, 0, func(globalEntity *GlobalEntity, loadData *pb.GlobalEntityData) gentity.Component {
+		component := &ProcessStatInfo{
+			DataComponent: *gentity.NewDataComponent(globalEntity, ComponentNameProcessStatInfo),
+			Data:          &pb.ProcessStatInfo{},
+		}
+		gentity.LoadData(component, loadData.GetProcessStatInfo())
+		return component
+	})
+}
+
 // 进程统计信息组件
 type ProcessStatInfo struct {
 	gentity.DataComponent
@@ -14,15 +31,8 @@ type ProcessStatInfo struct {
 	Data *pb.ProcessStatInfo `db:"ProcessStatInfo;plain"`
 }
 
-func NewProcessStatInfo(globalEntity *GlobalEntity, data *pb.ProcessStatInfo) *ProcessStatInfo {
-	component := &ProcessStatInfo{
-		DataComponent: *gentity.NewDataComponent(globalEntity, "ProcessStatInfo"),
-		Data:          &pb.ProcessStatInfo{},
-	}
-	if data != nil {
-		component.Data = data
-	}
-	return component
+func (this *GlobalEntity) GetProcessStatInfo() *ProcessStatInfo {
+	return this.GetComponentByName(ComponentNameProcessStatInfo).(*ProcessStatInfo)
 }
 
 func (this *ProcessStatInfo) HandleStartupReq(cmd PacketCommand, req *pb.StartupReq) {

@@ -80,7 +80,7 @@
       ],
       "FuncTemplate":[
         "   {Comment}",
-        "   gentity.RegisterProtoCodeGen(packetHandlerRegister, \"{ProtoName}\", PacketCommand(pb.Cmd{ProtoName}_Cmd_{MessageName}), new(pb.{MessageName}), func(c gentity.Component, m proto.Message) {",
+        "   _playerComponentHandlerRegister.RegisterProtoCodeGen(packetHandlerRegister, \"{ProtoName}\", PacketCommand(pb.Cmd{ProtoName}_Cmd_{MessageName}), new(pb.{MessageName}), func(c gentity.Component, m proto.Message) {",
         "       c.(*{ProtoName}).On{MessageName}(PacketCommand(pb.Cmd{ProtoName}_Cmd_{MessageName}), m.(*pb.{MessageName}))",
         "   })"
       ],

@@ -5,6 +5,7 @@ import (
 	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gentity/util"
 	. "github.com/fish-tennis/gnet"
+	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/pb"
 	"google.golang.org/protobuf/proto"
 	"log/slog"
@@ -12,15 +13,8 @@ import (
 	"strings"
 )
 
-func GuildServerHandlerRegister(handler PacketHandlerRegister) {
-	slog.Info("GuildServerHandlerRegister")
-	// 其他服务器转发过来的公会消息
-	handler.Register(PacketCommand(pb.CmdRoute_Cmd_GuildRoutePlayerMessageReq), func(connection Connection, packet Packet) {
-		req := packet.Message().(*pb.GuildRoutePlayerMessageReq)
-		slog.Debug("GuildRoutePlayerMessageReq", "packet", req)
-		_guildMgr.ParseRoutePacket(connection, packet, req.FromGuildId)
-	}, new(pb.GuildRoutePlayerMessageReq))
-}
+// 公会组件接口注册
+var _guildComponentHandlerInfos = make(map[PacketCommand]*gentity.ComponentHandlerInfo)
 
 func InitGuildStructAndHandler() {
 	tmpGuild := NewGuild(&pb.GuildLoadData{})
@@ -28,12 +22,11 @@ func InitGuildStructAndHandler() {
 		gentity.GetSaveableStruct(reflect.TypeOf(component))
 		return true
 	})
-	AutoRegisterGuildComponentHandler(tmpGuild, "Handle", "gserver")
+	AutoRegisterGuildComponentHandler(tmpGuild, internal.HandlerMethodNamePrefix, internal.ProtoPackageName)
 }
 
-var _guildComponentHandlerInfos = make(map[PacketCommand]*gentity.ComponentHandlerInfo)
-
-func AutoRegisterGuildComponentHandler(entity gentity.Entity, handlerPrefix, protoPackageName string) {
+// 公会组件的回调接口使用了特殊的形式,所以自己写组件接口注册流程
+func AutoRegisterGuildComponentHandler(entity gentity.Entity, methodNamePrefix, protoPackageName string) {
 	// 注册在组件上的回调
 	entity.RangeComponent(func(component gentity.Component) bool {
 		typ := reflect.TypeOf(component)
@@ -45,7 +38,7 @@ func AutoRegisterGuildComponentHandler(entity gentity.Entity, handlerPrefix, pro
 				continue
 			}
 			// 函数名前缀检查
-			if !strings.HasPrefix(method.Name, handlerPrefix) {
+			if !strings.HasPrefix(method.Name, methodNamePrefix) {
 				continue
 			}
 			// 消息回调格式: func (this *GuildJoinRequests) HandleGuildJoinReq(guildMessage *GuildMessage, req *pb.GuildJoinReq)
@@ -62,7 +55,7 @@ func AutoRegisterGuildComponentHandler(entity gentity.Entity, handlerPrefix, pro
 			// *pb.GuildJoinReq -> GuildJoinReq
 			messageName := methodArg2.String()[strings.LastIndex(methodArg2.String(), ".")+1:]
 			// 函数名规则,如HandleGuildJoinReq
-			if method.Name != fmt.Sprintf("%v%v", handlerPrefix, messageName) {
+			if method.Name != fmt.Sprintf("%v%v", methodNamePrefix, messageName) {
 				GetLogger().Debug("methodName not match:%v", method.Name)
 				continue
 			}
@@ -81,4 +74,14 @@ func AutoRegisterGuildComponentHandler(entity gentity.Entity, handlerPrefix, pro
 		}
 		return true
 	})
+}
+
+func GuildServerHandlerRegister(handler PacketHandlerRegister) {
+	slog.Info("GuildServerHandlerRegister")
+	// 其他服务器转发过来的公会消息
+	handler.Register(PacketCommand(pb.CmdRoute_Cmd_GuildRoutePlayerMessageReq), func(connection Connection, packet Packet) {
+		req := packet.Message().(*pb.GuildRoutePlayerMessageReq)
+		slog.Debug("GuildRoutePlayerMessageReq", "packet", req)
+		_guildMgr.ParseRoutePacket(connection, packet, req.FromGuildId)
+	}, new(pb.GuildRoutePlayerMessageReq))
 }

@@ -204,13 +204,13 @@ func (this *Player) processMessage(message *ProtoPacket) {
 	}()
 	logger.Debug("processMessage %v", proto.MessageName(message.Message()).Name())
 	// 先找组件接口
-	if gentity.ProcessComponentHandler(this, message.Command(), message.Message()) {
+	if _playerComponentHandlerRegister.Invoke(this, message) {
 		// 如果有需要保存的数据修改了,即时保存缓存
 		this.SaveCache(cache.Get())
 		return
 	}
 	// 再找func(player *Player, packet Packet)格式的回调接口
-	if playerHandler, ok := _playerHandler[message.Command()]; ok {
+	if playerHandler, ok := _playerHandlerRegister[message.Command()]; ok {
 		playerHandler(this, message)
 		this.SaveCache(cache.Get())
 		return
