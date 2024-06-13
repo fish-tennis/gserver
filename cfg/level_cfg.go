@@ -1,15 +1,11 @@
 package cfg
 
 import (
-	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
-	"github.com/fish-tennis/gserver/tool"
 )
 
 var (
-	_levelCfgMgr = &LevelCfgMgr{
-		needExps: make([]*pb.LevelExp, 0),
-	}
+	_levelCfgMgr = &LevelCfgMgr{}
 )
 
 func init() {
@@ -22,32 +18,20 @@ func init() {
 // 等级配置数据管理
 type LevelCfgMgr struct {
 	// 每一级升级所需要的经验
-	needExps []*pb.LevelExp
+	DataSlice[*pb.LevelExp]
 }
 
+// singleton
 func GetLevelCfgMgr() *LevelCfgMgr {
 	return _levelCfgMgr
 }
 
+// 最大等级
 func (this *LevelCfgMgr) GetMaxLevel() int32 {
-	return int32(len(this.needExps))
+	return int32(this.Len())
 }
 
+// 下一级所需要经验值
 func (this *LevelCfgMgr) GetNeedExp(nextLevel int32) int32 {
-	return this.needExps[nextLevel-1].NeedExp
-}
-
-func (this *LevelCfgMgr) Load(fileName string) bool {
-	option := &tool.CsvOption{
-		DataBeginRowIndex: 1,
-	}
-	s := make([]*pb.LevelExp, 0)
-	var err error
-	this.needExps, err = tool.ReadCsvFileSlice(fileName, s, option)
-	if err != nil {
-		logger.Error("csv read err:%v", err)
-		return false
-	}
-	logger.Info("count:%v", len(this.needExps))
-	return true
+	return this.cfgs[nextLevel-1].NeedExp
 }
