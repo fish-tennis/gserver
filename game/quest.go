@@ -2,13 +2,13 @@ package game
 
 import (
 	"github.com/fish-tennis/gentity"
-	"github.com/fish-tennis/gentity/util"
 	"github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cfg"
 	"github.com/fish-tennis/gserver/gen"
 	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
+	"slices"
 )
 
 const (
@@ -59,7 +59,7 @@ type FinishedQuests struct {
 }
 
 func (f *FinishedQuests) Add(finishedQuestId int32) {
-	if util.ContainsInt32(f.Finished, finishedQuestId) {
+	if slices.Contains(f.Finished, finishedQuestId) {
 		return
 	}
 	f.Finished = append(f.Finished, finishedQuestId)
@@ -117,21 +117,21 @@ func (this *Quest) checkData() {
 }
 
 // 事件接口
-func (this *Quest) OnEvent(event interface{}) {
-	switch event.(type) {
-	case *internal.EventPlayerEntryGame:
-		// 测试代码:给新玩家添加初始任务
-		if len(this.Quests.Quests) == 0 && len(this.Finished.Finished) == 0 {
-			cfg.GetQuestCfgMgr().Range(func(questCfg *cfg.QuestCfg) bool {
-				if !cfg.GetQuestCfgMgr().GetConditionMgr().CheckConditions(this.GetPlayer(), questCfg.Conditions) {
-					return false
-				}
-				questData := &pb.QuestData{CfgId: questCfg.CfgId}
-				this.Quests.Add(questData)
-				return true
-			})
-		}
+func (this *Quest) OnEventPlayerEntryGame(event *internal.EventPlayerEntryGame) {
+	// 测试代码:给新玩家添加初始任务
+	if len(this.Quests.Quests) == 0 && len(this.Finished.Finished) == 0 {
+		cfg.GetQuestCfgMgr().Range(func(questCfg *cfg.QuestCfg) bool {
+			if !cfg.GetQuestCfgMgr().GetConditionMgr().CheckConditions(this.GetPlayer(), questCfg.Conditions) {
+				return false
+			}
+			questData := &pb.QuestData{CfgId: questCfg.CfgId}
+			this.Quests.Add(questData)
+			return true
+		})
 	}
+}
+
+func (this *Quest) OnEvent(event interface{}) {
 	this.Quests.OnEvent(event)
 }
 

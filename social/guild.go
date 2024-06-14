@@ -46,7 +46,7 @@ func (this *Guild) processMessage(guildMessage *GuildMessage) {
 		}
 	}()
 	// 调用注册的组件回调接口
-	handlerInfo := _guildComponentHandlerInfos[guildMessage.cmd]
+	handlerInfo := _guildPacketHandlerMgr[guildMessage.cmd]
 	if handlerInfo != nil {
 		component := this.GetComponentByName(handlerInfo.ComponentName)
 		if component != nil {

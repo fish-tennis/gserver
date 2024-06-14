@@ -43,25 +43,22 @@ func (this *Player) GetPendingMessages() *PendingMessages {
 }
 
 // 事件接口
-func (this *PendingMessages) OnEvent(event interface{}) {
-	switch event.(type) {
-	case *internal.EventPlayerEntryGame:
-		for _, req := range this.Messages {
-			message, err := req.PacketData.UnmarshalNew()
-			if err != nil {
-				logger.Error("UnmarshalNew %v err:%v", this.GetPlayerId(), err)
-				continue
-			}
-			err = req.PacketData.UnmarshalTo(message)
-			if err != nil {
-				logger.Error("UnmarshalTo %v err:%v", this.GetPlayerId(), err)
-				continue
-			}
-			this.GetPlayer().processMessage(gnet.NewProtoPacket(gnet.PacketCommand(req.PacketCommand), message))
-			// 处理过的消息,单独删除数据
-			db.GetPlayerDb().DeleteComponentField(this.GetPlayerId(), strings.ToLower(this.GetName()), util.Itoa(req.MessageId))
-			logger.Debug("%v delete pending message:%v", this.GetPlayerId(), req.MessageId)
+func (this *PendingMessages) OnEventPlayerEntryGame(event *internal.EventPlayerEntryGame) {
+	for _, req := range this.Messages {
+		message, err := req.PacketData.UnmarshalNew()
+		if err != nil {
+			logger.Error("UnmarshalNew %v err:%v", this.GetPlayerId(), err)
+			continue
 		}
+		err = req.PacketData.UnmarshalTo(message)
+		if err != nil {
+			logger.Error("UnmarshalTo %v err:%v", this.GetPlayerId(), err)
+			continue
+		}
+		this.GetPlayer().processMessage(gnet.NewProtoPacket(gnet.PacketCommand(req.PacketCommand), message))
+		// 处理过的消息,单独删除数据
+		db.GetPlayerDb().DeleteComponentField(this.GetPlayerId(), strings.ToLower(this.GetName()), util.Itoa(req.MessageId))
+		logger.Debug("%v delete pending message:%v", this.GetPlayerId(), req.MessageId)
 	}
 }
 

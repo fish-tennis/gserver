@@ -52,15 +52,6 @@ func (this *Player) GetRegionId() int32 {
 	return this.regionId
 }
 
-// 获取组件
-func (this *Player) GetComponent(componentName string) gentity.Component {
-	index := GetComponentIndex(componentName)
-	if index >= 0 {
-		return this.GetComponentByIndex(index)
-	}
-	return nil
-}
-
 // 玩家数据保存数据库
 func (this *Player) SaveDb(removeCacheAfterSaveDb bool) error {
 	return gentity.SaveEntityChangedDataToDb(db.GetPlayerDb(), this, cache.Get(), removeCacheAfterSaveDb, PlayerCachePrefix)
@@ -137,14 +128,13 @@ func (this *Player) SendErrorRes(errorReqCmd PacketCommand, errorMsg string) boo
 	})
 }
 
-// 分发事件给组件
-func (this *Player) FireEvent(event interface{}) {
-	logger.Debug("%v FireEvent:%v", this.GetId(), event)
-	// TODO:建一个事件类型和组件的映射表 eventType -> component list
-	this.RangeComponent(func(component gentity.Component) bool {
-		if eventReceiver, ok := component.(gentity.EventReceiver); ok {
-			eventReceiver.OnEvent(event)
-		}
+// 分发事件
+func (this *Player) FireEvent(event any) {
+	// 注册的事件响应接口
+	_playerEventHandlerMgr.Invoke(this, event)
+	// 有些模块有通用的处理接口
+	this.RangeEventReceiver(func(eventReceiver gentity.EventReceiver) bool {
+		eventReceiver.OnEvent(event)
 		return true
 	})
 }
@@ -203,8 +193,8 @@ func (this *Player) processMessage(message *ProtoPacket) {
 		}
 	}()
 	logger.Debug("processMessage %v", proto.MessageName(message.Message()).Name())
-	// 先找组件接口
-	if _playerComponentHandlerRegister.Invoke(this, message) {
+	// 先找注册的消息回调接口,格式:func (q *Quest) OnFinishQuestReq(cmd PacketCommand, req *pb.FinishQuestReq)
+	if _playerPacketHandlerMgr.Invoke(this, message) {
 		// 如果有需要保存的数据修改了,即时保存缓存
 		this.SaveCache(cache.Get())
 		return

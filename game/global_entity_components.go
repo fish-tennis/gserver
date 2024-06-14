@@ -9,8 +9,8 @@ var (
 	// GlobalEntity组件注册表
 	_globalEntityComponentRegister = gentity.ComponentRegister[*GlobalEntity]{}
 
-	// GlobalEntity组件接口注册
-	_globalEntityComponentHandlerRegister = gentity.NewComponentHandlerRegister()
+	// GlobalEntity消息回调接口注册
+	_globalEntityPacketHandlerMgr = gentity.NewPacketHandlerMgr()
 )
 
 // 注册GlobalEntity组件构造信息

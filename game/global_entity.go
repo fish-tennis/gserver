@@ -10,7 +10,6 @@ import (
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 	"google.golang.org/protobuf/proto"
-	"reflect"
 	"time"
 )
 
@@ -92,8 +91,8 @@ func (this *GlobalEntity) processMessage(message *ProtoPacket) {
 		}
 	}()
 	logger.Debug("processMessage %v", proto.MessageName(message.Message()).Name())
-	// 先找组件接口
-	if _globalEntityComponentHandlerRegister.Invoke(this, message) {
+	// 先找注册的消息回调接口
+	if _globalEntityPacketHandlerMgr.Invoke(this, message) {
 		return
 	}
 	logger.Error("unhandle message:%v", message.Command())
@@ -130,10 +129,6 @@ func createGlobalEntityFromData(globalEntity *GlobalEntity, globalEntityData *pb
 // 注册GlobalEntity的结构体和消息回调
 func InitGlobalEntityStructAndHandler() {
 	tmpGlobalEntity := createTempGlobalEntity()
-	tmpGlobalEntity.RangeComponent(func(component gentity.Component) bool {
-		gentity.GetSaveableStruct(reflect.TypeOf(component))
-		return true
-	})
-	_globalEntityComponentHandlerRegister.AutoRegisterComponentHandler(tmpGlobalEntity,
-		internal.HandlerMethodNamePrefix, internal.ProtoPackageName)
+	gentity.GetEntitySaveableStruct(tmpGlobalEntity)
+	_globalEntityPacketHandlerMgr.AutoRegister(tmpGlobalEntity, internal.HandlerMethodNamePrefix, internal.ProtoPackageName)
 }

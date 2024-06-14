@@ -29,9 +29,7 @@ func init() {
 				Exp:   0,
 			},
 		}
-		if playerData != nil && playerData.BaseInfo != nil {
-			component.Data = playerData.BaseInfo
-		}
+		gentity.LoadData(component, playerData.GetBaseInfo())
 		return component
 	})
 }
@@ -87,13 +85,10 @@ func (this *BaseInfo) IncExp(incExp int32) {
 	this.SetDirty()
 }
 
-func (this *BaseInfo) OnEvent(event interface{}) {
-	switch event.(type) {
-	case *internal.EventPlayerExit:
-		this.Data.TotalOnlineSeconds += this.GetOnlineSecondsThisTime()
-		this.Data.LastLogoutTimestamp = this.GetPlayer().GetTimerEntries().Now().Unix()
-		this.SetDirty()
-	}
+func (this *BaseInfo) OnEventPlayerExit(event *internal.EventPlayerExit) {
+	this.Data.TotalOnlineSeconds += this.GetOnlineSecondsThisTime()
+	this.Data.LastLogoutTimestamp = this.GetPlayer().GetTimerEntries().Now().Unix()
+	this.SetDirty()
 }
 
 // 本次登录在线时长

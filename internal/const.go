@@ -7,4 +7,6 @@ const (
 	ClientHandlerMethodNamePrefix = "On"
 	// 其他回调接口函数名前缀
 	HandlerMethodNamePrefix = "Handle"
+	// 事件响应接口函数名前缀
+	EventHandlerMethodNamePrefix = "OnEvent"
 )

@@ -48,7 +48,7 @@ func (this *GameServer) Init(ctx context.Context, configFile string) bool {
 	}
 	this.readConfig()
 	this.loadCfgs()
-	game.InitPlayerComponentMap()
+	game.InitPlayerStructAndHandler()
 	this.initDb()
 	this.initCache()
 	this.GetServerList().SetCache(cache.Get())
@@ -214,7 +214,7 @@ func (this *GameServer) registerClientPacket(clientHandler PacketHandlerRegister
 	clientHandler.Register(PacketCommand(pb.CmdLogin_Cmd_CreatePlayerReq), onCreatePlayerReq, new(pb.CreatePlayerReq))
 	this.registerGatePlayerPacket(clientHandler, PacketCommand(pb.CmdInner_Cmd_TestCmd), onTestCmd, new(pb.TestCmd))
 	// 通过反射自动注册消息回调
-	game.AutoRegisterPlayerComponentProto(clientHandler)
+	game.AutoRegisterPlayerPacketHandler(clientHandler)
 	// 自动注册消息回调的另一种方案: proto_code_gen工具生成的回调函数
 	// 因为已经用了反射自动注册,所以这里注释了
 	// player_component_handler_gen(clientHandler)
@@ -264,7 +264,7 @@ func (this *GameServer) registerGatePacket(gateHandler PacketHandlerRegister) {
 		})
 	})
 	// 通过反射自动注册消息和proto.Message的映射
-	game.AutoRegisterPlayerComponentProto(gateHandler)
+	game.AutoRegisterPlayerPacketHandler(gateHandler)
 	// 自动注册消息回调的另一种方案: proto_code_gen工具生成的回调函数
 	// 因为已经用了反射自动注册,所以这里注释了
 	// player_component_handler_gen(clientHandler)
