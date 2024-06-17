@@ -9,4 +9,6 @@ const (
 	HandlerMethodNamePrefix = "Handle"
 	// 事件响应接口函数名前缀
 	EventHandlerMethodNamePrefix = "OnEvent"
+	// 事件分发嵌套层次限制
+	EventLoopLimit = int32(3)
 )

@@ -4,6 +4,7 @@ import (
 	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gserver/cache"
 	"github.com/fish-tennis/gserver/internal"
+	"log/slog"
 	"time"
 
 	. "github.com/fish-tennis/gnet"
@@ -35,6 +36,8 @@ type Player struct {
 	// 关联的连接,如果是网关模式,就是网关的连接
 	// 如果是客户端直连模式,就是客户端连接
 	connection Connection
+	// 事件分发的嵌套检测
+	fireEventLoopChecker int32
 }
 
 // 玩家名(unique)
@@ -130,7 +133,19 @@ func (this *Player) SendErrorRes(errorReqCmd PacketCommand, errorMsg string) boo
 
 // 分发事件
 func (this *Player) FireEvent(event any) {
-	// TODO:嵌套检测
+	// 嵌套检测
+	this.fireEventLoopChecker++
+	defer func() {
+		this.fireEventLoopChecker--
+	}()
+	if this.fireEventLoopChecker > 1 {
+		slog.Warn("FireEventLoopChecker", "loop", this.fireEventLoopChecker)
+		if this.fireEventLoopChecker > internal.EventLoopLimit {
+			slog.Error("FireEvent limit", "loop", internal.EventLoopLimit)
+			// 防止事件分发的嵌套导致死循环
+			return
+		}
+	}
 	// 注册的事件响应接口
 	_playerEventHandlerMgr.Invoke(this, event)
 	// 有些模块有通用的处理接口
