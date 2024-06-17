@@ -134,7 +134,7 @@ func (this *LoginServer) initDb() {
 	// 账号数据库
 	this.accountDb = mongoDb.RegisterEntityDb(db.AccountDbName, db.UniqueIdName)
 	// kv数据库
-	mongoDb.RegisterKvDb(db.KvDbName, db.KvKeyName, db.KvValueName)
+	mongoDb.RegisterKvDb(db.GlobalDbName, db.GlobalDbKeyName, db.GlobalDbValueName)
 	if !mongoDb.Connect() {
 		panic("connect db error")
 	}

@@ -90,7 +90,7 @@ func (this *GuildJoinRequests) HandleGuildJoinAgreeReq(guildMessage *GuildMessag
 	g := this.GetGuild()
 	logger.Debug("HandleGuildJoinAgreeReq %v %v", g.GetId(), guildMessage.fromPlayerId)
 	errStr := ""
-	// 返回操作结果
+	// 返回操作结果给公会管理者
 	defer g.RoutePlayerPacket(guildMessage, pb.CmdGuild_Cmd_GuildJoinAgreeRes, &pb.GuildJoinAgreeRes{
 		Error:           errStr,
 		GuildId:         g.GetId(),
@@ -117,16 +117,19 @@ func (this *GuildJoinRequests) HandleGuildJoinAgreeReq(guildMessage *GuildMessag
 		return
 	}
 	if req.IsAgree {
-		// TODO:如果玩家之前已经提交了一个加入其他联盟的请求,玩家又自己创建联盟
-		// 其他联盟的管理员又接受了该玩家的加入请求,如何防止该玩家同时存在于2个联盟?
-		// 利用mongodb加一个类似原子锁的操作?
 		g.GetMembers().Add(&pb.GuildMemberData{
 			Id:       joinRequest.PlayerId,
 			Name:     joinRequest.PlayerName,
 			Position: int32(pb.GuildPosition_Member),
 		})
-		g.GetBaseInfo().SetMemberCount(int32(len(g.GetMembers().Data)))
+		// 利用mongodb的原子操作,来防止该玩家同时加入多个公会
+		if !game.AtomicSetGuildId(joinRequest.PlayerId, g.GetId(), 0) {
+			errStr = "ConcurrentError"
+			g.GetMembers().Remove(joinRequest.PlayerId)
+			return
+		}
 		// 通知对方已经入会了
+		// 这里使用了WithSaveDb选项,如果玩家此时不在线,等他下次上线时,会收到该消息
 		game.RoutePlayerPacket(joinRequest.PlayerId, gnet.NewProtoPacketEx(pb.CmdGuild_Cmd_GuildJoinReqOpResult, &pb.GuildJoinReqOpResult{
 			GuildId:         g.GetId(),
 			ManagerPlayerId: guildMessage.fromPlayerId,

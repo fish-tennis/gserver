@@ -100,7 +100,7 @@ func initGuildMgr() {
 		},
 	}
 	_guildMgr = gentity.NewDistributedEntityMgr("g.lock",
-		db.GetDbMgr().GetEntityDb(db.GuildDbName),
+		db.GetGuildDb(),
 		cache.Get(),
 		GetServerList(),
 		routineArgs,

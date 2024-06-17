@@ -58,7 +58,7 @@ message PlayerData {
   bytes money = 6;
   BagSaveData bag = 7;
   QuestSaveData quest = 8;
-  bytes guild = 9; // (proto序列化)
+  PlayerGuildData guild = 9;
   map<int64,bytes> pendingMessages = 10;
   map<int32,bytes> activities = 11;
 }

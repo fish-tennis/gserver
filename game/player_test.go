@@ -13,12 +13,14 @@ import (
 
 func TestSaveable(t *testing.T) {
 	util.InitIdGenerator(1)
-	InitPlayerComponentMap()
-	cfg.GetItemCfgMgr().Load("./../cfgdata/itemcfg.json")
+	InitPlayerStructAndHandler()
+	progressMgr := RegisterProgressCheckers()
+	conditionMgr := RegisterConditionCheckers()
+	cfg.LoadAllCfgs("./../cfgdata", progressMgr, conditionMgr)
 
 	player := CreateTempPlayer(1, 1)
 	// 明文保存的proto
-	baseInfo := player.GetComponentByName("BaseInfo").(*BaseInfo)
+	baseInfo := player.GetBaseInfo()
 	baseInfo.IncExp(1001)
 	saveData, err := gentity.GetComponentSaveData(baseInfo)
 	if err != nil {
@@ -27,7 +29,7 @@ func TestSaveable(t *testing.T) {
 	t.Log(fmt.Sprintf("%v", saveData))
 
 	// 序列化保存的proto
-	money := player.GetComponentByName("Money").(*Money)
+	money := player.GetMoney()
 	money.IncCoin(10)
 	money.IncDiamond(100)
 	saveData, err = gentity.GetComponentSaveData(money)
@@ -37,7 +39,7 @@ func TestSaveable(t *testing.T) {
 	t.Log(fmt.Sprintf("%v", saveData))
 
 	// value是子模块的组合
-	bag := player.GetComponentByName("Bag").(*Bag)
+	bag := player.GetBag()
 	for i := 0; i < 3; i++ {
 		bag.AddItem(int32(i+1), int32((i+1)*10))
 	}
@@ -48,7 +50,7 @@ func TestSaveable(t *testing.T) {
 	t.Log(fmt.Sprintf("%v", saveData))
 
 	// value是子模块的组合
-	quest := player.GetComponentByName("Quest").(*Quest)
+	quest := player.GetQuest()
 	quest.Quests.Add(&pb.QuestData{
 		CfgId:    1,
 		Progress: 0,
@@ -69,7 +71,7 @@ func TestSaveable(t *testing.T) {
 func TestActivity(t *testing.T) {
 	gnet.SetLogLevel(-1)
 	util.InitIdGenerator(1)
-	InitPlayerComponentMap()
+	InitPlayerStructAndHandler()
 	progressMgr := RegisterProgressCheckers()
 	conditionMgr := RegisterConditionCheckers()
 	cfg.LoadAllCfgs("./../cfgdata", progressMgr, conditionMgr)

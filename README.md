@@ -11,14 +11,14 @@
 
 ## 演示功能
 - 服务器自动组网
-- 游戏服负载均衡
+- 服务器负载均衡
 - 客户端直连模式和网关模式可选,网关模式支持WebSocket
 - 一个账号同时只能登录一个服务器(数据一致性前提)
 - 游戏服宕机后重启,自动修复缓存数据,防止玩家数据回档
 - 工具生成消息注册和发送消息代码[proto_code_gen](https://github.com/fish-tennis/proto_code_gen)
-- 通过反射自动注册消息回调
+- 通过反射自动注册消息回调,事件响应接口
 - 采用Entity-Component设计,模块解耦
-- 玩家组件事件分发
+- Entity事件分发
 - 业务层和数据层分离,业务代码无需操作数据库和缓存
 - 通过公会功能演示如何开发分布式的功能
 - 通过公会功能演示服务器动态扩缩容的处理方式
@@ -80,8 +80,8 @@ type CurQuests struct {
 }
 ```
 
-## 消息回调
-支持自动注册消息回调
+## 消息回调,事件响应
+支持自动注册消息回调,事件响应
 ```go
 // 客户端发给服务器的完成任务的消息回调
 // 这种格式写的函数可以自动注册客户端消息回调
@@ -92,6 +92,13 @@ func (this *Quest) OnFinishQuestReq(reqCmd gnet.PacketCommand, req *pb.FinishQue
 ```go
 // 这种格式写的函数可以自动注册非客户端的消息回调
 func (this *BaseInfo) HandlePlayerEntryGameOk(cmd gnet.PacketCommand, msg *pb.PlayerEntryGameOk) { 
+	// logic code ...
+}
+```
+```go
+// 这种格式写的函数可以自动注册事件响应接口
+// 当执行player.FireEvent(&EventPlayerEntryGame{})时,该响应接口会被调用
+func (this *Quest) OnEventPlayerEntryGame(event *EventPlayerEntryGame) {
 	// logic code ...
 }
 ```

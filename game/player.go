@@ -130,6 +130,7 @@ func (this *Player) SendErrorRes(errorReqCmd PacketCommand, errorMsg string) boo
 
 // 分发事件
 func (this *Player) FireEvent(event any) {
+	// TODO:嵌套检测
 	// 注册的事件响应接口
 	_playerEventHandlerMgr.Invoke(this, event)
 	// 有些模块有通用的处理接口

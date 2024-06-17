@@ -86,7 +86,7 @@ func onAccountReg(connection Connection, packet Packet) {
 	logger.Debug("onAccountReg:%v", packet.Message())
 	req := packet.Message().(*pb.AccountReg)
 	result := ""
-	newAccountIdValue, err := db.GetDbMgr().GetKvDb(db.KvDbName).Inc(db.AccountIdKeyName, int64(1), true)
+	newAccountIdValue, err := db.GetKvDb().Inc(db.AccountIdKeyName, int64(1), true)
 	if err != nil {
 		internal.SendPacketAdapt(connection, packet, PacketCommand(pb.CmdLogin_Cmd_AccountRes), &pb.AccountRes{
 			Error: "IdError",

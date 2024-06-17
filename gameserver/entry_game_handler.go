@@ -148,7 +148,7 @@ func onCreatePlayerReq(connection Connection, packet Packet) {
 		})
 		return
 	}
-	newPlayerIdValue, err := db.GetDbMgr().GetKvDb(db.KvDbName).Inc(db.PlayerIdKeyName, int64(1), true)
+	newPlayerIdValue, err := db.GetKvDb().Inc(db.PlayerIdKeyName, int64(1), true)
 	if err != nil {
 		internal.SendPacketAdapt(connection, packet, PacketCommand(pb.CmdLogin_Cmd_CreatePlayerRes), &pb.CreatePlayerRes{
 			Error: "IdError",

@@ -29,22 +29,28 @@ type GuildMembers struct {
 	Data map[int64]*pb.GuildMemberData `db:"members;plain"`
 }
 
-func (this *Guild) GetMembers() *GuildMembers {
-	return this.GetComponentByName(ComponentNameMembers).(*GuildMembers)
+func (g *Guild) GetMembers() *GuildMembers {
+	return g.GetComponentByName(ComponentNameMembers).(*GuildMembers)
 }
 
-func (g *GuildMembers) Get(playerId int64) *pb.GuildMemberData {
-	return g.Data[playerId]
+func (this *GuildMembers) GetGuild() *Guild {
+	return this.GetEntity().(*Guild)
 }
 
-func (g *GuildMembers) Add(member *pb.GuildMemberData) {
-	g.Data[member.Id] = member
-	g.SetDirty(member.Id, true)
+func (this *GuildMembers) Get(playerId int64) *pb.GuildMemberData {
+	return this.Data[playerId]
+}
+
+func (this *GuildMembers) Add(member *pb.GuildMemberData) {
+	this.Data[member.Id] = member
+	this.SetDirty(member.Id, true)
+	this.GetGuild().GetBaseInfo().SetMemberCount(int32(len(this.Data)))
 	logger.Debug("Add member:%v", member)
 }
 
-func (g *GuildMembers) Remove(playerId int64) {
-	delete(g.Data, playerId)
-	g.SetDirty(playerId, false)
+func (this *GuildMembers) Remove(playerId int64) {
+	delete(this.Data, playerId)
+	this.SetDirty(playerId, false)
+	this.GetGuild().GetBaseInfo().SetMemberCount(int32(len(this.Data)))
 	logger.Debug("Remove member:%v", playerId)
 }

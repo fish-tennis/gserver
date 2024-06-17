@@ -15,6 +15,7 @@ import (
 	"google.golang.org/protobuf/proto"
 	"log/slog"
 	"math"
+	"strings"
 )
 
 const (
@@ -39,7 +40,8 @@ func init() {
 // 玩家的公会模块
 type Guild struct {
 	PlayerDataComponent
-	Data *pb.PlayerGuildData `db:"Guild"`
+	// 这里使用明文方式保存数据,以便使用mongodb语句直接进行操作,如AtomicSetGuildId函数
+	Data *pb.PlayerGuildData `db:"Guild;plain"`
 }
 
 func (this *Player) GetGuild() *Guild {
@@ -59,7 +61,7 @@ func (this *Guild) SetGuildId(guildId int64) {
 // 查询公会列表
 func (this *Guild) OnGuildListReq(reqCmd gnet.PacketCommand, req *pb.GuildListReq) {
 	logger.Debug("OnGuildListReq")
-	guildDb := db.GetDbMgr().GetEntityDb(db.GuildDbName)
+	guildDb := db.GetGuildDb()
 	col := guildDb.(*gentity.MongoCollection).GetCollection()
 	pageSize := int64(10)
 	count, err := col.CountDocuments(context.Background(), bson.D{}, nil)
@@ -105,7 +107,7 @@ func (this *Guild) OnGuildCreateReq(reqCmd gnet.PacketCommand, req *pb.GuildCrea
 	// TODO:如果玩家之前已经提交了一个加入其他联盟的请求,玩家又自己创建联盟
 	// 其他联盟的管理员又接受了该玩家的加入请求,如何防止该玩家同时存在于2个联盟?
 	// 利用mongodb加一个类似原子锁的操作?
-	newGuildIdValue, err := db.GetDbMgr().GetKvDb(db.KvDbName).Inc(db.GuildIdKeyName, int64(1), true)
+	newGuildIdValue, err := db.GetKvDb().Inc(db.GuildIdKeyName, int64(1), true)
 	if err != nil {
 		gen.SendGuildCreateRes(player, &pb.GuildCreateRes{
 			Error: "IdError",
@@ -129,7 +131,7 @@ func (this *Guild) OnGuildCreateReq(reqCmd gnet.PacketCommand, req *pb.GuildCrea
 		Name:     player.GetName(),
 		Position: int32(pb.GuildPosition_Leader),
 	}
-	guildDb := db.GetDbMgr().GetEntityDb(db.GuildDbName)
+	guildDb := db.GetGuildDb()
 	saveData := gentity.ConvertProtoToMap(newGuildData)
 	// mongodb _id特殊处理
 	saveData[db.UniqueIdName] = newGuildData.Id
@@ -144,6 +146,15 @@ func (this *Guild) OnGuildCreateReq(reqCmd gnet.PacketCommand, req *pb.GuildCrea
 	if isDuplicateName {
 		gen.SendGuildCreateRes(player, &pb.GuildCreateRes{
 			Error: "DuplicateName",
+		})
+		return
+	}
+	// 利用mongodb的原子操作,来防止该玩家同时加入多个公会
+	if !AtomicSetGuildId(this.GetPlayerId(), newGuildData.Id, 0) {
+		db.GetGuildDb().(*gentity.MongoCollection).GetCollection().DeleteOne(context.Background(),
+			bson.D{{db.UniqueIdName, newGuildData.Id}})
+		gen.SendGuildCreateRes(player, &pb.GuildCreateRes{
+			Error: "ConcurrentError",
 		})
 		return
 	}
@@ -195,6 +206,12 @@ func (this *Guild) OnGuildJoinAgreeReq(reqCmd gnet.PacketCommand, req *pb.GuildJ
 func (this *Guild) HandleGuildJoinReqOpResult(cmd gnet.PacketCommand, msg *pb.GuildJoinReqOpResult) {
 	logger.Debug("HandleGuildJoinReqOpResult:%v", msg)
 	if msg.Error == "" && msg.IsAgree {
+		// 利用mongodb的原子操作,来防止该玩家同时加入多个公会
+		if !AtomicSetGuildId(this.GetPlayerId(), msg.GuildId, 0) {
+			msg.Error = "ConcurrentError"
+			this.GetPlayer().Send(cmd, msg)
+			return
+		}
 		this.SetGuildId(msg.GuildId)
 	}
 	this.GetPlayer().Send(cmd, msg)
@@ -244,4 +261,25 @@ func (this *Guild) OnGuildDataViewReq(reqCmd gnet.PacketCommand, req *pb.GuildDa
 		return
 	}
 	this.RoutePacketToGuild(reqCmd, req)
+}
+
+// mongodb中对玩家公会id进行原子化操作,防止玩家同时存在于多个公会
+//
+//	比如:
+//	step1:玩家向公会A,B发送入会申请
+//	step2:公会A,B的管理员同时操作,同意入会申请,如果没有原子化保证,玩家将同时加入到A,B公会
+func AtomicSetGuildId(playerId int64, guildId int64, oldGuildId int64) bool {
+	col := db.GetPlayerDb().(*gentity.MongoCollectionPlayer)
+	fieldKey := strings.ToLower("guild.guildId")
+	filter := bson.D{
+		{db.UniqueIdName, playerId},
+		{
+			"$or",
+			[]any{bson.D{{fieldKey, int64(0)}}, bson.D{{fieldKey, oldGuildId}}},
+		},
+	}
+	result := col.GetCollection().FindOneAndUpdate(context.Background(),
+		filter,
+		bson.D{{"$set", bson.D{{fieldKey, guildId}}}})
+	return result.Err() == nil
 }

@@ -14,14 +14,10 @@ import (
 )
 
 const (
-	// mongo表名
-	GlobalEntityCollectionName = "global"
-	// global表的key
-	GlobalEntityCollectionKeyName = "key"
 	// GlobalEntity在redis里的前缀
-	GlobalEntityCachePrefix = GlobalEntityCollectionName
-	// GlobalEntity在mongo表里的key
-	GlobalEntityCollectionKey = "GlobalEntity"
+	GlobalEntityCachePrefix = db.GlobalDbName
+	// GlobalEntity在mongo表里的key前缀
+	GlobalEntityCollectionKeyPrefix = "GlobalEntity"
 )
 
 // 演示全局类的非玩家实体
@@ -38,8 +34,8 @@ func NewGlobalEntity() *GlobalEntity {
 	return &GlobalEntity{
 		BaseRoutineEntity: *gentity.NewRoutineEntity(32),
 		// NOTE: 需要在服务器初始化时调用mongoDb.RegisterEntityDb("global", "key")
-		globalDb: db.GetDbMgr().GetEntityDb(GlobalEntityCollectionName),
-		key:      fmt.Sprintf("%v%v", GlobalEntityCollectionKey, gentity.GetApplication().GetId()),
+		globalDb: db.GetGlobalDb(),
+		key:      fmt.Sprintf("%v%v", GlobalEntityCollectionKeyPrefix, gentity.GetApplication().GetId()),
 	}
 }
 
@@ -107,7 +103,7 @@ func CreateGlobalEntityFromDb() *GlobalEntity {
 	if err == nil && !has {
 		// 数据库还没数据,则插入一条新数据
 		newData := make(map[string]interface{})
-		newData[GlobalEntityCollectionKeyName] = globalEntity.key
+		newData[db.GlobalDbKeyName] = globalEntity.key
 		gentity.GetEntitySaveData(globalEntity, newData)
 		globalEntity.globalDb.InsertEntity(globalEntity.key, newData)
 	}
