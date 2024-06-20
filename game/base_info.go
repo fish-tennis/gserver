@@ -85,7 +85,7 @@ func (this *BaseInfo) IncExp(incExp int32) {
 	this.SetDirty()
 }
 
-func (this *BaseInfo) OnEventPlayerExit(event *internal.EventPlayerExit) {
+func (this *BaseInfo) TriggerPlayerExit(event *internal.EventPlayerExit) {
 	this.Data.TotalOnlineSeconds += this.GetOnlineSecondsThisTime()
 	this.Data.LastLogoutTimestamp = this.GetPlayer().GetTimerEntries().Now().Unix()
 	this.SetDirty()

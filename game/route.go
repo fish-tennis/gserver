@@ -10,7 +10,6 @@ import (
 	"github.com/fish-tennis/gserver/pb"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
-	"strings"
 	"time"
 )
 
@@ -91,6 +90,10 @@ func WithConnection(connection Connection) RouteOption {
 // 举例:
 // 公会会长同意了玩家A的入会申请,此时玩家A可能不在线,就把该消息存入玩家的数据库,待玩家下次上线时,从数据库取出该消息,并进行相应的逻辑处理
 func RoutePlayerPacket(playerId int64, packet Packet, opts ...RouteOption) bool {
+	return RoutePlayerPacketWithErr(playerId, packet, "", opts...)
+}
+
+func RoutePlayerPacketWithErr(playerId int64, packet Packet, errStr string, opts ...RouteOption) bool {
 	routeOpts := defaultRouteOptions()
 	for _, opt := range opts {
 		opt.apply(routeOpts)
@@ -114,7 +117,7 @@ func RoutePlayerPacket(playerId int64, packet Packet, opts ...RouteOption) bool 
 			logger.Error("RoutePlayerPacket %v err:%v", playerId, err)
 			return false
 		}
-		err = db.GetPlayerDb().SaveComponentField(playerId, strings.ToLower(ComponentNamePendingMessages),
+		err = db.GetPlayerDb().SaveComponentField(playerId, ComponentNamePendingMessages,
 			util.Itoa(pendingMessage.MessageId), pendingMessageBytes)
 		if err != nil {
 			logger.Error("RoutePlayerPacket %v err:%v", playerId, err)
@@ -134,12 +137,17 @@ func RoutePlayerPacket(playerId int64, packet Packet, opts ...RouteOption) bool 
 		}
 		conn = internal.GetServerList().GetServerConnection(toServerId)
 	}
-	anyPacket, err := anypb.New(packet.Message())
-	if err != nil {
-		logger.Error("RoutePlayerPacketWithServer %v err:%v", playerId, err)
-		return false
+	var anyPacket *anypb.Any
+	if packet.Message() != nil {
+		var err error
+		anyPacket, err = anypb.New(packet.Message())
+		if err != nil {
+			logger.Error("RoutePlayerPacketWithServer %v err:%v", playerId, err)
+			return false
+		}
 	}
 	routePacket := NewProtoPacketEx(pb.CmdRoute_Cmd_RoutePlayerMessage, &pb.RoutePlayerMessage{
+		Error:            errStr,
 		ToPlayerId:       playerId,
 		PacketCommand:    int32(packet.Command()),
 		DirectSendClient: routeOpts.DirectSendClient,

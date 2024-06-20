@@ -43,18 +43,6 @@ func (g *GuildHelper) RouteServerId(entityId int64) int32 {
 	return RouteGuildServerId(entityId)
 }
 
-//// 消息转换成公会的逻辑消息
-//func (g *GuildHelper) PacketToRoutineMessage(from gentity.Entity, packet Packet, to gentity.RoutineEntity) interface{} {
-//	fromPlayer := from.(*game.Player)
-//	return &GuildMessage{
-//		fromPlayerId:   fromPlayer.GetId(),
-//		fromPlayerName: fromPlayer.GetName(),
-//		fromServerId:   gentity.GetApplication().GetId(),
-//		cmd:            packet.Command(),
-//		message:        packet.Message(),
-//	}
-//}
-
 // 消息转换成路由消息
 func (g *GuildHelper) PacketToRoutePacket(from gentity.Entity, packet Packet, toEntityId int64) Packet {
 	fromPlayer := from.(*game.Player)

@@ -12,8 +12,16 @@ const (
 	AccountIdKeyName  = "AccountId"
 	PlayerIdKeyName   = "PlayerId"
 	GuildIdKeyName    = "GuildId"
-	GlobalDbKeyName   = "key"
-	GlobalDbValueName = "value" // global表作为kv数据库时的value列名
+	GlobalDbKeyName   = "Key"
+	GlobalDbValueName = "Value" // global表作为kv数据库时的value列名
+
+	// account表里的固定字段
+	AccountName = "Name"
+
+	// player表里的几个固定字段
+	PlayerName      = "Name"
+	PlayerAccountId = "AccountId"
+	PlayerRegionId  = "RegionId"
 )
 
 var (

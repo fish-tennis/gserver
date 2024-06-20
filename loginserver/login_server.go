@@ -132,13 +132,13 @@ func (this *LoginServer) initDb() {
 	// 使用mongodb来演示
 	mongoDb := gentity.NewMongoDb(this.config.MongoUri, this.config.MongoDbName)
 	// 账号数据库
-	this.accountDb = mongoDb.RegisterEntityDb(db.AccountDbName, db.UniqueIdName)
+	this.accountDb = mongoDb.RegisterEntityDb(db.AccountDbName, true, db.UniqueIdName)
 	// kv数据库
-	mongoDb.RegisterKvDb(db.GlobalDbName, db.GlobalDbKeyName, db.GlobalDbValueName)
+	mongoDb.RegisterKvDb(db.GlobalDbName, true, db.GlobalDbKeyName, db.GlobalDbValueName)
 	if !mongoDb.Connect() {
 		panic("connect db error")
 	}
-	this.accountDb.(*gentity.MongoCollection).CreateIndex("name", true)
+	this.accountDb.(*gentity.MongoCollection).CreateIndex(db.AccountName, true)
 	db.SetDbMgr(mongoDb)
 }
 
@@ -154,7 +154,7 @@ func (this *LoginServer) initCache() {
 func (this *LoginServer) getAccountData(accountName string, accountData *pb.Account) error {
 	mongoCol := this.GetAccountDb().(*gentity.MongoCollection)
 	col := mongoCol.GetCollection()
-	result := col.FindOne(context.Background(), bson.D{{"name", accountName}})
+	result := col.FindOne(context.Background(), bson.D{{db.AccountName, accountName}})
 	if result == nil || errors.Is(result.Err(), mongo.ErrNoDocuments) {
 		return nil
 	}

@@ -98,7 +98,7 @@ func (this *BaseInfo) HandlePlayerEntryGameOk(cmd gnet.PacketCommand, msg *pb.Pl
 ```go
 // 这种格式写的函数可以自动注册事件响应接口
 // 当执行player.FireEvent(&EventPlayerEntryGame{})时,该响应接口会被调用
-func (this *Quest) OnEventPlayerEntryGame(event *EventPlayerEntryGame) {
+func (this *Quest) TriggerPlayerEntryGame(event *EventPlayerEntryGame) {
 	// logic code ...
 }
 ```

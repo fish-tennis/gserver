@@ -102,7 +102,7 @@ func onAccountReg(connection Connection, packet Packet) {
 	}
 	accountMapData := gentity.ConvertProtoToMap(account)
 	accountMapData[db.UniqueIdName] = account.XId
-	delete(accountMapData, "xid")
+	delete(accountMapData, "XId")
 	err, isDuplicateKey := _loginServer.GetAccountDb().InsertEntity(account.XId, accountMapData)
 	if err != nil {
 		account.XId = 0

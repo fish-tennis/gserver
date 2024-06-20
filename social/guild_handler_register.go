@@ -5,6 +5,7 @@ import (
 	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gentity/util"
 	. "github.com/fish-tennis/gnet"
+	"github.com/fish-tennis/gserver/game"
 	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/pb"
 	"google.golang.org/protobuf/proto"
@@ -89,6 +90,14 @@ func GuildServerHandlerRegister(handler PacketHandlerRegister) {
 	handler.Register(PacketCommand(pb.CmdRoute_Cmd_GuildRoutePlayerMessageReq), func(connection Connection, packet Packet) {
 		req := packet.Message().(*pb.GuildRoutePlayerMessageReq)
 		slog.Debug("GuildRoutePlayerMessageReq", "packet", req)
-		_guildMgr.ParseRoutePacket(connection, packet, req.FromGuildId)
+		err := _guildMgr.ParseRoutePacket(connection, packet, req.FromGuildId)
+		if err != nil {
+			// 回复一个结果,避免rpc调用方超时
+			routePacket := NewProtoPacketEx(packet.Command()+1, nil)
+			if rpcCallIdSetter, ok := packet.(RpcCallIdSetter); ok {
+				routePacket.SetRpcCallId(rpcCallIdSetter.RpcCallId())
+			}
+			game.RoutePlayerPacketWithErr(req.FromPlayerId, routePacket, err.Error(), game.WithConnection(connection))
+		}
 	}, new(pb.GuildRoutePlayerMessageReq))
 }

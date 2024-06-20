@@ -8,7 +8,6 @@ import (
 	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
-	"strings"
 )
 
 const (
@@ -43,7 +42,7 @@ func (this *Player) GetPendingMessages() *PendingMessages {
 }
 
 // 事件接口
-func (this *PendingMessages) OnEventPlayerEntryGame(event *internal.EventPlayerEntryGame) {
+func (this *PendingMessages) TriggerPlayerEntryGame(event *internal.EventPlayerEntryGame) {
 	for _, req := range this.Messages {
 		message, err := req.PacketData.UnmarshalNew()
 		if err != nil {
@@ -57,12 +56,12 @@ func (this *PendingMessages) OnEventPlayerEntryGame(event *internal.EventPlayerE
 		}
 		this.GetPlayer().processMessage(gnet.NewProtoPacket(gnet.PacketCommand(req.PacketCommand), message))
 		// 处理过的消息,单独删除数据
-		db.GetPlayerDb().DeleteComponentField(this.GetPlayerId(), strings.ToLower(this.GetName()), util.Itoa(req.MessageId))
+		db.GetPlayerDb().DeleteComponentField(this.GetPlayerId(), this.GetName(), util.Itoa(req.MessageId))
 		logger.Debug("%v delete pending message:%v", this.GetPlayerId(), req.MessageId)
 	}
 }
 
 func (this *PendingMessages) Remove(messageId int64) {
-	db.GetPlayerDb().DeleteComponentField(this.GetPlayerId(), strings.ToLower(this.GetName()), util.Itoa(messageId))
+	db.GetPlayerDb().DeleteComponentField(this.GetPlayerId(), this.GetName(), util.Itoa(messageId))
 	logger.Debug("%v delete pending message:%v", this.GetPlayerId(), messageId)
 }

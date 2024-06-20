@@ -170,10 +170,10 @@ func onCreatePlayerReq(connection Connection, packet Packet) {
 	}
 	newPlayer := game.CreatePlayerFromData(playerData)
 	newPlayerSaveData := make(map[string]interface{})
-	newPlayerSaveData["_id"] = playerData.XId
-	newPlayerSaveData["name"] = playerData.Name
-	newPlayerSaveData["accountid"] = playerData.AccountId
-	newPlayerSaveData["regionid"] = playerData.RegionId
+	newPlayerSaveData[db.UniqueIdName] = playerData.XId
+	newPlayerSaveData[db.PlayerName] = playerData.Name
+	newPlayerSaveData[db.PlayerAccountId] = playerData.AccountId
+	newPlayerSaveData[db.PlayerRegionId] = playerData.RegionId
 	gentity.GetEntitySaveData(newPlayer, newPlayerSaveData)
 	err, isDuplicateKey := db.GetPlayerDb().InsertEntity(playerData.XId, newPlayerSaveData)
 	if err != nil {

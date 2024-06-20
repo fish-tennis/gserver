@@ -7,12 +7,13 @@ import (
 	"github.com/fish-tennis/gserver/game"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
+	"log/slog"
 	"strings"
 )
 
 // 客户端字符串形式的测试命令,仅用于测试环境!
 func onTestCmd(player *game.Player, packet Packet) {
-	logger.Debug("onTestCmd %v", packet.Message())
+	logger.Info("onTestCmd %v", packet.Message())
 	req := packet.Message().(*pb.TestCmd)
 	cmdStrs := strings.Split(req.GetCmd(), " ")
 	if len(cmdStrs) == 0 {
@@ -167,6 +168,17 @@ func onTestCmd(player *game.Player, packet Packet) {
 		if activityDefault, ok := activity.(*game.ActivityDefault); ok {
 			activityDefault.Exchange(cfgId)
 		}
+
+	case strings.ToLower("GuildRouteError"):
+		// 模拟一个rpc错误,向一个不存在的公会发送rpc消息
+		reply := new(pb.GuildJoinRes)
+		err := player.GetGuild().RouteRpcToTargetGuild(123456789, PacketCommand(pb.CmdGuild_Cmd_GuildJoinReq),
+			&pb.GuildJoinReq{Id: 123456789}, reply)
+		if err != nil {
+			slog.Info("GuildRouteError", "err", err.Error())
+			return
+		}
+		slog.Debug("GuildRouteError reply", "reply", reply)
 
 	default:
 		player.SendErrorRes(packet.Command(), "unsupport test cmd")

@@ -161,19 +161,18 @@ func (this *GameServer) initDb() {
 	// 使用mongodb来演示
 	mongoDb := gentity.NewMongoDb(this.config.MongoUri, this.config.MongoDbName)
 	// 玩家数据库
-	playerDb := mongoDb.RegisterPlayerDb(db.PlayerDbName, db.UniqueIdName, "accountid", "regionid")
+	mongoDb.RegisterPlayerDb(db.PlayerDbName, true, db.UniqueIdName, db.PlayerAccountId, db.PlayerRegionId)
 	// 公会数据库
-	mongoDb.RegisterEntityDb(db.GuildDbName, db.UniqueIdName)
+	mongoDb.RegisterEntityDb(db.GuildDbName, true, db.UniqueIdName)
 	// 全局对象数据库(如GlobalEntity)
-	mongoDb.RegisterEntityDb(db.GlobalDbName, db.GlobalDbKeyName)
+	mongoDb.RegisterEntityDb(db.GlobalDbName, true, db.GlobalDbKeyName)
 	// kv数据库
-	mongoDb.RegisterKvDb(db.GlobalDbName, db.GlobalDbKeyName, db.GlobalDbValueName)
+	mongoDb.RegisterKvDb(db.GlobalDbName, true, db.GlobalDbKeyName, db.GlobalDbValueName)
 	if !mongoDb.Connect() {
 		panic("connect db error")
 	}
 	// 玩家数据库设置分片
 	mongoDb.ShardDatabase(this.config.MongoDbName)
-	playerDb.(*gentity.MongoCollectionPlayer).ShardCollection(true)
 	db.SetDbMgr(mongoDb)
 }
 

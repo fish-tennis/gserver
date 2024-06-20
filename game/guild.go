@@ -2,6 +2,7 @@ package game
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gnet"
@@ -15,7 +16,6 @@ import (
 	"google.golang.org/protobuf/proto"
 	"log/slog"
 	"math"
-	"strings"
 )
 
 const (
@@ -151,8 +151,7 @@ func (this *Guild) OnGuildCreateReq(reqCmd gnet.PacketCommand, req *pb.GuildCrea
 	}
 	// 利用mongodb的原子操作,来防止该玩家同时加入多个公会
 	if !AtomicSetGuildId(this.GetPlayerId(), newGuildData.Id, 0) {
-		db.GetGuildDb().(*gentity.MongoCollection).GetCollection().DeleteOne(context.Background(),
-			bson.D{{db.UniqueIdName, newGuildData.Id}})
+		db.GetGuildDb().DeleteEntity(newGuildData.Id)
 		gen.SendGuildCreateRes(player, &pb.GuildCreateRes{
 			Error: "ConcurrentError",
 		})
@@ -239,6 +238,10 @@ func (this *Guild) RouteRpcToTargetGuild(targetGuildId int64, cmd gnet.PacketCom
 		slog.Error("RouteRpcToTargetGuildErr", "toServerId", toServerId, "err", err)
 	}
 	if err == nil {
+		if routePlayerMessage.Error != "" {
+			slog.Error("RouteRpcToTargetGuildErr", "toServerId", toServerId, "err", routePlayerMessage.Error)
+			return errors.New(routePlayerMessage.Error)
+		}
 		err = routePlayerMessage.PacketData.UnmarshalTo(reply)
 		if err != nil {
 			slog.Error("ParseReplyErr", "err", err, "reply", reply,
@@ -270,16 +273,16 @@ func (this *Guild) OnGuildDataViewReq(reqCmd gnet.PacketCommand, req *pb.GuildDa
 //	step2:公会A,B的管理员同时操作,同意入会申请,如果没有原子化保证,玩家将同时加入到A,B公会
 func AtomicSetGuildId(playerId int64, guildId int64, oldGuildId int64) bool {
 	col := db.GetPlayerDb().(*gentity.MongoCollectionPlayer)
-	fieldKey := strings.ToLower("guild.guildId")
+	// NOTE: 明文保存的proto字段,字段名会被mongodb自动转为小写 Q:有办法解决吗?
+	// 所以这里的guildid用全小写
+	fieldKey := "Guild.guildid"
 	filter := bson.D{
 		{db.UniqueIdName, playerId},
-		{
-			"$or",
-			[]any{bson.D{{fieldKey, int64(0)}}, bson.D{{fieldKey, oldGuildId}}},
-		},
+		{fieldKey, bson.D{{"$in", []any{int64(0), guildId}}}},
 	}
 	result := col.GetCollection().FindOneAndUpdate(context.Background(),
 		filter,
 		bson.D{{"$set", bson.D{{fieldKey, guildId}}}})
+	slog.Debug("AtomicSetGuildId", "playerId", playerId, "guildId", guildId, "oldGuildId", oldGuildId, "err", result.Err())
 	return result.Err() == nil
 }

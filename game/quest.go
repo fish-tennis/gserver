@@ -117,7 +117,7 @@ func (this *Quest) checkData() {
 }
 
 // 事件接口
-func (this *Quest) OnEventPlayerEntryGame(event *internal.EventPlayerEntryGame) {
+func (this *Quest) TriggerPlayerEntryGame(event *internal.EventPlayerEntryGame) {
 	// 测试代码:给新玩家添加初始任务
 	if len(this.Quests.Quests) == 0 && len(this.Finished.Finished) == 0 {
 		cfg.GetQuestCfgMgr().Range(func(questCfg *cfg.QuestCfg) bool {
