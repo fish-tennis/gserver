@@ -139,11 +139,13 @@ func (this *Player) FireEvent(event any) {
 		this.fireEventLoopChecker--
 	}()
 	if this.fireEventLoopChecker > 1 {
-		slog.Warn("FireEventLoopChecker", "loop", this.fireEventLoopChecker)
+		slog.Debug("FireEventLoopChecker", "loop", this.fireEventLoopChecker)
 		if this.fireEventLoopChecker > internal.EventLoopLimit {
 			slog.Error("FireEvent limit", "loop", internal.EventLoopLimit)
 			// 防止事件分发的嵌套导致死循环
 			return
+		} else if this.fireEventLoopChecker > internal.EventLoopLimit/2 {
+			slog.Warn("FireEventLoopChecker", "loop", this.fireEventLoopChecker)
 		}
 	}
 	// 注册的事件响应接口
