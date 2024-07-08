@@ -65,7 +65,7 @@ func onTestCmd(player *game.Player, packet Packet) {
 		}
 		// 完成所有任务
 		if strings.ToLower(cmdArgs[0]) == "all" {
-			for cfgId, _ := range player.GetQuest().Quests.Quests {
+			for cfgId, _ := range player.GetQuest().Quests.Data {
 				player.GetQuest().OnFinishQuestReq(PacketCommand(pb.CmdQuest_Cmd_FinishQuestReq), &pb.FinishQuestReq{
 					QuestCfgId: cfgId,
 				})

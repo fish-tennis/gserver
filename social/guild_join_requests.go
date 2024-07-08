@@ -18,8 +18,7 @@ const (
 func init() {
 	RegisterGuildComponentCtor(ComponentNameJoinRequests, 0, func(guild *Guild, guildData *pb.GuildLoadData) gentity.Component {
 		component := &GuildJoinRequests{
-			MapDataComponent: *gentity.NewMapDataComponent(guild, ComponentNameJoinRequests),
-			Data:             make(map[int64]*pb.GuildJoinRequest),
+			MapDataComponent: *gentity.NewMapDataComponent[int64, *pb.GuildJoinRequest](guild, ComponentNameJoinRequests),
 		}
 		gentity.LoadData(component, guildData.GetJoinRequests())
 		return component
@@ -28,8 +27,7 @@ func init() {
 
 // 公会加入请求
 type GuildJoinRequests struct {
-	gentity.MapDataComponent
-	Data map[int64]*pb.GuildJoinRequest `db:"joinrequests"`
+	gentity.MapDataComponent[int64, *pb.GuildJoinRequest] `db:"JoinRequests"`
 }
 
 func (g *Guild) GetJoinRequests() *GuildJoinRequests {
@@ -45,14 +43,12 @@ func (this *GuildJoinRequests) Get(playerId int64) *pb.GuildJoinRequest {
 }
 
 func (this *GuildJoinRequests) Add(joinRequest *pb.GuildJoinRequest) {
-	this.Data[joinRequest.PlayerId] = joinRequest
-	this.SetDirty(joinRequest.PlayerId, true)
+	this.Set(joinRequest.PlayerId, joinRequest)
 	logger.Debug("Add request:%v", joinRequest)
 }
 
 func (this *GuildJoinRequests) Remove(playerId int64) {
-	delete(this.Data, playerId)
-	this.SetDirty(playerId, false)
+	this.Delete(playerId)
 	logger.Debug("Remove request:%v", playerId)
 }
 

@@ -10,5 +10,5 @@ const (
 	// 事件响应接口函数名前缀
 	EventHandlerMethodNamePrefix = "Trigger"
 	// 事件分发嵌套层次限制
-	EventLoopLimit = int32(100)
+	SameEventLoopLimit = int32(3)
 )

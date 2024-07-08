@@ -15,8 +15,7 @@ const (
 func init() {
 	RegisterGuildComponentCtor(ComponentNameMembers, 0, func(guild *Guild, guildData *pb.GuildLoadData) gentity.Component {
 		component := &GuildMembers{
-			MapDataComponent: *gentity.NewMapDataComponent(guild, ComponentNameMembers),
-			Data:             make(map[int64]*pb.GuildMemberData),
+			MapDataComponent: *gentity.NewMapDataComponent[int64, *pb.GuildMemberData](guild, ComponentNameMembers),
 		}
 		gentity.LoadData(component, guildData.GetMembers())
 		return component
@@ -25,8 +24,7 @@ func init() {
 
 // 公会成员数据
 type GuildMembers struct {
-	gentity.MapDataComponent
-	Data map[int64]*pb.GuildMemberData `db:"members;plain"`
+	gentity.MapDataComponent[int64, *pb.GuildMemberData] `db:"Members;plain"`
 }
 
 func (g *Guild) GetMembers() *GuildMembers {
@@ -42,15 +40,13 @@ func (this *GuildMembers) Get(playerId int64) *pb.GuildMemberData {
 }
 
 func (this *GuildMembers) Add(member *pb.GuildMemberData) {
-	this.Data[member.Id] = member
-	this.SetDirty(member.Id, true)
+	this.Set(member.Id, member)
 	this.GetGuild().GetBaseInfo().SetMemberCount(int32(len(this.Data)))
 	logger.Debug("Add member:%v", member)
 }
 
 func (this *GuildMembers) Remove(playerId int64) {
-	delete(this.Data, playerId)
-	this.SetDirty(playerId, false)
+	this.Delete(playerId)
 	this.GetGuild().GetBaseInfo().SetMemberCount(int32(len(this.Data)))
 	logger.Debug("Remove member:%v", playerId)
 }

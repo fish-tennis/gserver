@@ -12,6 +12,7 @@ import (
 )
 
 func TestSaveable(t *testing.T) {
+	gnet.SetLogLevel(-1)
 	util.InitIdGenerator(1)
 	InitPlayerStructAndHandler()
 	progressMgr := RegisterProgressCheckers()
@@ -51,14 +52,16 @@ func TestSaveable(t *testing.T) {
 
 	// value是子模块的组合
 	quest := player.GetQuest()
-	quest.Quests.Add(&pb.QuestData{
+	questData1 := &pb.QuestData{
 		CfgId:    1,
 		Progress: 0,
-	})
-	quest.Quests.Add(&pb.QuestData{
+	}
+	quest.Quests.Set(questData1.CfgId, questData1)
+	questData2 := &pb.QuestData{
 		CfgId:    2,
 		Progress: 1,
-	})
+	}
+	quest.Quests.Set(questData2.CfgId, questData2)
 	quest.Finished.Add(3)
 	quest.Finished.Add(4)
 	saveData, err = gentity.GetComponentSaveData(quest)

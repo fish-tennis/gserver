@@ -5,6 +5,7 @@ import (
 	"github.com/fish-tennis/gserver/cache"
 	"github.com/fish-tennis/gserver/internal"
 	"log/slog"
+	"reflect"
 	"time"
 
 	. "github.com/fish-tennis/gnet"
@@ -37,7 +38,7 @@ type Player struct {
 	// 如果是客户端直连模式,就是客户端连接
 	connection Connection
 	// 事件分发的嵌套检测
-	fireEventLoopChecker int32
+	fireEventLoopChecker map[reflect.Type]int32
 }
 
 // 玩家名(unique)
@@ -134,18 +135,24 @@ func (this *Player) SendErrorRes(errorReqCmd PacketCommand, errorMsg string) boo
 // 分发事件
 func (this *Player) FireEvent(event any) {
 	// 嵌套检测
-	this.fireEventLoopChecker++
+	if this.fireEventLoopChecker == nil {
+		this.fireEventLoopChecker = make(map[reflect.Type]int32)
+	}
+	eventTyp := reflect.TypeOf(event)
+	this.fireEventLoopChecker[eventTyp]++
 	defer func() {
-		this.fireEventLoopChecker--
+		this.fireEventLoopChecker[eventTyp]--
+		if this.fireEventLoopChecker[eventTyp] <= 0 {
+			delete(this.fireEventLoopChecker, eventTyp)
+		}
 	}()
-	if this.fireEventLoopChecker > 1 {
-		slog.Debug("FireEventLoopChecker", "loop", this.fireEventLoopChecker)
-		if this.fireEventLoopChecker > internal.EventLoopLimit {
-			slog.Error("FireEvent limit", "loop", internal.EventLoopLimit)
+	curLoopCount := this.fireEventLoopChecker[eventTyp]
+	if curLoopCount > 1 {
+		slog.Debug("FireEventLoopChecker", "loop", curLoopCount)
+		if curLoopCount > internal.SameEventLoopLimit {
+			slog.Error("FireEvent limit", "loop", curLoopCount)
 			// 防止事件分发的嵌套导致死循环
 			return
-		} else if this.fireEventLoopChecker > internal.EventLoopLimit/2 {
-			slog.Warn("FireEventLoopChecker", "loop", this.fireEventLoopChecker)
 		}
 	}
 	// 注册的事件响应接口
@@ -160,7 +167,7 @@ func (this *Player) FireEvent(event any) {
 // 分发条件相关事件
 func (this *Player) FireConditionEvent(event interface{}) {
 	logger.Debug("%v FireConditionEvent:%v", this.GetId(), event)
-	this.GetQuest().Quests.OnEvent(event)
+	this.GetQuest().OnEvent(event)
 	this.GetActivities().OnEvent(event)
 }
 
