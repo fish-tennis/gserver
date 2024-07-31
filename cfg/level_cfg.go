@@ -5,12 +5,11 @@ import (
 )
 
 var (
-	_levelCfgMgr = &LevelCfgMgr{}
+	_levelCfgLoader *CfgLoaderOption
 )
 
 func init() {
-	RegisterCfgLoader(&CfgLoaderOption{
-		Loader:   _levelCfgMgr,
+	_levelCfgLoader = RegisterCfgLoader(new(LevelCfgMgr), &CfgLoaderOption{
 		FileName: "levelcfg.csv",
 	})
 }
@@ -23,7 +22,7 @@ type LevelCfgMgr struct {
 
 // singleton
 func GetLevelCfgMgr() *LevelCfgMgr {
-	return _levelCfgMgr
+	return _levelCfgLoader.Value.Load().(*LevelCfgMgr)
 }
 
 // 最大等级

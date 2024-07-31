@@ -2,10 +2,11 @@ package cfg
 
 import (
 	"cmp"
-	"github.com/fish-tennis/gserver/internal"
-	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/tool"
+	"log/slog"
+	"reflect"
 	"slices"
+	"sync/atomic"
 )
 
 var (
@@ -17,23 +18,31 @@ type CfgLoader interface {
 	Load(fileName string, loaderOption *CfgLoaderOption) error
 }
 
+type CfgAfterLoader interface {
+	AfterLoad()
+}
+
 type CfgLoaderOption struct {
-	Loader   CfgLoader
 	FileName string
+
 	// 加载顺序,数值小的,先执行
 	// 因为有的数据可能有依赖关系
 	Order     int
 	CsvOption *tool.CsvOption // csv配置文件才需要
+
+	Value atomic.Value // 原子Value,用于热更新时的并发保护
 }
 
 // 注册配置数据加载接口
-func RegisterCfgLoader(loaderOpt *CfgLoaderOption) {
+func RegisterCfgLoader(cfgLoader CfgLoader, loaderOpt *CfgLoaderOption) *CfgLoaderOption {
 	if loaderOpt.CsvOption == nil {
 		// 默认csv设置
 		loaderOpt.CsvOption = &tool.CsvOption{
-			DataBeginRowIndex: 1,
+			ColumnNameRowIndex: 0,
+			DataBeginRowIndex:  1, // csv行索引
 		}
 	}
+	loaderOpt.Value.Store(cfgLoader)
 	_cfgLoaders = append(_cfgLoaders, loaderOpt)
 	slices.SortStableFunc(_cfgLoaders, func(a, b *CfgLoaderOption) int {
 		if a.Order == b.Order {
@@ -41,22 +50,28 @@ func RegisterCfgLoader(loaderOpt *CfgLoaderOption) {
 		}
 		return cmp.Compare(a.Order, b.Order)
 	})
+	return loaderOpt
 }
 
-func LoadAllCfgs(dir string, progressMgr *internal.ProgressMgr, conditionMgr *internal.ConditionMgr) bool {
+// 加载所有注册的数据,支持热更新
+func LoadAllCfgs(dir string) bool {
 	if dir != "" && dir[len(dir)-1] != '/' {
 		dir = dir + "/"
 	}
-	GetQuestCfgMgr().SetProgressMgr(progressMgr)
-	GetQuestCfgMgr().SetConditionMgr(conditionMgr)
-	GetActivityCfgMgr().SetProgressMgr(progressMgr)
-	GetActivityCfgMgr().SetConditionMgr(conditionMgr)
 	for _, loaderOpt := range _cfgLoaders {
-		err := loaderOpt.Loader.Load(dir+loaderOpt.FileName, loaderOpt)
+		// 创建临时对象加载数据
+		loadingLoader := reflect.New(reflect.TypeOf(loaderOpt.Value.Load()).Elem()).Interface().(CfgLoader)
+		err := loadingLoader.Load(dir+loaderOpt.FileName, loaderOpt)
 		if err != nil {
-			logger.Error("load %v err", loaderOpt.FileName)
+			slog.Error("LoadAllCfgs err", "FileName", loaderOpt.FileName)
 			return false
 		}
+		// 需要预处理数据的
+		if afterLoader, ok := loadingLoader.(CfgAfterLoader); ok {
+			afterLoader.AfterLoad()
+		}
+		// 加载场景后,进行原子赋值
+		loaderOpt.Value.Store(loadingLoader)
 	}
 	return true
 }

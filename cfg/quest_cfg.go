@@ -6,12 +6,11 @@ import (
 )
 
 var (
-	_questCfgMgr = &QuestCfgMgr{}
+	_questCfgLoader *CfgLoaderOption
 )
 
 func init() {
-	RegisterCfgLoader(&CfgLoaderOption{
-		Loader:   _questCfgMgr,
+	_questCfgLoader = RegisterCfgLoader(new(QuestCfgMgr), &CfgLoaderOption{
 		FileName: "questcfg.json",
 	})
 }
@@ -33,7 +32,7 @@ type QuestCfgMgr struct {
 
 // singleton
 func GetQuestCfgMgr() *QuestCfgMgr {
-	return _questCfgMgr
+	return _questCfgLoader.Value.Load().(*QuestCfgMgr)
 }
 
 func (this *QuestCfgMgr) GetQuestCfg(cfgId int32) *QuestCfg {

@@ -17,7 +17,11 @@ func TestSaveable(t *testing.T) {
 	InitPlayerStructAndHandler()
 	progressMgr := RegisterProgressCheckers()
 	conditionMgr := RegisterConditionCheckers()
-	cfg.LoadAllCfgs("./../cfgdata", progressMgr, conditionMgr)
+	cfg.LoadAllCfgs("./../cfgdata")
+	cfg.GetQuestCfgMgr().SetProgressMgr(progressMgr)
+	cfg.GetQuestCfgMgr().SetConditionMgr(conditionMgr)
+	cfg.GetActivityCfgMgr().SetProgressMgr(progressMgr)
+	cfg.GetActivityCfgMgr().SetConditionMgr(conditionMgr)
 
 	player := CreateTempPlayer(1, 1)
 	// 明文保存的proto
@@ -77,7 +81,11 @@ func TestActivity(t *testing.T) {
 	InitPlayerStructAndHandler()
 	progressMgr := RegisterProgressCheckers()
 	conditionMgr := RegisterConditionCheckers()
-	cfg.LoadAllCfgs("./../cfgdata", progressMgr, conditionMgr)
+	cfg.LoadAllCfgs("./../cfgdata")
+	cfg.GetQuestCfgMgr().SetProgressMgr(progressMgr)
+	cfg.GetQuestCfgMgr().SetConditionMgr(conditionMgr)
+	cfg.GetActivityCfgMgr().SetProgressMgr(progressMgr)
+	cfg.GetActivityCfgMgr().SetConditionMgr(conditionMgr)
 
 	playerData := &pb.PlayerData{
 		XId:       1,

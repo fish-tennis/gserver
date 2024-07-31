@@ -6,12 +6,11 @@ import (
 )
 
 var (
-	_itemCfgMgr = &ItemCfgMgr{}
+	_itemCfgLoader *CfgLoaderOption
 )
 
 func init() {
-	RegisterCfgLoader(&CfgLoaderOption{
-		Loader:   _itemCfgMgr,
+	_itemCfgLoader = RegisterCfgLoader(new(ItemCfgMgr), &CfgLoaderOption{
 		FileName: "itemcfg.json",
 	})
 }
@@ -23,7 +22,7 @@ type ItemCfgMgr struct {
 
 // singleton
 func GetItemCfgMgr() *ItemCfgMgr {
-	return _itemCfgMgr
+	return _itemCfgLoader.Value.Load().(*ItemCfgMgr)
 }
 
 // 提供一个只读接口

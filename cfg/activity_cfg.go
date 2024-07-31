@@ -6,12 +6,11 @@ import (
 )
 
 var (
-	_activityCfgMgr = &ActivityCfgMgr{}
+	_activityCfgLoader *CfgLoaderOption
 )
 
 func init() {
-	RegisterCfgLoader(&CfgLoaderOption{
-		Loader:   _activityCfgMgr,
+	_activityCfgLoader = RegisterCfgLoader(new(ActivityCfgMgr), &CfgLoaderOption{
 		FileName: "activitycfg.json",
 	})
 }
@@ -41,7 +40,7 @@ type ActivityCfgMgr struct {
 
 // singleton
 func GetActivityCfgMgr() *ActivityCfgMgr {
-	return _activityCfgMgr
+	return _activityCfgLoader.Value.Load().(*ActivityCfgMgr)
 }
 
 func (this *ActivityCfgMgr) GetActivityCfg(cfgId int32) *ActivityCfg {

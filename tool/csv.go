@@ -14,11 +14,14 @@ import (
 )
 
 // 字段转换接口
-type FieldConverter func(obj interface{}, columnName, fieldStr string) interface{}
+type FieldConverter func(obj any, columnName, fieldStr string) any
 
 type CsvOption struct {
 	// 数据行索引(>=1)
 	DataBeginRowIndex int
+
+	// 字段名数据行索引(>=0)
+	ColumnNameRowIndex int
 
 	// 数组分隔符
 	// 如数组分隔符为;时,则1;2;3可以表示[1,2,3]的数组
@@ -77,7 +80,7 @@ func (co *CsvOption) GetConverterByTypePtrOrStruct(typ reflect.Type) (converter 
 	converter, _ = co.customFieldConvertersByType[typ]
 	if converter == nil {
 		if typ.Kind() == reflect.Struct {
-			converter = co.GetConverterByType(reflect.PtrTo(typ))
+			converter = co.GetConverterByType(reflect.PointerTo(typ))
 			// 注册的是指针类型,转换后,需要把ptr转换成elem
 			convertToElem = converter != nil
 			return
@@ -141,7 +144,10 @@ func ReadCsvFromDataMap[M ~map[K]V, K IntOrString, V any](rows [][]string, m M, 
 	if len(rows) == 0 {
 		return errors.New("no csv header")
 	}
-	columnNames := rows[0]
+	if len(rows) <= option.ColumnNameRowIndex {
+		return errors.New("no column name header")
+	}
+	columnNames := rows[option.ColumnNameRowIndex]
 	if len(columnNames) == 0 {
 		return errors.New("no column")
 	}
@@ -168,7 +174,10 @@ func ReadCsvFromDataSlice[Slice ~[]V, V any](rows [][]string, s Slice, option *C
 	if len(rows) == 0 {
 		return s, errors.New("no csv header")
 	}
-	columnNames := rows[0]
+	if len(rows) <= option.ColumnNameRowIndex {
+		return s, errors.New("no column name header")
+	}
+	columnNames := rows[option.ColumnNameRowIndex]
 	if len(columnNames) == 0 {
 		return s, errors.New("no column")
 	}
@@ -235,8 +244,8 @@ func ConvertStringToFieldValue(object, fieldVal reflect.Value, columnName, field
 		v := fieldConverter(object.Interface(), columnName, fieldString)
 		fieldVal.Set(reflect.ValueOf(v))
 	} else {
-		var convertToElem bool
-		fieldConverter, convertToElem = option.GetConverterByTypePtrOrStruct(fieldVal.Type())
+		var convertFieldToElem bool
+		fieldConverter, convertFieldToElem = option.GetConverterByTypePtrOrStruct(fieldVal.Type())
 		if fieldConverter != nil {
 			// 自定义的转换接口
 			v := fieldConverter(object.Interface(), columnName, fieldString)
@@ -244,7 +253,7 @@ func ConvertStringToFieldValue(object, fieldVal reflect.Value, columnName, field
 				slog.Debug("field parse error", "columnName", columnName, "fieldString", fieldString)
 				return
 			}
-			if convertToElem {
+			if convertFieldToElem {
 				fieldVal.Set(reflect.ValueOf(v).Elem())
 			} else {
 				fieldVal.Set(reflect.ValueOf(v))
@@ -288,12 +297,12 @@ func ConvertStringToFieldValue(object, fieldVal reflect.Value, columnName, field
 			newSlice := reflect.MakeSlice(fieldVal.Type(), 0, 0)
 			sliceElemType := fieldVal.Type().Elem()
 			converter, convertToElem := option.GetConverterByTypePtrOrStruct(sliceElemType)
-			strs := strings.Split(fieldString, option.SliceSeparator)
-			for _, str := range strs {
+			sArray := strings.Split(fieldString, option.SliceSeparator)
+			for _, str := range sArray {
 				if str == "" {
 					continue
 				}
-				var sliceElemValue interface{}
+				var sliceElemValue any
 				if converter != nil {
 					sliceElemValue = converter(object.Interface(), columnName, str)
 				} else {
@@ -325,7 +334,7 @@ func ConvertStringToFieldValue(object, fieldVal reflect.Value, columnName, field
 				kvStr := strings.Split(mapItemStr, option.MapKVSeparator)
 				if len(kvStr) == 2 {
 					fieldKeyValue := gentity.ConvertStringToRealType(fieldKeyType, kvStr[0])
-					var fieldValueValue interface{}
+					var fieldValueValue any
 					if converter != nil {
 						fieldValueValue = converter(object.Interface(), columnName, kvStr[1])
 					} else {
