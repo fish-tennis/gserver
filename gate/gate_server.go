@@ -97,7 +97,7 @@ func (this *GateServer) Init(ctx context.Context, configFile string) bool {
 	this.BaseServer.SetDefaultServerConnectorConfig(this.config.ServerConnConfig, NewGateCodec(nil))
 	this.BaseServer.GetServerList().SetFetchAndConnectServerTypes(ServerType_Login, ServerType_Game)
 	// gate连接其他服务器
-	this.BaseServer.GetServerList().SetServerConnectorFunc(func(ctx context.Context, info gentity.ServerInfo) Connection {
+	this.BaseServer.GetServerList().SetServerConnectorFunc(func(ctx context.Context, info ServerInfo) Connection {
 		serverInfo := info.(*pb.ServerInfo)
 		return GetNetMgr().NewConnector(ctx, serverInfo.GetGateListenAddr(), this.BaseServer.GetDefaultServerConnectorConfig(), nil)
 	})

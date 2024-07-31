@@ -290,7 +290,7 @@ func (this *BaseServer) SetDefaultServerConnectorConfig(config ConnectionConfig,
 }
 
 // 默认的服务器连接接口
-func (this *BaseServer) DefaultServerConnectorFunc(ctx context.Context, info gentity.ServerInfo) Connection {
+func (this *BaseServer) DefaultServerConnectorFunc(ctx context.Context, info ServerInfo) Connection {
 	serverInfo := info.(*pb.ServerInfo)
 	return GetNetMgr().NewConnector(ctx, serverInfo.GetServerListenAddr(), &this.serverConnectorConfig, nil)
 }

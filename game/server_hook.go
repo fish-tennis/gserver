@@ -16,8 +16,7 @@ func GetGlobalEntity() *GlobalEntity {
 type Hook struct {
 }
 
-func (h *Hook) OnRegisterServerHandler(serverHandler ConnectionHandler) {
-
+func (h *Hook) OnRegisterServerHandler(_ any) {
 }
 
 // 服务器初始化回调

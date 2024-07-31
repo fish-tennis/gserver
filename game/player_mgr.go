@@ -1,16 +1,16 @@
 package game
 
 import (
-	"github.com/fish-tennis/gentity"
+	"github.com/fish-tennis/gserver/internal"
 )
 
-var _playerMgr gentity.PlayerMgr
+var _playerMgr internal.PlayerMgr
 
-func SetPlayerMgr(mgr gentity.PlayerMgr) {
+func SetPlayerMgr(mgr internal.PlayerMgr) {
 	_playerMgr = mgr
 }
 
-func GetPlayerMgr() gentity.PlayerMgr {
+func GetPlayerMgr() internal.PlayerMgr {
 	return _playerMgr
 }
 

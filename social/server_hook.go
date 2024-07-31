@@ -8,10 +8,10 @@ import (
 type Hook struct {
 }
 
-func (h *Hook) OnRegisterServerHandler(serverHandler gnet.ConnectionHandler) {
+func (h *Hook) OnRegisterServerHandler(arg any) {
 	InitGuildStructAndHandler()
 	// 注册服务器之间的消息回调
-	GuildServerHandlerRegister(serverHandler.(gnet.PacketHandlerRegister))
+	GuildServerHandlerRegister(arg.(gnet.PacketHandlerRegister))
 }
 
 // 服务器初始化回调

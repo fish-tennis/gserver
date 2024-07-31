@@ -312,13 +312,13 @@ func (this *GameServer) registerServerPacket(handler ConnectionHandler) {
 }
 
 // 添加一个在线玩家
-func (this *GameServer) AddPlayer(player gentity.Player) {
+func (this *GameServer) AddPlayer(player IPlayer) {
 	this.playerMap.Store(player.GetId(), player)
 	cache.AddOnlinePlayer(player.GetId(), player.GetAccountId(), this.GetId())
 }
 
 // 删除一个在线玩家
-func (this *GameServer) RemovePlayer(player gentity.Player) {
+func (this *GameServer) RemovePlayer(player IPlayer) {
 	// 先保存数据库 再移除cache
 	player.(*game.Player).SaveDb(true)
 	this.playerMap.Delete(player.GetId())
@@ -327,9 +327,9 @@ func (this *GameServer) RemovePlayer(player gentity.Player) {
 }
 
 // 获取一个在线玩家
-func (this *GameServer) GetPlayer(playerId int64) gentity.Player {
+func (this *GameServer) GetPlayer(playerId int64) IPlayer {
 	if v, ok := this.playerMap.Load(playerId); ok {
-		return v.(gentity.Player)
+		return v.(IPlayer)
 	}
 	return nil
 }

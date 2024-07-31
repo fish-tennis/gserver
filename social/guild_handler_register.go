@@ -15,7 +15,7 @@ import (
 )
 
 // 公会消息回调接口注册
-var _guildPacketHandlerMgr = make(map[PacketCommand]*gentity.PacketHandlerInfo)
+var _guildPacketHandlerMgr = make(map[PacketCommand]*internal.PacketHandlerInfo)
 
 func InitGuildStructAndHandler() {
 	tmpGuild := NewGuild(&pb.GuildLoadData{})
@@ -75,7 +75,7 @@ func scanGuildMethods(obj any, methodNamePrefix, protoPackageName string) {
 		}
 		cmd := PacketCommand(messageId)
 		// 注册消息回调到组件上
-		_guildPacketHandlerMgr[cmd] = &gentity.PacketHandlerInfo{
+		_guildPacketHandlerMgr[cmd] = &internal.PacketHandlerInfo{
 			ComponentName: componentName,
 			Cmd:           cmd,
 			Method:        method,
@@ -90,7 +90,7 @@ func GuildServerHandlerRegister(handler PacketHandlerRegister) {
 	handler.Register(PacketCommand(pb.CmdRoute_Cmd_GuildRoutePlayerMessageReq), func(connection Connection, packet Packet) {
 		req := packet.Message().(*pb.GuildRoutePlayerMessageReq)
 		slog.Debug("GuildRoutePlayerMessageReq", "packet", req)
-		err := _guildMgr.ParseRoutePacket(connection, packet, req.FromGuildId)
+		err := ParseRoutePacket(_guildMgr, connection, packet, req.FromGuildId)
 		if err != nil {
 			// 回复一个结果,避免rpc调用方超时
 			routePacket := NewProtoPacketEx(packet.Command()+1, nil)
@@ -100,4 +100,30 @@ func GuildServerHandlerRegister(handler PacketHandlerRegister) {
 			game.RoutePlayerPacketWithErr(req.FromPlayerId, routePacket, err.Error(), game.WithConnection(connection))
 		}
 	}, new(pb.GuildRoutePlayerMessageReq))
+}
+
+func ParseRoutePacket(mgr *gentity.DistributedEntityMgr, connection Connection, packet Packet, toEntityId int64) error {
+	// 再验证一次是否属于本服务器管理
+	if _guildHelper.RouteServerId(toEntityId) != gentity.GetApplication().GetId() {
+		GetLogger().Warn("route err entityId:%v %v", toEntityId, packet)
+		return gentity.ErrRouteServerId
+	}
+	toEntity := mgr.GetEntity(toEntityId)
+	if toEntity == nil {
+		//if mgr.loadEntityWhenGetNil {
+		//	toEntity = _guildHelper.LoadEntity(toEntityId)
+		//}
+		toEntity = _guildHelper.LoadEntity(toEntityId)
+		if toEntity == nil {
+			GetLogger().Debug("ParseRoutePacket entity==nil entityId:%v %v", toEntityId, packet)
+			return gentity.ErrEntityNotExists
+		}
+	}
+	message := _guildHelper.RoutePacketToRoutineMessage(connection, packet, toEntityId)
+	if message == nil {
+		GetLogger().Debug("ParseRoutePacket convert err entityId:%v %v", toEntityId, packet)
+		return gentity.ErrConvertRoutineMessage
+	}
+	toEntity.PushMessage(message)
+	return nil
 }

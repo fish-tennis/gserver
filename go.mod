@@ -1,6 +1,8 @@
 module github.com/fish-tennis/gserver
 
-go 1.20
+go 1.21
+
+replace github.com/fish-tennis/gentity v1.2.0 => ./../gentity
 
 require (
 	github.com/fish-tennis/gentity v1.2.0

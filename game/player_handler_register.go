@@ -8,7 +8,7 @@ import (
 
 // 玩家接口注册
 var (
-	_playerPacketHandlerMgr = gentity.NewPacketHandlerMgr()
+	_playerPacketHandlerMgr = internal.NewPacketHandlerMgr()
 	// 玩家的普通回调接口注册
 	_playerHandlerRegister = make(map[PacketCommand]func(player *Player, packet Packet))
 	// 玩家的事件响应接口注册

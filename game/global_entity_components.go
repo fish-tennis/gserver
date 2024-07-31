@@ -2,6 +2,7 @@ package game
 
 import (
 	"github.com/fish-tennis/gentity"
+	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/pb"
 )
 
@@ -10,7 +11,7 @@ var (
 	_globalEntityComponentRegister = gentity.ComponentRegister[*GlobalEntity]{}
 
 	// GlobalEntity消息回调接口注册
-	_globalEntityPacketHandlerMgr = gentity.NewPacketHandlerMgr()
+	_globalEntityPacketHandlerMgr = internal.NewPacketHandlerMgr()
 )
 
 // 注册GlobalEntity组件构造信息

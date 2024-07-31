@@ -20,7 +20,8 @@ import (
 // 实际项目需求也可能需要服务器启动的时候就把公会数据加载进服务器(不难实现)
 
 var (
-	_guildMgr *gentity.DistributedEntityMgr
+	_guildMgr    *gentity.DistributedEntityMgr
+	_guildHelper *GuildHelper
 )
 
 // DistributedEntityHelper实现
@@ -87,13 +88,13 @@ func initGuildMgr() {
 			gentity.SaveEntityChangedDataToDb(_guildMgr.GetEntityDb(), routineEntity, cache.Get(), false, "")
 		},
 	}
+	_guildHelper = new(GuildHelper)
 	_guildMgr = gentity.NewDistributedEntityMgr("g.lock",
 		db.GetGuildDb(),
 		cache.Get(),
-		GetServerList(),
 		routineArgs,
-		new(GuildHelper))
-	_guildMgr.SetLoadEntityWhenGetNil(true)
+		_guildHelper)
+	//_guildMgr.SetLoadEntityWhenGetNil(true)
 }
 
 // 获取本服上的公会
@@ -106,6 +107,6 @@ func GetGuildById(guildId int64) *Guild {
 }
 
 // 服务器列表,触发公会重新分配
-func onServerListUpdate(serverList map[string][]gentity.ServerInfo, oldServerList map[string][]gentity.ServerInfo) {
+func onServerListUpdate(serverList map[string][]ServerInfo, oldServerList map[string][]ServerInfo) {
 	_guildMgr.ReBalance()
 }

@@ -5,7 +5,7 @@ import (
 	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gentity/util"
 	"github.com/fish-tennis/gserver/cfg"
-	. "github.com/fish-tennis/gserver/internal"
+	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 	"time"
@@ -13,7 +13,7 @@ import (
 
 var (
 	// 活动模板的构造函数注册表
-	_activityTemplateCtorMap = make(map[string]func(activities ActivityMgr, activityCfg *cfg.ActivityCfg, args interface{}) Activity)
+	_activityTemplateCtorMap = make(map[string]func(activities internal.ActivityMgr, activityCfg *cfg.ActivityCfg, args interface{}) internal.Activity)
 )
 
 const (
@@ -26,7 +26,7 @@ func init() {
 	RegisterPlayerComponentCtor(ComponentNameActivities, 100, func(player *Player, playerData *pb.PlayerData) gentity.Component {
 		component := &Activities{
 			PlayerMapDataComponent: *NewPlayerMapDataComponent(player, ComponentNameActivities),
-			Data:                   make(map[int32]Activity),
+			Data:                   make(map[int32]internal.Activity),
 		}
 		// 这里提前加入组件,因为后面的component.LoadData里,子活动可能需要用到player.GetActivities()
 		player.AddComponent(component)
@@ -40,7 +40,7 @@ func init() {
 // 活动模块
 type Activities struct {
 	PlayerMapDataComponent
-	Data map[int32]Activity `db:"Data"`
+	Data map[int32]internal.Activity `db:"Data"`
 }
 
 func (this *Player) GetActivities() *Activities {
@@ -48,7 +48,7 @@ func (this *Player) GetActivities() *Activities {
 }
 
 // 根据模板创建活动对象
-func CreateNewActivity(activityCfgId int32, activities ActivityMgr, t time.Time) Activity {
+func CreateNewActivity(activityCfgId int32, activities internal.ActivityMgr, t time.Time) internal.Activity {
 	activityCfg := cfg.GetActivityCfgMgr().GetActivityCfg(activityCfgId)
 	if activityCfg == nil {
 		logger.Error("activityCfg nil %v", activityCfgId)
@@ -61,12 +61,12 @@ func CreateNewActivity(activityCfgId int32, activities ActivityMgr, t time.Time)
 	return nil
 }
 
-func (this *Activities) GetActivity(activityId int32) Activity {
+func (this *Activities) GetActivity(activityId int32) internal.Activity {
 	activity, _ := this.Data[activityId]
 	return activity
 }
 
-func (this *Activities) AddNewActivity(activityCfg *cfg.ActivityCfg, t time.Time) Activity {
+func (this *Activities) AddNewActivity(activityCfg *cfg.ActivityCfg, t time.Time) internal.Activity {
 	activity := CreateNewActivity(activityCfg.CfgId, this, t)
 	if activity == nil {
 		logger.Error("activity nil %v", activityCfg.CfgId)
@@ -187,7 +187,7 @@ func (this *Activities) CheckEnd(t time.Time) {
 // 子活动
 type ChildActivity struct {
 	gentity.BaseDirtyMark
-	BaseActivity
+	internal.BaseActivity
 	Activities *Activities
 }
 
@@ -204,5 +204,5 @@ func (this *ChildActivity) GetActivityCfg() *cfg.ActivityCfg {
 
 type ActivityConditionArg struct {
 	Activities *Activities
-	Activity   Activity
+	Activity   internal.Activity
 }
