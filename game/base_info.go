@@ -16,8 +16,8 @@ const (
 
 // 利用go的init进行组件的自动注册
 func init() {
-	RegisterPlayerComponentCtor(ComponentNameBaseInfo, 0, func(player *Player, playerData *pb.PlayerData) gentity.Component {
-		component := &BaseInfo{
+	_playerComponentRegister.Register(ComponentNameBaseInfo, 0, func(player *Player, _ any) gentity.Component {
+		return &BaseInfo{
 			PlayerDataComponent: PlayerDataComponent{
 				BasePlayerComponent: BasePlayerComponent{
 					player: player,
@@ -29,8 +29,6 @@ func init() {
 				Exp:   0,
 			},
 		}
-		gentity.LoadData(component, playerData.GetBaseInfo())
-		return component
 	})
 }
 

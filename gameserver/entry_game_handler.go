@@ -111,6 +111,15 @@ func onPlayerEntryGameReq(connection Connection, packet Packet) {
 			playerData.XId = playerId
 		}
 		entryPlayer = game.CreatePlayerFromData(playerData)
+		if entryPlayer == nil {
+			cache.RemoveOnlineAccount(accountId)
+			internal.SendPacketAdapt(connection, packet, PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameRes), &pb.PlayerEntryGameRes{
+				Error:     "DbError",
+				AccountId: req.GetAccountId(),
+				RegionId:  req.GetRegionId(),
+			})
+			return
+		}
 		// 加入在线玩家表
 		game.GetPlayerMgr().AddPlayer(entryPlayer)
 		entryPlayer.SetConnection(connection, internal.IsGatePacket(packet))
@@ -169,6 +178,13 @@ func onCreatePlayerReq(connection Connection, packet Packet) {
 		},
 	}
 	newPlayer := game.CreatePlayerFromData(playerData)
+	if newPlayer == nil {
+		internal.SendPacketAdapt(connection, packet, PacketCommand(pb.CmdLogin_Cmd_CreatePlayerRes), &pb.CreatePlayerRes{
+			Error: "DbError",
+		})
+		logger.Error("CreatePlayerFromData")
+		return
+	}
 	newPlayerSaveData := make(map[string]interface{})
 	newPlayerSaveData[db.UniqueIdName] = playerData.XId
 	newPlayerSaveData[db.PlayerName] = playerData.Name

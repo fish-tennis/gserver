@@ -23,17 +23,11 @@ const (
 
 // 利用go的init进行组件的自动注册
 func init() {
-	RegisterPlayerComponentCtor(ComponentNameActivities, 100, func(player *Player, playerData *pb.PlayerData) gentity.Component {
-		component := &Activities{
+	_playerComponentRegister.Register(ComponentNameActivities, 100, func(player *Player, _ any) gentity.Component {
+		return &Activities{
 			PlayerMapDataComponent: *NewPlayerMapDataComponent(player, ComponentNameActivities),
 			Data:                   make(map[int32]internal.Activity),
 		}
-		// 这里提前加入组件,因为后面的component.LoadData里,子活动可能需要用到player.GetActivities()
-		player.AddComponent(component)
-		// 活动组件使用了动态结构,不能使用gentity.LoadData来自动加载数据
-		// 自己解析出具体的子活动数据
-		component.LoadData(playerData.GetActivities())
-		return component
 	})
 }
 

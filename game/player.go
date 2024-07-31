@@ -246,30 +246,30 @@ func (this *Player) OnRecvPacket(packet *ProtoPacket) {
 	this.PushMessage(packet)
 }
 
-// 从加载的数据构造出玩家对象
-func CreatePlayerFromData(playerData *pb.PlayerData) *Player {
+func CreatePlayer(playerId int64, playerName string, accountId int64, regionId int32) *Player {
 	player := &Player{
-		name:              playerData.Name,
-		accountId:         playerData.AccountId,
-		regionId:          playerData.RegionId,
+		name:              playerName,
+		accountId:         accountId,
+		regionId:          regionId,
 		BaseRoutineEntity: *gentity.NewRoutineEntity(32),
 	}
-	player.Id = playerData.XId
+	player.Id = playerId
 	// 初始化玩家的各个模块
-	_playerComponentRegister.InitComponents(player, playerData)
+	_playerComponentRegister.InitComponents(player, nil)
+	return player
+}
+
+// 从加载的数据构造出玩家对象
+func CreatePlayerFromData(playerData *pb.PlayerData) *Player {
+	player := CreatePlayer(playerData.XId, playerData.Name, playerData.AccountId, playerData.RegionId)
+	err := gentity.LoadEntityData(player, playerData)
+	if err != nil {
+		slog.Error("LoadPlayerDataErr", "playerId", player.GetId(), "err", err)
+		return nil
+	}
 	return player
 }
 
 func CreateTempPlayer(playerId, accountId int64) *Player {
-	playerData := &pb.PlayerData{}
-	player := CreatePlayerFromData(playerData)
-	player.Id = playerId
-	player.accountId = accountId
-	return player
-}
-
-func NewEmptyPlayer(playerId int64) *Player {
-	p := &Player{}
-	p.Id = playerId
-	return p
+	return CreatePlayer(playerId, "", accountId, 0)
 }

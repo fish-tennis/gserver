@@ -17,16 +17,14 @@ const (
 
 // 利用go的init进行组件的自动注册
 func init() {
-	RegisterPlayerComponentCtor(ComponentNamePendingMessages, 100, func(player *Player, playerData *pb.PlayerData) gentity.Component {
-		component := &PendingMessages{
+	_playerComponentRegister.Register(ComponentNamePendingMessages, 100, func(player *Player, _ any) gentity.Component {
+		return &PendingMessages{
 			BasePlayerComponent: BasePlayerComponent{
 				player: player,
 				name:   ComponentNamePendingMessages,
 			},
 			Messages: make(map[int64]*pb.PendingMessage),
 		}
-		gentity.LoadData(component, playerData.GetPendingMessages())
-		return component
 	})
 }
 

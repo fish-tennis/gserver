@@ -25,15 +25,13 @@ const (
 
 // 利用go的init进行组件的自动注册
 func init() {
-	RegisterPlayerComponentCtor(ComponentNameGuild, 100, func(player *Player, playerData *pb.PlayerData) gentity.Component {
-		component := &Guild{
+	_playerComponentRegister.Register(ComponentNameGuild, 100, func(player *Player, _ any) gentity.Component {
+		return &Guild{
 			PlayerDataComponent: *NewPlayerDataComponent(player, ComponentNameGuild),
 			Data: &pb.PlayerGuildData{
 				GuildId: 0,
 			},
 		}
-		gentity.LoadData(component, playerData.GetGuild())
-		return component
 	})
 }
 

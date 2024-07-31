@@ -16,8 +16,8 @@ const (
 
 // 利用go的init进行组件的自动注册
 func init() {
-	RegisterPlayerComponentCtor(ComponentNameBag, 100, func(player *Player, playerData *pb.PlayerData) gentity.Component {
-		component := &Bag{
+	_playerComponentRegister.Register(ComponentNameBag, 100, func(player *Player, _ any) gentity.Component {
+		return &Bag{
 			BasePlayerComponent: BasePlayerComponent{
 				player: player,
 				name:   ComponentNameBag,
@@ -25,8 +25,6 @@ func init() {
 			BagCountItem:  NewBagCountItem(),
 			BagUniqueItem: NewBagUniqueItem(),
 		}
-		gentity.LoadData(component, playerData.GetBag())
-		return component
 	})
 }
 

@@ -15,16 +15,14 @@ const (
 
 // 利用go的init进行组件的自动注册
 func init() {
-	RegisterPlayerComponentCtor(ComponentNameMoney, 0, func(player *Player, playerData *pb.PlayerData) gentity.Component {
-		component := &Money{
+	_playerComponentRegister.Register(ComponentNameMoney, 0, func(player *Player, _ any) gentity.Component {
+		return &Money{
 			PlayerDataComponent: *NewPlayerDataComponent(player, ComponentNameMoney),
 			Data: &pb.Money{
 				Coin:    0,
 				Diamond: 0,
 			},
 		}
-		gentity.LoadData(component, playerData.GetMoney())
-		return component
 	})
 }
 

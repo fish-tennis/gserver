@@ -2,20 +2,12 @@ package game
 
 import (
 	"github.com/fish-tennis/gentity"
-	"github.com/fish-tennis/gserver/pb"
 )
 
 var (
 	// Player组件注册表
 	_playerComponentRegister = gentity.ComponentRegister[*Player]{}
 )
-
-// 注册玩家组件构造信息
-func RegisterPlayerComponentCtor(componentName string, ctorOrder int, ctor func(player *Player, playerData *pb.PlayerData) gentity.Component) {
-	_playerComponentRegister.Register(componentName, ctorOrder, func(entity *Player, arg any) gentity.Component {
-		return ctor(entity, arg.(*pb.PlayerData))
-	})
-}
 
 // 玩家组件接口
 type PlayerComponent interface {

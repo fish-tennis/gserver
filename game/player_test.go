@@ -93,7 +93,7 @@ func TestActivity(t *testing.T) {
 		AccountId: 1,
 		RegionId:  1,
 	}
-	player := CreatePlayerFromData(playerData)
+	player := CreatePlayer(playerData.XId, playerData.Name, playerData.AccountId, playerData.RegionId)
 	activities := player.GetActivities()
 	activityIds := []int32{1, 2, 3, 4, 5}
 	for _, activityId := range activityIds {
