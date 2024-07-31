@@ -34,7 +34,7 @@ func init() {
 // 活动模块
 type Activities struct {
 	PlayerMapDataComponent
-	Data map[int32]internal.Activity `db:"Data"`
+	Data map[int32]internal.Activity `db:""`
 }
 
 func (this *Player) GetActivities() *Activities {
@@ -178,7 +178,7 @@ func (this *Activities) CheckEnd(t time.Time) {
 	}
 }
 
-// 子活动
+// 子活动,目前限制子活动只能是单保存字段(SingleField)
 type ChildActivity struct {
 	gentity.BaseDirtyMark
 	internal.BaseActivity

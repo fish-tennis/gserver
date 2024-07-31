@@ -39,7 +39,7 @@ func init() {
 type Guild struct {
 	PlayerDataComponent
 	// 这里使用明文方式保存数据,以便使用mongodb语句直接进行操作,如AtomicSetGuildId函数
-	Data *pb.PlayerGuildData `db:"Guild;plain"`
+	Data *pb.PlayerGuildData `db:"plain"`
 }
 
 func (this *Player) GetGuild() *Guild {

@@ -13,18 +13,16 @@ const (
 
 // 利用go的init进行组件的自动注册
 func init() {
-	RegisterGuildComponentCtor(ComponentNameMembers, 0, func(guild *Guild, guildData *pb.GuildLoadData) gentity.Component {
-		component := &GuildMembers{
-			MapDataComponent: *gentity.NewMapDataComponent[int64, *pb.GuildMemberData](guild, ComponentNameMembers),
+	_guildComponentRegister.Register(ComponentNameMembers, 0, func(guild *Guild, _ any) gentity.Component {
+		return &GuildMembers{
+			MapDataComponent: gentity.NewMapDataComponent[int64, *pb.GuildMemberData](guild, ComponentNameMembers),
 		}
-		gentity.LoadData(component, guildData.GetMembers())
-		return component
 	})
 }
 
 // 公会成员数据
 type GuildMembers struct {
-	gentity.MapDataComponent[int64, *pb.GuildMemberData] `db:"Members;plain"`
+	*gentity.MapDataComponent[int64, *pb.GuildMemberData] `db:"plain"`
 }
 
 func (g *Guild) GetMembers() *GuildMembers {

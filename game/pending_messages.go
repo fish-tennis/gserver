@@ -29,7 +29,9 @@ func init() {
 }
 
 // 待处理消息
-// 该组件不会在玩家下线时保存数据库,也不保存缓存
+//
+// NOTE:该组件不会在玩家下线时保存数据库,也不保存缓存,因为没有实现MapDirtyMark
+// 因为待处理消息,会有其他进程直接往mongodb写入PendingMessages
 type PendingMessages struct {
 	BasePlayerComponent
 	Messages map[int64]*pb.PendingMessage `db:""`

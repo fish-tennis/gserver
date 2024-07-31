@@ -8,12 +8,12 @@ import (
 
 // 有数量的物品背包
 type BagCountItem struct {
-	gentity.MapData[int32, int32] `db:""`
+	*gentity.MapData[int32, int32] `db:""`
 }
 
 func NewBagCountItem() *BagCountItem {
 	bag := &BagCountItem{
-		MapData: *gentity.NewMapData[int32, int32](),
+		MapData: gentity.NewMapData[int32, int32](),
 	}
 	return bag
 }

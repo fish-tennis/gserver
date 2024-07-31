@@ -10,6 +10,7 @@ import (
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 	"google.golang.org/protobuf/proto"
+	"log/slog"
 	"time"
 )
 
@@ -18,6 +19,13 @@ const (
 	GlobalEntityCachePrefix = db.GlobalDbName
 	// GlobalEntity在mongo表里的key前缀
 	GlobalEntityCollectionKeyPrefix = "GlobalEntity"
+)
+
+var (
+	// GlobalEntity组件注册表
+	_globalEntityComponentRegister = gentity.ComponentRegister[*GlobalEntity]{}
+	// GlobalEntity消息回调接口注册
+	_globalEntityPacketHandlerMgr = internal.NewPacketHandlerMgr()
 )
 
 // 演示全局类的非玩家实体
@@ -118,7 +126,13 @@ func createTempGlobalEntity() *GlobalEntity {
 
 func createGlobalEntityFromData(globalEntity *GlobalEntity, globalEntityData *pb.GlobalEntityData) *GlobalEntity {
 	// 初始化各个模块
-	_globalEntityComponentRegister.InitComponents(globalEntity, globalEntityData)
+	_globalEntityComponentRegister.InitComponents(globalEntity, nil)
+	if globalEntityData.Key != "" {
+		err := gentity.LoadEntityData(globalEntity, globalEntityData)
+		if err != nil {
+			slog.Error("GlobalEntity LoadEntityDataErr", "key", globalEntityData.Key, "err", err)
+		}
+	}
 	return globalEntity
 }
 

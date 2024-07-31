@@ -31,7 +31,7 @@ type Money struct {
 	PlayerDataComponent
 	// 该字段必须导出(首字母大写)
 	// 使用struct tag来标记该字段需要存数据库,可以设置存储字段名
-	Data *pb.Money `db:"Money"`
+	Data *pb.Money `db:""`
 }
 
 func (this *Player) GetMoney() *Money {

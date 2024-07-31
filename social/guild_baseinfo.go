@@ -13,13 +13,11 @@ const (
 
 // 利用go的init进行组件的自动注册
 func init() {
-	RegisterGuildComponentCtor(ComponentNameBaseInfo, 0, func(guild *Guild, guildData *pb.GuildLoadData) gentity.Component {
-		component := &GuildBaseInfo{
+	_guildComponentRegister.Register(ComponentNameBaseInfo, 0, func(guild *Guild, _ any) gentity.Component {
+		return &GuildBaseInfo{
 			DataComponent: *gentity.NewDataComponent(guild, ComponentNameBaseInfo),
 			Data:          &pb.GuildInfo{},
 		}
-		gentity.LoadData(component, guildData.GetBaseInfo())
-		return component
 	})
 }
 
@@ -28,7 +26,7 @@ var _ gentity.SaveableDirtyMark = (*GuildBaseInfo)(nil)
 // 公会基础信息
 type GuildBaseInfo struct {
 	gentity.DataComponent
-	Data *pb.GuildInfo `db:"baseinfo;plain"`
+	Data *pb.GuildInfo `db:"plain"`
 }
 
 func (g *Guild) GetBaseInfo() *GuildBaseInfo {

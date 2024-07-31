@@ -36,7 +36,7 @@ func init() {
 type BaseInfo struct {
 	PlayerDataComponent
 	// plain表示明文存储,在保存到mongo时,不会进行proto序列化
-	Data *pb.BaseInfo `db:"BaseInfo;plain"`
+	Data *pb.BaseInfo `db:"plain"`
 }
 
 func (this *Player) GetBaseInfo() *BaseInfo {

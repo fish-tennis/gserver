@@ -8,12 +8,12 @@ import (
 
 // 不可叠加的物品背包
 type BagUniqueItem struct {
-	gentity.MapData[int64, *pb.UniqueItem] `db:""`
+	*gentity.MapData[int64, *pb.UniqueItem] `db:""`
 }
 
 func NewBagUniqueItem() *BagUniqueItem {
 	bag := &BagUniqueItem{
-		MapData: *gentity.NewMapData[int64, *pb.UniqueItem](),
+		MapData: gentity.NewMapData[int64, *pb.UniqueItem](),
 	}
 	return bag
 }

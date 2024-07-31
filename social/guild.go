@@ -11,7 +11,11 @@ import (
 	"reflect"
 )
 
-var _ gentity.RoutineEntity = (*Guild)(nil)
+var (
+	_ gentity.RoutineEntity = (*Guild)(nil)
+	// 公会组件注册表
+	_guildComponentRegister = gentity.ComponentRegister[*Guild]{}
+)
 
 // 公会
 type Guild struct {
@@ -34,7 +38,13 @@ func NewGuild(guildLoadData *pb.GuildLoadData) *Guild {
 		BaseRoutineEntity: *gentity.NewRoutineEntity(32),
 	}
 	guild.Id = guildLoadData.Id
-	_guildComponentRegister.InitComponents(guild, guildLoadData)
+	_guildComponentRegister.InitComponents(guild, nil)
+	if guildLoadData.Id > 0 {
+		err := gentity.LoadEntityData(guild, guildLoadData)
+		if err != nil {
+			slog.Error("Guild LoadEntityDataErr", "id", guild.Id, "err", err)
+		}
+	}
 	return guild
 }
 
