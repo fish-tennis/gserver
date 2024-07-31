@@ -59,7 +59,8 @@ func (this *PendingMessages) TriggerPlayerEntryGame(event *internal.EventPlayerE
 	}
 }
 
-func (this *PendingMessages) Remove(messageId int64) {
-	db.GetPlayerDb().DeleteComponentField(this.GetPlayerId(), this.GetName(), util.Itoa(messageId))
-	logger.Debug("%v delete pending message:%v", this.GetPlayerId(), messageId)
+// 删除1个待处理消息(线程安全)
+func DeletePendingMessage(playerId, messageId int64) {
+	db.GetPlayerDb().DeleteComponentField(playerId, ComponentNamePendingMessages, util.Itoa(messageId))
+	logger.Debug("%v delete pending message:%v", playerId, messageId)
 }

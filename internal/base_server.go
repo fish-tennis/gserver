@@ -236,6 +236,7 @@ func (this *BaseServer) StartServer(ctx context.Context, serverListenAddr string
 		// TODO: set ping (ServerInfo)
 	}, new(pb.HeartBeatRes))
 	serverHandlerRegister(connectorHandler)
+	// 其他模块注册服务器之间的消息回调
 	for _, hook := range this.GetServerHooks() {
 		hook.OnRegisterServerHandler(connectorHandler)
 	}

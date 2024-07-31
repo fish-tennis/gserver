@@ -211,16 +211,13 @@ func (this *GameServer) repairPlayerCache(playerId, accountId int64) error {
 
 // 注册客户端消息回调
 func (this *GameServer) registerClientPacket(clientHandler PacketHandlerRegister) {
-	// 手动注册消息回调
+	// 手动注册特殊的消息回调
 	clientHandler.Register(PacketCommand(pb.CmdInner_Cmd_HeartBeatReq), onHeartBeatReq, new(pb.HeartBeatReq))
 	clientHandler.Register(PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameReq), onPlayerEntryGameReq, new(pb.PlayerEntryGameReq))
 	clientHandler.Register(PacketCommand(pb.CmdLogin_Cmd_CreatePlayerReq), onCreatePlayerReq, new(pb.CreatePlayerReq))
 	this.registerGatePlayerPacket(clientHandler, PacketCommand(pb.CmdInner_Cmd_TestCmd), onTestCmd, new(pb.TestCmd))
 	// 通过反射自动注册消息回调
 	game.AutoRegisterPlayerPacketHandler(clientHandler)
-	// 自动注册消息回调的另一种方案: proto_code_gen工具生成的回调函数
-	// 因为已经用了反射自动注册,所以这里注释了
-	// player_component_handler_gen(clientHandler)
 }
 
 // 心跳回复
@@ -234,7 +231,7 @@ func onHeartBeatReq(connection Connection, packet Packet) {
 
 // 注册网关消息回调
 func (this *GameServer) registerGatePacket(gateHandler PacketHandlerRegister) {
-	// 手动注册消息回调
+	// 手动注册特殊的消息回调
 	gateHandler.Register(PacketCommand(pb.CmdInner_Cmd_HeartBeatReq), onHeartBeatReq, new(pb.HeartBeatReq))
 	gateHandler.Register(PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameReq), onPlayerEntryGameReq, new(pb.PlayerEntryGameReq))
 	gateHandler.Register(PacketCommand(pb.CmdLogin_Cmd_CreatePlayerReq), onCreatePlayerReq, new(pb.CreatePlayerReq))
@@ -268,9 +265,6 @@ func (this *GameServer) registerGatePacket(gateHandler PacketHandlerRegister) {
 	})
 	// 通过反射自动注册消息和proto.Message的映射
 	game.AutoRegisterPlayerPacketHandler(gateHandler)
-	// 自动注册消息回调的另一种方案: proto_code_gen工具生成的回调函数
-	// 因为已经用了反射自动注册,所以这里注释了
-	// player_component_handler_gen(clientHandler)
 }
 
 // 注册func(player *Player, packet Packet)格式的消息回调函数,支持网关模式和客户端直连模式
@@ -371,17 +365,17 @@ func (this *GameServer) onRoutePlayerMessage(connection Connection, packet Packe
 	if player == nil {
 		// NOTE: 由于是异步消息,这里的player有很低的概率可能不在线了,如果是重要的不能丢弃的消息,需要保存该消息,留待后续处理
 		// 演示程序暂不处理,这里就直接丢弃了
-		logger.Error("player nil %v", req.ToPlayerId)
+		logger.Error("player nil %v,cmd:%v", req.ToPlayerId, req.PacketCommand)
 		return
 	}
 	message, err := req.PacketData.UnmarshalNew()
 	if err != nil {
-		logger.Error("UnmarshalNew %v err:%v", req.ToPlayerId, err)
+		logger.Error("UnmarshalNew %v cmd:%v err:%v", req.ToPlayerId, req.PacketCommand, err)
 		return
 	}
 	err = req.PacketData.UnmarshalTo(message)
 	if err != nil {
-		logger.Error("UnmarshalTo %v err:%v", req.ToPlayerId, err)
+		logger.Error("UnmarshalTo %v cmd:%v err:%v", req.ToPlayerId, req.PacketCommand, err)
 		return
 	}
 	if req.DirectSendClient {
@@ -393,6 +387,6 @@ func (this *GameServer) onRoutePlayerMessage(connection Connection, packet Packe
 	}
 	if req.PendingMessageId > 0 {
 		// 消息保存到db了,处理完需要删除
-		player.GetPendingMessages().Remove(req.PendingMessageId)
+		game.DeletePendingMessage(req.ToPlayerId, req.PendingMessageId)
 	}
 }

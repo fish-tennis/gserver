@@ -16,7 +16,7 @@
 - 一个账号同时只能登录一个服务器(数据一致性前提)
 - 游戏服宕机后重启,自动修复缓存数据,防止玩家数据回档
 - 工具生成消息注册和发送消息代码[proto_code_gen](https://github.com/fish-tennis/proto_code_gen)
-- 通过反射自动注册消息回调,事件响应接口
+- 通过反射自动注册消息回调,事件响应接口(业务代码和网络库解耦)
 - 采用Entity-Component设计,模块解耦
 - Entity事件分发
 - 业务层和数据层分离,业务代码无需操作数据库和缓存
@@ -24,7 +24,7 @@
 - 通过公会功能演示服务器动态扩缩容的处理方式
 - 服务器之间的rpc调用
 - 活动模块,演示了如何保存动态的数据,以及利用json,proto,gentity设计一个可灵活扩展的活动模块
-- 配置数据管理模块,同时支持csv和json
+- 配置数据管理模块,同时支持csv和json,支持热更新
 
 ## 数据方案
 玩家数据落地使用mongodb(支持扩展为mysql),玩家上线时,从mongodb拉取玩家数据,玩家下线时,把玩家数据保存到mongodb
@@ -34,6 +34,8 @@
 gserver提供了数据绑定的方案,业务层只需要标记哪些数据需要保存,无需自己写代码操作数据库和redis
 
 ## 数据绑定
+类似gorm(go Object Relation Mapping)对SQL进行对象映射,gserver使用的数据绑定对组件进行数据库和缓存的映射
+
 使用go的struct tag,设置对象组件的字段,框架接口会自动对这些字段进行数据库读取保存和缓存更新,极大的简化了业务代码对数据库和缓存的操作
 
 设置组件保存数据
@@ -42,11 +44,9 @@ gserver提供了数据绑定的方案,业务层只需要标记哪些数据需要
 type Money struct {
 	PlayerDataComponent
 	// 该字段必须导出(首字母大写)
-	// 使用struct tag来标记该字段需要存数据库,可以设置存储字段名(proto格式存mongo时,使用全小写格式)
-	Data *pb.Money `db:"money"`
+	// 使用struct tag来标记该字段需要存数据库
+	Data *pb.Money `db:""`
 }
-//调用player.SaveDb()会自动把Money.Data保存到mongo,保存时会自动进行proto序列化
-//调用player.SaveCache()会自动把Money.Data缓存到redis,保存时会自动进行proto序列化
 ```
 
 支持明文方式保存数据
@@ -55,29 +55,21 @@ type Money struct {
 type BaseInfo struct {
 	PlayerDataComponent
 	// plain表示明文存储,在保存到mongo时,不会进行proto序列化
-	Data *pb.BaseInfo `db:"baseinfo;plain"`
+	Data *pb.BaseInfo `db:"plain"`
 }
 ```
 
-支持组合模式
+支持多个保存字段
 ```go
 // 玩家的任务组件
 type Quest struct {
 	BasePlayerComponent
-	// 保存数据的子模块:已完成的任务
-	Finished *FinishedQuests `child:"finished"`
-	// 保存数据的子模块:当前任务列表
-	Quests *CurQuests `child:"quests"`
-}
-// 已完成的任务
-type FinishedQuests struct {
-    BaseDirtyMark
-    Finished []int32 `db:"finished;plain"`
-}
-// 当前任务列表
-type CurQuests struct {
-    BaseMapDirtyMark
-    Quests map[int32]*pb.QuestData `db:"quests"`
+	// 保存数据的子模块:已完成的任务 使用明文保存方式
+	// wrapper of []int32
+	Finished *gentity.SliceData[int32] `child:"Finished;plain"`
+    // 保存数据的子模块:当前任务列表
+    // wrapper of map[int32]*pb.QuestData
+    Quests *gentity.MapData[int32, *pb.QuestData] `child:"Quests"`
 }
 ```
 
