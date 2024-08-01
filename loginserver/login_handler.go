@@ -5,7 +5,6 @@ import (
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
 	"github.com/fish-tennis/gserver/db"
-	"github.com/fish-tennis/gserver/gen"
 	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
@@ -52,7 +51,7 @@ func onLoginReq(connection Connection, packet Packet) {
 				//	LogError("RemoveOnlinePlayer account:%v playerId:%v gameServerId:%v",
 				//		account.GetId(), onlinePlayerId, gameServerId)
 				//}
-				gen.SendKickPlayer(gameServerId, &pb.KickPlayer{
+				internal.GetServerList().Send(gameServerId, PacketCommand(pb.CmdInner_Cmd_KickPlayer), &pb.KickPlayer{
 					AccountId: account.GetXId(),
 					PlayerId:  onlinePlayerId,
 				})

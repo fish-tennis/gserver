@@ -4,7 +4,6 @@ import (
 	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cfg"
-	"github.com/fish-tennis/gserver/gen"
 	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
@@ -85,7 +84,7 @@ func (this *Quest) OnEvent(event interface{}) {
 
 // 完成任务的消息回调
 // 这种格式写的函数可以自动注册客户端消息回调
-func (this *Quest) OnFinishQuestReq(reqCmd gnet.PacketCommand, req *pb.FinishQuestReq) {
+func (this *Quest) OnFinishQuestReq(req *pb.FinishQuestReq) {
 	logger.Debug("OnFinishQuestReq:%v", req)
 	if questData, ok := this.Quests.Data[req.QuestCfgId]; ok {
 		questCfg := cfg.GetQuestCfgMgr().GetQuestCfg(questData.GetCfgId())
@@ -96,13 +95,13 @@ func (this *Quest) OnFinishQuestReq(reqCmd gnet.PacketCommand, req *pb.FinishQue
 			for _, idNum := range questCfg.GetRewards() {
 				this.GetPlayer().GetBag().AddItem(idNum.GetCfgId(), idNum.GetNum())
 			}
-			gen.SendFinishQuestRes(this.GetPlayer(), &pb.FinishQuestRes{
+			this.GetPlayer().Send(gnet.PacketCommand(pb.CmdQuest_Cmd_FinishQuestRes), &pb.FinishQuestRes{
 				QuestCfgId: questData.GetCfgId(),
 			})
 			return
 		}
-		this.GetPlayer().SendErrorRes(reqCmd, "quest not finish")
+		this.GetPlayer().SendErrorRes(gnet.PacketCommand(pb.CmdQuest_Cmd_FinishQuestReq), "quest not finish")
 		return
 	}
-	this.GetPlayer().SendErrorRes(reqCmd, "quest not exist")
+	this.GetPlayer().SendErrorRes(gnet.PacketCommand(pb.CmdQuest_Cmd_FinishQuestReq), "quest not exist")
 }

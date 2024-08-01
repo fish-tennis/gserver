@@ -94,7 +94,7 @@ func (this *PacketHandlerMgr) scanMethods(obj any, packetHandlerRegister gnet.Pa
 		if !method.IsExported() {
 			continue
 		}
-		if method.Type.NumIn() != 3 {
+		if method.Type.NumIn() != 2 {
 			continue
 		}
 		isClientMessage := false
@@ -106,20 +106,14 @@ func (this *PacketHandlerMgr) scanMethods(obj any, packetHandlerRegister gnet.Pa
 		} else {
 			continue
 		}
-		// 消息回调格式: func (this *Quest) OnFinishQuestReq(cmd PacketCommand, req *pb.FinishQuestReq)
-		methodArg1 := method.Type.In(1)
-		// 参数1是消息号
-		if methodArg1.Name() != "PacketCommand" && methodArg1.Name() != "gnet.PacketCommand" {
-			continue
-		}
-		methodArg2 := method.Type.In(2)
-		// 参数2是proto定义的消息体
-		if !methodArg2.Implements(reflect.TypeOf((*proto.Message)(nil)).Elem()) {
+		reqArg := method.Type.In(1)
+		// 参数1是proto定义的消息体
+		if !reqArg.Implements(reflect.TypeOf((*proto.Message)(nil)).Elem()) {
 			continue
 		}
 		// 消息名,如: FinishQuestReq
 		// *pb.FinishQuestReq -> FinishQuestReq
-		messageName := methodArg2.String()[strings.LastIndex(methodArg2.String(), ".")+1:]
+		messageName := reqArg.String()[strings.LastIndex(reqArg.String(), ".")+1:]
 		// 客户端消息回调的函数名规则,如OnFinishQuestReq
 		if isClientMessage && method.Name != fmt.Sprintf("%v%v", clientHandlerPrefix, messageName) {
 			gentity.GetLogger().Debug("client methodName not match:%v", method.Name)
@@ -143,7 +137,7 @@ func (this *PacketHandlerMgr) scanMethods(obj any, packetHandlerRegister gnet.Pa
 		})
 		// 注册客户端消息
 		if isClientMessage && packetHandlerRegister != nil {
-			packetHandlerRegister.Register(cmd, nil, reflect.New(methodArg2.Elem()).Interface().(proto.Message))
+			packetHandlerRegister.Register(cmd, nil, reflect.New(reqArg.Elem()).Interface().(proto.Message))
 		}
 		gentity.GetLogger().Debug("ScanPacketHandler %v.%v %v client:%v", componentStructName, method.Name, messageId, isClientMessage)
 	}
@@ -179,7 +173,6 @@ func (this *PacketHandlerMgr) Invoke(entity gentity.Entity, packet gnet.Packet) 
 					}
 					// 反射调用函数
 					handlerInfo.Method.Func.Call([]reflect.Value{reflect.ValueOf(component),
-						reflect.ValueOf(packet.Command()),
 						reflect.ValueOf(packet.Message())})
 					return true
 				}
@@ -191,7 +184,6 @@ func (this *PacketHandlerMgr) Invoke(entity gentity.Entity, packet gnet.Packet) 
 			}
 			// 反射调用函数
 			handlerInfo.Method.Func.Call([]reflect.Value{reflect.ValueOf(entity),
-				reflect.ValueOf(packet.Command()),
 				reflect.ValueOf(packet.Message())})
 			return true
 		}

@@ -66,14 +66,14 @@ func onTestCmd(player *game.Player, packet Packet) {
 		// 完成所有任务
 		if strings.ToLower(cmdArgs[0]) == "all" {
 			for cfgId, _ := range player.GetQuest().Quests.Data {
-				player.GetQuest().OnFinishQuestReq(PacketCommand(pb.CmdQuest_Cmd_FinishQuestReq), &pb.FinishQuestReq{
+				player.GetQuest().OnFinishQuestReq(&pb.FinishQuestReq{
 					QuestCfgId: cfgId,
 				})
 			}
 		} else {
 			// 完成某一个任务
 			cfgId := int32(util.Atoi(cmdArgs[0]))
-			player.GetQuest().OnFinishQuestReq(PacketCommand(pb.CmdQuest_Cmd_FinishQuestReq), &pb.FinishQuestReq{
+			player.GetQuest().OnFinishQuestReq(&pb.FinishQuestReq{
 				QuestCfgId: cfgId,
 			})
 		}

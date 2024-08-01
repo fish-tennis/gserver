@@ -2,7 +2,6 @@ package game
 
 import (
 	"github.com/fish-tennis/gentity"
-	"github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cfg"
 	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
@@ -45,7 +44,7 @@ func (this *Player) GetBaseInfo() *BaseInfo {
 
 // 玩家进游戏服成功,非客户端消息
 // 这种格式写的函数可以自动注册非客户端的消息回调
-func (this *BaseInfo) HandlePlayerEntryGameOk(_ gnet.PacketCommand, msg *pb.PlayerEntryGameOk) {
+func (this *BaseInfo) HandlePlayerEntryGameOk(msg *pb.PlayerEntryGameOk) {
 	logger.Debug("HandlePlayerEntryGameOk:%v", msg)
 	now := this.GetPlayer().GetTimerEntries().Now().Unix()
 	var offlineSeconds int32
