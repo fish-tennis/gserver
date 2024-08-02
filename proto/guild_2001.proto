@@ -6,22 +6,6 @@ package gserver;
 
 // 公会相关proto
 
-enum CmdGuild {
-  CmdGuild_None         = 0; // 解决"The first enum value must be zero in proto3."的报错
-  Cmd_GuildListReq      = 2001; // 公会列表查看
-  Cmd_GuildListRes      = 2002;
-  Cmd_GuildCreateReq    = 2003; // 创建公会
-  Cmd_GuildCreateRes    = 2004;
-  Cmd_GuildJoinReq      = 2005; // 请求加入某个公会
-  Cmd_GuildJoinRes      = 2006;
-  Cmd_GuildJoinAgreeReq = 2007; // 公会管理员处理入会请求
-  Cmd_GuildJoinAgreeRes = 2008;
-  Cmd_GuildDataViewReq  = 2009; // 查看本公会的数据
-  Cmd_GuildDataViewRes  = 2010;
-  Cmd_GuildJoinReqTip   = 2012; // 公会入户申请的提示
-  Cmd_GuildJoinReqOpResult = 2013; // 自己的入会申请的操作结果
-}
-
 enum GuildPosition {
   Member  = 0; // 普通成员
   Manager = 1; // 管理员

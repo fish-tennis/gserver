@@ -55,7 +55,7 @@ func (this *GuildJoinRequests) HandleGuildJoinReq(guildMessage *GuildMessage, re
 	errStr := ""
 	g := this.GetGuild()
 	logger.Debug("HandleGuildJoinReq %v %v", g.GetId(), guildMessage.fromPlayerId)
-	defer g.RoutePlayerPacket(guildMessage, pb.CmdGuild_Cmd_GuildJoinRes, &pb.GuildJoinRes{
+	defer g.RoutePlayerPacket(guildMessage, pb.CmdClient_Cmd_GuildJoinRes, &pb.GuildJoinRes{
 		Error: errStr,
 		Id:    g.GetId(),
 	})
@@ -73,7 +73,7 @@ func (this *GuildJoinRequests) HandleGuildJoinReq(guildMessage *GuildMessage, re
 		TimestampSec: int32(util.GetCurrentTimeStamp()),
 	})
 	// 广播公会成员
-	g.BroadcastClientPacket(pb.CmdGuild_Cmd_GuildJoinReqTip, &pb.GuildJoinReqTip{
+	g.BroadcastClientPacket(pb.CmdClient_Cmd_GuildJoinReqTip, &pb.GuildJoinReqTip{
 		PlayerId:   guildMessage.fromPlayerId,
 		PlayerName: guildMessage.fromPlayerName,
 	})
@@ -85,7 +85,7 @@ func (this *GuildJoinRequests) HandleGuildJoinAgreeReq(guildMessage *GuildMessag
 	logger.Debug("HandleGuildJoinAgreeReq %v %v", g.GetId(), guildMessage.fromPlayerId)
 	errStr := ""
 	// 返回操作结果给公会管理者
-	defer g.RoutePlayerPacket(guildMessage, pb.CmdGuild_Cmd_GuildJoinAgreeRes, &pb.GuildJoinAgreeRes{
+	defer g.RoutePlayerPacket(guildMessage, pb.CmdClient_Cmd_GuildJoinAgreeRes, &pb.GuildJoinAgreeRes{
 		Error:           errStr,
 		GuildId:         g.GetId(),
 		ManagerPlayerId: guildMessage.fromPlayerId,
@@ -124,7 +124,7 @@ func (this *GuildJoinRequests) HandleGuildJoinAgreeReq(guildMessage *GuildMessag
 		}
 		// 通知对方已经入会了
 		// 这里使用了WithSaveDb选项,如果玩家此时不在线,等他下次上线时,会收到该消息
-		game.RoutePlayerPacket(joinRequest.PlayerId, gnet.NewProtoPacketEx(pb.CmdGuild_Cmd_GuildJoinReqOpResult, &pb.GuildJoinReqOpResult{
+		game.RoutePlayerPacket(joinRequest.PlayerId, gnet.NewProtoPacketEx(pb.CmdClient_Cmd_GuildJoinReqOpResult, &pb.GuildJoinReqOpResult{
 			GuildId:         g.GetId(),
 			ManagerPlayerId: guildMessage.fromPlayerId,
 			JoinPlayerId:    joinRequest.PlayerId,

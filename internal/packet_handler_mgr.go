@@ -25,6 +25,8 @@ type PacketHandlerInfo struct {
 // 消息回调接口管理类
 type PacketHandlerMgr struct {
 	HandlerInfos map[gnet.PacketCommand]*PacketHandlerInfo
+	// TODO: 消息结构类型和回调函数的映射
+	//HandlerByTyp map[reflect.Type]*PacketHandlerInfo
 }
 
 func NewPacketHandlerMgr() *PacketHandlerMgr {
@@ -94,6 +96,7 @@ func (this *PacketHandlerMgr) scanMethods(obj any, packetHandlerRegister gnet.Pa
 		if !method.IsExported() {
 			continue
 		}
+		// TODO: 扩展func (c *Component) OnXxx(req *pb.Xxx, res *pb.Xxx) int32
 		if method.Type.NumIn() != 2 {
 			continue
 		}

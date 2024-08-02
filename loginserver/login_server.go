@@ -184,8 +184,8 @@ func (this *LoginServer) getAccountData(accountName string, accountData *pb.Acco
 // 注册客户端消息回调
 func (this *LoginServer) registerClientPacket(clientHandler PacketHandlerRegister) {
 	clientHandler.Register(PacketCommand(pb.CmdInner_Cmd_HeartBeatReq), onHeartBeatReq, new(pb.HeartBeatReq))
-	clientHandler.Register(PacketCommand(pb.CmdLogin_Cmd_LoginReq), onLoginReq, new(pb.LoginReq))
-	clientHandler.Register(PacketCommand(pb.CmdLogin_Cmd_AccountReg), onAccountReg, new(pb.AccountReg))
+	clientHandler.Register(PacketCommand(pb.CmdClient_Cmd_LoginReq), onLoginReq, new(pb.LoginReq))
+	clientHandler.Register(PacketCommand(pb.CmdClient_Cmd_AccountReg), onAccountReg, new(pb.AccountReg))
 }
 
 // 心跳回复

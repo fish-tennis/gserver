@@ -4,12 +4,6 @@ option go_package = "./pb";
 
 package gserver;
 
-enum CmdGlobalEntity {
-  CmdGlobalEntity_None = 0; // 解决"The first enum value must be zero in proto3."的报错
-  Cmd_StartupReq = 4001;
-  Cmd_ShutdownReq = 4002;
-}
-
 // 进程统计信息
 message ProcessStatInfo {
   int64 lastStartupTimestamp = 1; // 最近一次进程启动时间戳

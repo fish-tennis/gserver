@@ -20,74 +20,6 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// 消息号定义
-type CmdLogin int32
-
-const (
-	CmdLogin_CmdLogin_None          CmdLogin = 0 // 解决"The first enum value must be zero in proto3."的报错
-	CmdLogin_Cmd_LoginReq           CmdLogin = 1001
-	CmdLogin_Cmd_LoginRes           CmdLogin = 1002
-	CmdLogin_Cmd_AccountReg         CmdLogin = 1003
-	CmdLogin_Cmd_AccountRes         CmdLogin = 1004
-	CmdLogin_Cmd_PlayerEntryGameReq CmdLogin = 1005
-	CmdLogin_Cmd_PlayerEntryGameRes CmdLogin = 1006
-	CmdLogin_Cmd_CreatePlayerReq    CmdLogin = 1007
-	CmdLogin_Cmd_CreatePlayerRes    CmdLogin = 1008
-)
-
-// Enum value maps for CmdLogin.
-var (
-	CmdLogin_name = map[int32]string{
-		0:    "CmdLogin_None",
-		1001: "Cmd_LoginReq",
-		1002: "Cmd_LoginRes",
-		1003: "Cmd_AccountReg",
-		1004: "Cmd_AccountRes",
-		1005: "Cmd_PlayerEntryGameReq",
-		1006: "Cmd_PlayerEntryGameRes",
-		1007: "Cmd_CreatePlayerReq",
-		1008: "Cmd_CreatePlayerRes",
-	}
-	CmdLogin_value = map[string]int32{
-		"CmdLogin_None":          0,
-		"Cmd_LoginReq":           1001,
-		"Cmd_LoginRes":           1002,
-		"Cmd_AccountReg":         1003,
-		"Cmd_AccountRes":         1004,
-		"Cmd_PlayerEntryGameReq": 1005,
-		"Cmd_PlayerEntryGameRes": 1006,
-		"Cmd_CreatePlayerReq":    1007,
-		"Cmd_CreatePlayerRes":    1008,
-	}
-)
-
-func (x CmdLogin) Enum() *CmdLogin {
-	p := new(CmdLogin)
-	*p = x
-	return p
-}
-
-func (x CmdLogin) String() string {
-	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
-}
-
-func (CmdLogin) Descriptor() protoreflect.EnumDescriptor {
-	return file_login_1001_proto_enumTypes[0].Descriptor()
-}
-
-func (CmdLogin) Type() protoreflect.EnumType {
-	return &file_login_1001_proto_enumTypes[0]
-}
-
-func (x CmdLogin) Number() protoreflect.EnumNumber {
-	return protoreflect.EnumNumber(x)
-}
-
-// Deprecated: Use CmdLogin.Descriptor instead.
-func (CmdLogin) EnumDescriptor() ([]byte, []int) {
-	return file_login_1001_proto_rawDescGZIP(), []int{0}
-}
-
 // 账号登录请求
 type LoginReq struct {
 	state         protoimpl.MessageState
@@ -782,21 +714,8 @@ var file_login_1001_proto_rawDesc = []byte{
 	0x64, 0x12, 0x1a, 0x0a, 0x08, 0x72, 0x65, 0x67, 0x69, 0x6f, 0x6e, 0x49, 0x64, 0x18, 0x03, 0x20,
 	0x01, 0x28, 0x05, 0x52, 0x08, 0x72, 0x65, 0x67, 0x69, 0x6f, 0x6e, 0x49, 0x64, 0x12, 0x12, 0x0a,
 	0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x04, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d,
-	0x65, 0x2a, 0xdb, 0x01, 0x0a, 0x08, 0x43, 0x6d, 0x64, 0x4c, 0x6f, 0x67, 0x69, 0x6e, 0x12, 0x11,
-	0x0a, 0x0d, 0x43, 0x6d, 0x64, 0x4c, 0x6f, 0x67, 0x69, 0x6e, 0x5f, 0x4e, 0x6f, 0x6e, 0x65, 0x10,
-	0x00, 0x12, 0x11, 0x0a, 0x0c, 0x43, 0x6d, 0x64, 0x5f, 0x4c, 0x6f, 0x67, 0x69, 0x6e, 0x52, 0x65,
-	0x71, 0x10, 0xe9, 0x07, 0x12, 0x11, 0x0a, 0x0c, 0x43, 0x6d, 0x64, 0x5f, 0x4c, 0x6f, 0x67, 0x69,
-	0x6e, 0x52, 0x65, 0x73, 0x10, 0xea, 0x07, 0x12, 0x13, 0x0a, 0x0e, 0x43, 0x6d, 0x64, 0x5f, 0x41,
-	0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x52, 0x65, 0x67, 0x10, 0xeb, 0x07, 0x12, 0x13, 0x0a, 0x0e,
-	0x43, 0x6d, 0x64, 0x5f, 0x41, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x52, 0x65, 0x73, 0x10, 0xec,
-	0x07, 0x12, 0x1b, 0x0a, 0x16, 0x43, 0x6d, 0x64, 0x5f, 0x50, 0x6c, 0x61, 0x79, 0x65, 0x72, 0x45,
-	0x6e, 0x74, 0x72, 0x79, 0x47, 0x61, 0x6d, 0x65, 0x52, 0x65, 0x71, 0x10, 0xed, 0x07, 0x12, 0x1b,
-	0x0a, 0x16, 0x43, 0x6d, 0x64, 0x5f, 0x50, 0x6c, 0x61, 0x79, 0x65, 0x72, 0x45, 0x6e, 0x74, 0x72,
-	0x79, 0x47, 0x61, 0x6d, 0x65, 0x52, 0x65, 0x73, 0x10, 0xee, 0x07, 0x12, 0x18, 0x0a, 0x13, 0x43,
-	0x6d, 0x64, 0x5f, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x50, 0x6c, 0x61, 0x79, 0x65, 0x72, 0x52,
-	0x65, 0x71, 0x10, 0xef, 0x07, 0x12, 0x18, 0x0a, 0x13, 0x43, 0x6d, 0x64, 0x5f, 0x43, 0x72, 0x65,
-	0x61, 0x74, 0x65, 0x50, 0x6c, 0x61, 0x79, 0x65, 0x72, 0x52, 0x65, 0x73, 0x10, 0xf0, 0x07, 0x42,
-	0x06, 0x5a, 0x04, 0x2e, 0x2f, 0x70, 0x62, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x65, 0x42, 0x06, 0x5a, 0x04, 0x2e, 0x2f, 0x70, 0x62, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f,
+	0x33,
 }
 
 var (
@@ -811,29 +730,27 @@ func file_login_1001_proto_rawDescGZIP() []byte {
 	return file_login_1001_proto_rawDescData
 }
 
-var file_login_1001_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 var file_login_1001_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_login_1001_proto_goTypes = []interface{}{
-	(CmdLogin)(0),              // 0: gserver.CmdLogin
-	(*LoginReq)(nil),           // 1: gserver.LoginReq
-	(*LoginRes)(nil),           // 2: gserver.LoginRes
-	(*AccountReg)(nil),         // 3: gserver.AccountReg
-	(*AccountRes)(nil),         // 4: gserver.AccountRes
-	(*GameServerInfo)(nil),     // 5: gserver.GameServerInfo
-	(*PlayerEntryGameReq)(nil), // 6: gserver.PlayerEntryGameReq
-	(*PlayerEntryGameRes)(nil), // 7: gserver.PlayerEntryGameRes
-	(*CreatePlayerReq)(nil),    // 8: gserver.CreatePlayerReq
-	(*CreatePlayerRes)(nil),    // 9: gserver.CreatePlayerRes
-	(*PlayerGuildData)(nil),    // 10: gserver.PlayerGuildData
+	(*LoginReq)(nil),           // 0: gserver.LoginReq
+	(*LoginRes)(nil),           // 1: gserver.LoginRes
+	(*AccountReg)(nil),         // 2: gserver.AccountReg
+	(*AccountRes)(nil),         // 3: gserver.AccountRes
+	(*GameServerInfo)(nil),     // 4: gserver.GameServerInfo
+	(*PlayerEntryGameReq)(nil), // 5: gserver.PlayerEntryGameReq
+	(*PlayerEntryGameRes)(nil), // 6: gserver.PlayerEntryGameRes
+	(*CreatePlayerReq)(nil),    // 7: gserver.CreatePlayerReq
+	(*CreatePlayerRes)(nil),    // 8: gserver.CreatePlayerRes
+	(*PlayerGuildData)(nil),    // 9: gserver.PlayerGuildData
 }
 var file_login_1001_proto_depIdxs = []int32{
-	5,  // 0: gserver.LoginRes.gameServer:type_name -> gserver.GameServerInfo
-	10, // 1: gserver.PlayerEntryGameRes.guildData:type_name -> gserver.PlayerGuildData
-	2,  // [2:2] is the sub-list for method output_type
-	2,  // [2:2] is the sub-list for method input_type
-	2,  // [2:2] is the sub-list for extension type_name
-	2,  // [2:2] is the sub-list for extension extendee
-	0,  // [0:2] is the sub-list for field type_name
+	4, // 0: gserver.LoginRes.gameServer:type_name -> gserver.GameServerInfo
+	9, // 1: gserver.PlayerEntryGameRes.guildData:type_name -> gserver.PlayerGuildData
+	2, // [2:2] is the sub-list for method output_type
+	2, // [2:2] is the sub-list for method input_type
+	2, // [2:2] is the sub-list for extension type_name
+	2, // [2:2] is the sub-list for extension extendee
+	0, // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_login_1001_proto_init() }
@@ -957,14 +874,13 @@ func file_login_1001_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_login_1001_proto_rawDesc,
-			NumEnums:      1,
+			NumEnums:      0,
 			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
 		GoTypes:           file_login_1001_proto_goTypes,
 		DependencyIndexes: file_login_1001_proto_depIdxs,
-		EnumInfos:         file_login_1001_proto_enumTypes,
 		MessageInfos:      file_login_1001_proto_msgTypes,
 	}.Build()
 	File_login_1001_proto = out.File

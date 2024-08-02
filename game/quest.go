@@ -95,13 +95,13 @@ func (this *Quest) OnFinishQuestReq(req *pb.FinishQuestReq) {
 			for _, idNum := range questCfg.GetRewards() {
 				this.GetPlayer().GetBag().AddItem(idNum.GetCfgId(), idNum.GetNum())
 			}
-			this.GetPlayer().Send(gnet.PacketCommand(pb.CmdQuest_Cmd_FinishQuestRes), &pb.FinishQuestRes{
+			this.GetPlayer().Send(&pb.FinishQuestRes{
 				QuestCfgId: questData.GetCfgId(),
 			})
 			return
 		}
-		this.GetPlayer().SendErrorRes(gnet.PacketCommand(pb.CmdQuest_Cmd_FinishQuestReq), "quest not finish")
+		this.GetPlayer().SendErrorRes(gnet.PacketCommand(pb.CmdClient_Cmd_FinishQuestReq), "quest not finish")
 		return
 	}
-	this.GetPlayer().SendErrorRes(gnet.PacketCommand(pb.CmdQuest_Cmd_FinishQuestReq), "quest not exist")
+	this.GetPlayer().SendErrorRes(gnet.PacketCommand(pb.CmdClient_Cmd_FinishQuestReq), "quest not exist")
 }

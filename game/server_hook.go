@@ -24,7 +24,7 @@ func (h *Hook) OnApplicationInit(initArg interface{}) {
 	InitGlobalEntityStructAndHandler()
 	_globalEntity = CreateGlobalEntityFromDb()
 	_globalEntity.RunRoutine()
-	_globalEntity.PushMessage(NewProtoPacket(PacketCommand(pb.CmdGlobalEntity_Cmd_StartupReq), &pb.StartupReq{
+	_globalEntity.PushMessage(NewProtoPacket(PacketCommand(pb.CmdServer_Cmd_StartupReq), &pb.StartupReq{
 		Timestamp: GetGlobalEntity().GetTimerEntries().Now().Unix(),
 	}))
 }

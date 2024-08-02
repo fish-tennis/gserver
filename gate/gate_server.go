@@ -144,10 +144,10 @@ func (this *GateServer) initCache() {
 func (this *GateServer) registerClientPacket(clientHandler *ClientConnectionHandler) {
 	// 手动注册消息回调
 	clientHandler.Register(PacketCommand(pb.CmdInner_Cmd_HeartBeatReq), onHeartBeatReq, new(pb.HeartBeatReq))
-	clientHandler.Register(PacketCommand(pb.CmdLogin_Cmd_AccountReg), this.routeToLoginServer, new(pb.AccountReg))
-	clientHandler.Register(PacketCommand(pb.CmdLogin_Cmd_LoginReq), this.routeToLoginServer, new(pb.LoginReq))
-	clientHandler.Register(PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameReq), this.routeToGameServerWithConnId, new(pb.PlayerEntryGameReq))
-	clientHandler.Register(PacketCommand(pb.CmdLogin_Cmd_CreatePlayerReq), this.routeToGameServerWithConnId, new(pb.CreatePlayerReq))
+	clientHandler.Register(PacketCommand(pb.CmdClient_Cmd_AccountReg), this.routeToLoginServer, new(pb.AccountReg))
+	clientHandler.Register(PacketCommand(pb.CmdClient_Cmd_LoginReq), this.routeToLoginServer, new(pb.LoginReq))
+	clientHandler.Register(PacketCommand(pb.CmdClient_Cmd_PlayerEntryGameReq), this.routeToGameServerWithConnId, new(pb.PlayerEntryGameReq))
+	clientHandler.Register(PacketCommand(pb.CmdClient_Cmd_CreatePlayerReq), this.routeToGameServerWithConnId, new(pb.CreatePlayerReq))
 	clientHandler.SetUnRegisterHandler(this.routeToGameServer)
 }
 
@@ -233,10 +233,10 @@ func (this *GateServer) routeToGameServer(connection Connection, packet Packet) 
 
 // 注册服务器消息回调
 func (this *GateServer) registerServerPacket(serverHandler *DefaultConnectionHandler) {
-	serverHandler.Register(PacketCommand(pb.CmdLogin_Cmd_AccountRes), this.routeToClientWithConnId, new(pb.AccountRes))
-	serverHandler.Register(PacketCommand(pb.CmdLogin_Cmd_LoginRes), this.onLoginRes, new(pb.LoginRes))
-	serverHandler.Register(PacketCommand(pb.CmdLogin_Cmd_CreatePlayerRes), this.routeToClientWithConnId, new(pb.CreatePlayerRes))
-	serverHandler.Register(PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameRes), this.onPlayerEntryGameRes, new(pb.PlayerEntryGameRes))
+	serverHandler.Register(PacketCommand(pb.CmdClient_Cmd_AccountRes), this.routeToClientWithConnId, new(pb.AccountRes))
+	serverHandler.Register(PacketCommand(pb.CmdClient_Cmd_LoginRes), this.onLoginRes, new(pb.LoginRes))
+	serverHandler.Register(PacketCommand(pb.CmdClient_Cmd_CreatePlayerRes), this.routeToClientWithConnId, new(pb.CreatePlayerRes))
+	serverHandler.Register(PacketCommand(pb.CmdClient_Cmd_PlayerEntryGameRes), this.onPlayerEntryGameRes, new(pb.PlayerEntryGameRes))
 	serverHandler.SetUnRegisterHandler(this.routeToClient)
 }
 

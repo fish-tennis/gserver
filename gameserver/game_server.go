@@ -119,7 +119,7 @@ func (this *GameServer) Exit() {
 		player.Stop()
 		return true
 	})
-	game.GetGlobalEntity().PushMessage(NewProtoPacket(PacketCommand(pb.CmdGlobalEntity_Cmd_ShutdownReq), &pb.ShutdownReq{
+	game.GetGlobalEntity().PushMessage(NewProtoPacket(PacketCommand(pb.CmdServer_Cmd_ShutdownReq), &pb.ShutdownReq{
 		Timestamp: game.GetGlobalEntity().GetTimerEntries().Now().Unix(),
 	}))
 	this.BaseServer.Exit()
@@ -213,8 +213,8 @@ func (this *GameServer) repairPlayerCache(playerId, accountId int64) error {
 func (this *GameServer) registerClientPacket(clientHandler PacketHandlerRegister) {
 	// 手动注册特殊的消息回调
 	clientHandler.Register(PacketCommand(pb.CmdInner_Cmd_HeartBeatReq), onHeartBeatReq, new(pb.HeartBeatReq))
-	clientHandler.Register(PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameReq), onPlayerEntryGameReq, new(pb.PlayerEntryGameReq))
-	clientHandler.Register(PacketCommand(pb.CmdLogin_Cmd_CreatePlayerReq), onCreatePlayerReq, new(pb.CreatePlayerReq))
+	clientHandler.Register(PacketCommand(pb.CmdClient_Cmd_PlayerEntryGameReq), onPlayerEntryGameReq, new(pb.PlayerEntryGameReq))
+	clientHandler.Register(PacketCommand(pb.CmdClient_Cmd_CreatePlayerReq), onCreatePlayerReq, new(pb.CreatePlayerReq))
 	this.registerGatePlayerPacket(clientHandler, PacketCommand(pb.CmdInner_Cmd_TestCmd), onTestCmd, new(pb.TestCmd))
 	// 通过反射自动注册消息回调
 	game.AutoRegisterPlayerPacketHandler(clientHandler)
@@ -233,8 +233,8 @@ func onHeartBeatReq(connection Connection, packet Packet) {
 func (this *GameServer) registerGatePacket(gateHandler PacketHandlerRegister) {
 	// 手动注册特殊的消息回调
 	gateHandler.Register(PacketCommand(pb.CmdInner_Cmd_HeartBeatReq), onHeartBeatReq, new(pb.HeartBeatReq))
-	gateHandler.Register(PacketCommand(pb.CmdLogin_Cmd_PlayerEntryGameReq), onPlayerEntryGameReq, new(pb.PlayerEntryGameReq))
-	gateHandler.Register(PacketCommand(pb.CmdLogin_Cmd_CreatePlayerReq), onCreatePlayerReq, new(pb.CreatePlayerReq))
+	gateHandler.Register(PacketCommand(pb.CmdClient_Cmd_PlayerEntryGameReq), onPlayerEntryGameReq, new(pb.PlayerEntryGameReq))
+	gateHandler.Register(PacketCommand(pb.CmdClient_Cmd_CreatePlayerReq), onCreatePlayerReq, new(pb.CreatePlayerReq))
 	gateHandler.Register(PacketCommand(pb.CmdInner_Cmd_ClientDisconnect), onClientDisconnect, new(pb.TestCmd))
 	this.registerGatePlayerPacket(gateHandler, PacketCommand(pb.CmdInner_Cmd_TestCmd), onTestCmd, new(pb.TestCmd))
 	gateHandler.(*DefaultConnectionHandler).SetUnRegisterHandler(func(connection Connection, packet Packet) {
@@ -305,7 +305,7 @@ func (this *GameServer) registerServerPacket(handler ConnectionHandler) {
 	serverHandler := handler.(*DefaultConnectionHandler)
 	serverHandler.Register(PacketCommand(pb.CmdInner_Cmd_HeartBeatReq), onHeartBeatReq, new(pb.HeartBeatReq))
 	serverHandler.Register(PacketCommand(pb.CmdInner_Cmd_KickPlayer), this.onKickPlayer, new(pb.KickPlayer))
-	serverHandler.Register(PacketCommand(pb.CmdRoute_Cmd_RoutePlayerMessage), this.onRoutePlayerMessage, new(pb.RoutePlayerMessage))
+	serverHandler.Register(PacketCommand(pb.CmdServer_Cmd_RoutePlayerMessage), this.onRoutePlayerMessage, new(pb.RoutePlayerMessage))
 	//serverHandler.autoRegisterPlayerComponentProto()
 }
 
@@ -380,7 +380,7 @@ func (this *GameServer) onRoutePlayerMessage(connection Connection, packet Packe
 	}
 	if req.DirectSendClient {
 		// 不需要player处理的消息,直接转发给客户端
-		player.Send(PacketCommand(uint16(req.PacketCommand)), message)
+		player.SendWithCommand(PacketCommand(uint16(req.PacketCommand)), message)
 	} else {
 		// 需要player处理的消息,放进player的消息队列,在玩家的逻辑协程中处理
 		player.OnRecvPacket(NewProtoPacket(PacketCommand(req.PacketCommand), message))

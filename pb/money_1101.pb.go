@@ -20,60 +20,7 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// 消息号定义
-type CmdMoney int32
-
-const (
-	CmdMoney_CmdMoney_None CmdMoney = 0    // 解决"The first enum value must be zero in proto3."的报错
-	CmdMoney_Cmd_CoinReq   CmdMoney = 1101 // 请求加coin的测试消息
-	CmdMoney_Cmd_CoinRes   CmdMoney = 1102
-)
-
-// Enum value maps for CmdMoney.
-var (
-	CmdMoney_name = map[int32]string{
-		0:    "CmdMoney_None",
-		1101: "Cmd_CoinReq",
-		1102: "Cmd_CoinRes",
-	}
-	CmdMoney_value = map[string]int32{
-		"CmdMoney_None": 0,
-		"Cmd_CoinReq":   1101,
-		"Cmd_CoinRes":   1102,
-	}
-)
-
-func (x CmdMoney) Enum() *CmdMoney {
-	p := new(CmdMoney)
-	*p = x
-	return p
-}
-
-func (x CmdMoney) String() string {
-	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
-}
-
-func (CmdMoney) Descriptor() protoreflect.EnumDescriptor {
-	return file_money_1101_proto_enumTypes[0].Descriptor()
-}
-
-func (CmdMoney) Type() protoreflect.EnumType {
-	return &file_money_1101_proto_enumTypes[0]
-}
-
-func (x CmdMoney) Number() protoreflect.EnumNumber {
-	return protoreflect.EnumNumber(x)
-}
-
-// Deprecated: Use CmdMoney.Descriptor instead.
-func (CmdMoney) EnumDescriptor() ([]byte, []int) {
-	return file_money_1101_proto_rawDescGZIP(), []int{0}
-}
-
 // 请求加coin的测试消息
-// @Client表示是客户端发的消息,工具也可以考虑为客户端生成相应的辅助代码(c#或lua)
-// @Client
-// @PlayerHandler
 type CoinReq struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -122,8 +69,6 @@ func (x *CoinReq) GetAddCoin() int32 {
 }
 
 // 请求加coin的返回结果
-// @Player表示是服务器上的玩家对象发给客户端的消息,工具会生成相应的辅助代码
-// @Player
 type CoinRes struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -180,12 +125,8 @@ var file_money_1101_proto_rawDesc = []byte{
 	0x6e, 0x18, 0x01, 0x20, 0x01, 0x28, 0x05, 0x52, 0x07, 0x61, 0x64, 0x64, 0x43, 0x6f, 0x69, 0x6e,
 	0x22, 0x27, 0x0a, 0x07, 0x43, 0x6f, 0x69, 0x6e, 0x52, 0x65, 0x73, 0x12, 0x1c, 0x0a, 0x09, 0x74,
 	0x6f, 0x74, 0x61, 0x6c, 0x43, 0x6f, 0x69, 0x6e, 0x18, 0x01, 0x20, 0x01, 0x28, 0x05, 0x52, 0x09,
-	0x74, 0x6f, 0x74, 0x61, 0x6c, 0x43, 0x6f, 0x69, 0x6e, 0x2a, 0x41, 0x0a, 0x08, 0x43, 0x6d, 0x64,
-	0x4d, 0x6f, 0x6e, 0x65, 0x79, 0x12, 0x11, 0x0a, 0x0d, 0x43, 0x6d, 0x64, 0x4d, 0x6f, 0x6e, 0x65,
-	0x79, 0x5f, 0x4e, 0x6f, 0x6e, 0x65, 0x10, 0x00, 0x12, 0x10, 0x0a, 0x0b, 0x43, 0x6d, 0x64, 0x5f,
-	0x43, 0x6f, 0x69, 0x6e, 0x52, 0x65, 0x71, 0x10, 0xcd, 0x08, 0x12, 0x10, 0x0a, 0x0b, 0x43, 0x6d,
-	0x64, 0x5f, 0x43, 0x6f, 0x69, 0x6e, 0x52, 0x65, 0x73, 0x10, 0xce, 0x08, 0x42, 0x06, 0x5a, 0x04,
-	0x2e, 0x2f, 0x70, 0x62, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x74, 0x6f, 0x74, 0x61, 0x6c, 0x43, 0x6f, 0x69, 0x6e, 0x42, 0x06, 0x5a, 0x04, 0x2e, 0x2f, 0x70,
+	0x62, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -200,12 +141,10 @@ func file_money_1101_proto_rawDescGZIP() []byte {
 	return file_money_1101_proto_rawDescData
 }
 
-var file_money_1101_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 var file_money_1101_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_money_1101_proto_goTypes = []interface{}{
-	(CmdMoney)(0),   // 0: gserver.CmdMoney
-	(*CoinReq)(nil), // 1: gserver.CoinReq
-	(*CoinRes)(nil), // 2: gserver.CoinRes
+	(*CoinReq)(nil), // 0: gserver.CoinReq
+	(*CoinRes)(nil), // 1: gserver.CoinRes
 }
 var file_money_1101_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type
@@ -251,14 +190,13 @@ func file_money_1101_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_money_1101_proto_rawDesc,
-			NumEnums:      1,
+			NumEnums:      0,
 			NumMessages:   2,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
 		GoTypes:           file_money_1101_proto_goTypes,
 		DependencyIndexes: file_money_1101_proto_depIdxs,
-		EnumInfos:         file_money_1101_proto_enumTypes,
 		MessageInfos:      file_money_1101_proto_msgTypes,
 	}.Build()
 	File_money_1101_proto = out.File

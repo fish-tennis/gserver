@@ -20,85 +20,6 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-type CmdGuild int32
-
-const (
-	CmdGuild_CmdGuild_None            CmdGuild = 0    // 解决"The first enum value must be zero in proto3."的报错
-	CmdGuild_Cmd_GuildListReq         CmdGuild = 2001 // 公会列表查看
-	CmdGuild_Cmd_GuildListRes         CmdGuild = 2002
-	CmdGuild_Cmd_GuildCreateReq       CmdGuild = 2003 // 创建公会
-	CmdGuild_Cmd_GuildCreateRes       CmdGuild = 2004
-	CmdGuild_Cmd_GuildJoinReq         CmdGuild = 2005 // 请求加入某个公会
-	CmdGuild_Cmd_GuildJoinRes         CmdGuild = 2006
-	CmdGuild_Cmd_GuildJoinAgreeReq    CmdGuild = 2007 // 公会管理员处理入会请求
-	CmdGuild_Cmd_GuildJoinAgreeRes    CmdGuild = 2008
-	CmdGuild_Cmd_GuildDataViewReq     CmdGuild = 2009 // 查看本公会的数据
-	CmdGuild_Cmd_GuildDataViewRes     CmdGuild = 2010
-	CmdGuild_Cmd_GuildJoinReqTip      CmdGuild = 2012 // 公会入户申请的提示
-	CmdGuild_Cmd_GuildJoinReqOpResult CmdGuild = 2013 // 自己的入会申请的操作结果
-)
-
-// Enum value maps for CmdGuild.
-var (
-	CmdGuild_name = map[int32]string{
-		0:    "CmdGuild_None",
-		2001: "Cmd_GuildListReq",
-		2002: "Cmd_GuildListRes",
-		2003: "Cmd_GuildCreateReq",
-		2004: "Cmd_GuildCreateRes",
-		2005: "Cmd_GuildJoinReq",
-		2006: "Cmd_GuildJoinRes",
-		2007: "Cmd_GuildJoinAgreeReq",
-		2008: "Cmd_GuildJoinAgreeRes",
-		2009: "Cmd_GuildDataViewReq",
-		2010: "Cmd_GuildDataViewRes",
-		2012: "Cmd_GuildJoinReqTip",
-		2013: "Cmd_GuildJoinReqOpResult",
-	}
-	CmdGuild_value = map[string]int32{
-		"CmdGuild_None":            0,
-		"Cmd_GuildListReq":         2001,
-		"Cmd_GuildListRes":         2002,
-		"Cmd_GuildCreateReq":       2003,
-		"Cmd_GuildCreateRes":       2004,
-		"Cmd_GuildJoinReq":         2005,
-		"Cmd_GuildJoinRes":         2006,
-		"Cmd_GuildJoinAgreeReq":    2007,
-		"Cmd_GuildJoinAgreeRes":    2008,
-		"Cmd_GuildDataViewReq":     2009,
-		"Cmd_GuildDataViewRes":     2010,
-		"Cmd_GuildJoinReqTip":      2012,
-		"Cmd_GuildJoinReqOpResult": 2013,
-	}
-)
-
-func (x CmdGuild) Enum() *CmdGuild {
-	p := new(CmdGuild)
-	*p = x
-	return p
-}
-
-func (x CmdGuild) String() string {
-	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
-}
-
-func (CmdGuild) Descriptor() protoreflect.EnumDescriptor {
-	return file_guild_2001_proto_enumTypes[0].Descriptor()
-}
-
-func (CmdGuild) Type() protoreflect.EnumType {
-	return &file_guild_2001_proto_enumTypes[0]
-}
-
-func (x CmdGuild) Number() protoreflect.EnumNumber {
-	return protoreflect.EnumNumber(x)
-}
-
-// Deprecated: Use CmdGuild.Descriptor instead.
-func (CmdGuild) EnumDescriptor() ([]byte, []int) {
-	return file_guild_2001_proto_rawDescGZIP(), []int{0}
-}
-
 type GuildPosition int32
 
 const (
@@ -132,11 +53,11 @@ func (x GuildPosition) String() string {
 }
 
 func (GuildPosition) Descriptor() protoreflect.EnumDescriptor {
-	return file_guild_2001_proto_enumTypes[1].Descriptor()
+	return file_guild_2001_proto_enumTypes[0].Descriptor()
 }
 
 func (GuildPosition) Type() protoreflect.EnumType {
-	return &file_guild_2001_proto_enumTypes[1]
+	return &file_guild_2001_proto_enumTypes[0]
 }
 
 func (x GuildPosition) Number() protoreflect.EnumNumber {
@@ -145,7 +66,7 @@ func (x GuildPosition) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use GuildPosition.Descriptor instead.
 func (GuildPosition) EnumDescriptor() ([]byte, []int) {
-	return file_guild_2001_proto_rawDescGZIP(), []int{1}
+	return file_guild_2001_proto_rawDescGZIP(), []int{0}
 }
 
 // 公会在mongo中的保存格式
@@ -1326,33 +1247,12 @@ var file_guild_2001_proto_rawDesc = []byte{
 	0x22, 0x0a, 0x0c, 0x6a, 0x6f, 0x69, 0x6e, 0x50, 0x6c, 0x61, 0x79, 0x65, 0x72, 0x49, 0x64, 0x18,
 	0x04, 0x20, 0x01, 0x28, 0x03, 0x52, 0x0c, 0x6a, 0x6f, 0x69, 0x6e, 0x50, 0x6c, 0x61, 0x79, 0x65,
 	0x72, 0x49, 0x64, 0x12, 0x18, 0x0a, 0x07, 0x69, 0x73, 0x41, 0x67, 0x72, 0x65, 0x65, 0x18, 0x05,
-	0x20, 0x01, 0x28, 0x08, 0x52, 0x07, 0x69, 0x73, 0x41, 0x67, 0x72, 0x65, 0x65, 0x2a, 0xd2, 0x02,
-	0x0a, 0x08, 0x43, 0x6d, 0x64, 0x47, 0x75, 0x69, 0x6c, 0x64, 0x12, 0x11, 0x0a, 0x0d, 0x43, 0x6d,
-	0x64, 0x47, 0x75, 0x69, 0x6c, 0x64, 0x5f, 0x4e, 0x6f, 0x6e, 0x65, 0x10, 0x00, 0x12, 0x15, 0x0a,
-	0x10, 0x43, 0x6d, 0x64, 0x5f, 0x47, 0x75, 0x69, 0x6c, 0x64, 0x4c, 0x69, 0x73, 0x74, 0x52, 0x65,
-	0x71, 0x10, 0xd1, 0x0f, 0x12, 0x15, 0x0a, 0x10, 0x43, 0x6d, 0x64, 0x5f, 0x47, 0x75, 0x69, 0x6c,
-	0x64, 0x4c, 0x69, 0x73, 0x74, 0x52, 0x65, 0x73, 0x10, 0xd2, 0x0f, 0x12, 0x17, 0x0a, 0x12, 0x43,
-	0x6d, 0x64, 0x5f, 0x47, 0x75, 0x69, 0x6c, 0x64, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x52, 0x65,
-	0x71, 0x10, 0xd3, 0x0f, 0x12, 0x17, 0x0a, 0x12, 0x43, 0x6d, 0x64, 0x5f, 0x47, 0x75, 0x69, 0x6c,
-	0x64, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x52, 0x65, 0x73, 0x10, 0xd4, 0x0f, 0x12, 0x15, 0x0a,
-	0x10, 0x43, 0x6d, 0x64, 0x5f, 0x47, 0x75, 0x69, 0x6c, 0x64, 0x4a, 0x6f, 0x69, 0x6e, 0x52, 0x65,
-	0x71, 0x10, 0xd5, 0x0f, 0x12, 0x15, 0x0a, 0x10, 0x43, 0x6d, 0x64, 0x5f, 0x47, 0x75, 0x69, 0x6c,
-	0x64, 0x4a, 0x6f, 0x69, 0x6e, 0x52, 0x65, 0x73, 0x10, 0xd6, 0x0f, 0x12, 0x1a, 0x0a, 0x15, 0x43,
-	0x6d, 0x64, 0x5f, 0x47, 0x75, 0x69, 0x6c, 0x64, 0x4a, 0x6f, 0x69, 0x6e, 0x41, 0x67, 0x72, 0x65,
-	0x65, 0x52, 0x65, 0x71, 0x10, 0xd7, 0x0f, 0x12, 0x1a, 0x0a, 0x15, 0x43, 0x6d, 0x64, 0x5f, 0x47,
-	0x75, 0x69, 0x6c, 0x64, 0x4a, 0x6f, 0x69, 0x6e, 0x41, 0x67, 0x72, 0x65, 0x65, 0x52, 0x65, 0x73,
-	0x10, 0xd8, 0x0f, 0x12, 0x19, 0x0a, 0x14, 0x43, 0x6d, 0x64, 0x5f, 0x47, 0x75, 0x69, 0x6c, 0x64,
-	0x44, 0x61, 0x74, 0x61, 0x56, 0x69, 0x65, 0x77, 0x52, 0x65, 0x71, 0x10, 0xd9, 0x0f, 0x12, 0x19,
-	0x0a, 0x14, 0x43, 0x6d, 0x64, 0x5f, 0x47, 0x75, 0x69, 0x6c, 0x64, 0x44, 0x61, 0x74, 0x61, 0x56,
-	0x69, 0x65, 0x77, 0x52, 0x65, 0x73, 0x10, 0xda, 0x0f, 0x12, 0x18, 0x0a, 0x13, 0x43, 0x6d, 0x64,
-	0x5f, 0x47, 0x75, 0x69, 0x6c, 0x64, 0x4a, 0x6f, 0x69, 0x6e, 0x52, 0x65, 0x71, 0x54, 0x69, 0x70,
-	0x10, 0xdc, 0x0f, 0x12, 0x1d, 0x0a, 0x18, 0x43, 0x6d, 0x64, 0x5f, 0x47, 0x75, 0x69, 0x6c, 0x64,
-	0x4a, 0x6f, 0x69, 0x6e, 0x52, 0x65, 0x71, 0x4f, 0x70, 0x52, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x10,
-	0xdd, 0x0f, 0x2a, 0x34, 0x0a, 0x0d, 0x47, 0x75, 0x69, 0x6c, 0x64, 0x50, 0x6f, 0x73, 0x69, 0x74,
-	0x69, 0x6f, 0x6e, 0x12, 0x0a, 0x0a, 0x06, 0x4d, 0x65, 0x6d, 0x62, 0x65, 0x72, 0x10, 0x00, 0x12,
-	0x0b, 0x0a, 0x07, 0x4d, 0x61, 0x6e, 0x61, 0x67, 0x65, 0x72, 0x10, 0x01, 0x12, 0x0a, 0x0a, 0x06,
-	0x4c, 0x65, 0x61, 0x64, 0x65, 0x72, 0x10, 0x02, 0x42, 0x06, 0x5a, 0x04, 0x2e, 0x2f, 0x70, 0x62,
-	0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x20, 0x01, 0x28, 0x08, 0x52, 0x07, 0x69, 0x73, 0x41, 0x67, 0x72, 0x65, 0x65, 0x2a, 0x34, 0x0a,
+	0x0d, 0x47, 0x75, 0x69, 0x6c, 0x64, 0x50, 0x6f, 0x73, 0x69, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x0a,
+	0x0a, 0x06, 0x4d, 0x65, 0x6d, 0x62, 0x65, 0x72, 0x10, 0x00, 0x12, 0x0b, 0x0a, 0x07, 0x4d, 0x61,
+	0x6e, 0x61, 0x67, 0x65, 0x72, 0x10, 0x01, 0x12, 0x0a, 0x0a, 0x06, 0x4c, 0x65, 0x61, 0x64, 0x65,
+	0x72, 0x10, 0x02, 0x42, 0x06, 0x5a, 0x04, 0x2e, 0x2f, 0x70, 0x62, 0x62, 0x06, 0x70, 0x72, 0x6f,
+	0x74, 0x6f, 0x33,
 }
 
 var (
@@ -1367,45 +1267,44 @@ func file_guild_2001_proto_rawDescGZIP() []byte {
 	return file_guild_2001_proto_rawDescData
 }
 
-var file_guild_2001_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_guild_2001_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 var file_guild_2001_proto_msgTypes = make([]protoimpl.MessageInfo, 21)
 var file_guild_2001_proto_goTypes = []interface{}{
-	(CmdGuild)(0),                // 0: gserver.CmdGuild
-	(GuildPosition)(0),           // 1: gserver.GuildPosition
-	(*GuildLoadData)(nil),        // 2: gserver.GuildLoadData
-	(*GuildData)(nil),            // 3: gserver.GuildData
-	(*GuildMemberData)(nil),      // 4: gserver.GuildMemberData
-	(*GuildInfo)(nil),            // 5: gserver.GuildInfo
-	(*GuildJoinRequest)(nil),     // 6: gserver.GuildJoinRequest
-	(*GuildListReq)(nil),         // 7: gserver.GuildListReq
-	(*GuildListRes)(nil),         // 8: gserver.GuildListRes
-	(*GuildCreateReq)(nil),       // 9: gserver.GuildCreateReq
-	(*GuildCreateRes)(nil),       // 10: gserver.GuildCreateRes
-	(*GuildJoinReq)(nil),         // 11: gserver.GuildJoinReq
-	(*GuildJoinRes)(nil),         // 12: gserver.GuildJoinRes
-	(*GuildJoinAgreeReq)(nil),    // 13: gserver.GuildJoinAgreeReq
-	(*GuildJoinAgreeRes)(nil),    // 14: gserver.GuildJoinAgreeRes
-	(*GuildDataViewReq)(nil),     // 15: gserver.GuildDataViewReq
-	(*GuildDataViewRes)(nil),     // 16: gserver.GuildDataViewRes
-	(*GuildJoinReqTip)(nil),      // 17: gserver.GuildJoinReqTip
-	(*GuildJoinReqOpResult)(nil), // 18: gserver.GuildJoinReqOpResult
-	nil,                          // 19: gserver.GuildLoadData.MembersEntry
-	nil,                          // 20: gserver.GuildLoadData.JoinRequestsEntry
-	nil,                          // 21: gserver.GuildData.MembersEntry
-	nil,                          // 22: gserver.GuildData.JoinRequestsEntry
+	(GuildPosition)(0),           // 0: gserver.GuildPosition
+	(*GuildLoadData)(nil),        // 1: gserver.GuildLoadData
+	(*GuildData)(nil),            // 2: gserver.GuildData
+	(*GuildMemberData)(nil),      // 3: gserver.GuildMemberData
+	(*GuildInfo)(nil),            // 4: gserver.GuildInfo
+	(*GuildJoinRequest)(nil),     // 5: gserver.GuildJoinRequest
+	(*GuildListReq)(nil),         // 6: gserver.GuildListReq
+	(*GuildListRes)(nil),         // 7: gserver.GuildListRes
+	(*GuildCreateReq)(nil),       // 8: gserver.GuildCreateReq
+	(*GuildCreateRes)(nil),       // 9: gserver.GuildCreateRes
+	(*GuildJoinReq)(nil),         // 10: gserver.GuildJoinReq
+	(*GuildJoinRes)(nil),         // 11: gserver.GuildJoinRes
+	(*GuildJoinAgreeReq)(nil),    // 12: gserver.GuildJoinAgreeReq
+	(*GuildJoinAgreeRes)(nil),    // 13: gserver.GuildJoinAgreeRes
+	(*GuildDataViewReq)(nil),     // 14: gserver.GuildDataViewReq
+	(*GuildDataViewRes)(nil),     // 15: gserver.GuildDataViewRes
+	(*GuildJoinReqTip)(nil),      // 16: gserver.GuildJoinReqTip
+	(*GuildJoinReqOpResult)(nil), // 17: gserver.GuildJoinReqOpResult
+	nil,                          // 18: gserver.GuildLoadData.MembersEntry
+	nil,                          // 19: gserver.GuildLoadData.JoinRequestsEntry
+	nil,                          // 20: gserver.GuildData.MembersEntry
+	nil,                          // 21: gserver.GuildData.JoinRequestsEntry
 }
 var file_guild_2001_proto_depIdxs = []int32{
-	5,  // 0: gserver.GuildLoadData.baseInfo:type_name -> gserver.GuildInfo
-	19, // 1: gserver.GuildLoadData.members:type_name -> gserver.GuildLoadData.MembersEntry
-	20, // 2: gserver.GuildLoadData.joinRequests:type_name -> gserver.GuildLoadData.JoinRequestsEntry
-	5,  // 3: gserver.GuildData.baseInfo:type_name -> gserver.GuildInfo
-	21, // 4: gserver.GuildData.members:type_name -> gserver.GuildData.MembersEntry
-	22, // 5: gserver.GuildData.joinRequests:type_name -> gserver.GuildData.JoinRequestsEntry
-	5,  // 6: gserver.GuildListRes.guildInfos:type_name -> gserver.GuildInfo
-	3,  // 7: gserver.GuildDataViewRes.guildData:type_name -> gserver.GuildData
-	4,  // 8: gserver.GuildLoadData.MembersEntry.value:type_name -> gserver.GuildMemberData
-	4,  // 9: gserver.GuildData.MembersEntry.value:type_name -> gserver.GuildMemberData
-	6,  // 10: gserver.GuildData.JoinRequestsEntry.value:type_name -> gserver.GuildJoinRequest
+	4,  // 0: gserver.GuildLoadData.baseInfo:type_name -> gserver.GuildInfo
+	18, // 1: gserver.GuildLoadData.members:type_name -> gserver.GuildLoadData.MembersEntry
+	19, // 2: gserver.GuildLoadData.joinRequests:type_name -> gserver.GuildLoadData.JoinRequestsEntry
+	4,  // 3: gserver.GuildData.baseInfo:type_name -> gserver.GuildInfo
+	20, // 4: gserver.GuildData.members:type_name -> gserver.GuildData.MembersEntry
+	21, // 5: gserver.GuildData.joinRequests:type_name -> gserver.GuildData.JoinRequestsEntry
+	4,  // 6: gserver.GuildListRes.guildInfos:type_name -> gserver.GuildInfo
+	2,  // 7: gserver.GuildDataViewRes.guildData:type_name -> gserver.GuildData
+	3,  // 8: gserver.GuildLoadData.MembersEntry.value:type_name -> gserver.GuildMemberData
+	3,  // 9: gserver.GuildData.MembersEntry.value:type_name -> gserver.GuildMemberData
+	5,  // 10: gserver.GuildData.JoinRequestsEntry.value:type_name -> gserver.GuildJoinRequest
 	11, // [11:11] is the sub-list for method output_type
 	11, // [11:11] is the sub-list for method input_type
 	11, // [11:11] is the sub-list for extension type_name
@@ -1629,7 +1528,7 @@ func file_guild_2001_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_guild_2001_proto_rawDesc,
-			NumEnums:      2,
+			NumEnums:      1,
 			NumMessages:   21,
 			NumExtensions: 0,
 			NumServices:   0,

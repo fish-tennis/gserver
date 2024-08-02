@@ -98,13 +98,22 @@ func (this *Player) OnDisconnect(connection Connection) {
 
 // 发包(protobuf)
 // NOTE:调用Send(command,message)之后,不要再对message进行读写!
-func (this *Player) Send(command PacketCommand, message proto.Message, opts ...SendOption) bool {
+func (this *Player) Send(message proto.Message, opts ...SendOption) bool {
+	clientCmd := internal.GetClientCommandByProto(message)
+	if clientCmd <= 0 {
+		slog.Error("clientCmdNotFound", "messageName", proto.MessageName(message))
+		return false
+	}
+	return this.SendWithCommand(PacketCommand(clientCmd), message, opts...)
+}
+
+func (this *Player) SendWithCommand(cmd PacketCommand, message proto.Message, opts ...SendOption) bool {
 	if this.connection != nil {
 		if this.useGate {
 			// 网关模式,自动附加上playerId
-			return this.connection.SendPacket(internal.NewGatePacket(this.GetId(), command, message), opts...)
+			return this.connection.SendPacket(internal.NewGatePacket(this.GetId(), PacketCommand(cmd), message), opts...)
 		} else {
-			return this.connection.Send(command, message, opts...)
+			return this.connection.Send(PacketCommand(cmd), message, opts...)
 		}
 	}
 	return false
@@ -125,7 +134,7 @@ func (this *Player) SendPacket(packet Packet, opts ...SendOption) bool {
 
 // 通用的错误返回消息
 func (this *Player) SendErrorRes(errorReqCmd PacketCommand, errorMsg string) bool {
-	return this.Send(PacketCommand(pb.CmdInner_Cmd_ErrorRes), &pb.ErrorRes{
+	return this.SendWithCommand(PacketCommand(pb.CmdInner_Cmd_ErrorRes), &pb.ErrorRes{
 		Command:   int32(errorReqCmd),
 		ResultStr: errorMsg,
 	})

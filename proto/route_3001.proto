@@ -8,12 +8,6 @@ package gserver;
 
 // 路由转发相关proto
 
-enum CmdRoute {
-  CmdRoute_None         = 0; // 解决"The first enum value must be zero in proto3."的报错
-  Cmd_RoutePlayerMessage = 3001;
-  Cmd_GuildRoutePlayerMessageReq = 3003;
-}
-
 // 路由转发给玩家的消息
 // server -> otherserver -> player
 message RoutePlayerMessage {

@@ -88,7 +88,7 @@ func (this *Guild) OnGuildListReq(req *pb.GuildListReq) {
 	for i, info := range guildInfos {
 		res.GuildInfos[i] = info.BaseInfo
 	}
-	this.GetPlayer().Send(gnet.PacketCommand(pb.CmdGuild_Cmd_GuildListRes), res)
+	this.GetPlayer().Send(res)
 }
 
 // 创建公会
@@ -96,7 +96,7 @@ func (this *Guild) OnGuildCreateReq(req *pb.GuildCreateReq) {
 	logger.Debug("OnGuildCreateReq")
 	player := this.GetPlayer()
 	if this.Data.GuildId > 0 {
-		this.GetPlayer().Send(gnet.PacketCommand(pb.CmdGuild_Cmd_GuildCreateRes), &pb.GuildCreateRes{
+		this.GetPlayer().Send(&pb.GuildCreateRes{
 			Error: "AlreadyHaveGuild",
 		})
 		return
@@ -106,7 +106,7 @@ func (this *Guild) OnGuildCreateReq(req *pb.GuildCreateReq) {
 	// 利用mongodb加一个类似原子锁的操作?
 	newGuildIdValue, err := db.GetKvDb().Inc(db.GuildIdKeyName, int64(1), true)
 	if err != nil {
-		this.GetPlayer().Send(gnet.PacketCommand(pb.CmdGuild_Cmd_GuildCreateRes), &pb.GuildCreateRes{
+		this.GetPlayer().Send(&pb.GuildCreateRes{
 			Error: "IdError",
 		})
 		logger.Error("OnGuildCreateReq err:%v", err)
@@ -135,13 +135,13 @@ func (this *Guild) OnGuildCreateReq(req *pb.GuildCreateReq) {
 	dbErr, isDuplicateName := guildDb.InsertEntity(newGuildData.Id, saveData)
 	if dbErr != nil {
 		logger.Error("OnGuildCreateReq dbErr:%v", dbErr)
-		player.Send(gnet.PacketCommand(pb.CmdGuild_Cmd_GuildCreateRes), &pb.GuildCreateRes{
+		player.Send(&pb.GuildCreateRes{
 			Error: "DbError",
 		})
 		return
 	}
 	if isDuplicateName {
-		player.Send(gnet.PacketCommand(pb.CmdGuild_Cmd_GuildCreateRes), &pb.GuildCreateRes{
+		player.Send(&pb.GuildCreateRes{
 			Error: "DuplicateName",
 		})
 		return
@@ -149,13 +149,13 @@ func (this *Guild) OnGuildCreateReq(req *pb.GuildCreateReq) {
 	// 利用mongodb的原子操作,来防止该玩家同时加入多个公会
 	if !AtomicSetGuildId(this.GetPlayerId(), newGuildData.Id, 0) {
 		db.GetGuildDb().DeleteEntity(newGuildData.Id)
-		player.Send(gnet.PacketCommand(pb.CmdGuild_Cmd_GuildCreateRes), &pb.GuildCreateRes{
+		player.Send(&pb.GuildCreateRes{
 			Error: "ConcurrentError",
 		})
 		return
 	}
 	this.SetGuildId(newGuildData.Id)
-	player.Send(gnet.PacketCommand(pb.CmdGuild_Cmd_GuildCreateRes), &pb.GuildCreateRes{
+	player.Send(&pb.GuildCreateRes{
 		Id:   newGuildData.Id,
 		Name: newGuildData.BaseInfo.Name,
 	})
@@ -165,35 +165,35 @@ func (this *Guild) OnGuildCreateReq(req *pb.GuildCreateReq) {
 // 加入公会请求
 func (this *Guild) OnGuildJoinReq(req *pb.GuildJoinReq) {
 	if this.Data.GuildId > 0 {
-		this.player.SendErrorRes(gnet.PacketCommand(pb.CmdGuild_Cmd_GuildJoinReq), "AlreadyHaveGuild")
+		this.player.SendErrorRes(gnet.PacketCommand(pb.CmdClient_Cmd_GuildJoinReq), "AlreadyHaveGuild")
 		return
 	}
 	// 向公会所在的服务器发rpc请求
 	reply := new(pb.GuildJoinRes)
-	err := this.RouteRpcToTargetGuild(req.Id, gnet.PacketCommand(pb.CmdGuild_Cmd_GuildJoinReq), req, reply)
+	err := this.RouteRpcToTargetGuild(req.Id, gnet.PacketCommand(pb.CmdClient_Cmd_GuildJoinReq), req, reply)
 	if err != nil {
-		this.player.SendErrorRes(gnet.PacketCommand(pb.CmdGuild_Cmd_GuildJoinReq), fmt.Sprintf("server internal error:%v", err.Error()))
+		this.player.SendErrorRes(gnet.PacketCommand(pb.CmdClient_Cmd_GuildJoinReq), fmt.Sprintf("server internal error:%v", err.Error()))
 		return
 	}
 	slog.Debug("OnGuildJoinReq reply", "reply", reply)
-	this.GetPlayer().Send(gnet.PacketCommand(pb.CmdGuild_Cmd_GuildJoinRes), reply)
+	this.GetPlayer().Send(reply)
 }
 
 // 公会管理员处理申请者的入会申请
 func (this *Guild) OnGuildJoinAgreeReq(req *pb.GuildJoinAgreeReq) {
 	if this.Data.GuildId == 0 {
-		this.player.SendErrorRes(gnet.PacketCommand(pb.CmdGuild_Cmd_GuildJoinAgreeReq), "not a guild member")
+		this.player.SendErrorRes(gnet.PacketCommand(pb.CmdClient_Cmd_GuildJoinAgreeReq), "not a guild member")
 		return
 	}
 	// 向公会所在的服务器发rpc请求
 	reply := new(pb.GuildJoinAgreeRes)
-	err := this.RouteRpcToSelfGuild(gnet.PacketCommand(pb.CmdGuild_Cmd_GuildJoinAgreeReq), req, reply)
+	err := this.RouteRpcToSelfGuild(gnet.PacketCommand(pb.CmdClient_Cmd_GuildJoinAgreeReq), req, reply)
 	if err != nil {
-		this.player.SendErrorRes(gnet.PacketCommand(pb.CmdGuild_Cmd_GuildJoinAgreeReq), fmt.Sprintf("server internal error:%v", err.Error()))
+		this.player.SendErrorRes(gnet.PacketCommand(pb.CmdClient_Cmd_GuildJoinAgreeReq), fmt.Sprintf("server internal error:%v", err.Error()))
 		return
 	}
 	slog.Debug("OnGuildJoinAgreeReq reply", "reply", reply)
-	this.GetPlayer().Send(gnet.PacketCommand(pb.CmdGuild_Cmd_GuildJoinAgreeRes), reply)
+	this.GetPlayer().Send(reply)
 }
 
 // 自己的入会申请的操作结果
@@ -205,12 +205,12 @@ func (this *Guild) HandleGuildJoinReqOpResult(msg *pb.GuildJoinReqOpResult) {
 		// 利用mongodb的原子操作,来防止该玩家同时加入多个公会
 		if !AtomicSetGuildId(this.GetPlayerId(), msg.GuildId, 0) {
 			msg.Error = "ConcurrentError"
-			this.GetPlayer().Send(gnet.PacketCommand(pb.CmdGuild_Cmd_GuildJoinReqOpResult), msg)
+			this.GetPlayer().Send(msg)
 			return
 		}
 		this.SetGuildId(msg.GuildId)
 	}
-	this.GetPlayer().Send(gnet.PacketCommand(pb.CmdGuild_Cmd_GuildJoinReqOpResult), msg)
+	this.GetPlayer().Send(msg)
 }
 
 // 公会成员的客户端的请求消息路由到自己的公会所在服务器
@@ -257,10 +257,10 @@ func (this *Guild) RouteRpcToSelfGuild(cmd gnet.PacketCommand, message proto.Mes
 // 查看自己公会的信息
 func (this *Guild) OnGuildDataViewReq(req *pb.GuildDataViewReq) {
 	if this.Data.GuildId == 0 {
-		this.player.SendErrorRes(gnet.PacketCommand(pb.CmdGuild_Cmd_GuildDataViewReq), "not a guild member")
+		this.player.SendErrorRes(gnet.PacketCommand(pb.CmdClient_Cmd_GuildDataViewReq), "not a guild member")
 		return
 	}
-	this.RoutePacketToGuild(gnet.PacketCommand(pb.CmdGuild_Cmd_GuildDataViewReq), req)
+	this.RoutePacketToGuild(gnet.PacketCommand(pb.CmdClient_Cmd_GuildDataViewReq), req)
 }
 
 // mongodb中对玩家公会id进行原子化操作,防止玩家同时存在于多个公会

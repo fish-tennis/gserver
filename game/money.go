@@ -2,7 +2,6 @@ package game
 
 import (
 	"github.com/fish-tennis/gentity"
-	"github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 )
@@ -52,7 +51,7 @@ func (this *Money) IncDiamond(diamond int32) {
 func (this *Money) OnCoinReq(req *pb.CoinReq) {
 	logger.Debug("OnCoinReq:%v", req)
 	this.IncCoin(req.GetAddCoin())
-	this.GetPlayer().Send(gnet.PacketCommand(pb.CmdMoney_Cmd_CoinRes), &pb.CoinRes{
+	this.GetPlayer().Send(&pb.CoinRes{
 		TotalCoin: this.Data.GetCoin(),
 	})
 }

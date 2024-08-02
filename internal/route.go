@@ -37,5 +37,5 @@ func PacketToGuildRoutePacket(fromPlayerId int64, fromPlayerName string, reqPack
 		PacketCommand:  int32(reqPacket.Command()),
 		PacketData:     anyPacket,
 	}
-	return gnet.NewProtoPacketEx(pb.CmdRoute_Cmd_GuildRoutePlayerMessageReq, routePacket)
+	return gnet.NewProtoPacketEx(pb.CmdServer_Cmd_GuildRoutePlayerMessageReq, routePacket)
 }

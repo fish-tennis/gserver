@@ -6,26 +6,6 @@ import "player.proto";
 
 package gserver;
 
-// 消息号定义
-enum CmdLogin {
-	CmdLogin_None = 0; // 解决"The first enum value must be zero in proto3."的报错
-	
-	// 消息号枚举值的命名规范:Cmd_MessageName,便于工具处理,生成一些辅助代码
-	// proto生成go之后,枚举值的格式为pb.CmdLogin_Cmd_LoginReq,实际使用时,往往还要转换成gnet.PacketCommand
-	// 如 gnet.PacketCommand(pb.CmdLogin_Cmd_LoginReq)
-	// 可以写个工具在proto生成后,自动生成如下代码,即可简化枚举名的书写
-	// type Cmd_LoginReq gnet.PacketCommand(pb.CmdLogin_Cmd_LoginReq)
-
-	Cmd_LoginReq = 1001;
-	Cmd_LoginRes = 1002;
-	Cmd_AccountReg = 1003;
-	Cmd_AccountRes = 1004;
-	Cmd_PlayerEntryGameReq = 1005;
-	Cmd_PlayerEntryGameRes = 1006;
-	Cmd_CreatePlayerReq = 1007;
-	Cmd_CreatePlayerRes = 1008;
-}
-
 // 账号登录请求
 message LoginReq {
   string accountName = 1;

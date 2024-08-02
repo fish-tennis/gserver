@@ -3,7 +3,6 @@ package internal
 import (
 	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gnet"
-	"google.golang.org/protobuf/proto"
 )
 
 type IPlayer interface {
@@ -17,8 +16,6 @@ type IPlayer interface {
 
 	// 区服id
 	GetRegionId() int32
-
-	Send(command gnet.PacketCommand, message proto.Message, opts ...gnet.SendOption) bool
 
 	SendPacket(packet gnet.Packet, opts ...gnet.SendOption) bool
 }

@@ -20,53 +20,6 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// 消息号定义
-type CmdBaseInfo int32
-
-const (
-	CmdBaseInfo_CmdBaseInfo_None      CmdBaseInfo = 0    // 解决"The first enum value must be zero in proto3."的报错
-	CmdBaseInfo_Cmd_PlayerEntryGameOk CmdBaseInfo = 1301 // 玩家进游戏服成功,非客户端消息
-)
-
-// Enum value maps for CmdBaseInfo.
-var (
-	CmdBaseInfo_name = map[int32]string{
-		0:    "CmdBaseInfo_None",
-		1301: "Cmd_PlayerEntryGameOk",
-	}
-	CmdBaseInfo_value = map[string]int32{
-		"CmdBaseInfo_None":      0,
-		"Cmd_PlayerEntryGameOk": 1301,
-	}
-)
-
-func (x CmdBaseInfo) Enum() *CmdBaseInfo {
-	p := new(CmdBaseInfo)
-	*p = x
-	return p
-}
-
-func (x CmdBaseInfo) String() string {
-	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
-}
-
-func (CmdBaseInfo) Descriptor() protoreflect.EnumDescriptor {
-	return file_baseinfo_1301_proto_enumTypes[0].Descriptor()
-}
-
-func (CmdBaseInfo) Type() protoreflect.EnumType {
-	return &file_baseinfo_1301_proto_enumTypes[0]
-}
-
-func (x CmdBaseInfo) Number() protoreflect.EnumNumber {
-	return protoreflect.EnumNumber(x)
-}
-
-// Deprecated: Use CmdBaseInfo.Descriptor instead.
-func (CmdBaseInfo) EnumDescriptor() ([]byte, []int) {
-	return file_baseinfo_1301_proto_rawDescGZIP(), []int{0}
-}
-
 // 玩家进游戏服成功,非客户端消息
 type PlayerEntryGameOk struct {
 	state         protoimpl.MessageState
@@ -123,12 +76,8 @@ var file_baseinfo_1301_proto_rawDesc = []byte{
 	0x0a, 0x11, 0x50, 0x6c, 0x61, 0x79, 0x65, 0x72, 0x45, 0x6e, 0x74, 0x72, 0x79, 0x47, 0x61, 0x6d,
 	0x65, 0x4f, 0x6b, 0x12, 0x20, 0x0a, 0x0b, 0x69, 0x73, 0x52, 0x65, 0x63, 0x6f, 0x6e, 0x6e, 0x65,
 	0x63, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x08, 0x52, 0x0b, 0x69, 0x73, 0x52, 0x65, 0x63, 0x6f,
-	0x6e, 0x6e, 0x65, 0x63, 0x74, 0x2a, 0x3f, 0x0a, 0x0b, 0x43, 0x6d, 0x64, 0x42, 0x61, 0x73, 0x65,
-	0x49, 0x6e, 0x66, 0x6f, 0x12, 0x14, 0x0a, 0x10, 0x43, 0x6d, 0x64, 0x42, 0x61, 0x73, 0x65, 0x49,
-	0x6e, 0x66, 0x6f, 0x5f, 0x4e, 0x6f, 0x6e, 0x65, 0x10, 0x00, 0x12, 0x1a, 0x0a, 0x15, 0x43, 0x6d,
-	0x64, 0x5f, 0x50, 0x6c, 0x61, 0x79, 0x65, 0x72, 0x45, 0x6e, 0x74, 0x72, 0x79, 0x47, 0x61, 0x6d,
-	0x65, 0x4f, 0x6b, 0x10, 0x95, 0x0a, 0x42, 0x06, 0x5a, 0x04, 0x2e, 0x2f, 0x70, 0x62, 0x62, 0x06,
-	0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x6e, 0x6e, 0x65, 0x63, 0x74, 0x42, 0x06, 0x5a, 0x04, 0x2e, 0x2f, 0x70, 0x62, 0x62, 0x06, 0x70,
+	0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -143,11 +92,9 @@ func file_baseinfo_1301_proto_rawDescGZIP() []byte {
 	return file_baseinfo_1301_proto_rawDescData
 }
 
-var file_baseinfo_1301_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 var file_baseinfo_1301_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
 var file_baseinfo_1301_proto_goTypes = []interface{}{
-	(CmdBaseInfo)(0),          // 0: gserver.CmdBaseInfo
-	(*PlayerEntryGameOk)(nil), // 1: gserver.PlayerEntryGameOk
+	(*PlayerEntryGameOk)(nil), // 0: gserver.PlayerEntryGameOk
 }
 var file_baseinfo_1301_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type
@@ -181,14 +128,13 @@ func file_baseinfo_1301_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_baseinfo_1301_proto_rawDesc,
-			NumEnums:      1,
+			NumEnums:      0,
 			NumMessages:   1,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
 		GoTypes:           file_baseinfo_1301_proto_goTypes,
 		DependencyIndexes: file_baseinfo_1301_proto_depIdxs,
-		EnumInfos:         file_baseinfo_1301_proto_enumTypes,
 		MessageInfos:      file_baseinfo_1301_proto_msgTypes,
 	}.Build()
 	File_baseinfo_1301_proto = out.File

@@ -4,13 +4,6 @@ option go_package = "./pb";
 
 package gserver;
 
-// 消息号定义
-enum CmdBaseInfo {
-	CmdBaseInfo_None = 0; // 解决"The first enum value must be zero in proto3."的报错
-
-	Cmd_PlayerEntryGameOk = 1301; // 玩家进游戏服成功,非客户端消息
-}
-
 // 玩家进游戏服成功,非客户端消息
 message PlayerEntryGameOk {
   bool isReconnect = 1;

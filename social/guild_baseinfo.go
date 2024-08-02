@@ -49,7 +49,7 @@ func (this *GuildBaseInfo) HandleGuildDataViewReq(guildMessage *GuildMessage, re
 		logger.Debug("HandleGuildDataViewReq not a member %v %v", g.GetId(), guildMessage.fromPlayerId)
 		return
 	}
-	g.RouteClientPacket(guildMessage, pb.CmdGuild_Cmd_GuildDataViewRes, &pb.GuildDataViewRes{
+	g.RouteClientPacket(guildMessage, pb.CmdClient_Cmd_GuildDataViewRes, &pb.GuildDataViewRes{
 		GuildData: &pb.GuildData{
 			Id:           g.GetId(),
 			BaseInfo:     g.GetBaseInfo().Data,

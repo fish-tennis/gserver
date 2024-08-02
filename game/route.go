@@ -146,7 +146,7 @@ func RoutePlayerPacketWithErr(playerId int64, packet Packet, errStr string, opts
 			return false
 		}
 	}
-	routePacket := NewProtoPacketEx(pb.CmdRoute_Cmd_RoutePlayerMessage, &pb.RoutePlayerMessage{
+	routePacket := NewProtoPacketEx(pb.CmdServer_Cmd_RoutePlayerMessage, &pb.RoutePlayerMessage{
 		Error:            errStr,
 		ToPlayerId:       playerId,
 		PacketCommand:    int32(packet.Command()),

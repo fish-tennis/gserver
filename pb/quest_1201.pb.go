@@ -20,60 +20,7 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// 消息号定义
-type CmdQuest int32
-
-const (
-	CmdQuest_CmdQuest_None      CmdQuest = 0    // 解决"The first enum value must be zero in proto3."的报错
-	CmdQuest_Cmd_FinishQuestReq CmdQuest = 1201 // 完成任务
-	CmdQuest_Cmd_FinishQuestRes CmdQuest = 1202 // 完成任务的返回结果
-)
-
-// Enum value maps for CmdQuest.
-var (
-	CmdQuest_name = map[int32]string{
-		0:    "CmdQuest_None",
-		1201: "Cmd_FinishQuestReq",
-		1202: "Cmd_FinishQuestRes",
-	}
-	CmdQuest_value = map[string]int32{
-		"CmdQuest_None":      0,
-		"Cmd_FinishQuestReq": 1201,
-		"Cmd_FinishQuestRes": 1202,
-	}
-)
-
-func (x CmdQuest) Enum() *CmdQuest {
-	p := new(CmdQuest)
-	*p = x
-	return p
-}
-
-func (x CmdQuest) String() string {
-	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
-}
-
-func (CmdQuest) Descriptor() protoreflect.EnumDescriptor {
-	return file_quest_1201_proto_enumTypes[0].Descriptor()
-}
-
-func (CmdQuest) Type() protoreflect.EnumType {
-	return &file_quest_1201_proto_enumTypes[0]
-}
-
-func (x CmdQuest) Number() protoreflect.EnumNumber {
-	return protoreflect.EnumNumber(x)
-}
-
-// Deprecated: Use CmdQuest.Descriptor instead.
-func (CmdQuest) EnumDescriptor() ([]byte, []int) {
-	return file_quest_1201_proto_rawDescGZIP(), []int{0}
-}
-
 // 完成任务
-// @Client表示是客户端发的消息,工具也可以考虑为客户端生成相应的辅助代码(c#或lua)
-// @Client
-// @PlayerHandler
 type FinishQuestReq struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -122,8 +69,6 @@ func (x *FinishQuestReq) GetQuestCfgId() int32 {
 }
 
 // 完成任务的返回结果
-// @Player表示是服务器上的玩家对象发给客户端的消息,工具会生成相应的辅助代码
-// @Player
 type FinishQuestRes struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -181,13 +126,8 @@ var file_quest_1201_proto_rawDesc = []byte{
 	0x05, 0x52, 0x0a, 0x71, 0x75, 0x65, 0x73, 0x74, 0x43, 0x66, 0x67, 0x49, 0x64, 0x22, 0x30, 0x0a,
 	0x0e, 0x46, 0x69, 0x6e, 0x69, 0x73, 0x68, 0x51, 0x75, 0x65, 0x73, 0x74, 0x52, 0x65, 0x73, 0x12,
 	0x1e, 0x0a, 0x0a, 0x71, 0x75, 0x65, 0x73, 0x74, 0x43, 0x66, 0x67, 0x49, 0x64, 0x18, 0x01, 0x20,
-	0x01, 0x28, 0x05, 0x52, 0x0a, 0x71, 0x75, 0x65, 0x73, 0x74, 0x43, 0x66, 0x67, 0x49, 0x64, 0x2a,
-	0x4f, 0x0a, 0x08, 0x43, 0x6d, 0x64, 0x51, 0x75, 0x65, 0x73, 0x74, 0x12, 0x11, 0x0a, 0x0d, 0x43,
-	0x6d, 0x64, 0x51, 0x75, 0x65, 0x73, 0x74, 0x5f, 0x4e, 0x6f, 0x6e, 0x65, 0x10, 0x00, 0x12, 0x17,
-	0x0a, 0x12, 0x43, 0x6d, 0x64, 0x5f, 0x46, 0x69, 0x6e, 0x69, 0x73, 0x68, 0x51, 0x75, 0x65, 0x73,
-	0x74, 0x52, 0x65, 0x71, 0x10, 0xb1, 0x09, 0x12, 0x17, 0x0a, 0x12, 0x43, 0x6d, 0x64, 0x5f, 0x46,
-	0x69, 0x6e, 0x69, 0x73, 0x68, 0x51, 0x75, 0x65, 0x73, 0x74, 0x52, 0x65, 0x73, 0x10, 0xb2, 0x09,
-	0x42, 0x06, 0x5a, 0x04, 0x2e, 0x2f, 0x70, 0x62, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x01, 0x28, 0x05, 0x52, 0x0a, 0x71, 0x75, 0x65, 0x73, 0x74, 0x43, 0x66, 0x67, 0x49, 0x64, 0x42,
+	0x06, 0x5a, 0x04, 0x2e, 0x2f, 0x70, 0x62, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -202,12 +142,10 @@ func file_quest_1201_proto_rawDescGZIP() []byte {
 	return file_quest_1201_proto_rawDescData
 }
 
-var file_quest_1201_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 var file_quest_1201_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_quest_1201_proto_goTypes = []interface{}{
-	(CmdQuest)(0),          // 0: gserver.CmdQuest
-	(*FinishQuestReq)(nil), // 1: gserver.FinishQuestReq
-	(*FinishQuestRes)(nil), // 2: gserver.FinishQuestRes
+	(*FinishQuestReq)(nil), // 0: gserver.FinishQuestReq
+	(*FinishQuestRes)(nil), // 1: gserver.FinishQuestRes
 }
 var file_quest_1201_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type
@@ -253,14 +191,13 @@ func file_quest_1201_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_quest_1201_proto_rawDesc,
-			NumEnums:      1,
+			NumEnums:      0,
 			NumMessages:   2,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
 		GoTypes:           file_quest_1201_proto_goTypes,
 		DependencyIndexes: file_quest_1201_proto_depIdxs,
-		EnumInfos:         file_quest_1201_proto_enumTypes,
 		MessageInfos:      file_quest_1201_proto_msgTypes,
 	}.Build()
 	File_quest_1201_proto = out.File
