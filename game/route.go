@@ -10,6 +10,7 @@ import (
 	"github.com/fish-tennis/gserver/pb"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
+	"log/slog"
 	"time"
 )
 
@@ -145,6 +146,8 @@ func RoutePlayerPacketWithErr(playerId int64, packet Packet, errStr string, opts
 			logger.Error("RoutePlayerPacketWithServer %v err:%v", playerId, err)
 			return false
 		}
+	} else {
+		slog.Debug("anyPacketNil", "playerId", playerId, "cmd", packet.Command(), "errStr", errStr, "DirectSendClient", routeOpts.DirectSendClient)
 	}
 	routePacket := NewProtoPacketEx(pb.CmdServer_Cmd_RoutePlayerMessage, &pb.RoutePlayerMessage{
 		Error:            errStr,

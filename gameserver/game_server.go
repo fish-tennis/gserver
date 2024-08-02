@@ -368,6 +368,10 @@ func (this *GameServer) onRoutePlayerMessage(connection Connection, packet Packe
 		logger.Error("player nil %v,cmd:%v", req.ToPlayerId, req.PacketCommand)
 		return
 	}
+	if req.PacketData == nil {
+		logger.Error("onRoutePlayerMessage playerId:%v,cmd:%v errStr:%v", req.ToPlayerId, req.PacketCommand, req.Error)
+		return
+	}
 	message, err := req.PacketData.UnmarshalNew()
 	if err != nil {
 		logger.Error("UnmarshalNew %v cmd:%v err:%v", req.ToPlayerId, req.PacketCommand, err)
@@ -375,7 +379,7 @@ func (this *GameServer) onRoutePlayerMessage(connection Connection, packet Packe
 	}
 	err = req.PacketData.UnmarshalTo(message)
 	if err != nil {
-		logger.Error("UnmarshalTo %v cmd:%v err:%v", req.ToPlayerId, req.PacketCommand, err)
+		logger.Error("UnmarshalTo %v cmd:%v err:%v DirectSendClient:%v", req.ToPlayerId, req.PacketCommand, err, req.DirectSendClient)
 		return
 	}
 	if req.DirectSendClient {

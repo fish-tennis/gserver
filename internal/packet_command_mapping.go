@@ -30,6 +30,7 @@ func GetServerCommandByProto(protoMessage proto.Message) int32 {
 
 func GetCommandByProto(cmdEnumName string, protoMessage proto.Message) int32 {
 	// CmdClient或CmdServer
+	cmdEnumName = fmt.Sprintf("%v.%v", ProtoPackageName, cmdEnumName)
 	enumType, err := protoregistry.GlobalTypes.FindEnumByName(protoreflect.FullName(cmdEnumName))
 	if err != nil {
 		//gentity.Debug("%v err:%v", enumTypeName, err)
