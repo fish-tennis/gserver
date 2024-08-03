@@ -30,6 +30,6 @@ func RegisterPlayerHandler(cmd PacketCommand, handler func(player *Player, packe
 
 func InitPlayerStructAndHandler() {
 	tmpPlayer := CreateTempPlayer(0, 0)
-	gentity.GetEntitySaveableStruct(tmpPlayer)
+	gentity.ParseEntitySaveableStruct(tmpPlayer)
 	_playerEventHandlerMgr.AutoRegister(tmpPlayer, internal.EventHandlerMethodNamePrefix)
 }

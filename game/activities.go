@@ -96,7 +96,7 @@ func (this *Activities) LoadData(sourceData map[int32][]byte) {
 			logger.Error(fmt.Sprintf("activity nil id:%v", activityId))
 			continue
 		}
-		err := gentity.LoadData(activity, bytes)
+		err := gentity.LoadObjData(activity, bytes)
 		if err != nil {
 			logger.Error(fmt.Sprintf("activity load %v err:%v", activityId, err.Error()))
 			continue

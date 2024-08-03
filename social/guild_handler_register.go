@@ -19,7 +19,7 @@ var _guildPacketHandlerMgr = make(map[PacketCommand]*internal.PacketHandlerInfo)
 
 func InitGuildStructAndHandler() {
 	tmpGuild := NewGuild(&pb.GuildLoadData{})
-	gentity.GetEntitySaveableStruct(tmpGuild)
+	gentity.ParseEntitySaveableStruct(tmpGuild)
 	AutoRegisterGuildPacketHandler(tmpGuild, internal.HandlerMethodNamePrefix, internal.ProtoPackageName)
 }
 

@@ -139,6 +139,6 @@ func createGlobalEntityFromData(globalEntity *GlobalEntity, globalEntityData *pb
 // 注册GlobalEntity的结构体和消息回调
 func InitGlobalEntityStructAndHandler() {
 	tmpGlobalEntity := createTempGlobalEntity()
-	gentity.GetEntitySaveableStruct(tmpGlobalEntity)
+	gentity.ParseEntitySaveableStruct(tmpGlobalEntity)
 	_globalEntityPacketHandlerMgr.AutoRegister(tmpGlobalEntity, internal.HandlerMethodNamePrefix, internal.ProtoPackageName)
 }
