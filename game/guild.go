@@ -129,9 +129,12 @@ func (this *Guild) OnGuildCreateReq(req *pb.GuildCreateReq) {
 		Position: int32(pb.GuildPosition_Leader),
 	}
 	guildDb := db.GetGuildDb()
-	saveData := gentity.ConvertProtoToMap(newGuildData)
-	// mongodb _id特殊处理
-	saveData[db.UniqueIdName] = newGuildData.Id
+	saveData := map[string]any{
+		db.UniqueIdName: newGuildData.Id, // mongodb _id特殊处理
+		"Id":            newGuildData.Id,
+		"Name":          player.GetName(),
+		"Position":      int32(pb.GuildPosition_Leader),
+	}
 	dbErr, isDuplicateName := guildDb.InsertEntity(newGuildData.Id, saveData)
 	if dbErr != nil {
 		logger.Error("OnGuildCreateReq dbErr:%v", dbErr)

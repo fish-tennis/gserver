@@ -1,6 +1,7 @@
 package game
 
 import (
+	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gentity/util"
 	"github.com/fish-tennis/gserver/cfg"
 	. "github.com/fish-tennis/gserver/internal"
@@ -18,6 +19,8 @@ func init() {
 				JoinTime: int32(t.Unix()),
 			},
 		}
+		newActivity.Parent = activities.(gentity.MapDirtyMark)
+		newActivity.MapKey = activityCfg.CfgId
 		newActivity.Id = activityCfg.CfgId
 		newActivity.Activities = activities.(*Activities)
 		newActivity.Reset()
@@ -28,7 +31,7 @@ func init() {
 // 默认活动模板,支持常见的简单活动
 type ActivityDefault struct {
 	ChildActivity
-	// 基础数据
+	// 子活动的保存数据必须是一个整体,无法再细分,因为gentity目前只支持2层结构(Activities是第1层,子活动是第2层)
 	Base *pb.ActivityDefaultBaseData `db:"Base"`
 }
 
@@ -149,7 +152,8 @@ func (this *ActivityDefault) ReceiveReward(cfgId int32) {
 }
 
 // 兑换物品
-//  商店也是一种兑换功能
+//
+//	商店也是一种兑换功能
 func (this *ActivityDefault) Exchange(exchangeCfgId int32) {
 	activityCfg := this.GetActivityCfg()
 	if activityCfg == nil {

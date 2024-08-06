@@ -6,6 +6,8 @@ github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f h1:lO4WD4F/r
 github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f/go.mod h1:cuUVRXasLTGF7a8hSLbxyZXjz+1KgoB3wDUb6vlszIc=
 github.com/fish-tennis/gentity v1.3.1 h1:A4jSX40hdklURS41YC0AlC2WLlNsp3WELnPP4x8ncmE=
 github.com/fish-tennis/gentity v1.3.1/go.mod h1:tDM/uCSTZO6XyTd7MrL2EoQ1dLT8N6iKyHHWEOIggvc=
+github.com/fish-tennis/gentity v1.4.0 h1:JwjmvMqddAazSZh5eqVnpqSzUOjIdSiNGmWZC/3zqgU=
+github.com/fish-tennis/gentity v1.4.0/go.mod h1:tDM/uCSTZO6XyTd7MrL2EoQ1dLT8N6iKyHHWEOIggvc=
 github.com/fish-tennis/gnet v1.1.2 h1:9HGK76v49fDrAqPmwhqglQNdO91GRix0sqPeN+nrdgw=
 github.com/fish-tennis/gnet v1.1.2/go.mod h1:f33rsGHToKEmKhtyicpRcJX9uKVBrBof1aJcuaNUjcg=
 github.com/fish-tennis/snowflake v1.0.1 h1:IfutFtA3ZET6g4fXT+4CQs9znQ0utQcOUs/2N4D93xs=

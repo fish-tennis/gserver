@@ -25,16 +25,16 @@ const (
 func init() {
 	_playerComponentRegister.Register(ComponentNameActivities, 100, func(player *Player, _ any) gentity.Component {
 		return &Activities{
-			PlayerMapDataComponent: *NewPlayerMapDataComponent(player, ComponentNameActivities),
-			Data:                   make(map[int32]internal.Activity),
+			PlayerMapDataComponent: NewPlayerMapDataComponent(player, ComponentNameActivities),
+			Data:                   gentity.NewMapData[int32, internal.Activity](),
 		}
 	})
 }
 
 // 活动模块
 type Activities struct {
-	PlayerMapDataComponent
-	Data map[int32]internal.Activity `db:""`
+	*PlayerMapDataComponent
+	Data *gentity.MapData[int32, internal.Activity] `db:""`
 }
 
 func (this *Player) GetActivities() *Activities {
@@ -56,7 +56,7 @@ func CreateNewActivity(activityCfgId int32, activities internal.ActivityMgr, t t
 }
 
 func (this *Activities) GetActivity(activityId int32) internal.Activity {
-	activity, _ := this.Data[activityId]
+	activity, _ := this.Data.Data[activityId]
 	return activity
 }
 
@@ -66,15 +66,13 @@ func (this *Activities) AddNewActivity(activityCfg *cfg.ActivityCfg, t time.Time
 		logger.Error("activity nil %v", activityCfg.CfgId)
 		return nil
 	}
-	this.Data[activityCfg.CfgId] = activity
-	this.SetDirty(activityCfg.CfgId, true)
+	this.Data.Set(activity.GetId(), activity)
 	logger.Debug("AddNewActivity playerId:%v activityId:%v", this.GetPlayer().GetId(), activityCfg.CfgId)
 	return activity
 }
 
 func (this *Activities) RemoveActivity(activityId int32) {
-	delete(this.Data, activityId)
-	this.SetDirty(activityId, false)
+	this.Data.Delete(activityId)
 }
 
 func (this *Activities) AddAllActivities(t time.Time) {
@@ -88,7 +86,8 @@ func (this *Activities) AddAllActivities(t time.Time) {
 	})
 }
 
-func (this *Activities) LoadData(sourceData map[int32][]byte) {
+func (this *Activities) LoadFromBytesMap(bytesMap any) error {
+	sourceData := bytesMap.(map[int32][]byte)
 	for activityId, bytes := range sourceData {
 		// 动态构建活动对象
 		activity := CreateNewActivity(activityId, this, this.GetPlayer().GetTimerEntries().Now())
@@ -99,17 +98,19 @@ func (this *Activities) LoadData(sourceData map[int32][]byte) {
 		err := gentity.LoadObjData(activity, bytes)
 		if err != nil {
 			logger.Error(fmt.Sprintf("activity load %v err:%v", activityId, err.Error()))
-			continue
+			return err
 		}
-		this.Data[activityId] = activity
+		this.Data.Data[activityId] = activity // 加载数据,不设置dirty
 	}
+	return nil
 }
 
 // 事件分发
 func (this *Activities) OnEvent(event interface{}) {
-	for _, activity := range this.Data {
+	this.Data.Range(func(k int32, activity internal.Activity) bool {
 		activity.OnEvent(event)
-	}
+		return true
+	})
 }
 
 // 检查活动是否能参加
@@ -134,13 +135,19 @@ func (this *Activities) CheckJoinTime(activityCfg *cfg.ActivityCfg, t time.Time)
 	switch activityCfg.TimeType {
 	case int32(pb.TimeType_TimeType_Timestamp):
 		now := t.Unix()
-		if now < int64(activityCfg.BeginTime) || now > int64(activityCfg.EndTime) {
+		if activityCfg.BeginTime > 0 && now < int64(activityCfg.BeginTime) {
+			return false
+		}
+		if activityCfg.EndTime > 0 && now > int64(activityCfg.EndTime) {
 			return false
 		}
 
 	case int32(pb.TimeType_TimeType_Date):
 		nowDateInt := util.ToDateInt(t)
-		if nowDateInt < activityCfg.BeginTime || nowDateInt > activityCfg.EndTime {
+		if activityCfg.BeginTime > 0 && nowDateInt < activityCfg.BeginTime {
+			return false
+		}
+		if activityCfg.EndTime > 0 || nowDateInt > activityCfg.EndTime {
 			return false
 		}
 	}
@@ -167,7 +174,7 @@ func (this *Activities) CheckEndTime(activityCfg *cfg.ActivityCfg, t time.Time) 
 
 // 检查已经结束的活动
 func (this *Activities) CheckEnd(t time.Time) {
-	for activityId, activity := range this.Data {
+	for activityId, activity := range this.Data.Data {
 		activityCfg := cfg.GetActivityCfgMgr().GetActivityCfg(activityId)
 		if activityCfg == nil {
 			continue
@@ -180,16 +187,16 @@ func (this *Activities) CheckEnd(t time.Time) {
 
 // 子活动,目前限制子活动只能是单保存字段(SingleField)
 type ChildActivity struct {
-	gentity.BaseDirtyMark
 	internal.BaseActivity
+	gentity.MapValueDirtyMark[int32]
 	Activities *Activities
 }
 
-// 子活动设置脏标记时,玩家活动模块也设置脏标记
-func (this *ChildActivity) SetDirty() {
-	this.BaseDirtyMark.SetDirty()
-	this.Activities.SetDirty(this.GetId(), true)
-}
+//// 子活动有数据变化时,玩家活动模块设置脏标记
+//func (this *ChildActivity) SetDirty() {
+//	//this.BaseDirtyMark.SetDirty()
+//	this.Activities.SetDirty(this.GetId(), true)
+//}
 
 // 活动配置数据
 func (this *ChildActivity) GetActivityCfg() *cfg.ActivityCfg {

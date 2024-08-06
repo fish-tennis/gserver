@@ -1,7 +1,6 @@
 package loginserver
 
 import (
-	"github.com/fish-tennis/gentity"
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
 	"github.com/fish-tennis/gserver/db"
@@ -99,9 +98,11 @@ func onAccountReg(connection Connection, packet Packet) {
 		Name:     req.GetAccountName(),
 		Password: req.GetPassword(),
 	}
-	accountMapData := gentity.ConvertProtoToMap(account)
-	accountMapData[db.UniqueIdName] = account.XId
-	delete(accountMapData, "XId")
+	accountMapData := map[string]any{
+		db.UniqueIdName: account.XId, // mongodb _id特殊处理
+		"Name":          account.Name,
+		"Password":      account.Password,
+	}
 	err, isDuplicateKey := _loginServer.GetAccountDb().InsertEntity(account.XId, accountMapData)
 	if err != nil {
 		account.XId = 0
