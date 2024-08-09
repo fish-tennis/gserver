@@ -138,6 +138,7 @@ func (this *LoginServer) initDb() {
 	if !mongoDb.Connect() {
 		panic("connect db error")
 	}
+	// 账号名建立唯一索引
 	this.accountDb.(*gentity.MongoCollection).CreateIndex(db.AccountName, true)
 	db.SetDbMgr(mongoDb)
 }

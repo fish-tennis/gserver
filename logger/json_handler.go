@@ -23,7 +23,7 @@ func NewJsonHandlerWithStdOutput(w io.Writer, opts *slog.HandlerOptions, useStdO
 		JSONHandler: *slog.NewJSONHandler(w, opts),
 	}
 	if useStdOutput {
-		h.stdLogger = log.New(os.Stdout, "", log.LstdFlags|log.Llongfile)
+		h.stdLogger = log.New(os.Stdout, "", log.LstdFlags|log.Lshortfile)
 	}
 	return h
 }

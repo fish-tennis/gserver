@@ -136,11 +136,11 @@ func initLog(logFileName string, useStdOutput bool) {
 			if a.Key == slog.SourceKey {
 				source := a.Value.Any().(*slog.Source)
 				source.Function = ""
-				// 让source简短些
-				if wd, err := os.Getwd(); err == nil {
-					source.File = strings.TrimPrefix(source.File, filepath.ToSlash(wd))
-					if source.File[0] == '/' {
-						source.File = strings.TrimPrefix(source.File, "/")
+				idx := strings.LastIndexByte(source.File, '/')
+				if idx >= 0 {
+					idx = strings.LastIndexByte(source.File[:idx], '/')
+					if idx >= 0 {
+						source.File = source.File[idx+1:] // 让source简短些
 					}
 				}
 			}

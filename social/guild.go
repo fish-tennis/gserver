@@ -60,6 +60,8 @@ func (this *Guild) processMessage(guildMessage *GuildMessage) {
 	if handlerInfo != nil {
 		component := this.GetComponentByName(handlerInfo.ComponentName)
 		if component != nil {
+			// TODO: rpc reply格式的回调,自动回传res
+			// HandleXxxReq(guildMessage *GuildMessage, req *pb.XxxReq) *pb.XxxRes
 			// 反射调用函数
 			slog.Debug("processMessage", "cmd", guildMessage.cmd, "message", proto.MessageName(guildMessage.message))
 			handlerInfo.Method.Func.Call([]reflect.Value{reflect.ValueOf(component),

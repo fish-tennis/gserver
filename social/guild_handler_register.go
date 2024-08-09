@@ -51,6 +51,7 @@ func scanGuildMethods(obj any, methodNamePrefix, protoPackageName string) {
 			continue
 		}
 		// 消息回调格式: func (this *GuildJoinRequests) HandleGuildJoinReq(guildMessage *GuildMessage, req *pb.GuildJoinReq)
+		// TODO: rpc回调格式: HandleXxxReq(guildMessage *GuildMessage, req *pb.XxxReq) *pb.XxxRes
 		methodArg1 := method.Type.In(1)
 		if !methodArg1.ConvertibleTo(reflect.TypeOf(&GuildMessage{})) {
 			continue
