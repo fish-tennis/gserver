@@ -6,6 +6,7 @@ import (
 	"github.com/fish-tennis/gserver/db"
 	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
+	"github.com/fish-tennis/gserver/network"
 	"github.com/fish-tennis/gserver/pb"
 	"math/rand"
 )
@@ -64,7 +65,7 @@ func onLoginReq(connection Connection, packet Packet) {
 		}
 		logger.Debug("%v(%v) -> %v", account.Name, account.GetXId(), loginRes.GameServer)
 	}
-	internal.SendPacketAdapt(connection, packet, PacketCommand(pb.CmdClient_Cmd_LoginRes), loginRes)
+	network.SendPacketAdapt(connection, packet, PacketCommand(pb.CmdClient_Cmd_LoginRes), loginRes)
 }
 
 // 选择一个游戏服给登录成功的客户端
@@ -86,7 +87,7 @@ func onAccountReg(connection Connection, packet Packet) {
 	result := ""
 	newAccountIdValue, err := db.GetKvDb().Inc(db.AccountIdKeyName, int64(1), true)
 	if err != nil {
-		internal.SendPacketAdapt(connection, packet, PacketCommand(pb.CmdClient_Cmd_AccountRes), &pb.AccountRes{
+		network.SendPacketAdapt(connection, packet, PacketCommand(pb.CmdClient_Cmd_AccountRes), &pb.AccountRes{
 			Error: "IdError",
 		})
 		logger.Error("onAccountReg err:%v", err)
@@ -113,7 +114,7 @@ func onAccountReg(connection Connection, packet Packet) {
 		}
 		logger.Error("onAccountReg account:%v result:%v err:%v", account.Name, result, err.Error())
 	}
-	internal.SendPacketAdapt(connection, packet, PacketCommand(pb.CmdClient_Cmd_AccountRes), &pb.AccountRes{
+	network.SendPacketAdapt(connection, packet, PacketCommand(pb.CmdClient_Cmd_AccountRes), &pb.AccountRes{
 		Error:       result,
 		AccountName: account.Name,
 		AccountId:   account.XId,

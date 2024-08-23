@@ -7,6 +7,7 @@ import (
 	"github.com/fish-tennis/gserver/db"
 	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
+	"github.com/fish-tennis/gserver/network"
 	"github.com/fish-tennis/gserver/pb"
 	"google.golang.org/protobuf/proto"
 	"log/slog"
@@ -111,7 +112,7 @@ func (this *Player) SendWithCommand(cmd PacketCommand, message proto.Message, op
 	if this.connection != nil {
 		if this.useGate {
 			// 网关模式,自动附加上playerId
-			return this.connection.SendPacket(internal.NewGatePacket(this.GetId(), PacketCommand(cmd), message), opts...)
+			return this.connection.SendPacket(network.NewGatePacket(this.GetId(), PacketCommand(cmd), message), opts...)
 		} else {
 			return this.connection.Send(PacketCommand(cmd), message, opts...)
 		}
@@ -123,7 +124,7 @@ func (this *Player) SendPacket(packet Packet, opts ...SendOption) bool {
 	if this.connection != nil {
 		if this.useGate {
 			// 网关模式,自动附加上playerId
-			return this.connection.SendPacket(internal.NewGatePacket(this.GetId(), packet.Command(), packet.Message()).
+			return this.connection.SendPacket(network.NewGatePacket(this.GetId(), packet.Command(), packet.Message()).
 				WithStreamData(packet.GetStreamData()).WithRpc(packet), opts...)
 		} else {
 			return this.connection.SendPacket(packet, opts...)

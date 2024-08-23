@@ -1,40 +1,9 @@
-package internal
+package network
 
 import (
 	. "github.com/fish-tennis/gnet"
 	"google.golang.org/protobuf/proto"
 )
-
-//
-//const (
-//	GatePacketHeaderSize = int(unsafe.Sizeof(GatePacketHeader{}))
-//)
-//
-//type GatePacketHeader struct {
-//	DefaultPacketHeader
-//	PlayerId    int64
-//}
-//
-//func NewGatePacketHeader(len uint32, flags uint8) *GatePacketHeader {
-//	return &GatePacketHeader{
-//		DefaultPacketHeader: *NewDefaultPacketHeader(len, flags),
-//	}
-//}
-//
-//// 从字节流读取数据,len(messageHeaderData)>=MessageHeaderSize
-//// 使用小端字节序
-////  parse LenAndFlags from stream data
-//func (this *GatePacketHeader) ReadFrom(packetHeaderData []byte) {
-//	this.LenAndFlags = binary.LittleEndian.Uint32(packetHeaderData)
-//	this.PlayerId = int64(binary.LittleEndian.Uint64(packetHeaderData[4:]))
-//}
-//
-//// 写入字节流,使用小端字节序
-////  write LenAndFlags to stream data
-//func (this *GatePacketHeader) WriteTo(packetHeaderData []byte) {
-//	binary.LittleEndian.PutUint32(packetHeaderData, this.LenAndFlags)
-//	binary.LittleEndian.PutUint64(packetHeaderData[4:], uint64(this.PlayerId))
-//}
 
 type GatePacket struct {
 	command  PacketCommand

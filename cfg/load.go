@@ -70,7 +70,7 @@ func LoadAllCfgs(dir string) bool {
 		if afterLoader, ok := loadingLoader.(CfgAfterLoader); ok {
 			afterLoader.AfterLoad()
 		}
-		// 加载场景后,进行原子赋值
+		// 加载完成后,进行原子赋值
 		loaderOpt.Value.Store(loadingLoader)
 	}
 	return true

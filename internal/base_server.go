@@ -7,6 +7,7 @@ import (
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
 	"github.com/fish-tennis/gserver/logger"
+	"github.com/fish-tennis/gserver/network"
 	"github.com/fish-tennis/gserver/pb"
 	"google.golang.org/protobuf/proto"
 	"io"
@@ -185,7 +186,7 @@ func (this *BaseServer) StartServer(ctx context.Context, serverListenAddr string
 	serverListenerConfig.AcceptConfig.Handler = acceptServerHandler
 	acceptServerHandler.Register(PacketCommand(pb.CmdInner_Cmd_HeartBeatReq), func(connection Connection, packet Packet) {
 		req := packet.Message().(*pb.HeartBeatReq)
-		SendPacketAdapt(connection, packet, PacketCommand(pb.CmdInner_Cmd_HeartBeatRes), &pb.HeartBeatRes{
+		network.SendPacketAdapt(connection, packet, PacketCommand(pb.CmdInner_Cmd_HeartBeatRes), &pb.HeartBeatRes{
 			RequestTimestamp:  req.GetTimestamp(),
 			ResponseTimestamp: util.GetCurrentMS(),
 		})
@@ -250,7 +251,7 @@ func (this *BaseServer) StartServer(ctx context.Context, serverListenAddr string
 
 func (this *BaseServer) NewAdaptPacket(cmd PacketCommand, message proto.Message) Packet {
 	if this.serverInfo.ServerType == ServerType_Gate {
-		return NewGatePacket(0, cmd, message)
+		return network.NewGatePacket(0, cmd, message)
 	} else {
 		return NewProtoPacket(cmd, message)
 	}

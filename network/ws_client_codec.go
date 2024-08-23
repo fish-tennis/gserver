@@ -1,8 +1,8 @@
-package gate
+package network
 
 import (
 	. "github.com/fish-tennis/gnet"
-	"github.com/fish-tennis/gserver/internal"
+	"github.com/fish-tennis/gserver/gate"
 	"github.com/fish-tennis/gserver/logger"
 	"google.golang.org/protobuf/proto"
 	"reflect"
@@ -43,8 +43,8 @@ func (this *WsClientCodec) Decode(connection Connection, data []byte) (newPacket
 		}
 	}
 	// 其他消息,gate直接转发,附加上playerId
-	if clientData, ok := connection.GetTag().(*ClientData); ok {
-		return internal.NewGatePacketWithData(clientData.PlayerId, PacketCommand(command), data[SimplePacketHeaderSize:]), nil
+	if clientData, ok := connection.GetTag().(*gate.ClientData); ok {
+		return NewGatePacketWithData(clientData.PlayerId, PacketCommand(command), data[SimplePacketHeaderSize:]), nil
 	}
 	logger.Error("unSupport command:%v", command)
 	return nil, ErrNotSupport

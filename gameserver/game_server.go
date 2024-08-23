@@ -12,6 +12,7 @@ import (
 	"github.com/fish-tennis/gserver/game"
 	. "github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
+	. "github.com/fish-tennis/gserver/network"
 	"github.com/fish-tennis/gserver/pb"
 	"github.com/fish-tennis/gserver/social"
 	"google.golang.org/protobuf/proto"
@@ -53,37 +54,14 @@ func (this *GameServer) Init(ctx context.Context, configFile string) bool {
 	this.initCache()
 	this.GetServerList().SetCache(cache.Get())
 
-	netMgr := GetNetMgr()
 	// NOTE: 实际项目中,监听客户端和监听网关,二选一即可
 	// 这里为了演示,同时提供客户端直连和网关两种模式
-	// 客户端的codec和handler
-	clientCodec := NewProtoCodec(nil)
-	clientHandler := game.NewClientConnectionHandler(clientCodec)
-	this.registerClientPacket(clientHandler)
-
-	clientListenerConfig := &ListenerConfig{
-		AcceptConfig: this.config.ClientConnConfig,
-	}
-	clientListenerConfig.AcceptConfig.Codec = clientCodec
-	clientListenerConfig.AcceptConfig.Handler = clientHandler
-	clientListenerConfig.ListenerHandler = &ClientListerHandler{}
-	if netMgr.NewListener(ctx, this.config.ClientListenAddr, clientListenerConfig) == nil {
+	if ListenClient(this.config.ClientListenAddr, &ClientListerHandler{}, this.registerClientPacket) == nil {
 		panic("listen client failed")
 		return false
 	}
 
-	// NOTE: 实际项目中,监听客户端和监听网关,二选一即可
-	// 这里为了演示,同时提供客户端直连和网关两种模式
-	// 服务器的codec和handler
-	gateCodec := NewGateCodec(nil)
-	gateHandler := NewDefaultConnectionHandler(gateCodec)
-	this.registerGatePacket(gateHandler)
-	gateListenerConfig := &ListenerConfig{
-		AcceptConfig: this.config.ServerConnConfig,
-	}
-	gateListenerConfig.AcceptConfig.Codec = gateCodec
-	gateListenerConfig.AcceptConfig.Handler = gateHandler
-	this.gateListener = netMgr.NewListener(ctx, this.config.GateListenAddr, gateListenerConfig)
+	this.gateListener = ListenGate(this.config.GateListenAddr, this.registerGatePacket)
 	if this.gateListener == nil {
 		panic("listen gate failed")
 		return false
@@ -210,7 +188,7 @@ func (this *GameServer) repairPlayerCache(playerId, accountId int64) error {
 }
 
 // 注册客户端消息回调
-func (this *GameServer) registerClientPacket(clientHandler PacketHandlerRegister) {
+func (this *GameServer) registerClientPacket(clientHandler *DefaultConnectionHandler) {
 	// 手动注册特殊的消息回调
 	clientHandler.Register(PacketCommand(pb.CmdInner_Cmd_HeartBeatReq), onHeartBeatReq, new(pb.HeartBeatReq))
 	clientHandler.Register(PacketCommand(pb.CmdClient_Cmd_PlayerEntryGameReq), onPlayerEntryGameReq, new(pb.PlayerEntryGameReq))
@@ -230,14 +208,14 @@ func onHeartBeatReq(connection Connection, packet Packet) {
 }
 
 // 注册网关消息回调
-func (this *GameServer) registerGatePacket(gateHandler PacketHandlerRegister) {
+func (this *GameServer) registerGatePacket(gateHandler *DefaultConnectionHandler) {
 	// 手动注册特殊的消息回调
 	gateHandler.Register(PacketCommand(pb.CmdInner_Cmd_HeartBeatReq), onHeartBeatReq, new(pb.HeartBeatReq))
 	gateHandler.Register(PacketCommand(pb.CmdClient_Cmd_PlayerEntryGameReq), onPlayerEntryGameReq, new(pb.PlayerEntryGameReq))
 	gateHandler.Register(PacketCommand(pb.CmdClient_Cmd_CreatePlayerReq), onCreatePlayerReq, new(pb.CreatePlayerReq))
 	gateHandler.Register(PacketCommand(pb.CmdInner_Cmd_ClientDisconnect), onClientDisconnect, new(pb.TestCmd))
 	this.registerGatePlayerPacket(gateHandler, PacketCommand(pb.CmdInner_Cmd_TestCmd), onTestCmd, new(pb.TestCmd))
-	gateHandler.(*DefaultConnectionHandler).SetUnRegisterHandler(func(connection Connection, packet Packet) {
+	gateHandler.SetUnRegisterHandler(func(connection Connection, packet Packet) {
 		if gatePacket, ok := packet.(*GatePacket); ok {
 			playerId := gatePacket.PlayerId()
 			player := this.GetPlayer(playerId)
@@ -253,7 +231,7 @@ func (this *GameServer) registerGatePacket(gateHandler PacketHandlerRegister) {
 		}
 	})
 	// 网关服务器掉线,该网关上的所有玩家都掉线
-	gateHandler.(*DefaultConnectionHandler).SetOnDisconnectedFunc(func(connection Connection) {
+	gateHandler.SetOnDisconnectedFunc(func(connection Connection) {
 		this.playerMap.Range(func(key, value interface{}) bool {
 			if player, ok := value.(*game.Player); ok {
 				if player.GetConnection() == connection {

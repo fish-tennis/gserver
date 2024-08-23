@@ -2,8 +2,8 @@ package gate
 
 import (
 	. "github.com/fish-tennis/gnet"
-	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
+	"github.com/fish-tennis/gserver/network"
 	"github.com/fish-tennis/gserver/pb"
 )
 
@@ -26,7 +26,7 @@ func (this *ClientListerHandler) OnConnectionDisconnect(listener Listener, conne
 			delete(_gateServer.clients, clientData.PlayerId)
 			_gateServer.clientsMutex.Unlock()
 			// 通知GameServer,玩家掉线了
-			_gateServer.GetServerList().SendPacket(clientData.GameServerId, internal.NewGatePacket(
+			_gateServer.GetServerList().SendPacket(clientData.GameServerId, network.NewGatePacket(
 				clientData.PlayerId, PacketCommand(pb.CmdInner_Cmd_ClientDisconnect), &pb.ClientDisconnect{
 					ClientConnId: connection.GetConnectionId(),
 				}))

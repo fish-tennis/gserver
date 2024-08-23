@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/fish-tennis/gentity"
-	"github.com/fish-tennis/gentity/util"
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
 	"github.com/fish-tennis/gserver/db"
 	. "github.com/fish-tennis/gserver/internal"
+	. "github.com/fish-tennis/gserver/network"
 	"github.com/fish-tennis/gserver/pb"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -53,35 +53,13 @@ func (this *LoginServer) Init(ctx context.Context, configFile string) bool {
 	this.initDb()
 	this.initCache()
 	this.GetServerList().SetCache(cache.Get())
-	netMgr := GetNetMgr()
 	// NOTE: 实际项目中,监听客户端和监听网关,二选一即可
 	// 这里为了演示,同时提供客户端直连和网关两种模式
-	clientCodec := NewProtoCodec(nil)
-	clientHandler := NewDefaultConnectionHandler(clientCodec)
-	this.registerClientPacket(clientHandler)
-	this.config.ClientConnConfig.Codec = clientCodec
-	this.config.ClientConnConfig.Handler = clientHandler
-	listenerConfig := &ListenerConfig{
-		AcceptConfig: this.config.ClientConnConfig,
-	}
-	if netMgr.NewListener(ctx, this.config.ClientListenAddr, listenerConfig) == nil {
-		panic("listen failed")
+	if ListenClient(this.config.ClientListenAddr, nil, this.registerClientPacket) == nil {
+		panic("listen client failed")
 		return false
 	}
-
-	// NOTE: 实际项目中,监听客户端和监听网关,二选一即可
-	// 这里为了演示,同时提供客户端直连和网关两种模式
-	// 服务器的codec和handler
-	serverCodec := NewGateCodec(nil)
-	serverHandler := NewDefaultConnectionHandler(serverCodec)
-	this.registerServerPacket(serverHandler)
-	gateListenerConfig := &ListenerConfig{
-		AcceptConfig: this.config.ServerConnConfig,
-	}
-	gateListenerConfig.AcceptConfig.Codec = serverCodec
-	gateListenerConfig.AcceptConfig.Handler = serverHandler
-	this.gateListener = netMgr.NewListener(ctx, this.config.GateListenAddr, gateListenerConfig)
-	if this.gateListener == nil {
+	if ListenGate(this.config.GateListenAddr, this.registerServerPacket) == nil {
 		panic("listen gate failed")
 		return false
 	}
@@ -183,22 +161,12 @@ func (this *LoginServer) getAccountData(accountName string, accountData *pb.Acco
 }
 
 // 注册客户端消息回调
-func (this *LoginServer) registerClientPacket(clientHandler PacketHandlerRegister) {
-	clientHandler.Register(PacketCommand(pb.CmdInner_Cmd_HeartBeatReq), onHeartBeatReq, new(pb.HeartBeatReq))
+func (this *LoginServer) registerClientPacket(clientHandler *DefaultConnectionHandler) {
 	clientHandler.Register(PacketCommand(pb.CmdClient_Cmd_LoginReq), onLoginReq, new(pb.LoginReq))
 	clientHandler.Register(PacketCommand(pb.CmdClient_Cmd_AccountReg), onAccountReg, new(pb.AccountReg))
 }
 
-// 心跳回复
-func onHeartBeatReq(connection Connection, packet Packet) {
-	req := packet.Message().(*pb.HeartBeatReq)
-	SendPacketAdapt(connection, packet, PacketCommand(pb.CmdInner_Cmd_HeartBeatRes), &pb.HeartBeatRes{
-		RequestTimestamp:  req.GetTimestamp(),
-		ResponseTimestamp: util.GetCurrentMS(),
-	})
-}
-
 // 注册服务器消息回调
-func (this *LoginServer) registerServerPacket(serverHandler PacketHandlerRegister) {
+func (this *LoginServer) registerServerPacket(serverHandler *DefaultConnectionHandler) {
 	this.registerClientPacket(serverHandler)
 }

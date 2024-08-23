@@ -9,6 +9,7 @@ import (
 	"github.com/fish-tennis/gserver/cache"
 	. "github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
+	. "github.com/fish-tennis/gserver/network"
 	"github.com/fish-tennis/gserver/pb"
 	"math/rand"
 	"os"
@@ -58,35 +59,17 @@ func (this *GateServer) Init(ctx context.Context, configFile string) bool {
 	this.initCache()
 	this.GetServerList().SetCache(cache.Get())
 
-	netMgr := GetNetMgr()
-	// 客户端的codec和handler
-	clientCodec := NewClientCodec()
-	clientHandler := NewClientConnectionHandler(clientCodec)
-	this.registerClientPacket(clientHandler)
-
-	// 监听客户端
-	clientListenerConfig := &ListenerConfig{
-		AcceptConfig: this.config.ClientConnConfig,
-	}
-	clientListenerConfig.AcceptConfig.Codec = clientCodec
-	clientListenerConfig.AcceptConfig.Handler = clientHandler
-	clientListenerConfig.ListenerHandler = &ClientListerHandler{}
-	this.clientListener = netMgr.NewListener(ctx, this.config.ClientListenAddr, clientListenerConfig)
+	// 监听普通TCP客户端
+	this.clientListener = ListenClient(this.config.ClientListenAddr, nil, this.registerClientPacket)
 	if this.clientListener == nil {
 		panic("listen client failed")
 		return false
 	}
 
+	// 监听WebSocket客户端
 	if this.config.WsClientListenAddr != "" {
 		// WebSocket测试
-		// WebSocket不使用RingBuffer,所以使用SimpleProtoCodec
-		wsCodec := NewWsClientCodec()
-		wsClientHandler := NewClientConnectionHandler(wsCodec)
-		this.registerClientPacket(wsClientHandler)
-		this.config.WsClientListenerConfig.AcceptConfig.Codec = wsCodec
-		this.config.WsClientListenerConfig.AcceptConfig.Handler = wsClientHandler
-		this.config.WsClientListenerConfig.ListenerHandler = &ClientListerHandler{}
-		this.wsClientListener = netMgr.NewWsListener(ctx, this.config.WsClientListenAddr, &this.config.WsClientListenerConfig)
+		this.wsClientListener = ListenWebSocketClient(this.config.WsClientListenAddr, &ClientListerHandler{}, this.registerClientPacket)
 		if this.wsClientListener == nil {
 			panic("listen websocket client failed")
 			return false
@@ -141,23 +124,13 @@ func (this *GateServer) initCache() {
 }
 
 // 注册客户端消息回调
-func (this *GateServer) registerClientPacket(clientHandler *ClientConnectionHandler) {
+func (this *GateServer) registerClientPacket(clientHandler *DefaultConnectionHandler) {
 	// 手动注册消息回调
-	clientHandler.Register(PacketCommand(pb.CmdInner_Cmd_HeartBeatReq), onHeartBeatReq, new(pb.HeartBeatReq))
 	clientHandler.Register(PacketCommand(pb.CmdClient_Cmd_AccountReg), this.routeToLoginServer, new(pb.AccountReg))
 	clientHandler.Register(PacketCommand(pb.CmdClient_Cmd_LoginReq), this.routeToLoginServer, new(pb.LoginReq))
 	clientHandler.Register(PacketCommand(pb.CmdClient_Cmd_PlayerEntryGameReq), this.routeToGameServerWithConnId, new(pb.PlayerEntryGameReq))
 	clientHandler.Register(PacketCommand(pb.CmdClient_Cmd_CreatePlayerReq), this.routeToGameServerWithConnId, new(pb.CreatePlayerReq))
 	clientHandler.SetUnRegisterHandler(this.routeToGameServer)
-}
-
-// 心跳回复
-func onHeartBeatReq(connection Connection, packet Packet) {
-	req := packet.Message().(*pb.HeartBeatReq)
-	connection.Send(PacketCommand(pb.CmdInner_Cmd_HeartBeatRes), &pb.HeartBeatRes{
-		RequestTimestamp:  req.GetTimestamp(),
-		ResponseTimestamp: util.GetCurrentMS(),
-	})
 }
 
 //// 客户端绑定连接

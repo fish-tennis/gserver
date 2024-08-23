@@ -1,16 +1,15 @@
-package gate
+package network
 
 import (
 	"encoding/binary"
 	. "github.com/fish-tennis/gnet"
-	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"google.golang.org/protobuf/proto"
 	"reflect"
 )
 
-// Tcp客户端和gate之间的编解码
-type ClientCodec struct {
+// gate和其他服务器之间的编解码
+type GateCodec struct {
 	RingBufferCodec
 
 	// 在proto序列化后的数据,再做一层编码
@@ -25,10 +24,13 @@ type ClientCodec struct {
 	MessageCreatorMap map[PacketCommand]reflect.Type
 }
 
-func NewClientCodec() *ClientCodec {
-	codec := &ClientCodec{
+func NewGateCodec(protoMessageTypeMap map[PacketCommand]reflect.Type) *GateCodec {
+	codec := &GateCodec{
 		RingBufferCodec:   RingBufferCodec{},
-		MessageCreatorMap: make(map[PacketCommand]reflect.Type),
+		MessageCreatorMap: protoMessageTypeMap,
+	}
+	if codec.MessageCreatorMap == nil {
+		codec.MessageCreatorMap = make(map[PacketCommand]reflect.Type)
 	}
 	codec.DataEncoder = codec.EncodePacket
 	codec.DataDecoder = codec.DecodePacket
@@ -38,7 +40,7 @@ func NewClientCodec() *ClientCodec {
 // 注册消息和proto.Message的映射
 //
 //	protoMessage can be nil
-func (this *ClientCodec) Register(command PacketCommand, protoMessage proto.Message) {
+func (this *GateCodec) Register(command PacketCommand, protoMessage proto.Message) {
 	if protoMessage == nil {
 		this.MessageCreatorMap[command] = nil
 		return
@@ -46,14 +48,17 @@ func (this *ClientCodec) Register(command PacketCommand, protoMessage proto.Mess
 	this.MessageCreatorMap[command] = reflect.TypeOf(protoMessage).Elem()
 }
 
-func (this *ClientCodec) EncodePacket(connection Connection, packet Packet) ([][]byte, uint8) {
+func (this *GateCodec) EncodePacket(connection Connection, packet Packet) ([][]byte, uint8) {
+	gatePacket, _ := packet.(*GatePacket)
 	protoMessage := packet.Message()
 	headerFlags := uint8(0)
 	// 先写入消息号
 	// write PacketCommand
-	commandBytes := make([]byte, 2)
+	commandBytes := make([]byte, 10)
 	binary.LittleEndian.PutUint16(commandBytes, uint16(packet.Command()))
-	rpcCallId := packet.(*ProtoPacket).RpcCallId()
+	// write PlayerId
+	binary.LittleEndian.PutUint64(commandBytes[2:], uint64(gatePacket.PlayerId()))
+	rpcCallId := gatePacket.rpcCallId
 	var rpcCallIdBytes []byte
 	// rpcCall才会写入rpcCallId
 	if rpcCallId > 0 {
@@ -89,25 +94,28 @@ func (this *ClientCodec) EncodePacket(connection Connection, packet Packet) ([][
 	return [][]byte{commandBytes, messageBytes}, headerFlags
 }
 
-func (this *ClientCodec) DecodePacket(connection Connection, packetHeader PacketHeader, packetData []byte) Packet {
+func (this *GateCodec) DecodePacket(connection Connection, packetHeader PacketHeader, packetData []byte) Packet {
 	decodedPacketData := packetData
 	// Q:这里可以对packetData进行解码,如异或,解密,解压等
 	// you can decode packetData here, such as XOR, decryption, decompression, etc
 	if this.ProtoPacketBytesDecoder != nil {
 		decodedPacketData = this.ProtoPacketBytesDecoder(packetData)
 	}
-	if len(decodedPacketData) < 2 {
+	// command:2 playerId:8
+	if len(decodedPacketData) < 10 {
 		return nil
 	}
 	isRpcCall := false
 	if defaultPacketHeader, ok := packetHeader.(*DefaultPacketHeader); ok {
 		isRpcCall = defaultPacketHeader.HasFlag(RpcCall)
 	}
-	if isRpcCall && len(decodedPacketData) < 6 {
+	// command:2 playerId:8 rpcCallId:4
+	if isRpcCall && len(decodedPacketData) < 14 {
 		return nil
 	}
 	command := binary.LittleEndian.Uint16(decodedPacketData[:2])
-	offset := 2
+	playerId := int64(binary.LittleEndian.Uint64(decodedPacketData[2:10]))
+	offset := 10
 	rpcCallId := uint32(0)
 	if isRpcCall {
 		rpcCallId = binary.LittleEndian.Uint32(decodedPacketData[offset : offset+4])
@@ -115,7 +123,6 @@ func (this *ClientCodec) DecodePacket(connection Connection, packetHeader Packet
 		//logger.Debug("read rpcCallId:%v", rpcCallId)
 	}
 	if protoMessageType, ok := this.MessageCreatorMap[PacketCommand(command)]; ok {
-		// 有一些客户端消息,是gate处理
 		if protoMessageType != nil {
 			newProtoMessage := reflect.New(protoMessageType).Interface().(proto.Message)
 			err := proto.Unmarshal(decodedPacketData[offset:], newProtoMessage)
@@ -123,23 +130,28 @@ func (this *ClientCodec) DecodePacket(connection Connection, packetHeader Packet
 				logger.Error("proto decode err:%v cmd:%v", err, command)
 				return nil
 			}
-			newPacket := NewProtoPacket(PacketCommand(command), newProtoMessage)
-			newPacket.SetRpcCallId(rpcCallId)
-			return newPacket
+			return &GatePacket{
+				command:   PacketCommand(command),
+				playerId:  playerId,
+				rpcCallId: rpcCallId,
+				message:   newProtoMessage,
+			}
 		} else {
 			// 支持只注册了消息号,没注册proto结构体的用法
 			// support Register(command, nil), return the direct stream data to application layer
-			newPacket := NewProtoPacketWithData(PacketCommand(command), decodedPacketData[offset:])
-			newPacket.SetRpcCallId(rpcCallId)
-			return newPacket
+			return &GatePacket{
+				command:   PacketCommand(command),
+				playerId:  playerId,
+				rpcCallId: rpcCallId,
+				data:      decodedPacketData[offset:],
+			}
 		}
 	}
-	// 其他消息,gate直接转发,附加上playerId
-	if clientData, ok := connection.GetTag().(*ClientData); ok {
-		newPacket := internal.NewGatePacketWithData(clientData.PlayerId, PacketCommand(command), decodedPacketData[offset:])
-		newPacket.SetRpcCallId(rpcCallId)
-		return newPacket
+	// 允许消息不注册,留给业务层解析
+	return &GatePacket{
+		command:   PacketCommand(command),
+		playerId:  playerId,
+		rpcCallId: rpcCallId,
+		data:      decodedPacketData[offset:],
 	}
-	logger.Error("unSupport command:%v", command)
-	return nil
 }
