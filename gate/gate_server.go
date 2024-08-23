@@ -9,7 +9,7 @@ import (
 	"github.com/fish-tennis/gserver/cache"
 	. "github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
-	. "github.com/fish-tennis/gserver/network"
+	"github.com/fish-tennis/gserver/network"
 	"github.com/fish-tennis/gserver/pb"
 	"math/rand"
 	"os"
@@ -29,7 +29,7 @@ type GateServer struct {
 	// WebSocket测试
 	wsClientListener Listener
 	clientsMutex     sync.RWMutex
-	clients          map[int64]*ClientData
+	clients          map[int64]*network.ClientData
 }
 
 // gate服配置
@@ -40,27 +40,19 @@ type GateServerConfig struct {
 	WsClientListenerConfig ListenerConfig
 }
 
-// 客户端绑定数据
-type ClientData struct {
-	ConnId       uint32
-	AccountId    int64
-	PlayerId     int64
-	GameServerId int32
-}
-
 // 初始化
 func (this *GateServer) Init(ctx context.Context, configFile string) bool {
 	_gateServer = this
 	if !this.BaseServer.Init(ctx, configFile) {
 		return false
 	}
-	this.clients = make(map[int64]*ClientData)
+	this.clients = make(map[int64]*network.ClientData)
 	this.readConfig()
 	this.initCache()
 	this.GetServerList().SetCache(cache.Get())
 
 	// 监听普通TCP客户端
-	this.clientListener = ListenClient(this.config.ClientListenAddr, nil, this.registerClientPacket)
+	this.clientListener = network.ListenGateClient(this.config.ClientListenAddr, &ClientListerHandler{}, this.registerClientPacket)
 	if this.clientListener == nil {
 		panic("listen client failed")
 		return false
@@ -69,7 +61,7 @@ func (this *GateServer) Init(ctx context.Context, configFile string) bool {
 	// 监听WebSocket客户端
 	if this.config.WsClientListenAddr != "" {
 		// WebSocket测试
-		this.wsClientListener = ListenWebSocketClient(this.config.WsClientListenAddr, &ClientListerHandler{}, this.registerClientPacket)
+		this.wsClientListener = network.ListenWebSocketClient(this.config.WsClientListenAddr, &ClientListerHandler{}, this.registerClientPacket)
 		if this.wsClientListener == nil {
 			panic("listen websocket client failed")
 			return false
@@ -77,7 +69,7 @@ func (this *GateServer) Init(ctx context.Context, configFile string) bool {
 	}
 
 	// 连接其他服务器
-	this.BaseServer.SetDefaultServerConnectorConfig(this.config.ServerConnConfig, NewGateCodec(nil))
+	this.BaseServer.SetDefaultServerConnectorConfig(network.ServerConnectionConfig, network.NewGateCodec(nil))
 	this.BaseServer.GetServerList().SetFetchAndConnectServerTypes(ServerType_Login, ServerType_Game)
 	// gate连接其他服务器
 	this.BaseServer.GetServerList().SetServerConnectorFunc(func(ctx context.Context, info ServerInfo) Connection {
@@ -87,7 +79,7 @@ func (this *GateServer) Init(ctx context.Context, configFile string) bool {
 	defaultServerHandler := this.BaseServer.GetDefaultServerConnectorConfig().Handler.(*DefaultConnectionHandler)
 	// gate和其他服务器之间使用GatePacket
 	defaultServerHandler.RegisterHeartBeat(func() Packet {
-		return NewGatePacket(0, PacketCommand(pb.CmdInner_Cmd_HeartBeatReq), &pb.HeartBeatReq{
+		return network.NewGatePacket(0, PacketCommand(pb.CmdInner_Cmd_HeartBeatReq), &pb.HeartBeatReq{
 			Timestamp: util.GetCurrentMS(),
 		})
 	})
@@ -142,11 +134,11 @@ func (this *GateServer) registerClientPacket(clientHandler *DefaultConnectionHan
 func (this *GateServer) routeToLoginServer(connection Connection, packet Packet) {
 	message := packet.Message()
 	data := packet.GetStreamData()
-	var gatePacket *GatePacket
+	var gatePacket *network.GatePacket
 	if message != nil {
-		gatePacket = NewGatePacket(0, packet.Command(), message)
+		gatePacket = network.NewGatePacket(0, packet.Command(), message)
 	} else {
-		gatePacket = NewGatePacketWithData(0, packet.Command(), data)
+		gatePacket = network.NewGatePacketWithData(0, packet.Command(), data)
 	}
 	loginServers := this.GetServerList().GetServersByType(ServerType_Login)
 	if len(loginServers) == 0 {
@@ -168,14 +160,14 @@ func (this *GateServer) routeToLoginServer(connection Connection, packet Packet)
 
 // 登录期间,playerId还没确定,这时候GatePacket.PlayerId用来存储connId
 func (this *GateServer) routeToGameServerWithConnId(connection Connection, packet Packet) {
-	if clientData, ok := connection.GetTag().(*ClientData); ok {
+	if clientData, ok := connection.GetTag().(*network.ClientData); ok {
 		message := packet.Message()
 		data := packet.GetStreamData()
-		var gatePacket *GatePacket
+		var gatePacket *network.GatePacket
 		if message != nil {
-			gatePacket = NewGatePacket(0, packet.Command(), message)
+			gatePacket = network.NewGatePacket(0, packet.Command(), message)
 		} else {
-			gatePacket = NewGatePacketWithData(0, packet.Command(), data)
+			gatePacket = network.NewGatePacketWithData(0, packet.Command(), data)
 		}
 		// 附加上connId
 		gatePacket.SetPlayerId(int64(clientData.ConnId))
@@ -186,15 +178,15 @@ func (this *GateServer) routeToGameServerWithConnId(connection Connection, packe
 }
 
 func (this *GateServer) routeToGameServer(connection Connection, packet Packet) {
-	if clientData, ok := connection.GetTag().(*ClientData); ok {
+	if clientData, ok := connection.GetTag().(*network.ClientData); ok {
 		// 已验证过的客户端,转发给对应的GameServer
 		message := packet.Message()
 		data := packet.GetStreamData()
-		var gatePacket *GatePacket
+		var gatePacket *network.GatePacket
 		if message != nil {
-			gatePacket = NewGatePacket(0, packet.Command(), message)
+			gatePacket = network.NewGatePacket(0, packet.Command(), message)
 		} else {
-			gatePacket = NewGatePacketWithData(0, packet.Command(), data)
+			gatePacket = network.NewGatePacketWithData(0, packet.Command(), data)
 		}
 		// 附加上playerId
 		gatePacket.SetPlayerId(clientData.PlayerId)
@@ -215,7 +207,7 @@ func (this *GateServer) registerServerPacket(serverHandler *DefaultConnectionHan
 
 // 登录期间,playerId还没确定,这时候GatePacket.PlayerId用来存储connId
 func (this *GateServer) routeToClientWithConnId(connection Connection, packet Packet) {
-	gatePacket, _ := packet.(*GatePacket)
+	gatePacket, _ := packet.(*network.GatePacket)
 	clientConn := this.getClientConnectionByConnId(uint32(gatePacket.PlayerId()))
 	if clientConn == nil {
 		return
@@ -225,7 +217,7 @@ func (this *GateServer) routeToClientWithConnId(connection Connection, packet Pa
 
 func (this *GateServer) onLoginRes(connection Connection, packet Packet) {
 	res := packet.Message().(*pb.LoginRes)
-	gatePacket, _ := packet.(*GatePacket)
+	gatePacket, _ := packet.(*network.GatePacket)
 	clientConnId := uint32(gatePacket.PlayerId())
 	clientConn := this.getClientConnectionByConnId(clientConnId)
 	if clientConn == nil {
@@ -235,7 +227,7 @@ func (this *GateServer) onLoginRes(connection Connection, packet Packet) {
 	}
 	if res.Error == "" {
 		// 客户端登录成功,为该客户端连接设置绑定信息
-		clientData := &ClientData{
+		clientData := &network.ClientData{
 			ConnId:       clientConn.GetConnectionId(),
 			AccountId:    res.AccountId,
 			GameServerId: res.GetGameServer().GetServerId(),
@@ -249,7 +241,7 @@ func (this *GateServer) onLoginRes(connection Connection, packet Packet) {
 
 func (this *GateServer) onPlayerEntryGameRes(connection Connection, packet Packet) {
 	res := packet.Message().(*pb.PlayerEntryGameRes)
-	gatePacket, _ := packet.(*GatePacket)
+	gatePacket, _ := packet.(*network.GatePacket)
 	clientConnId := uint32(gatePacket.PlayerId())
 	clientConn := this.getClientConnectionByConnId(clientConnId)
 	if clientConn == nil {
@@ -258,7 +250,7 @@ func (this *GateServer) onPlayerEntryGameRes(connection Connection, packet Packe
 		return
 	}
 	if res.Error == "" {
-		if clientData, ok := clientConn.GetTag().(*ClientData); ok {
+		if clientData, ok := clientConn.GetTag().(*network.ClientData); ok {
 			// 登录游戏服成功后,绑定客户端连接和playerId,后续的消息都可以用playerId来关联
 			clientData.PlayerId = res.PlayerId
 			this.clientsMutex.Lock()
@@ -273,7 +265,7 @@ func (this *GateServer) onPlayerEntryGameRes(connection Connection, packet Packe
 }
 
 func (this *GateServer) routeToClient(connection Connection, packet Packet) {
-	gatePacket, _ := packet.(*GatePacket)
+	gatePacket, _ := packet.(*network.GatePacket)
 	this.clientsMutex.RLock()
 	defer this.clientsMutex.RUnlock()
 	if clientData, ok := this.clients[gatePacket.PlayerId()]; ok {

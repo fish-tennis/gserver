@@ -44,6 +44,7 @@ var (
 	}
 )
 
+// 非网关服务器监听普通TCP客户端
 func ListenClient(listenAddr string, listenerHandler gnet.ListenerHandler, packetRegister func(handler *gnet.DefaultConnectionHandler)) gnet.Listener {
 	codec := gnet.NewProtoCodec(nil)
 	handler := gnet.NewDefaultConnectionHandler(codec)
@@ -58,6 +59,22 @@ func ListenClient(listenAddr string, listenerHandler gnet.ListenerHandler, packe
 	return gnet.GetNetMgr().NewListener(gentity.GetApplication().GetContext(), listenAddr, listenerConfig)
 }
 
+// 网关服务器监听普通TCP客户端
+func ListenGateClient(listenAddr string, listenerHandler gnet.ListenerHandler, packetRegister func(handler *gnet.DefaultConnectionHandler)) gnet.Listener {
+	codec := NewClientCodec()
+	handler := gnet.NewDefaultConnectionHandler(codec)
+	handler.Register(gnet.PacketCommand(pb.CmdInner_Cmd_HeartBeatReq), onHeartBeatReq, new(pb.HeartBeatReq))
+	packetRegister(handler)
+	listenerConfig := &gnet.ListenerConfig{
+		AcceptConfig: ClientConnectionConfig,
+	}
+	listenerConfig.AcceptConfig.Codec = codec
+	listenerConfig.AcceptConfig.Handler = handler
+	listenerConfig.ListenerHandler = listenerHandler
+	return gnet.GetNetMgr().NewListener(gentity.GetApplication().GetContext(), listenAddr, listenerConfig)
+}
+
+// 网关服务器监听WebSocket客户端
 func ListenWebSocketClient(listenAddr string, listenerHandler gnet.ListenerHandler, packetRegister func(handler *gnet.DefaultConnectionHandler)) gnet.Listener {
 	codec := NewWsClientCodec()
 	handler := gnet.NewDefaultConnectionHandler(codec)
@@ -69,9 +86,11 @@ func ListenWebSocketClient(listenAddr string, listenerHandler gnet.ListenerHandl
 	listenerConfig.AcceptConfig.Codec = codec
 	listenerConfig.AcceptConfig.Handler = handler
 	listenerConfig.ListenerHandler = listenerHandler
+	listenerConfig.Path = WebSocketClientConnectionConfig.Path
 	return gnet.GetNetMgr().NewWsListener(gentity.GetApplication().GetContext(), listenAddr, listenerConfig)
 }
 
+// 其他服务器监听网关
 func ListenGate(listenAddr string, packetRegister func(handler *gnet.DefaultConnectionHandler)) gnet.Listener {
 	codec := NewGateCodec(nil)
 	handler := gnet.NewDefaultConnectionHandler(codec)
@@ -88,7 +107,8 @@ func ListenGate(listenAddr string, packetRegister func(handler *gnet.DefaultConn
 // 默认的心跳回复
 func onHeartBeatReq(connection gnet.Connection, packet gnet.Packet) {
 	req := packet.Message().(*pb.HeartBeatReq)
-	connection.Send(gnet.PacketCommand(pb.CmdInner_Cmd_HeartBeatRes), &pb.HeartBeatRes{
+	// 兼容普通消息和GatePacket
+	SendPacketAdapt(connection, packet, gnet.PacketCommand(pb.CmdInner_Cmd_HeartBeatRes), &pb.HeartBeatRes{
 		RequestTimestamp:  req.GetTimestamp(),
 		ResponseTimestamp: util.GetCurrentMS(),
 	})

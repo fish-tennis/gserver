@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/fish-tennis/gentity"
-	"github.com/fish-tennis/gentity/util"
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
 	"github.com/fish-tennis/gserver/cfg"
@@ -12,7 +11,7 @@ import (
 	"github.com/fish-tennis/gserver/game"
 	. "github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
-	. "github.com/fish-tennis/gserver/network"
+	"github.com/fish-tennis/gserver/network"
 	"github.com/fish-tennis/gserver/pb"
 	"github.com/fish-tennis/gserver/social"
 	"google.golang.org/protobuf/proto"
@@ -56,12 +55,12 @@ func (this *GameServer) Init(ctx context.Context, configFile string) bool {
 
 	// NOTE: 实际项目中,监听客户端和监听网关,二选一即可
 	// 这里为了演示,同时提供客户端直连和网关两种模式
-	if ListenClient(this.config.ClientListenAddr, &ClientListerHandler{}, this.registerClientPacket) == nil {
+	if network.ListenClient(this.config.ClientListenAddr, &ClientListerHandler{}, this.registerClientPacket) == nil {
 		panic("listen client failed")
 		return false
 	}
 
-	this.gateListener = ListenGate(this.config.GateListenAddr, this.registerGatePacket)
+	this.gateListener = network.ListenGate(this.config.GateListenAddr, this.registerGatePacket)
 	if this.gateListener == nil {
 		panic("listen gate failed")
 		return false
@@ -70,7 +69,7 @@ func (this *GameServer) Init(ctx context.Context, configFile string) bool {
 	// 其他模块初始化接口
 	this.AddServerHook(&game.Hook{}, &social.Hook{})
 
-	this.serverListener = this.BaseServer.StartServer(ctx, this.config.ServerListenAddr, this.config.ServerConnConfig,
+	this.serverListener = this.BaseServer.StartServer(ctx, this.config.ServerListenAddr, network.ServerConnectionConfig,
 		this.registerServerPacket, []string{ServerType_Game})
 	if this.serverListener == nil {
 		panic("listen server failed")
@@ -190,7 +189,6 @@ func (this *GameServer) repairPlayerCache(playerId, accountId int64) error {
 // 注册客户端消息回调
 func (this *GameServer) registerClientPacket(clientHandler *DefaultConnectionHandler) {
 	// 手动注册特殊的消息回调
-	clientHandler.Register(PacketCommand(pb.CmdInner_Cmd_HeartBeatReq), onHeartBeatReq, new(pb.HeartBeatReq))
 	clientHandler.Register(PacketCommand(pb.CmdClient_Cmd_PlayerEntryGameReq), onPlayerEntryGameReq, new(pb.PlayerEntryGameReq))
 	clientHandler.Register(PacketCommand(pb.CmdClient_Cmd_CreatePlayerReq), onCreatePlayerReq, new(pb.CreatePlayerReq))
 	this.registerGatePlayerPacket(clientHandler, PacketCommand(pb.CmdInner_Cmd_TestCmd), onTestCmd, new(pb.TestCmd))
@@ -198,25 +196,15 @@ func (this *GameServer) registerClientPacket(clientHandler *DefaultConnectionHan
 	game.AutoRegisterPlayerPacketHandler(clientHandler)
 }
 
-// 心跳回复
-func onHeartBeatReq(connection Connection, packet Packet) {
-	req := packet.Message().(*pb.HeartBeatReq)
-	SendPacketAdapt(connection, packet, PacketCommand(pb.CmdInner_Cmd_HeartBeatRes), &pb.HeartBeatRes{
-		RequestTimestamp:  req.GetTimestamp(),
-		ResponseTimestamp: util.GetCurrentMS(),
-	})
-}
-
 // 注册网关消息回调
 func (this *GameServer) registerGatePacket(gateHandler *DefaultConnectionHandler) {
 	// 手动注册特殊的消息回调
-	gateHandler.Register(PacketCommand(pb.CmdInner_Cmd_HeartBeatReq), onHeartBeatReq, new(pb.HeartBeatReq))
 	gateHandler.Register(PacketCommand(pb.CmdClient_Cmd_PlayerEntryGameReq), onPlayerEntryGameReq, new(pb.PlayerEntryGameReq))
 	gateHandler.Register(PacketCommand(pb.CmdClient_Cmd_CreatePlayerReq), onCreatePlayerReq, new(pb.CreatePlayerReq))
 	gateHandler.Register(PacketCommand(pb.CmdInner_Cmd_ClientDisconnect), onClientDisconnect, new(pb.TestCmd))
 	this.registerGatePlayerPacket(gateHandler, PacketCommand(pb.CmdInner_Cmd_TestCmd), onTestCmd, new(pb.TestCmd))
 	gateHandler.SetUnRegisterHandler(func(connection Connection, packet Packet) {
-		if gatePacket, ok := packet.(*GatePacket); ok {
+		if gatePacket, ok := packet.(*network.GatePacket); ok {
 			playerId := gatePacket.PlayerId()
 			player := this.GetPlayer(playerId)
 			if player != nil {
@@ -249,7 +237,7 @@ func (this *GameServer) registerGatePacket(gateHandler *DefaultConnectionHandler
 func (this *GameServer) registerGatePlayerPacket(gateHandler PacketHandlerRegister, packetCommand PacketCommand, playerHandler func(player *game.Player, packet Packet), protoMessage proto.Message) {
 	gateHandler.Register(packetCommand, func(connection Connection, packet Packet) {
 		var playerId int64
-		if gatePacket, ok := packet.(*GatePacket); ok {
+		if gatePacket, ok := packet.(*network.GatePacket); ok {
 			// 网关转发的消息,包含playerId
 			playerId = gatePacket.PlayerId()
 		} else {
@@ -267,7 +255,7 @@ func (this *GameServer) registerGatePlayerPacket(gateHandler PacketHandlerRegist
 			return
 		}
 		// 网关模式,使用的GatePacket
-		if gatePacket, ok := packet.(*GatePacket); ok {
+		if gatePacket, ok := packet.(*network.GatePacket); ok {
 			// 转换成ProtoPacket,业务层统一接口
 			player.OnRecvPacket(gatePacket.ToProtoPacket())
 		} else {
@@ -281,7 +269,6 @@ func (this *GameServer) registerGatePlayerPacket(gateHandler PacketHandlerRegist
 // 注册服务器消息回调
 func (this *GameServer) registerServerPacket(handler ConnectionHandler) {
 	serverHandler := handler.(*DefaultConnectionHandler)
-	serverHandler.Register(PacketCommand(pb.CmdInner_Cmd_HeartBeatReq), onHeartBeatReq, new(pb.HeartBeatReq))
 	serverHandler.Register(PacketCommand(pb.CmdInner_Cmd_KickPlayer), this.onKickPlayer, new(pb.KickPlayer))
 	serverHandler.Register(PacketCommand(pb.CmdServer_Cmd_RoutePlayerMessage), this.onRoutePlayerMessage, new(pb.RoutePlayerMessage))
 	//serverHandler.autoRegisterPlayerComponentProto()

@@ -2,11 +2,18 @@ package network
 
 import (
 	. "github.com/fish-tennis/gnet"
-	"github.com/fish-tennis/gserver/gate"
 	"github.com/fish-tennis/gserver/logger"
 	"google.golang.org/protobuf/proto"
 	"reflect"
 )
+
+// 客户端绑定数据
+type ClientData struct {
+	ConnId       uint32
+	AccountId    int64
+	PlayerId     int64
+	GameServerId int32
+}
 
 // WebSocket客户端和gate之间的编解码
 type WsClientCodec struct {
@@ -43,7 +50,7 @@ func (this *WsClientCodec) Decode(connection Connection, data []byte) (newPacket
 		}
 	}
 	// 其他消息,gate直接转发,附加上playerId
-	if clientData, ok := connection.GetTag().(*gate.ClientData); ok {
+	if clientData, ok := connection.GetTag().(*ClientData); ok {
 		return NewGatePacketWithData(clientData.PlayerId, PacketCommand(command), data[SimplePacketHeaderSize:]), nil
 	}
 	logger.Error("unSupport command:%v", command)

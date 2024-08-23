@@ -19,7 +19,7 @@ func (this *ClientListerHandler) OnConnectionDisconnect(listener Listener, conne
 	if connection.GetTag() == nil {
 		return
 	}
-	if clientData, ok := connection.GetTag().(*ClientData); ok {
+	if clientData, ok := connection.GetTag().(*network.ClientData); ok {
 		connection.SetTag(nil)
 		if clientData.PlayerId > 0 {
 			_gateServer.clientsMutex.Lock()

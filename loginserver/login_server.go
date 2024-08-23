@@ -9,7 +9,7 @@ import (
 	"github.com/fish-tennis/gserver/cache"
 	"github.com/fish-tennis/gserver/db"
 	. "github.com/fish-tennis/gserver/internal"
-	. "github.com/fish-tennis/gserver/network"
+	"github.com/fish-tennis/gserver/network"
 	"github.com/fish-tennis/gserver/pb"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -55,11 +55,11 @@ func (this *LoginServer) Init(ctx context.Context, configFile string) bool {
 	this.GetServerList().SetCache(cache.Get())
 	// NOTE: 实际项目中,监听客户端和监听网关,二选一即可
 	// 这里为了演示,同时提供客户端直连和网关两种模式
-	if ListenClient(this.config.ClientListenAddr, nil, this.registerClientPacket) == nil {
+	if network.ListenClient(this.config.ClientListenAddr, nil, this.registerClientPacket) == nil {
 		panic("listen client failed")
 		return false
 	}
-	if ListenGate(this.config.GateListenAddr, this.registerServerPacket) == nil {
+	if network.ListenGate(this.config.GateListenAddr, this.registerServerPacket) == nil {
 		panic("listen gate failed")
 		return false
 	}
