@@ -1,32 +1,7 @@
 {
   "ServerId": 1,
   "ClientListenAddr": "127.0.0.1:10001",
-  "ClientConnConfig": {
-    "SendPacketCacheCap": 8,
-    "SendBufferSize": 10240,
-    "RecvBufferSize": 10240,
-    "MaxPacketSize": 10240,
-    "RecvTimeout": 20
-  },
-  "ServerConnConfig": {
-    "SendPacketCacheCap": 64,
-    "SendBufferSize": 2097152,
-    "RecvBufferSize": 2097152,
-    "MaxPacketSize": 1048576,
-    "RecvTimeout": 20,
-    "HeartBeatInterval": 5
-  },
   "WsClientListenAddr": "127.0.0.1:8080",
-  "WsClientListenerConfig":{
-    "AcceptConfig": {
-      "SendPacketCacheCap": 8,
-      "SendBufferSize": 10240,
-      "RecvBufferSize": 10240,
-      "MaxPacketSize": 10240,
-      "RecvTimeout": 20
-    },
-    "Path": "/ws"
-  },
   "RedisUri": ["127.0.0.1:6379"],
   "RedisCluster": true
 }

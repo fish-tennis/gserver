@@ -1,23 +1,8 @@
 {
   "ServerId": 11,
   "ClientListenAddr": "127.0.0.1:10002",
-  "ClientConnConfig": {
-    "SendPacketCacheCap": 8,
-    "SendBufferSize": 10240,
-    "RecvBufferSize": 10240,
-    "MaxPacketSize": 10240,
-    "RecvTimeout": 20
-  },
   "GateListenAddr": "127.0.0.1:10003",
-  "ServerConnConfig": {
-    "SendPacketCacheCap": 64,
-    "SendBufferSize": 2097152,
-    "RecvBufferSize": 2097152,
-    "MaxPacketSize": 1048576,
-    "RecvTimeout": 20,
-    "HeartBeatInterval": 5
-  },
-  "MongoUri": "mongodb://localhost:27017",
+  "MongoUri": "mongodb://127.0.0.1:27017",
   "MongoDbName": "testdb",
   "RedisUri": ["127.0.0.1:6379"],
   "RedisCluster": true

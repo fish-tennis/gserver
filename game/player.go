@@ -239,14 +239,14 @@ func (this *Player) processMessage(message *ProtoPacket) {
 		this.SaveCache(cache.Get())
 		return
 	}
-	// 再找func(connection Connection, packet Packet)的回调接口
-	packetHandler := _clientConnectionHandler.GetPacketHandler(message.Command())
-	if packetHandler != nil {
-		packetHandler(this.GetConnection(), message)
-		// 如果有需要保存的数据修改了,即时保存缓存
-		this.SaveCache(cache.Get())
-		return
-	}
+	//// 再找func(connection Connection, packet Packet)的回调接口
+	//packetHandler := _clientConnectionHandler.GetPacketHandler(message.Command())
+	//if packetHandler != nil {
+	//	packetHandler(this.GetConnection(), message)
+	//	// 如果有需要保存的数据修改了,即时保存缓存
+	//	this.SaveCache(cache.Get())
+	//	return
+	//}
 	logger.Error("unhandled cmd:%v message:%v", message.Command(), proto.MessageName(message.Message()).Name())
 }
 

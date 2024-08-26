@@ -132,8 +132,8 @@ func (this *Guild) OnGuildCreateReq(req *pb.GuildCreateReq) {
 	saveData := map[string]any{
 		db.UniqueIdName: newGuildData.Id, // mongodb _id特殊处理
 		"Id":            newGuildData.Id,
-		"Name":          player.GetName(),
-		"Position":      int32(pb.GuildPosition_Leader),
+		"BaseInfo":      newGuildData.BaseInfo,
+		"Members":       newGuildData.Members,
 	}
 	dbErr, isDuplicateName := guildDb.InsertEntity(newGuildData.Id, saveData)
 	if dbErr != nil {

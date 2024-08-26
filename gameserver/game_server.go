@@ -204,39 +204,49 @@ func (this *GameServer) repairPlayerCache(playerId, accountId int64) error {
 }
 
 // 注册客户端消息回调
-func (this *GameServer) registerClientPacket(clientHandler *DefaultConnectionHandler) {
+func (this *GameServer) registerClientPacket(handler *DefaultConnectionHandler) {
 	// 手动注册特殊的消息回调
-	clientHandler.Register(PacketCommand(pb.CmdClient_Cmd_PlayerEntryGameReq), onPlayerEntryGameReq, new(pb.PlayerEntryGameReq))
-	clientHandler.Register(PacketCommand(pb.CmdClient_Cmd_CreatePlayerReq), onCreatePlayerReq, new(pb.CreatePlayerReq))
-	this.registerGatePlayerPacket(clientHandler, PacketCommand(pb.CmdInner_Cmd_TestCmd), onTestCmd, new(pb.TestCmd))
-	// 通过反射自动注册消息回调
-	game.AutoRegisterPlayerPacketHandler(clientHandler)
-}
-
-// 注册网关消息回调
-func (this *GameServer) registerGatePacket(gateHandler *DefaultConnectionHandler) {
-	// 手动注册特殊的消息回调
-	gateHandler.Register(PacketCommand(pb.CmdClient_Cmd_PlayerEntryGameReq), onPlayerEntryGameReq, new(pb.PlayerEntryGameReq))
-	gateHandler.Register(PacketCommand(pb.CmdClient_Cmd_CreatePlayerReq), onCreatePlayerReq, new(pb.CreatePlayerReq))
-	gateHandler.Register(PacketCommand(pb.CmdInner_Cmd_ClientDisconnect), onClientDisconnect, new(pb.TestCmd))
-	this.registerGatePlayerPacket(gateHandler, PacketCommand(pb.CmdInner_Cmd_TestCmd), onTestCmd, new(pb.TestCmd))
-	gateHandler.SetUnRegisterHandler(func(connection Connection, packet Packet) {
+	handler.Register(PacketCommand(pb.CmdClient_Cmd_PlayerEntryGameReq), onPlayerEntryGameReq, new(pb.PlayerEntryGameReq))
+	handler.Register(PacketCommand(pb.CmdClient_Cmd_CreatePlayerReq), onCreatePlayerReq, new(pb.CreatePlayerReq))
+	this.registerGatePlayerPacket(handler, PacketCommand(pb.CmdInner_Cmd_TestCmd), onTestCmd, new(pb.TestCmd))
+	handler.SetUnRegisterHandler(func(connection Connection, packet Packet) {
+		var playerId int64
+		var playerPacket *ProtoPacket
 		if gatePacket, ok := packet.(*network.GatePacket); ok {
-			playerId := gatePacket.PlayerId()
-			player := this.GetPlayer(playerId)
-			if player != nil {
-				if gamePlayer, ok := player.(*game.Player); ok {
-					if gamePlayer.GetConnection() == connection {
-						// 在线玩家的消息,转到玩家消息处理协程去处理
-						gamePlayer.OnRecvPacket(gatePacket.ToProtoPacket())
-						logger.Debug("gate->player playerId:%v cmd:%v", playerId, packet.Command())
-					}
+			// 网关转发的消息,包含playerId
+			playerId = gatePacket.PlayerId()
+			playerPacket = gatePacket.ToProtoPacket()
+		} else {
+			// 客户端直连的模式
+			if connection.GetTag() == nil {
+				return
+			}
+			playerId, ok = connection.GetTag().(int64)
+			if !ok {
+				return
+			}
+			playerPacket = packet.(*ProtoPacket)
+		}
+		player := this.GetPlayer(playerId)
+		if player != nil {
+			if gamePlayer, ok := player.(*game.Player); ok {
+				if gamePlayer.GetConnection() == connection {
+					// 在线玩家的消息,转到玩家消息处理协程去处理
+					gamePlayer.OnRecvPacket(playerPacket)
 				}
 			}
 		}
 	})
+	// 通过反射自动注册消息回调
+	game.AutoRegisterPlayerPacketHandler(handler)
+}
+
+// 注册网关消息回调
+func (this *GameServer) registerGatePacket(handler *DefaultConnectionHandler) {
+	this.registerClientPacket(handler)
+	handler.Register(PacketCommand(pb.CmdInner_Cmd_ClientDisconnect), onClientDisconnect, new(pb.ClientDisconnect))
 	// 网关服务器掉线,该网关上的所有玩家都掉线
-	gateHandler.SetOnDisconnectedFunc(func(connection Connection) {
+	handler.SetOnDisconnectedFunc(func(connection Connection) {
 		this.playerMap.Range(func(key, value interface{}) bool {
 			if player, ok := value.(*game.Player); ok {
 				if player.GetConnection() == connection {
@@ -246,8 +256,6 @@ func (this *GameServer) registerGatePacket(gateHandler *DefaultConnectionHandler
 			return true
 		})
 	})
-	// 通过反射自动注册消息和proto.Message的映射
-	game.AutoRegisterPlayerPacketHandler(gateHandler)
 }
 
 // 注册func(player *Player, packet Packet)格式的消息回调函数,支持网关模式和客户端直连模式
