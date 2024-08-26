@@ -52,11 +52,9 @@ func main() {
 	baseFileName = strings.TrimSuffix(baseFileName, filepath.Ext(baseFileName)) // login_test
 	serverType := getServerTypeFromConfigFile(configFile)
 	initLog(baseFileName, !isDaemon)
-	server := createServer(serverType)
-	gentity.SetApplication(server)
-
-	// context实现优雅的协程关闭通知
 	ctx, cancel := context.WithCancel(context.Background())
+	server := createServer(ctx, serverType, configFile)
+	gentity.SetApplication(server)
 	// 服务器初始化
 	if !server.Init(ctx, configFile) {
 		panic("server init error")
@@ -157,14 +155,14 @@ func getServerTypeFromConfigFile(configFile string) string {
 }
 
 // 创建相应类型的服务器
-func createServer(serverType string) gentity.Application {
+func createServer(ctx context.Context, serverType, configFile string) gentity.Application {
 	switch strings.ToLower(serverType) {
 	case strings.ToLower(internal.ServerType_Gate):
-		return new(gate.GateServer)
+		return gate.NewGateServer(ctx, configFile)
 	case strings.ToLower(internal.ServerType_Login):
-		return new(loginserver.LoginServer)
+		return loginserver.NewLoginServer(ctx, configFile)
 	case strings.ToLower(internal.ServerType_Game):
-		return new(gameserver.GameServer)
+		return gameserver.NewGameServer(ctx, configFile)
 	}
 	panic("err server type")
 }

@@ -21,14 +21,14 @@ type BaseServerConfig struct {
 	ServerId int32
 	// 客户端监听地址
 	ClientListenAddr string
-	// 客户端监听配置
-	ClientConnConfig ConnectionConfig
+	//// 客户端监听配置
+	//ClientConnConfig ConnectionConfig
 	// 网关监听地址
 	GateListenAddr string
 	// 其他服务器监听地址
 	ServerListenAddr string
-	// 服务器连接配置
-	ServerConnConfig ConnectionConfig
+	//// 服务器连接配置
+	//ServerConnConfig ConnectionConfig
 	// mongodb地址
 	MongoUri string
 	// mongodb db name
@@ -53,12 +53,19 @@ type BaseServer struct {
 	updateInterval time.Duration
 	// 更新次数
 	updateCount int64
-	// 服务器连接配置
-	serverConfig          *BaseServerConfig
-	serverConnectorConfig ConnectionConfig
-	ctx                   context.Context
-	wg                    sync.WaitGroup
-	serverHooks           []gentity.ApplicationHook
+	ctx         context.Context
+	wg          sync.WaitGroup
+	serverHooks []gentity.ApplicationHook
+}
+
+func NewBaseServer(ctx context.Context, serverType string, configFile string) *BaseServer {
+	return &BaseServer{
+		ctx:        ctx,
+		configFile: configFile,
+		serverInfo: &pb.ServerInfo{
+			ServerType: serverType,
+		},
+	}
 }
 
 func (this *BaseServer) GetConfigFile() string {
@@ -95,16 +102,11 @@ func (this *BaseServer) GetServerHooks() []gentity.ApplicationHook {
 
 // 加载配置文件
 func (this *BaseServer) Init(ctx context.Context, configFile string) bool {
-	logger.Info("BaseServer.Init")
-	this.configFile = configFile
-	this.serverInfo = new(pb.ServerInfo)
-	this.serverList = NewServerList()
-	this.serverList.SetLocalServerInfo(this.serverInfo)
-	this.serverList.SetServerConnectorFunc(this.DefaultServerConnectorFunc)
-	this.updateInterval = time.Second
+	slog.Info("BaseServer.Init")
 	// 初始化id生成器
 	util.InitIdGenerator(uint16(this.serverInfo.ServerId))
-	this.ctx = ctx
+	this.serverList = NewServerList(this.serverInfo)
+	this.updateInterval = time.Second
 	return true
 }
 
@@ -169,132 +171,12 @@ func (this *BaseServer) updateLoop(ctx context.Context) {
 	}
 }
 
-func (this *BaseServer) GetDefaultServerConnectorConfig() *ConnectionConfig {
-	return &this.serverConnectorConfig
-}
-
-// 启动服务器之间的监听和连接
-func (this *BaseServer) StartServer(ctx context.Context, serverListenAddr string, serverConnectionConfig ConnectionConfig,
-	serverHandlerRegister func(handler ConnectionHandler), connectServerTypes []string) Listener {
-	// listener的codec和handler
-	listenerCodec := NewProtoCodec(nil)
-	acceptServerHandler := NewDefaultConnectionHandler(listenerCodec)
-	serverListenerConfig := &ListenerConfig{
-		AcceptConfig: serverConnectionConfig,
-	}
-	serverListenerConfig.AcceptConfig.Codec = listenerCodec
-	serverListenerConfig.AcceptConfig.Handler = acceptServerHandler
-	acceptServerHandler.Register(PacketCommand(pb.CmdInner_Cmd_HeartBeatReq), func(connection Connection, packet Packet) {
-		req := packet.Message().(*pb.HeartBeatReq)
-		network.SendPacketAdapt(connection, packet, PacketCommand(pb.CmdInner_Cmd_HeartBeatRes), &pb.HeartBeatRes{
-			RequestTimestamp:  req.GetTimestamp(),
-			ResponseTimestamp: util.GetCurrentMS(),
-		})
-	}, new(pb.HeartBeatReq))
-	acceptServerHandler.Register(PacketCommand(pb.CmdInner_Cmd_ServerHello), func(connection Connection, packet Packet) {
-		serverHello := packet.Message().(*pb.ServerHello)
-		this.GetServerList().OnServerConnected(serverHello.ServerId, connection)
-		slog.Info("AcceptServer", "serverHello", serverHello, "connId", connection.GetConnectionId())
-	}, new(pb.ServerHello))
-	serverHandlerRegister(acceptServerHandler)
-	for _, hook := range this.GetServerHooks() {
-		hook.OnRegisterServerHandler(acceptServerHandler)
-	}
-	serverListener := GetNetMgr().NewListener(ctx, serverListenAddr, serverListenerConfig)
-	if serverListener == nil {
-		panic("listen server failed")
-		return nil
-	}
-
-	// connector的codec和handler
-	connectorCodec := NewProtoCodec(nil)
-	connectorHandler := NewDefaultConnectionHandler(connectorCodec)
-	connectorHandler.SetOnConnectedFunc(func(connection Connection, success bool) {
-		slog.Info("OnConnectedServer", "RemoteAddr", connection.RemoteAddr().String(),
-			"connId", connection.GetConnectionId(), "success", success)
-		if !success {
-			return
-		}
-		// 连接成功后,告诉对方自己的服务器id和type
-		connection.SendPacket(NewProtoPacketEx(pb.CmdInner_Cmd_ServerHello, &pb.ServerHello{
-			ServerId:   this.GetServerList().GetLocalServerInfo().GetServerId(),
-			ServerType: this.GetServerList().GetLocalServerInfo().GetServerType(),
-		}))
-	})
-	connectorHandler.SetOnDisconnectedFunc(func(connection Connection) {
-		if connection.GetTag() == nil {
-			return
-		}
-		serverId := connection.GetTag().(int32)
-		this.serverList.OnServerConnectorDisconnect(serverId)
-	})
-	connectorHandler.RegisterHeartBeat(func() Packet {
-		return NewProtoPacket(PacketCommand(pb.CmdInner_Cmd_HeartBeatReq), &pb.HeartBeatReq{
-			Timestamp: util.GetCurrentMS(),
-		})
-	})
-	connectorHandler.Register(PacketCommand(pb.CmdInner_Cmd_HeartBeatRes), func(connection Connection, packet Packet) {
-		// TODO: set ping (ServerInfo)
-	}, new(pb.HeartBeatRes))
-	serverHandlerRegister(connectorHandler)
-	// 其他模块注册服务器之间的消息回调
-	for _, hook := range this.GetServerHooks() {
-		hook.OnRegisterServerHandler(connectorHandler)
-	}
-	// 连接其他服务器
-	this.serverConnectorConfig = serverConnectionConfig
-	this.serverConnectorConfig.Codec = connectorCodec
-	this.serverConnectorConfig.Handler = connectorHandler
-	this.GetServerList().SetFetchAndConnectServerTypes(connectServerTypes...)
-	return serverListener
-}
-
 func (this *BaseServer) NewAdaptPacket(cmd PacketCommand, message proto.Message) Packet {
 	if this.serverInfo.ServerType == ServerType_Gate {
 		return network.NewGatePacket(0, cmd, message)
 	} else {
 		return NewProtoPacket(cmd, message)
 	}
-}
-
-// 设置默认的服务器连接器的编解码和回调接口
-func (this *BaseServer) SetDefaultServerConnectorConfig(config ConnectionConfig, defaultServerConnectorCodec Codec) {
-	this.serverConnectorConfig = config
-	handler := NewDefaultConnectionHandler(defaultServerConnectorCodec)
-	handler.SetOnConnectedFunc(func(connection Connection, success bool) {
-		slog.Info("OnConnectedServer", "RemoteAddr", connection.RemoteAddr().String(), "success", success)
-		if !success {
-			return
-		}
-		// 连接成功后,告诉对方自己的服务器id和type
-		connection.SendPacket(this.NewAdaptPacket(PacketCommand(pb.CmdInner_Cmd_ServerHello), &pb.ServerHello{
-			ServerId:   this.GetServerList().GetLocalServerInfo().GetServerId(),
-			ServerType: this.GetServerList().GetLocalServerInfo().GetServerType(),
-		}))
-	})
-	handler.SetOnDisconnectedFunc(func(connection Connection) {
-		if connection.GetTag() == nil {
-			return
-		}
-		serverId := connection.GetTag().(int32)
-		this.serverList.OnServerConnectorDisconnect(serverId)
-	})
-	handler.RegisterHeartBeat(func() Packet {
-		return this.NewAdaptPacket(PacketCommand(pb.CmdInner_Cmd_HeartBeatReq), &pb.HeartBeatReq{
-			Timestamp: util.GetCurrentMS(),
-		})
-	})
-	handler.Register(PacketCommand(pb.CmdInner_Cmd_HeartBeatRes), func(connection Connection, packet Packet) {
-		// TODO: set ping (ServerInfo)
-	}, new(pb.HeartBeatRes))
-	this.serverConnectorConfig.Codec = defaultServerConnectorCodec
-	this.serverConnectorConfig.Handler = handler
-}
-
-// 默认的服务器连接接口
-func (this *BaseServer) DefaultServerConnectorFunc(ctx context.Context, info ServerInfo) Connection {
-	serverInfo := info.(*pb.ServerInfo)
-	return GetNetMgr().NewConnector(ctx, serverInfo.GetServerListenAddr(), &this.serverConnectorConfig, nil)
 }
 
 // 发消息给另一个服务器

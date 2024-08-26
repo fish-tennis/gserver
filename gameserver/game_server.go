@@ -25,12 +25,10 @@ var (
 
 // 游戏服
 type GameServer struct {
-	BaseServer
+	*BaseServer
 	config *GameServerConfig
 	// 网关服务器listener
 	gateListener Listener
-	// 服务器listener
-	serverListener Listener
 	// 在线玩家
 	playerMap sync.Map // playerId-*player
 }
@@ -40,41 +38,30 @@ type GameServerConfig struct {
 	BaseServerConfig
 }
 
+func NewGameServer(ctx context.Context, configFile string) *GameServer {
+	s := &GameServer{
+		BaseServer: NewBaseServer(ctx, ServerType_Game, configFile),
+		config:     new(GameServerConfig),
+	}
+	s.readConfig()
+	return s
+}
+
 // 初始化
 func (this *GameServer) Init(ctx context.Context, configFile string) bool {
 	game.SetPlayerMgr(this)
 	if !this.BaseServer.Init(ctx, configFile) {
 		return false
 	}
-	this.readConfig()
 	this.loadCfgs()
+
 	game.InitPlayerStructAndHandler()
-	this.initDb()
-	this.initCache()
-	this.GetServerList().SetCache(cache.Get())
-
-	// NOTE: 实际项目中,监听客户端和监听网关,二选一即可
-	// 这里为了演示,同时提供客户端直连和网关两种模式
-	if network.ListenClient(this.config.ClientListenAddr, &ClientListerHandler{}, this.registerClientPacket) == nil {
-		panic("listen client failed")
-		return false
-	}
-
-	this.gateListener = network.ListenGate(this.config.GateListenAddr, this.registerGatePacket)
-	if this.gateListener == nil {
-		panic("listen gate failed")
-		return false
-	}
-
 	// 其他模块初始化接口
 	this.AddServerHook(&game.Hook{}, &social.Hook{})
 
-	this.serverListener = this.BaseServer.StartServer(ctx, this.config.ServerListenAddr, network.ServerConnectionConfig,
-		this.registerServerPacket, []string{ServerType_Game})
-	if this.serverListener == nil {
-		panic("listen server failed")
-		return false
-	}
+	this.initDb()
+	this.initCache()
+	this.initNetwork()
 
 	for _, hook := range this.BaseServer.GetServerHooks() {
 		hook.OnApplicationInit(nil)
@@ -120,7 +107,6 @@ func (this *GameServer) readConfig() {
 	}
 	logger.Debug("%v", this.config)
 	this.BaseServer.GetServerInfo().ServerId = this.config.ServerId
-	this.BaseServer.GetServerInfo().ServerType = ServerType_Game
 	this.BaseServer.GetServerInfo().ClientListenAddr = this.config.ClientListenAddr
 	this.BaseServer.GetServerInfo().GateListenAddr = this.config.GateListenAddr
 	this.BaseServer.GetServerInfo().ServerListenAddr = this.config.ServerListenAddr
@@ -165,6 +151,37 @@ func (this *GameServer) initCache() {
 		panic("redis connect error")
 	}
 	this.repairCache()
+}
+
+func (this *GameServer) initNetwork() {
+	// NOTE: 实际项目中,监听客户端和监听网关,二选一即可
+	// 这里为了演示,同时提供客户端直连和网关两种模式
+	if network.ListenClient(this.config.ClientListenAddr, &ClientListerHandler{}, this.registerClientPacket) == nil {
+		panic("listen client failed")
+	}
+
+	this.gateListener = network.ListenGate(this.config.GateListenAddr, this.registerGatePacket)
+	if this.gateListener == nil {
+		panic("listen gate failed")
+	}
+
+	this.GetServerList().SetCache(cache.Get())
+	// 注册业务层的消息回调
+	serverHandlers := []*DefaultConnectionHandler{
+		this.GetServerList().GetServerConnectionHandler(),
+		this.GetServerList().GetServerListenerHandler(),
+	}
+	for _, serverHandler := range serverHandlers {
+		this.registerServerPacket(serverHandler)
+		// 其他模块注册服务器之间的消息回调
+		for _, hook := range this.GetServerHooks() {
+			hook.OnRegisterServerHandler(serverHandler)
+		}
+	}
+	this.GetServerList().SetFetchAndConnectServerTypes(ServerType_Game)
+	if this.GetServerList().StartListen(this.GetContext(), this.config.ServerListenAddr) == nil {
+		panic("listen server failed")
+	}
 }
 
 // 修复缓存,游戏服异常宕机重启后进行修复操作
@@ -267,10 +284,9 @@ func (this *GameServer) registerGatePlayerPacket(gateHandler PacketHandlerRegist
 }
 
 // 注册服务器消息回调
-func (this *GameServer) registerServerPacket(handler ConnectionHandler) {
-	serverHandler := handler.(*DefaultConnectionHandler)
-	serverHandler.Register(PacketCommand(pb.CmdInner_Cmd_KickPlayer), this.onKickPlayer, new(pb.KickPlayer))
-	serverHandler.Register(PacketCommand(pb.CmdServer_Cmd_RoutePlayerMessage), this.onRoutePlayerMessage, new(pb.RoutePlayerMessage))
+func (this *GameServer) registerServerPacket(handler *DefaultConnectionHandler) {
+	handler.Register(PacketCommand(pb.CmdInner_Cmd_KickPlayer), this.onKickPlayer, new(pb.KickPlayer))
+	handler.Register(PacketCommand(pb.CmdServer_Cmd_RoutePlayerMessage), this.onRoutePlayerMessage, new(pb.RoutePlayerMessage))
 	//serverHandler.autoRegisterPlayerComponentProto()
 }
 

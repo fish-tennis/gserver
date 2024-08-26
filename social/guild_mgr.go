@@ -107,6 +107,6 @@ func GetGuildById(guildId int64) *Guild {
 }
 
 // 服务器列表,触发公会重新分配
-func onServerListUpdate(serverList map[string][]ServerInfo, oldServerList map[string][]ServerInfo) {
+func onServerListUpdate(serverList map[string][]*pb.ServerInfo, oldServerList map[string][]*pb.ServerInfo) {
 	_guildMgr.ReBalance()
 }

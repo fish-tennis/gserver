@@ -6,8 +6,10 @@ import (
 	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gentity/util"
 	"github.com/fish-tennis/gnet"
+	"github.com/fish-tennis/gserver/network"
 	"github.com/fish-tennis/gserver/pb"
 	"google.golang.org/protobuf/proto"
+	"log/slog"
 	"slices"
 	"sort"
 	"sync"
@@ -37,10 +39,6 @@ type ServerInfo interface {
 type ServerList struct {
 	// 缓存接口
 	cache gentity.KvCache
-	// bytes -> ServerInfo
-	serverInfoUnmarshal func(bytes []byte) ServerInfo
-	// ServerInfo -> bytes
-	serverInfoMarshal func(info ServerInfo) []byte
 	// 需要获取信息的服务器类型
 	fetchServerTypes []string
 	// 需要连接的服务器类型
@@ -48,43 +46,38 @@ type ServerList struct {
 	// 服务器多少毫秒没上传自己的信息,就判断为不活跃了
 	activeTimeout int32
 	// 缓存的服务器列表信息
-	serverInfos      map[int32]ServerInfo // serverId-ServerInfo
+	serverInfos      map[int32]*pb.ServerInfo // serverId-ServerInfo
 	serverInfosMutex sync.RWMutex
 	// 按照服务器类型分组的服务器列表信息
-	serverInfoTypeMap      map[string][]ServerInfo
+	serverInfoTypeMap      map[string][]*pb.ServerInfo
 	serverInfoTypeMapMutex sync.RWMutex
 	// 本地服务器信息
-	localServerInfo ServerInfo
+	localServerInfo *pb.ServerInfo
+	// 服务器的监听配置
+	serverListenerConfig gnet.ListenerConfig
+	// 服务器之间的连接配置
+	serverConnectorConfig gnet.ConnectionConfig
+	// 服务器listener
+	serverListener gnet.Listener
 	// 已连接的服务器
 	connectedServers      map[int32]gnet.Connection // serverId-Connection
 	connectedServersMutex sync.RWMutex
 	// 服务器连接创建函数,供外部扩展
-	serverConnectorFunc func(ctx context.Context, info ServerInfo) gnet.Connection
-	listUpdateHooks     []func(serverList map[string][]ServerInfo, oldServerList map[string][]ServerInfo)
+	listUpdateHooks []func(serverList map[string][]*pb.ServerInfo, oldServerList map[string][]*pb.ServerInfo)
 }
 
-func NewServerList() *ServerList {
+func NewServerList(serverInfo *pb.ServerInfo) *ServerList {
 	_serverList = &ServerList{
-		activeTimeout:     3 * 1000, // 默认3秒
-		serverInfos:       make(map[int32]ServerInfo),
-		connectedServers:  make(map[int32]gnet.Connection),
-		serverInfoTypeMap: make(map[string][]ServerInfo),
+		activeTimeout:         3 * 1000, // 默认3秒
+		serverInfos:           make(map[int32]*pb.ServerInfo),
+		connectedServers:      make(map[int32]gnet.Connection),
+		serverInfoTypeMap:     make(map[string][]*pb.ServerInfo),
+		localServerInfo:       serverInfo,
+		serverConnectorConfig: network.ServerConnectionConfig,
 	}
-	_serverList.SetServerInfoFunc(func(bytes []byte) ServerInfo {
-		serverInfo := new(pb.ServerInfo)
-		err := proto.Unmarshal(bytes, serverInfo)
-		if err != nil {
-			return nil
-		}
-		return serverInfo
-	}, func(info ServerInfo) []byte {
-		serverInfo := info.(*pb.ServerInfo)
-		bytes, err := proto.Marshal(serverInfo)
-		if err != nil {
-			return nil
-		}
-		return bytes
-	})
+	// 初始化服务器之间的网络配置
+	_serverList.initDefaultServerConnectorConfig()
+	_serverList.initDefaultServerListenerConfig()
 	return _serverList
 }
 
@@ -92,35 +85,105 @@ func (this *ServerList) SetCache(cache gentity.KvCache) {
 	this.cache = cache
 }
 
-// 设置ServerInfo的序列化接口
-func (this *ServerList) SetServerInfoFunc(serverInfoUnmarshal func(bytes []byte) ServerInfo,
-	serverInfoMarshal func(info ServerInfo) []byte) {
-	this.serverInfoUnmarshal = serverInfoUnmarshal
-	this.serverInfoMarshal = serverInfoMarshal
+func (this *ServerList) initDefaultServerConnectorConfig() {
+	var codec gnet.Codec
+	if this.localServerInfo.ServerType == ServerType_Gate {
+		// gate -> otherServer
+		codec = network.NewGateCodec(nil)
+	} else {
+		// otherServer -> otherServer
+		codec = gnet.NewProtoCodec(nil)
+	}
+	handler := gnet.NewDefaultConnectionHandler(codec)
+	handler.SetOnConnectedFunc(func(connection gnet.Connection, success bool) {
+		slog.Info("OnConnectedServer", "RemoteAddr", connection.RemoteAddr().String(), "success", success)
+		if !success {
+			return
+		}
+		// 连接成功后,告诉对方自己的服务器id和type
+		connection.SendPacket(this.NewAdaptPacket(gnet.PacketCommand(pb.CmdInner_Cmd_ServerHello), &pb.ServerHello{
+			ServerId:   this.GetLocalServerInfo().GetServerId(),
+			ServerType: this.GetLocalServerInfo().GetServerType(),
+		}))
+	})
+	handler.SetOnDisconnectedFunc(func(connection gnet.Connection) {
+		if connection.GetTag() == nil {
+			return
+		}
+		serverId := connection.GetTag().(int32)
+		this.OnServerConnectorDisconnect(serverId)
+	})
+	if this.localServerInfo.ServerType == ServerType_Gate {
+		// gate -> otherServer
+		handler.RegisterHeartBeat(func() gnet.Packet {
+			return network.NewGatePacket(0, gnet.PacketCommand(pb.CmdInner_Cmd_HeartBeatReq), &pb.HeartBeatReq{
+				Timestamp: util.GetCurrentMS(),
+			})
+		})
+	} else {
+		handler.RegisterHeartBeat(func() gnet.Packet {
+			return this.NewAdaptPacket(gnet.PacketCommand(pb.CmdInner_Cmd_HeartBeatReq), &pb.HeartBeatReq{
+				Timestamp: util.GetCurrentMS(),
+			})
+		})
+	}
+	handler.Register(gnet.PacketCommand(pb.CmdInner_Cmd_HeartBeatRes), func(connection gnet.Connection, packet gnet.Packet) {
+		// TODO: set ping (ServerInfo)
+	}, new(pb.HeartBeatRes))
+	this.serverConnectorConfig = network.ServerConnectionConfig
+	this.serverConnectorConfig.Codec = codec
+	this.serverConnectorConfig.Handler = handler
 }
 
-// 设置服务器连接创建函数
-func (this *ServerList) SetServerConnectorFunc(connectFunc func(ctx context.Context, info ServerInfo) gnet.Connection) {
-	this.serverConnectorFunc = connectFunc
+func (this *ServerList) initDefaultServerListenerConfig() {
+	// listener的codec和handler
+	listenerCodec := gnet.NewProtoCodec(nil)
+	acceptServerHandler := gnet.NewDefaultConnectionHandler(listenerCodec)
+	this.serverListenerConfig.AcceptConfig = network.ServerConnectionConfig
+	this.serverListenerConfig.AcceptConfig.Codec = listenerCodec
+	this.serverListenerConfig.AcceptConfig.Handler = acceptServerHandler
+	acceptServerHandler.Register(gnet.PacketCommand(pb.CmdInner_Cmd_HeartBeatReq), func(connection gnet.Connection, packet gnet.Packet) {
+		req := packet.Message().(*pb.HeartBeatReq)
+		network.SendPacketAdapt(connection, packet, gnet.PacketCommand(pb.CmdInner_Cmd_HeartBeatRes), &pb.HeartBeatRes{
+			RequestTimestamp:  req.GetTimestamp(),
+			ResponseTimestamp: util.GetCurrentMS(),
+		})
+	}, new(pb.HeartBeatReq))
+	acceptServerHandler.Register(gnet.PacketCommand(pb.CmdInner_Cmd_ServerHello), func(connection gnet.Connection, packet gnet.Packet) {
+		serverHello := packet.Message().(*pb.ServerHello)
+		this.OnServerConnected(serverHello.ServerId, connection)
+		slog.Info("AcceptServer", "serverHello", serverHello, "connId", connection.GetConnectionId())
+	}, new(pb.ServerHello))
+}
+
+func (this *ServerList) GetServerConnectionHandler() *gnet.DefaultConnectionHandler {
+	return this.serverConnectorConfig.Handler.(*gnet.DefaultConnectionHandler)
+}
+
+func (this *ServerList) GetServerListenerHandler() *gnet.DefaultConnectionHandler {
+	return this.serverListenerConfig.AcceptConfig.Handler.(*gnet.DefaultConnectionHandler)
+}
+
+func (this *ServerList) NewAdaptPacket(cmd gnet.PacketCommand, message proto.Message) gnet.Packet {
+	if this.localServerInfo.ServerType == ServerType_Gate {
+		return network.NewGatePacket(0, cmd, message)
+	} else {
+		return gnet.NewProtoPacket(cmd, message)
+	}
 }
 
 // 服务发现: 读取服务器列表信息,并连接这些服务器
 func (this *ServerList) FindAndConnectServers(ctx context.Context) {
 	serverInfoMapUpdated := false
-	infoMap := make(map[int32]ServerInfo)
+	infoMap := make(map[int32]*pb.ServerInfo)
 	for _, serverType := range this.fetchServerTypes {
-		serverInfoDatas := make(map[string]string)
-		err := this.cache.GetMap(fmt.Sprintf("servers:%v", serverType), serverInfoDatas)
+		serverInfos := make(map[int32]*pb.ServerInfo)
+		err := this.cache.GetMap(fmt.Sprintf("servers:%v", serverType), serverInfos)
 		if gentity.IsRedisError(err) {
 			gentity.GetLogger().Error("get %v info err:%v", serverType, err)
 			continue
 		}
-		for idStr, serverInfoData := range serverInfoDatas {
-			serverInfo := this.serverInfoUnmarshal([]byte(serverInfoData))
-			if serverInfo == nil {
-				gentity.GetLogger().Error("serverInfoCreator err:k:%v v:%v", idStr, serverInfoData)
-				continue
-			}
+		for _, serverInfo := range serverInfos {
 			// 目标服务器已经处于"不活跃"状态了
 			if util.GetCurrentMS()-serverInfo.GetLastActiveTime() > int64(this.activeTimeout) {
 				continue
@@ -140,17 +203,17 @@ func (this *ServerList) FindAndConnectServers(ctx context.Context) {
 		this.serverInfosMutex.Lock()
 		this.serverInfos = infoMap
 		this.serverInfosMutex.Unlock()
-		serverInfoTypeMap := make(map[string][]ServerInfo)
+		serverInfoTypeMap := make(map[string][]*pb.ServerInfo)
 		for _, info := range infoMap {
 			infoSlice, ok := serverInfoTypeMap[info.GetServerType()]
 			if !ok {
-				infoSlice = make([]ServerInfo, 0)
+				infoSlice = make([]*pb.ServerInfo, 0)
 				serverInfoTypeMap[info.GetServerType()] = infoSlice
 			}
 			infoSlice = append(infoSlice, info)
 			serverInfoTypeMap[info.GetServerType()] = infoSlice
 		}
-		var oldList map[string][]ServerInfo
+		var oldList map[string][]*pb.ServerInfo
 		this.serverInfoTypeMapMutex.Lock()
 		oldList = this.serverInfoTypeMap
 		this.serverInfoTypeMap = serverInfoTypeMap
@@ -176,9 +239,15 @@ func (this *ServerList) FindAndConnectServers(ctx context.Context) {
 	}
 }
 
+// 开始监听服务器
+func (this *ServerList) StartListen(ctx context.Context, serverListenAddr string) gnet.Listener {
+	this.serverListener = gnet.GetNetMgr().NewListener(ctx, serverListenAddr, &this.serverListenerConfig)
+	return this.serverListener
+}
+
 // 连接其他服务器(包括自己),我方作为connector
-func (this *ServerList) ConnectServer(ctx context.Context, info ServerInfo) {
-	if info == nil || this.serverConnectorFunc == nil {
+func (this *ServerList) ConnectServer(ctx context.Context, info *pb.ServerInfo) {
+	if info == nil {
 		return
 	}
 	this.connectedServersMutex.RLock()
@@ -187,9 +256,13 @@ func (this *ServerList) ConnectServer(ctx context.Context, info ServerInfo) {
 	if ok {
 		return
 	}
-	serverConn := this.serverConnectorFunc(ctx, info)
+	targetAddr := info.GetServerListenAddr()
+	if this.localServerInfo.GetServerType() == ServerType_Gate {
+		// gate -> otherServer
+		targetAddr = info.GetGateListenAddr()
+	}
+	serverConn := gnet.GetNetMgr().NewConnector(ctx, targetAddr, &this.serverConnectorConfig, info.GetServerId())
 	if serverConn != nil {
-		serverConn.SetTag(info.GetServerId())
 		this.connectedServersMutex.Lock()
 		this.connectedServers[info.GetServerId()] = serverConn
 		this.connectedServersMutex.Unlock()
@@ -201,13 +274,13 @@ func (this *ServerList) ConnectServer(ctx context.Context, info ServerInfo) {
 
 // 服务注册:上传本地服务器的信息
 func (this *ServerList) RegisterLocalServerInfo() {
-	bytes := this.serverInfoMarshal(this.localServerInfo)
+	bytes, _ := proto.Marshal(this.localServerInfo)
 	this.cache.HSet(fmt.Sprintf("servers:%v", this.localServerInfo.GetServerType()),
 		util.Itoa(this.localServerInfo.GetServerId()), bytes)
 }
 
 // 获取某个服务器的信息
-func (this *ServerList) GetServerInfo(serverId int32) ServerInfo {
+func (this *ServerList) GetServerInfo(serverId int32) *pb.ServerInfo {
 	this.serverInfosMutex.RLock()
 	defer this.serverInfosMutex.RUnlock()
 	info, _ := this.serverInfos[serverId]
@@ -215,12 +288,8 @@ func (this *ServerList) GetServerInfo(serverId int32) ServerInfo {
 }
 
 // 自己的服务器信息
-func (this *ServerList) GetLocalServerInfo() ServerInfo {
+func (this *ServerList) GetLocalServerInfo() *pb.ServerInfo {
 	return this.localServerInfo
-}
-
-func (this *ServerList) SetLocalServerInfo(info ServerInfo) {
-	this.localServerInfo = info
 }
 
 // 服务器连接断开了
@@ -261,11 +330,11 @@ func (this *ServerList) SetFetchAndConnectServerTypes(serverTypes ...string) {
 }
 
 // 获取某类服务器的信息列表
-func (this *ServerList) GetServersByType(serverType string) []ServerInfo {
+func (this *ServerList) GetServersByType(serverType string) []*pb.ServerInfo {
 	this.serverInfoTypeMapMutex.RLock()
 	defer this.serverInfoTypeMapMutex.RUnlock()
 	if infoList, ok := this.serverInfoTypeMap[serverType]; ok {
-		copyInfoList := make([]ServerInfo, len(infoList), len(infoList))
+		copyInfoList := make([]*pb.ServerInfo, len(infoList), len(infoList))
 		for idx, info := range infoList {
 			copyInfoList[idx] = info
 		}
@@ -311,6 +380,6 @@ func (this *ServerList) Rpc(serverId int32, request gnet.Packet, reply proto.Mes
 }
 
 // 添加服务器列表更新回调
-func (this *ServerList) AddListUpdateHook(onListUpdateFunc ...func(serverList map[string][]ServerInfo, oldServerList map[string][]ServerInfo)) {
+func (this *ServerList) AddListUpdateHook(onListUpdateFunc ...func(serverList map[string][]*pb.ServerInfo, oldServerList map[string][]*pb.ServerInfo)) {
 	this.listUpdateHooks = append(this.listUpdateHooks, onListUpdateFunc...)
 }

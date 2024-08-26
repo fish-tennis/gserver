@@ -75,7 +75,7 @@ func selectGameServer(account *pb.Account) *pb.ServerInfo {
 	if len(gameServerInfos) > 0 {
 		// 作为演示,这里随机一个
 		selectGameServerInfo := gameServerInfos[rand.Intn(len(gameServerInfos))]
-		return selectGameServerInfo.(*pb.ServerInfo)
+		return selectGameServerInfo
 	}
 	return nil
 }

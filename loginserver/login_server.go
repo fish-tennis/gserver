@@ -25,7 +25,7 @@ var (
 
 // 登录服
 type LoginServer struct {
-	BaseServer
+	*BaseServer
 	config *LoginServerConfig
 	// 网关服务器listener
 	gateListener Listener
@@ -36,6 +36,15 @@ type LoginServer struct {
 // 登录服配置
 type LoginServerConfig struct {
 	BaseServerConfig
+}
+
+func NewLoginServer(ctx context.Context, configFile string) *LoginServer {
+	s := &LoginServer{
+		BaseServer: NewBaseServer(ctx, ServerType_Login, configFile),
+		config:     new(LoginServerConfig),
+	}
+	s.readConfig()
+	return s
 }
 
 // 账号db接口
@@ -49,23 +58,9 @@ func (this *LoginServer) Init(ctx context.Context, configFile string) bool {
 	if !this.BaseServer.Init(ctx, configFile) {
 		return false
 	}
-	this.readConfig()
 	this.initDb()
 	this.initCache()
-	this.GetServerList().SetCache(cache.Get())
-	// NOTE: 实际项目中,监听客户端和监听网关,二选一即可
-	// 这里为了演示,同时提供客户端直连和网关两种模式
-	if network.ListenClient(this.config.ClientListenAddr, nil, this.registerClientPacket) == nil {
-		panic("listen client failed")
-		return false
-	}
-	if network.ListenGate(this.config.GateListenAddr, this.registerServerPacket) == nil {
-		panic("listen gate failed")
-		return false
-	}
-
-	this.BaseServer.GetServerList().SetFetchServerTypes(ServerType_Game)
-
+	this.initNetwork()
 	slog.Info("LoginServer.Init")
 	return true
 }
@@ -91,14 +86,12 @@ func (this *LoginServer) readConfig() {
 	if err != nil {
 		panic("read config file err")
 	}
-	this.config = new(LoginServerConfig)
 	err = json.Unmarshal(fileData, this.config)
 	if err != nil {
 		panic("decode config file err")
 	}
 	slog.Debug("readConfig", "config", this.config)
 	this.BaseServer.GetServerInfo().ServerId = this.config.ServerId
-	this.BaseServer.GetServerInfo().ServerType = ServerType_Login
 	// NOTE: 实际项目中,监听客户端和监听网关,二选一即可
 	// 这里为了演示,同时提供客户端直连和网关两种模式
 	this.BaseServer.GetServerInfo().ClientListenAddr = this.config.ClientListenAddr
@@ -128,6 +121,19 @@ func (this *LoginServer) initCache() {
 	if err != nil || pong == "" {
 		panic("redis connect error")
 	}
+}
+
+func (this *LoginServer) initNetwork() {
+	// NOTE: 实际项目中,监听客户端和监听网关,二选一即可
+	// 这里为了演示,同时提供客户端直连和网关两种模式
+	if network.ListenClient(this.config.ClientListenAddr, nil, this.registerClientPacket) == nil {
+		panic("listen client failed")
+	}
+	if network.ListenGate(this.config.GateListenAddr, this.registerServerPacket) == nil {
+		panic("listen gate failed")
+	}
+	this.GetServerList().SetCache(cache.Get())
+	this.BaseServer.GetServerList().SetFetchServerTypes(ServerType_Game)
 }
 
 func (this *LoginServer) getAccountData(accountName string, accountData *pb.Account) error {

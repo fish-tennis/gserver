@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/fish-tennis/gentity"
-	"github.com/fish-tennis/gentity/util"
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
 	. "github.com/fish-tennis/gserver/internal"
@@ -23,7 +22,7 @@ var (
 )
 
 type GateServer struct {
-	BaseServer
+	*BaseServer
 	config         *GateServerConfig
 	clientListener Listener
 	// WebSocket测试
@@ -40,6 +39,15 @@ type GateServerConfig struct {
 	WsClientListenerConfig ListenerConfig
 }
 
+func NewGateServer(ctx context.Context, configFile string) *GateServer {
+	s := &GateServer{
+		BaseServer: NewBaseServer(ctx, ServerType_Gate, configFile),
+		config:     new(GateServerConfig),
+	}
+	s.readConfig()
+	return s
+}
+
 // 初始化
 func (this *GateServer) Init(ctx context.Context, configFile string) bool {
 	_gateServer = this
@@ -47,44 +55,8 @@ func (this *GateServer) Init(ctx context.Context, configFile string) bool {
 		return false
 	}
 	this.clients = make(map[int64]*network.ClientData)
-	this.readConfig()
 	this.initCache()
-	this.GetServerList().SetCache(cache.Get())
-
-	// 监听普通TCP客户端
-	this.clientListener = network.ListenGateClient(this.config.ClientListenAddr, &ClientListerHandler{}, this.registerClientPacket)
-	if this.clientListener == nil {
-		panic("listen client failed")
-		return false
-	}
-
-	// 监听WebSocket客户端
-	if this.config.WsClientListenAddr != "" {
-		// WebSocket测试
-		this.wsClientListener = network.ListenWebSocketClient(this.config.WsClientListenAddr, &ClientListerHandler{}, this.registerClientPacket)
-		if this.wsClientListener == nil {
-			panic("listen websocket client failed")
-			return false
-		}
-	}
-
-	// 连接其他服务器
-	this.BaseServer.SetDefaultServerConnectorConfig(network.ServerConnectionConfig, network.NewGateCodec(nil))
-	this.BaseServer.GetServerList().SetFetchAndConnectServerTypes(ServerType_Login, ServerType_Game)
-	// gate连接其他服务器
-	this.BaseServer.GetServerList().SetServerConnectorFunc(func(ctx context.Context, info ServerInfo) Connection {
-		serverInfo := info.(*pb.ServerInfo)
-		return GetNetMgr().NewConnector(ctx, serverInfo.GetGateListenAddr(), this.BaseServer.GetDefaultServerConnectorConfig(), nil)
-	})
-	defaultServerHandler := this.BaseServer.GetDefaultServerConnectorConfig().Handler.(*DefaultConnectionHandler)
-	// gate和其他服务器之间使用GatePacket
-	defaultServerHandler.RegisterHeartBeat(func() Packet {
-		return network.NewGatePacket(0, PacketCommand(pb.CmdInner_Cmd_HeartBeatReq), &pb.HeartBeatReq{
-			Timestamp: util.GetCurrentMS(),
-		})
-	})
-	this.registerServerPacket(defaultServerHandler)
-
+	this.initNetwork()
 	logger.Info("GateServer.Init")
 	return true
 }
@@ -102,7 +74,6 @@ func (this *GateServer) readConfig() {
 	}
 	logger.Debug("%v", this.config)
 	this.BaseServer.GetServerInfo().ServerId = this.config.ServerId
-	this.BaseServer.GetServerInfo().ServerType = ServerType_Gate
 	this.BaseServer.GetServerInfo().ClientListenAddr = this.config.ClientListenAddr
 }
 
@@ -113,6 +84,28 @@ func (this *GateServer) initCache() {
 	if err != nil || pong == "" {
 		panic("redis connect error")
 	}
+}
+
+func (this *GateServer) initNetwork() {
+	// 监听普通TCP客户端
+	this.clientListener = network.ListenGateClient(this.config.ClientListenAddr, &ClientListerHandler{}, this.registerClientPacket)
+	if this.clientListener == nil {
+		panic("listen client failed")
+	}
+
+	// 监听WebSocket客户端
+	if this.config.WsClientListenAddr != "" {
+		// WebSocket测试
+		this.wsClientListener = network.ListenWebSocketClient(this.config.WsClientListenAddr, &ClientListerHandler{}, this.registerClientPacket)
+		if this.wsClientListener == nil {
+			panic("listen websocket client failed")
+		}
+	}
+
+	this.GetServerList().SetCache(cache.Get())
+	// 连接其他服务器
+	this.registerServerPacket(this.GetServerList().GetServerConnectionHandler())
+	this.GetServerList().SetFetchAndConnectServerTypes(ServerType_Login, ServerType_Game)
 }
 
 // 注册客户端消息回调
