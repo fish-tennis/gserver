@@ -32,6 +32,8 @@ type routeOptions struct {
 
 	// 先保存到数据库(player.pendingmessages),防止路由失败造成消息丢失
 	SaveDb bool
+
+	Error error
 }
 
 func defaultRouteOptions() *routeOptions {
@@ -75,6 +77,12 @@ func WithToServerId(toServerId int32) RouteOption {
 func WithConnection(connection Connection) RouteOption {
 	return newFuncRouteOption(func(options *routeOptions) {
 		options.Connection = connection
+	})
+}
+
+func WithError(err error) RouteOption {
+	return newFuncRouteOption(func(options *routeOptions) {
+		options.Error = err
 	})
 }
 
@@ -148,6 +156,9 @@ func RoutePlayerPacketWithErr(playerId int64, packet Packet, errStr string, opts
 		}
 	} else {
 		slog.Debug("anyPacketNil", "playerId", playerId, "cmd", packet.Command(), "errStr", errStr, "DirectSendClient", routeOpts.DirectSendClient)
+	}
+	if errStr == "" && routeOpts.Error != nil {
+		errStr = routeOpts.Error.Error()
 	}
 	routePacket := NewProtoPacketEx(pb.CmdServer_Cmd_RoutePlayerMessage, &pb.RoutePlayerMessage{
 		Error:            errStr,

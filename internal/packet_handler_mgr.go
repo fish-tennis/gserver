@@ -3,7 +3,6 @@ package internal
 import (
 	"fmt"
 	"github.com/fish-tennis/gentity"
-	"github.com/fish-tennis/gentity/util"
 	"github.com/fish-tennis/gnet"
 	"google.golang.org/protobuf/proto"
 	"reflect"
@@ -14,12 +13,14 @@ import (
 type PacketHandlerInfo struct {
 	// 组件名,如果为空,就表示是直接写在Entity上的接口
 	ComponentName string
-	// 消息号
+	// req消息号
 	Cmd gnet.PacketCommand
+	// res消息号,用于rpc
+	ResCmd gnet.PacketCommand
+	// res类型
+	ResMessageElem reflect.Type
 	// 函数信息
 	Method reflect.Method
-	// 匿名函数接口
-	Handler func(c gentity.Component, m proto.Message)
 }
 
 // 消息回调接口管理类
@@ -127,7 +128,7 @@ func (this *PacketHandlerMgr) scanMethods(obj any, packetHandlerRegister gnet.Pa
 			gentity.GetLogger().Debug("methodName not match:%v", method.Name)
 			continue
 		}
-		messageId := util.GetMessageIdByMessageName(protoPackageName, componentStructName, messageName)
+		messageId := GetCommandByProto(reflect.New(reqArg.Elem()).Interface().(proto.Message))
 		if messageId == 0 {
 			gentity.GetLogger().Debug("methodName match:%v but messageId==0", method.Name)
 			continue
@@ -146,16 +147,6 @@ func (this *PacketHandlerMgr) scanMethods(obj any, packetHandlerRegister gnet.Pa
 	}
 }
 
-// 用于proto_code_gen工具自动生成的消息注册代码
-func (this *PacketHandlerMgr) RegisterProtoCodeGen(packetHandlerRegister gnet.PacketHandlerRegister, componentName string, cmd gnet.PacketCommand, protoMessage proto.Message, handler func(c gentity.Component, m proto.Message)) {
-	this.HandlerInfos[cmd] = &PacketHandlerInfo{
-		ComponentName: componentName,
-		Cmd:           cmd,
-		Handler:       handler,
-	}
-	packetHandlerRegister.Register(cmd, nil, protoMessage)
-}
-
 // 执行注册的消息回调接口
 // return true表示执行了接口
 // return false表示未执行
@@ -166,19 +157,14 @@ func (this *PacketHandlerMgr) Invoke(entity gentity.Entity, packet gnet.Packet) 
 		if handlerInfo.ComponentName != "" {
 			component := entity.GetComponentByName(handlerInfo.ComponentName)
 			if component != nil {
-				if handlerInfo.Handler != nil {
-					handlerInfo.Handler(component, packet.Message())
-					return true
-				} else {
-					if !handlerInfo.Method.Func.IsValid() {
-						gentity.GetLogger().Error("InvokeErr method invalid cmd:%v", packet.Command())
-						return false
-					}
-					// 反射调用函数
-					handlerInfo.Method.Func.Call([]reflect.Value{reflect.ValueOf(component),
-						reflect.ValueOf(packet.Message())})
-					return true
+				if !handlerInfo.Method.Func.IsValid() {
+					gentity.GetLogger().Error("InvokeErr method invalid cmd:%v", packet.Command())
+					return false
 				}
+				// 反射调用函数
+				handlerInfo.Method.Func.Call([]reflect.Value{reflect.ValueOf(component),
+					reflect.ValueOf(packet.Message())})
+				return true
 			}
 		} else {
 			if !handlerInfo.Method.Func.IsValid() {

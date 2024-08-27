@@ -3,7 +3,6 @@ package social
 import (
 	"fmt"
 	"github.com/fish-tennis/gentity"
-	"github.com/fish-tennis/gentity/util"
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/game"
 	"github.com/fish-tennis/gserver/internal"
@@ -50,8 +49,7 @@ func scanGuildMethods(obj any, methodNamePrefix, protoPackageName string) {
 		if !strings.HasPrefix(method.Name, methodNamePrefix) {
 			continue
 		}
-		// 消息回调格式: func (this *GuildJoinRequests) HandleGuildJoinReq(guildMessage *GuildMessage, req *pb.GuildJoinReq)
-		// TODO: rpc回调格式: HandleXxxReq(guildMessage *GuildMessage, req *pb.XxxReq) *pb.XxxRes
+		// rpc回调格式: HandleXxxReq(guildMessage *GuildMessage, req *pb.XxxReq) (*pb.XxxRes,error)
 		methodArg1 := method.Type.In(1)
 		if !methodArg1.ConvertibleTo(reflect.TypeOf(&GuildMessage{})) {
 			continue
@@ -69,19 +67,40 @@ func scanGuildMethods(obj any, methodNamePrefix, protoPackageName string) {
 			GetLogger().Debug("methodName not match:%v", method.Name)
 			continue
 		}
-		messageId := util.GetMessageIdByMessageName(protoPackageName, componentStructName, messageName)
-		if messageId == 0 {
-			GetLogger().Debug("methodName match:%v but messageId==0", method.Name)
+		reqCmd := internal.GetCommandByProto(reflect.New(methodArg2.Elem()).Interface().(proto.Message))
+		if reqCmd == 0 {
+			GetLogger().Debug("methodName match:%v but reqCmd==0", method.Name)
 			continue
 		}
-		cmd := PacketCommand(messageId)
-		// 注册消息回调到组件上
-		_guildPacketHandlerMgr[cmd] = &internal.PacketHandlerInfo{
-			ComponentName: componentName,
-			Cmd:           cmd,
-			Method:        method,
+		var (
+			resCmd         int32
+			resMessageElem reflect.Type
+		)
+		if method.Type.NumOut() < 2 {
+			GetLogger().Debug("methodName match:%v but len(returnValues)<2", method.Name)
+			continue
 		}
-		GetLogger().Info("GuildPacketHandler %v.%v %v", componentStructName, method.Name, messageId)
+		resArg := method.Type.Out(0)
+		// 返回值1是proto定义的消息体
+		if !resArg.Implements(reflect.TypeOf((*proto.Message)(nil)).Elem()) {
+			GetLogger().Debug("methodName match:%v but resArg not proto.Message", method.Name)
+			continue
+		}
+		resMessageElem = resArg.Elem()
+		resCmd = internal.GetCommandByProto(reflect.New(resMessageElem).Interface().(proto.Message))
+		if resCmd == 0 {
+			GetLogger().Debug("methodName match:%v but resCmd==0", method.Name)
+			continue
+		}
+		// 注册消息回调到组件上
+		_guildPacketHandlerMgr[PacketCommand(reqCmd)] = &internal.PacketHandlerInfo{
+			ComponentName:  componentName,
+			Cmd:            PacketCommand(reqCmd),
+			ResCmd:         PacketCommand(resCmd),
+			ResMessageElem: resMessageElem,
+			Method:         method,
+		}
+		GetLogger().Info("GuildPacketHandler %v.%v %v", componentStructName, method.Name, reqCmd)
 	}
 }
 

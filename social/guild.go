@@ -60,13 +60,20 @@ func (this *Guild) processMessage(guildMessage *GuildMessage) {
 	if handlerInfo != nil {
 		component := this.GetComponentByName(handlerInfo.ComponentName)
 		if component != nil {
-			// TODO: rpc reply格式的回调,自动回传res
-			// HandleXxxReq(guildMessage *GuildMessage, req *pb.XxxReq) *pb.XxxRes
+			// HandleXxxReq(guildMessage *GuildMessage, req *pb.XxxReq) (*pb.XxxRes,error)
 			// 反射调用函数
 			slog.Debug("processMessage", "cmd", guildMessage.cmd, "message", proto.MessageName(guildMessage.message))
-			handlerInfo.Method.Func.Call([]reflect.Value{reflect.ValueOf(component),
+			returnValues := handlerInfo.Method.Func.Call([]reflect.Value{reflect.ValueOf(component),
 				reflect.ValueOf(guildMessage),
 				reflect.ValueOf(guildMessage.message)})
+			if handlerInfo.ResCmd > 0 && len(returnValues) >= 2 {
+				resProto, _ := returnValues[0].Interface().(proto.Message)
+				resErr, _ := returnValues[1].Interface().(error)
+				if resProto == nil {
+					resProto = reflect.New(handlerInfo.ResMessageElem).Interface().(proto.Message)
+				}
+				this.RoutePlayerPacket(guildMessage, handlerInfo.ResCmd, resProto, game.WithError(resErr))
+			}
 			return
 		}
 	}

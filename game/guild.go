@@ -260,10 +260,16 @@ func (this *Guild) RouteRpcToSelfGuild(cmd gnet.PacketCommand, message proto.Mes
 // 查看自己公会的信息
 func (this *Guild) OnGuildDataViewReq(req *pb.GuildDataViewReq) {
 	if this.Data.GuildId == 0 {
-		this.player.SendErrorRes(gnet.PacketCommand(pb.CmdClient_Cmd_GuildDataViewReq), "not a guild member")
+		this.GetPlayer().SendErrorRes(gnet.PacketCommand(pb.CmdClient_Cmd_GuildDataViewReq), "not a guild member")
 		return
 	}
-	this.RoutePacketToGuild(gnet.PacketCommand(pb.CmdClient_Cmd_GuildDataViewReq), req)
+	reply := new(pb.GuildDataViewRes)
+	err := this.RouteRpcToSelfGuild(gnet.PacketCommand(pb.CmdClient_Cmd_GuildDataViewReq), req, reply)
+	if err != nil {
+		this.GetPlayer().SendErrorRes(gnet.PacketCommand(pb.CmdClient_Cmd_GuildDataViewReq), fmt.Sprintf("server internal error:%v", err.Error()))
+		return
+	}
+	this.GetPlayer().Send(reply)
 }
 
 // mongodb中对玩家公会id进行原子化操作,防止玩家同时存在于多个公会

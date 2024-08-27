@@ -21,14 +21,22 @@ func GetResCommand(reqCommand int32) int32 {
 }
 
 func GetClientCommandByProto(protoMessage proto.Message) int32 {
-	return GetCommandByProto(CmdClientEnumName, protoMessage)
+	return getCommandByProto(CmdClientEnumName, protoMessage)
 }
 
 func GetServerCommandByProto(protoMessage proto.Message) int32 {
-	return GetCommandByProto(CmdServerEnumName, protoMessage)
+	return getCommandByProto(CmdServerEnumName, protoMessage)
 }
 
-func GetCommandByProto(cmdEnumName string, protoMessage proto.Message) int32 {
+func GetCommandByProto(protoMessage proto.Message) int32 {
+	cmd := GetClientCommandByProto(protoMessage)
+	if cmd != 0 {
+		return cmd
+	}
+	return GetServerCommandByProto(protoMessage)
+}
+
+func getCommandByProto(cmdEnumName string, protoMessage proto.Message) int32 {
 	// CmdClient或CmdServer
 	cmdEnumName = fmt.Sprintf("%v.%v", ProtoPackageName, cmdEnumName)
 	enumType, err := protoregistry.GlobalTypes.FindEnumByName(protoreflect.FullName(cmdEnumName))
