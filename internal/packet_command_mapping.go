@@ -13,8 +13,6 @@ const (
 	CmdClientEnumName = "CmdClient" // 对应proto/cmd_client.proto里的enum CmdClient
 	// 服务器之间的消息号定义
 	CmdServerEnumName = "CmdServer" // 对应proto/cmd_server.proto里的enum CmdServer
-	// 内部消息号定义
-	CmdInnerEnumName = "CmdInner" // 对应proto/inner.proto里的enum CmdInner
 )
 
 // 本项目的request和response的消息号规范: resCmd = reqCmd + 1

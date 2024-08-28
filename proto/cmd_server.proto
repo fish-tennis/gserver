@@ -6,14 +6,21 @@ package gserver;
 
 enum CmdServer {
 	CmdServer_None = 0; // 解决"The first enum value must be zero in proto3."的报错
-	
+
+    Cmd_ServerHello         = 30001; // 服务器连接上其他服务器时,发的初始化信息
+    Cmd_ClientDisconnect    = 30002; // 客户端掉线
+
+    Cmd_KickPlayerReq       = 31001; // 踢玩家下线req
+    Cmd_KickPlayerRes       = 31002; // 踢玩家下线res
+
 	// BaseInfo
-	Cmd_PlayerEntryGameOk = 1301; // 玩家进游戏服成功
-	
-	Cmd_RoutePlayerMessage = 3001;
-	Cmd_GuildRoutePlayerMessageReq = 3003;
+	Cmd_PlayerEntryGameOk   = 32001; // 玩家进游戏服成功
+
+	// route
+	Cmd_RoutePlayerMessage  = 33001;
+	Cmd_GuildRoutePlayerMessageReq = 33003;
 	
 	// GlobalEntity
-	Cmd_StartupReq = 4001;
-	Cmd_ShutdownReq = 4002;
+	Cmd_StartupReq          = 34001;
+	Cmd_ShutdownReq         = 34002;
 }

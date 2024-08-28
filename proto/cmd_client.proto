@@ -6,6 +6,10 @@ package gserver;
 
 enum CmdClient {
 	CmdClient_None = 0; // 解决"The first enum value must be zero in proto3."的报错
+
+	Cmd_HeartBeatReq = 1; // 心跳请求
+    Cmd_HeartBeatRes = 2; // 心跳返回
+    Cmd_ErrorRes     = 3; // 通用的错误返回消息
 	
 	// Login
 	Cmd_LoginReq = 1001;

@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+option go_package = "./pb";
+
+package gserver;
+
+// 心跳包请求
+message HeartBeatReq {
+  int64 timestamp = 1; // 请求方的时间戳
+}
+
+// 心跳包回复
+message HeartBeatRes {
+  int64 requestTimestamp = 1; // 请求方的时间戳
+  int64 responseTimestamp = 2;// 回复方的时间戳
+}
+
+// 通用的错误返回消息
+message ErrorRes {
+  int32 command = 1; // 消息号
+  int32 resultId = 2; // 错误信息id
+  string resultStr = 3; // 错误信息内容
+}

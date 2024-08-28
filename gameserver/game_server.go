@@ -242,7 +242,7 @@ func (this *GameServer) registerClientPacket(handler *DefaultConnectionHandler) 
 // 注册网关消息回调
 func (this *GameServer) registerGatePacket(handler *DefaultConnectionHandler) {
 	this.registerClientPacket(handler)
-	handler.Register(PacketCommand(pb.CmdInner_Cmd_ClientDisconnect), onClientDisconnect, new(pb.ClientDisconnect))
+	handler.Register(PacketCommand(pb.CmdServer_Cmd_ClientDisconnect), onClientDisconnect, new(pb.ClientDisconnect))
 	// 网关服务器掉线,该网关上的所有玩家都掉线
 	handler.SetOnDisconnectedFunc(func(connection Connection) {
 		this.playerMap.Range(func(key, value interface{}) bool {
@@ -258,7 +258,7 @@ func (this *GameServer) registerGatePacket(handler *DefaultConnectionHandler) {
 
 // 注册服务器消息回调
 func (this *GameServer) registerServerPacket(handler *DefaultConnectionHandler) {
-	handler.Register(PacketCommand(pb.CmdInner_Cmd_KickPlayer), this.onKickPlayer, new(pb.KickPlayer))
+	handler.Register(PacketCommand(pb.CmdServer_Cmd_KickPlayerReq), this.onKickPlayer, new(pb.KickPlayerReq))
 	handler.Register(PacketCommand(pb.CmdServer_Cmd_RoutePlayerMessage), this.onRoutePlayerMessage, new(pb.RoutePlayerMessage))
 }
 
@@ -288,7 +288,7 @@ func (this *GameServer) GetPlayer(playerId int64) IPlayer {
 // 踢玩家下线
 // TODO: GameServer也建一个实体,把onKickPlayer放到组件rpc回调上
 func (this *GameServer) onKickPlayer(connection Connection, packet Packet) {
-	req := packet.Message().(*pb.KickPlayer)
+	req := packet.Message().(*pb.KickPlayerReq)
 	player := game.GetPlayer(req.GetPlayerId())
 	if player != nil {
 		player.ResetConnection()

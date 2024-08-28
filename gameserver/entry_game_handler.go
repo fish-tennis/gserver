@@ -68,9 +68,8 @@ func onPlayerEntryGameReq(connection Connection, packet Packet) {
 				accountId, playerId, gameServerId)
 			if gameServerId > 0 {
 				// 通知目标游戏服踢掉玩家
-				// TODO: KickPlayerReq KickPlayerRes
-				kickReply := new(pb.KickPlayer)
-				rpcErr := internal.GetServerList().Rpc(gameServerId, NewProtoPacketEx(pb.CmdInner_Cmd_KickPlayer, &pb.KickPlayer{
+				kickReply := new(pb.KickPlayerRes)
+				rpcErr := internal.GetServerList().Rpc(gameServerId, NewProtoPacketEx(pb.CmdServer_Cmd_KickPlayerReq, &pb.KickPlayerReq{
 					AccountId: accountId,
 					PlayerId:  playerId,
 				}), kickReply)

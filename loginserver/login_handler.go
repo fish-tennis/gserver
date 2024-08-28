@@ -51,7 +51,7 @@ func onLoginReq(connection Connection, packet Packet) {
 				//	LogError("RemoveOnlinePlayer account:%v playerId:%v gameServerId:%v",
 				//		account.GetId(), onlinePlayerId, gameServerId)
 				//}
-				internal.GetServerList().Send(gameServerId, PacketCommand(pb.CmdInner_Cmd_KickPlayer), &pb.KickPlayer{
+				internal.GetServerList().Send(gameServerId, PacketCommand(pb.CmdServer_Cmd_KickPlayerReq), &pb.KickPlayerReq{
 					AccountId: account.GetXId(),
 					PlayerId:  onlinePlayerId,
 				})

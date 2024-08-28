@@ -135,7 +135,7 @@ func (this *Player) SendPacket(packet Packet, opts ...SendOption) bool {
 
 // 通用的错误返回消息
 func (this *Player) SendErrorRes(errorReqCmd PacketCommand, errorMsg string) bool {
-	return this.SendWithCommand(PacketCommand(pb.CmdInner_Cmd_ErrorRes), &pb.ErrorRes{
+	return this.SendWithCommand(PacketCommand(pb.CmdClient_Cmd_ErrorRes), &pb.ErrorRes{
 		Command:   int32(errorReqCmd),
 		ResultStr: errorMsg,
 	})
