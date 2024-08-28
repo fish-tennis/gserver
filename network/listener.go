@@ -108,8 +108,8 @@ func ListenGate(listenAddr string, packetRegister func(handler *gnet.DefaultConn
 func onHeartBeatReq(connection gnet.Connection, packet gnet.Packet) {
 	req := packet.Message().(*pb.HeartBeatReq)
 	// 兼容普通消息和GatePacket
-	SendPacketAdapt(connection, packet, gnet.NewProtoPacketEx(pb.CmdClient_Cmd_HeartBeatRes, &pb.HeartBeatRes{
+	SendPacketAdapt(connection, packet, &pb.HeartBeatRes{
 		RequestTimestamp:  req.GetTimestamp(),
 		ResponseTimestamp: util.GetCurrentMS(),
-	}))
+	})
 }

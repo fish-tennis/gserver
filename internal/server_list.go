@@ -145,10 +145,10 @@ func (this *ServerList) initDefaultServerListenerConfig() {
 	this.serverListenerConfig.AcceptConfig.Handler = acceptServerHandler
 	acceptServerHandler.Register(gnet.PacketCommand(pb.CmdClient_Cmd_HeartBeatReq), func(connection gnet.Connection, packet gnet.Packet) {
 		req := packet.Message().(*pb.HeartBeatReq)
-		network.SendPacketAdapt(connection, packet, gnet.NewProtoPacketEx(pb.CmdClient_Cmd_HeartBeatRes, &pb.HeartBeatRes{
+		network.SendPacketAdapt(connection, packet, &pb.HeartBeatRes{
 			RequestTimestamp:  req.GetTimestamp(),
 			ResponseTimestamp: util.GetCurrentMS(),
-		}))
+		})
 	}, new(pb.HeartBeatReq))
 	acceptServerHandler.Register(gnet.PacketCommand(pb.CmdServer_Cmd_ServerHello), func(connection gnet.Connection, packet gnet.Packet) {
 		serverHello := packet.Message().(*pb.ServerHello)

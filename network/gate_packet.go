@@ -104,10 +104,11 @@ func IsGatePacket(packet Packet) bool {
 }
 
 // 根据请求消息的类型,自动适配不同的发消息接口
-func SendPacketAdapt(connection Connection, reqPacket Packet, sendPacket Packet) bool {
+func SendPacketAdapt(connection Connection, reqPacket Packet, sendMessage proto.Message) bool {
+	cmd := GetCommandByProto(sendMessage)
 	if gatePacket, ok := reqPacket.(*GatePacket); ok {
-		return connection.SendPacket(NewGatePacket(gatePacket.PlayerId(), sendPacket.Command(), sendPacket.Message()))
+		return connection.SendPacket(NewGatePacket(gatePacket.PlayerId(), PacketCommand(cmd), sendMessage))
 	} else {
-		return connection.SendPacket(sendPacket)
+		return connection.Send(PacketCommand(cmd), sendMessage)
 	}
 }
