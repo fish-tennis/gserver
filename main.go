@@ -110,8 +110,8 @@ func daemon() {
 }
 
 func initLog(logFileName string, useStdOutput bool) {
-	// TODO: 后续会把gnet,gentity的logger替换成slog,以统一日志接口
 	gnet.SetLogLevel(gnet.DebugLevel)
+	gnet.SetLogger(logger.GetLogger(), gnet.DebugLevel)
 	gentity.SetLogger(gnet.GetLogger(), gnet.DebugLevel)
 
 	os.Mkdir("log", 0750)

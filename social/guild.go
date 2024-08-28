@@ -4,6 +4,7 @@ import (
 	"github.com/fish-tennis/gentity"
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/game"
+	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 	"google.golang.org/protobuf/proto"
@@ -102,23 +103,23 @@ func (this *Guild) RoutePlayerPacket(guildMessage *GuildMessage, cmd any, messag
 
 // 路由玩家消息,直接发给客户端
 // this server -> other server -> client
-func (this *Guild) RouteClientPacket(guildMessage *GuildMessage, cmd any, message proto.Message) {
-	game.RoutePlayerPacket(guildMessage.fromPlayerId, NewProtoPacketEx(cmd, message),
+func (this *Guild) RouteClientPacket(guildMessage *GuildMessage, message proto.Message) {
+	game.RoutePlayerPacket(guildMessage.fromPlayerId, internal.NewPacket(message),
 		game.WithDirectSendClient(), game.WithConnection(guildMessage.srcConnection))
 }
 
 // 广播公会消息
 // this server -> other server -> player
-func (this *Guild) BroadcastPlayerPacket(cmd any, message proto.Message) {
+func (this *Guild) BroadcastPlayerPacket(message proto.Message) {
 	for _, member := range this.GetMembers().Data {
-		game.RoutePlayerPacket(member.Id, NewProtoPacketEx(cmd, message))
+		game.RoutePlayerPacket(member.Id, internal.NewPacket(message))
 	}
 }
 
 // 广播公会消息,直接发给客户端
 // this server -> other server -> client
-func (this *Guild) BroadcastClientPacket(cmd any, message proto.Message) {
+func (this *Guild) BroadcastClientPacket(message proto.Message) {
 	for _, member := range this.GetMembers().Data {
-		game.RoutePlayerPacket(member.Id, NewProtoPacketEx(cmd, message), game.WithDirectSendClient())
+		game.RoutePlayerPacket(member.Id, internal.NewPacket(message), game.WithDirectSendClient())
 	}
 }

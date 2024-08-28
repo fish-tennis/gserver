@@ -64,12 +64,12 @@ func scanGuildMethods(obj any, methodNamePrefix, protoPackageName string) {
 		messageName := methodArg2.String()[strings.LastIndex(methodArg2.String(), ".")+1:]
 		// 函数名规则,如HandleGuildJoinReq
 		if method.Name != fmt.Sprintf("%v%v", methodNamePrefix, messageName) {
-			GetLogger().Debug("methodName not match:%v", method.Name)
+			slog.Debug("methodName not match", "method", method.Name)
 			continue
 		}
 		reqCmd := internal.GetCommandByProto(reflect.New(methodArg2.Elem()).Interface().(proto.Message))
 		if reqCmd == 0 {
-			GetLogger().Debug("methodName match:%v but reqCmd==0", method.Name)
+			slog.Debug("reqCmd==0", "method", method.Name)
 			continue
 		}
 		var (
@@ -77,19 +77,19 @@ func scanGuildMethods(obj any, methodNamePrefix, protoPackageName string) {
 			resMessageElem reflect.Type
 		)
 		if method.Type.NumOut() < 2 {
-			GetLogger().Debug("methodName match:%v but len(returnValues)<2", method.Name)
+			slog.Debug("len(returnValues)<2", "method", method.Name)
 			continue
 		}
 		resArg := method.Type.Out(0)
 		// 返回值1是proto定义的消息体
 		if !resArg.Implements(reflect.TypeOf((*proto.Message)(nil)).Elem()) {
-			GetLogger().Debug("methodName match:%v but resArg not proto.Message", method.Name)
+			slog.Debug("resArg not proto.Message", "method", method.Name)
 			continue
 		}
 		resMessageElem = resArg.Elem()
 		resCmd = internal.GetCommandByProto(reflect.New(resMessageElem).Interface().(proto.Message))
 		if resCmd == 0 {
-			GetLogger().Debug("methodName match:%v but resCmd==0", method.Name)
+			slog.Debug("resCmd==0", "method", method.Name)
 			continue
 		}
 		// 注册消息回调到组件上
@@ -100,7 +100,7 @@ func scanGuildMethods(obj any, methodNamePrefix, protoPackageName string) {
 			ResMessageElem: resMessageElem,
 			Method:         method,
 		}
-		GetLogger().Info("GuildPacketHandler %v.%v %v", componentStructName, method.Name, reqCmd)
+		slog.Info("scanGuildMethods", "component", componentStructName, "method", method.Name, "cmd", reqCmd)
 	}
 }
 
@@ -113,19 +113,20 @@ func GuildServerHandlerRegister(handler PacketHandlerRegister) {
 		err := ParseRoutePacket(_guildMgr, connection, packet, req.FromGuildId)
 		if err != nil {
 			// 回复一个结果,避免rpc调用方超时
-			routePacket := NewProtoPacketEx(packet.Command()+1, nil)
+			routePacket := NewProtoPacketEx(internal.GetResCommand(req.PacketCommand), nil)
 			if rpcCallIdSetter, ok := packet.(RpcCallIdSetter); ok {
 				routePacket.SetRpcCallId(rpcCallIdSetter.RpcCallId())
 			}
-			game.RoutePlayerPacketWithErr(req.FromPlayerId, routePacket, err.Error(), game.WithConnection(connection))
+			game.RoutePlayerPacket(req.FromPlayerId, routePacket, game.WithConnection(connection), game.WithError(err))
 		}
 	}, new(pb.GuildRoutePlayerMessageReq))
 }
 
 func ParseRoutePacket(mgr *gentity.DistributedEntityMgr, connection Connection, packet Packet, toEntityId int64) error {
+	log := slog.Default().With("toEntityId", toEntityId, "packet", packet)
 	// 再验证一次是否属于本服务器管理
 	if _guildHelper.RouteServerId(toEntityId) != gentity.GetApplication().GetId() {
-		GetLogger().Warn("route err entityId:%v %v", toEntityId, packet)
+		log.Warn("route err")
 		return gentity.ErrRouteServerId
 	}
 	toEntity := mgr.GetEntity(toEntityId)
@@ -135,13 +136,13 @@ func ParseRoutePacket(mgr *gentity.DistributedEntityMgr, connection Connection, 
 		//}
 		toEntity = _guildHelper.LoadEntity(toEntityId)
 		if toEntity == nil {
-			GetLogger().Debug("ParseRoutePacket entity==nil entityId:%v %v", toEntityId, packet)
+			log.Debug("ParseRoutePacket entity==nil")
 			return gentity.ErrEntityNotExists
 		}
 	}
 	message := _guildHelper.RoutePacketToRoutineMessage(connection, packet, toEntityId)
 	if message == nil {
-		GetLogger().Debug("ParseRoutePacket convert err entityId:%v %v", toEntityId, packet)
+		log.Debug("ParseRoutePacket convert err")
 		return gentity.ErrConvertRoutineMessage
 	}
 	toEntity.PushMessage(message)

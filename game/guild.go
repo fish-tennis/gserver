@@ -173,7 +173,7 @@ func (this *Guild) OnGuildJoinReq(req *pb.GuildJoinReq) {
 	}
 	// 向公会所在的服务器发rpc请求
 	reply := new(pb.GuildJoinRes)
-	err := this.RouteRpcToTargetGuild(req.Id, gnet.PacketCommand(pb.CmdClient_Cmd_GuildJoinReq), req, reply)
+	err := this.RouteRpcToTargetGuild(req.Id, req, reply)
 	if err != nil {
 		this.player.SendErrorRes(gnet.PacketCommand(pb.CmdClient_Cmd_GuildJoinReq), fmt.Sprintf("server internal error:%v", err.Error()))
 		return
@@ -190,7 +190,7 @@ func (this *Guild) OnGuildJoinAgreeReq(req *pb.GuildJoinAgreeReq) {
 	}
 	// 向公会所在的服务器发rpc请求
 	reply := new(pb.GuildJoinAgreeRes)
-	err := this.RouteRpcToSelfGuild(gnet.PacketCommand(pb.CmdClient_Cmd_GuildJoinAgreeReq), req, reply)
+	err := this.RouteRpcToSelfGuild(req, reply)
 	if err != nil {
 		this.player.SendErrorRes(gnet.PacketCommand(pb.CmdClient_Cmd_GuildJoinAgreeReq), fmt.Sprintf("server internal error:%v", err.Error()))
 		return
@@ -226,12 +226,12 @@ func (this *Guild) RoutePacketToGuild(cmd gnet.PacketCommand, message proto.Mess
 }
 
 // 客户端的请求消息路由到目标公会所在服务器,并阻塞等待返回结果
-func (this *Guild) RouteRpcToTargetGuild(targetGuildId int64, cmd gnet.PacketCommand, message proto.Message, reply proto.Message) error {
+func (this *Guild) RouteRpcToTargetGuild(targetGuildId int64, message proto.Message, reply proto.Message) error {
 	// 转换成给公会服务的路由消息,附带上玩家信息
 	routePacket := internal.PacketToGuildRoutePacket(this.GetPlayer().GetId(), this.GetPlayer().GetName(),
-		gnet.NewProtoPacketEx(cmd, message), targetGuildId)
+		internal.NewPacket(message), targetGuildId)
 	toServerId := internal.RouteGuildServerId(targetGuildId)
-	slog.Debug("RouteRpcToTargetGuild", "cmd", cmd, "playerId", this.GetPlayerId(), "guildId", targetGuildId, "toServerId", toServerId)
+	slog.Debug("RouteRpcToTargetGuild", "playerId", this.GetPlayerId(), "guildId", targetGuildId, "toServerId", toServerId, "req", proto.MessageName(message))
 	routePlayerMessage := new(pb.RoutePlayerMessage)
 	err := internal.GetServerList().Rpc(toServerId, routePacket, routePlayerMessage)
 	if err != nil {
@@ -252,9 +252,9 @@ func (this *Guild) RouteRpcToTargetGuild(targetGuildId int64, cmd gnet.PacketCom
 }
 
 // 公会成员的客户端的请求消息路由到自己的公会所在服务器,并阻塞等待返回结果
-func (this *Guild) RouteRpcToSelfGuild(cmd gnet.PacketCommand, message proto.Message, reply proto.Message) error {
-	slog.Debug("RouteRpcToSelfGuild", "cmd", cmd, "playerId", this.GetPlayerId(), "guildId", this.Data.GuildId)
-	return this.RouteRpcToTargetGuild(this.Data.GuildId, cmd, message, reply)
+func (this *Guild) RouteRpcToSelfGuild(message proto.Message, reply proto.Message) error {
+	slog.Debug("RouteRpcToSelfGuild", "playerId", this.GetPlayerId(), "guildId", this.Data.GuildId, "req", proto.MessageName(message))
+	return this.RouteRpcToTargetGuild(this.Data.GuildId, message, reply)
 }
 
 // 查看自己公会的信息
@@ -264,7 +264,7 @@ func (this *Guild) OnGuildDataViewReq(req *pb.GuildDataViewReq) {
 		return
 	}
 	reply := new(pb.GuildDataViewRes)
-	err := this.RouteRpcToSelfGuild(gnet.PacketCommand(pb.CmdClient_Cmd_GuildDataViewReq), req, reply)
+	err := this.RouteRpcToSelfGuild(req, reply)
 	if err != nil {
 		this.GetPlayer().SendErrorRes(gnet.PacketCommand(pb.CmdClient_Cmd_GuildDataViewReq), fmt.Sprintf("server internal error:%v", err.Error()))
 		return

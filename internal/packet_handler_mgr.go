@@ -5,6 +5,7 @@ import (
 	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gnet"
 	"google.golang.org/protobuf/proto"
+	"log/slog"
 	"reflect"
 	"strings"
 )
@@ -40,7 +41,7 @@ func NewPacketHandlerMgr() *PacketHandlerMgr {
 func (this *PacketHandlerMgr) AddHandlerInfo(handlerInfo *PacketHandlerInfo) {
 	if oldInfo, ok := this.HandlerInfos[handlerInfo.Cmd]; ok {
 		if oldInfo.ComponentName != handlerInfo.ComponentName || oldInfo.Method.Name != handlerInfo.Method.Name {
-			gentity.GetLogger().Error("duplicate cmd:%v component:%v method:%v", handlerInfo.Cmd, oldInfo.ComponentName, oldInfo.Method.Name)
+			slog.Error("duplicate cmd", "cmd", handlerInfo.Cmd, "component", oldInfo.ComponentName, "method", oldInfo.Method.Name)
 		}
 	}
 	this.HandlerInfos[handlerInfo.Cmd] = handlerInfo
@@ -97,7 +98,7 @@ func (this *PacketHandlerMgr) scanMethods(obj any, packetHandlerRegister gnet.Pa
 		if !method.IsExported() {
 			continue
 		}
-		// TODO: 扩展func (c *Component) OnXxx(req *pb.Xxx, res *pb.Xxx) int32
+		// TODO: 扩展func (c *Component) OnXxx(req *pb.Xxx) (*pb.Xxx,error)
 		if method.Type.NumIn() != 2 {
 			continue
 		}
@@ -120,17 +121,17 @@ func (this *PacketHandlerMgr) scanMethods(obj any, packetHandlerRegister gnet.Pa
 		messageName := reqArg.String()[strings.LastIndex(reqArg.String(), ".")+1:]
 		// 客户端消息回调的函数名规则,如OnFinishQuestReq
 		if isClientMessage && method.Name != fmt.Sprintf("%v%v", clientHandlerPrefix, messageName) {
-			gentity.GetLogger().Debug("client methodName not match:%v", method.Name)
+			slog.Debug("client methodName not match", "method", method.Name)
 			continue
 		}
 		// 非客户端消息回调的函数名规则,如HandleFinishQuestReq
 		if !isClientMessage && method.Name != fmt.Sprintf("%v%v", otherHandlerPrefix, messageName) {
-			gentity.GetLogger().Debug("methodName not match:%v", method.Name)
+			slog.Debug("methodName not match", "method", method.Name)
 			continue
 		}
 		messageId := GetCommandByProto(reflect.New(reqArg.Elem()).Interface().(proto.Message))
 		if messageId == 0 {
-			gentity.GetLogger().Debug("methodName match:%v but messageId==0", method.Name)
+			slog.Debug("messageId==0", "method", method.Name)
 			continue
 		}
 		cmd := gnet.PacketCommand(messageId)
@@ -143,7 +144,7 @@ func (this *PacketHandlerMgr) scanMethods(obj any, packetHandlerRegister gnet.Pa
 		if isClientMessage && packetHandlerRegister != nil {
 			packetHandlerRegister.Register(cmd, nil, reflect.New(reqArg.Elem()).Interface().(proto.Message))
 		}
-		gentity.GetLogger().Debug("ScanPacketHandler %v.%v %v client:%v", componentStructName, method.Name, messageId, isClientMessage)
+		slog.Debug("scanMethods", "component", componentStructName, "method", method.Name, "cmd", messageId, "isClient", isClientMessage)
 	}
 }
 
@@ -158,7 +159,7 @@ func (this *PacketHandlerMgr) Invoke(entity gentity.Entity, packet gnet.Packet) 
 			component := entity.GetComponentByName(handlerInfo.ComponentName)
 			if component != nil {
 				if !handlerInfo.Method.Func.IsValid() {
-					gentity.GetLogger().Error("InvokeErr method invalid cmd:%v", packet.Command())
+					slog.Error("InvokeErr method invalid", "cmd", packet.Command())
 					return false
 				}
 				// 反射调用函数
@@ -168,7 +169,7 @@ func (this *PacketHandlerMgr) Invoke(entity gentity.Entity, packet gnet.Packet) 
 			}
 		} else {
 			if !handlerInfo.Method.Func.IsValid() {
-				gentity.GetLogger().Error("InvokeErr method invalid cmd:%v", packet.Command())
+				slog.Error("InvokeErr method invalid", "cmd", packet.Command())
 				return false
 			}
 			// 反射调用函数

@@ -6,7 +6,6 @@ import (
 	"github.com/fish-tennis/gserver/cache"
 	"github.com/fish-tennis/gserver/db"
 	"github.com/fish-tennis/gserver/internal"
-	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
@@ -99,10 +98,7 @@ func WithError(err error) RouteOption {
 // 举例:
 // 公会会长同意了玩家A的入会申请,此时玩家A可能不在线,就把该消息存入玩家的数据库,待玩家下次上线时,从数据库取出该消息,并进行相应的逻辑处理
 func RoutePlayerPacket(playerId int64, packet Packet, opts ...RouteOption) bool {
-	return RoutePlayerPacketWithErr(playerId, packet, "", opts...)
-}
-
-func RoutePlayerPacketWithErr(playerId int64, packet Packet, errStr string, opts ...RouteOption) bool {
+	log := slog.Default().With("playerId", playerId, "message", proto.MessageName(packet.Message()))
 	routeOpts := defaultRouteOptions()
 	for _, opt := range opts {
 		opt.apply(routeOpts)
@@ -111,7 +107,7 @@ func RoutePlayerPacketWithErr(playerId int64, packet Packet, errStr string, opts
 	if routeOpts.SaveDb {
 		anyMessage, err := anypb.New(packet.Message())
 		if err != nil {
-			logger.Error("RoutePlayerPacket %v err:%v", playerId, err)
+			log.Error("RoutePlayerPacketErr", "err", err)
 			return false
 		}
 		pendingMessageId = util.GenUniqueId()
@@ -123,16 +119,16 @@ func RoutePlayerPacketWithErr(playerId int64, packet Packet, errStr string, opts
 		}
 		pendingMessageBytes, err := proto.Marshal(pendingMessage)
 		if err != nil {
-			logger.Error("RoutePlayerPacket %v err:%v", playerId, err)
+			log.Error("RoutePlayerPacketErr", "err", err)
 			return false
 		}
 		err = db.GetPlayerDb().SaveComponentField(playerId, ComponentNamePendingMessages,
 			util.Itoa(pendingMessage.MessageId), pendingMessageBytes)
 		if err != nil {
-			logger.Error("RoutePlayerPacket %v err:%v", playerId, err)
+			log.Error("RoutePlayerPacketErr", "err", err)
 			return false
 		}
-		logger.Debug("save PendingMessage:%v playerId:%v cmd:%v", pendingMessage.MessageId, playerId, packet.Command())
+		log.Debug("save PendingMessage", "MessageId", pendingMessage.MessageId, "cmd", packet.Command())
 	}
 	conn := routeOpts.Connection
 	if conn == nil {
@@ -140,7 +136,7 @@ func RoutePlayerPacketWithErr(playerId int64, packet Packet, errStr string, opts
 		if toServerId == 0 {
 			_, toServerId = cache.GetOnlinePlayer(playerId)
 			if toServerId == 0 {
-				logger.Error("RoutePlayerPacketErr player offline playerId:%v cmd:%v", playerId, packet.Command())
+				log.Error("RoutePlayerPacketErr player offline", "cmd", packet.Command())
 				return false
 			}
 		}
@@ -151,16 +147,17 @@ func RoutePlayerPacketWithErr(playerId int64, packet Packet, errStr string, opts
 		var err error
 		anyPacket, err = anypb.New(packet.Message())
 		if err != nil {
-			logger.Error("RoutePlayerPacketWithServer %v err:%v", playerId, err)
+			log.Error("RoutePlayerPacketWithServerErr", "err", err)
 			return false
 		}
 	} else {
-		slog.Debug("anyPacketNil", "playerId", playerId, "cmd", packet.Command(), "errStr", errStr, "DirectSendClient", routeOpts.DirectSendClient)
+		log.Debug("anyPacketNil", "cmd", packet.Command(), "err", routeOpts.Error, "DirectSendClient", routeOpts.DirectSendClient)
 	}
-	if errStr == "" && routeOpts.Error != nil {
+	var errStr string
+	if routeOpts.Error != nil {
 		errStr = routeOpts.Error.Error()
 	}
-	routePacket := NewProtoPacketEx(pb.CmdServer_Cmd_RoutePlayerMessage, &pb.RoutePlayerMessage{
+	routePacket := internal.NewServerPacket(&pb.RoutePlayerMessage{
 		Error:            errStr,
 		ToPlayerId:       playerId,
 		PacketCommand:    int32(packet.Command()),

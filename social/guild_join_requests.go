@@ -4,8 +4,8 @@ import (
 	"errors"
 	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gentity/util"
-	"github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/game"
+	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 	"log/slog"
@@ -68,7 +68,7 @@ func (this *GuildJoinRequests) HandleGuildJoinReq(guildMessage *GuildMessage, re
 		TimestampSec: int32(util.GetCurrentTimeStamp()),
 	})
 	// 广播公会成员
-	g.BroadcastClientPacket(pb.CmdClient_Cmd_GuildJoinReqTip, &pb.GuildJoinReqTip{
+	g.BroadcastClientPacket(&pb.GuildJoinReqTip{
 		PlayerId:   guildMessage.fromPlayerId,
 		PlayerName: guildMessage.fromPlayerName,
 	})
@@ -108,7 +108,7 @@ func (this *GuildJoinRequests) HandleGuildJoinAgreeReq(guildMessage *GuildMessag
 		}
 		// 通知对方已经入会了
 		// 这里使用了WithSaveDb选项,如果玩家此时不在线,等他下次上线时,会收到该消息
-		game.RoutePlayerPacket(joinRequest.PlayerId, gnet.NewProtoPacketEx(pb.CmdClient_Cmd_GuildJoinReqOpResult, &pb.GuildJoinReqOpResult{
+		game.RoutePlayerPacket(joinRequest.PlayerId, internal.NewPacket(&pb.GuildJoinReqOpResult{
 			GuildId:         g.GetId(),
 			ManagerPlayerId: guildMessage.fromPlayerId,
 			JoinPlayerId:    joinRequest.PlayerId,

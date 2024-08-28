@@ -172,7 +172,7 @@ func onTestCmd(player *game.Player, packet Packet) {
 	case strings.ToLower("GuildRouteError"):
 		// 模拟一个rpc错误,向一个不存在的公会发送rpc消息
 		reply := new(pb.GuildJoinRes)
-		err := player.GetGuild().RouteRpcToTargetGuild(123456789, PacketCommand(pb.CmdClient_Cmd_GuildJoinReq),
+		err := player.GetGuild().RouteRpcToTargetGuild(123456789,
 			&pb.GuildJoinReq{Id: 123456789}, reply)
 		if err != nil {
 			slog.Info("GuildRouteError", "err", err.Error())

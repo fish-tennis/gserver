@@ -1,18 +1,62 @@
 package logger
 
 import (
+	"context"
+	"fmt"
 	"github.com/fish-tennis/gnet"
+	"log/slog"
 	"runtime"
+	"time"
 )
 
-var _logger = gnet.NewStdLogger(3)
+// see go\src\log\slog\example_wrap_test.go
+type slogWrapper struct {
+}
+
+func (s *slogWrapper) Debug(format string, args ...interface{}) {
+	if !slog.Default().Enabled(context.Background(), slog.LevelDebug) {
+		return
+	}
+	var pcs [1]uintptr
+	runtime.Callers(2, pcs[:]) // skip [Callers, Infof]
+	r := slog.NewRecord(time.Now(), slog.LevelDebug, fmt.Sprintf(format, args...), pcs[0])
+	_ = slog.Default().Handler().Handle(context.Background(), r)
+}
+
+func (s *slogWrapper) Info(format string, args ...interface{}) {
+	if !slog.Default().Enabled(context.Background(), slog.LevelInfo) {
+		return
+	}
+	var pcs [1]uintptr
+	runtime.Callers(2, pcs[:]) // skip [Callers, Infof]
+	r := slog.NewRecord(time.Now(), slog.LevelInfo, fmt.Sprintf(format, args...), pcs[0])
+	_ = slog.Default().Handler().Handle(context.Background(), r)
+}
+
+func (s *slogWrapper) Warn(format string, args ...interface{}) {
+	if !slog.Default().Enabled(context.Background(), slog.LevelWarn) {
+		return
+	}
+	var pcs [1]uintptr
+	runtime.Callers(2, pcs[:]) // skip [Callers, Infof]
+	r := slog.NewRecord(time.Now(), slog.LevelWarn, fmt.Sprintf(format, args...), pcs[0])
+	_ = slog.Default().Handler().Handle(context.Background(), r)
+}
+
+func (s *slogWrapper) Error(format string, args ...interface{}) {
+	if !slog.Default().Enabled(context.Background(), slog.LevelError) {
+		return
+	}
+	var pcs [1]uintptr
+	runtime.Callers(2, pcs[:]) // skip [Callers, Infof]
+	r := slog.NewRecord(time.Now(), slog.LevelError, fmt.Sprintf(format, args...), pcs[0])
+	_ = slog.Default().Handler().Handle(context.Background(), r)
+}
+
+var _logger = &slogWrapper{}
 
 func GetLogger() gnet.Logger {
 	return _logger
-}
-
-func SetLogger(logger gnet.Logger) {
-	_logger = logger
 }
 
 func Debug(format string, args ...interface{}) {

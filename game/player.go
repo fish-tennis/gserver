@@ -228,6 +228,7 @@ func (this *Player) processMessage(message *ProtoPacket) {
 	}()
 	logger.Debug("processMessage %v", proto.MessageName(message.Message()).Name())
 	// 先找注册的消息回调接口,格式:func (q *Quest) OnFinishQuestReq(cmd PacketCommand, req *pb.FinishQuestReq)
+	// TODO: func (q *Quest) OnFinishQuestReq(req *pb.FinishQuestReq) *pb.FinishQuestRes
 	if _playerPacketHandlerMgr.Invoke(this, message) {
 		// 如果有需要保存的数据修改了,即时保存缓存
 		this.SaveCache(cache.Get())
