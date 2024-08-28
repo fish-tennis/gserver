@@ -1,4 +1,4 @@
-package internal
+package network
 
 import (
 	"github.com/fish-tennis/gnet"
@@ -7,10 +7,5 @@ import (
 
 func NewPacket(message proto.Message) *gnet.ProtoPacket {
 	cmd := GetCommandByProto(message)
-	return gnet.NewProtoPacketEx(cmd, message)
-}
-
-func NewServerPacket(message proto.Message) *gnet.ProtoPacket {
-	cmd := GetServerCommandByProto(message)
 	return gnet.NewProtoPacketEx(cmd, message)
 }

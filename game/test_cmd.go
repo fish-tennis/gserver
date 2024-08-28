@@ -4,7 +4,7 @@ import (
 	"github.com/fish-tennis/gentity/util"
 	"github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cfg"
-	"github.com/fish-tennis/gserver/internal"
+	"github.com/fish-tennis/gserver/network"
 	"github.com/fish-tennis/gserver/pb"
 	"log/slog"
 	"strings"
@@ -13,7 +13,7 @@ import (
 // 直接写在实体上的消息回调
 func (p *Player) OnTestCmd(req *pb.TestCmd) {
 	slog.Info("OnTestCmd", "cmd", req.Cmd)
-	cmd := gnet.PacketCommand(internal.GetCommandByProto(req))
+	cmd := gnet.PacketCommand(network.GetCommandByProto(req))
 	cmdStrs := strings.Split(req.GetCmd(), " ")
 	if len(cmdStrs) == 0 {
 		p.SendErrorRes(cmd, "empty cmd")

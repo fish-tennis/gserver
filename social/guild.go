@@ -4,8 +4,8 @@ import (
 	"github.com/fish-tennis/gentity"
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/game"
-	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
+	"github.com/fish-tennis/gserver/network"
 	"github.com/fish-tennis/gserver/pb"
 	"google.golang.org/protobuf/proto"
 	"log/slog"
@@ -104,7 +104,7 @@ func (this *Guild) RoutePlayerPacket(guildMessage *GuildMessage, cmd any, messag
 // 路由玩家消息,直接发给客户端
 // this server -> other server -> client
 func (this *Guild) RouteClientPacket(guildMessage *GuildMessage, message proto.Message) {
-	game.RoutePlayerPacket(guildMessage.fromPlayerId, internal.NewPacket(message),
+	game.RoutePlayerPacket(guildMessage.fromPlayerId, network.NewPacket(message),
 		game.WithDirectSendClient(), game.WithConnection(guildMessage.srcConnection))
 }
 
@@ -112,7 +112,7 @@ func (this *Guild) RouteClientPacket(guildMessage *GuildMessage, message proto.M
 // this server -> other server -> player
 func (this *Guild) BroadcastPlayerPacket(message proto.Message) {
 	for _, member := range this.GetMembers().Data {
-		game.RoutePlayerPacket(member.Id, internal.NewPacket(message))
+		game.RoutePlayerPacket(member.Id, network.NewPacket(message))
 	}
 }
 
@@ -120,6 +120,6 @@ func (this *Guild) BroadcastPlayerPacket(message proto.Message) {
 // this server -> other server -> client
 func (this *Guild) BroadcastClientPacket(message proto.Message) {
 	for _, member := range this.GetMembers().Data {
-		game.RoutePlayerPacket(member.Id, internal.NewPacket(message), game.WithDirectSendClient())
+		game.RoutePlayerPacket(member.Id, network.NewPacket(message), game.WithDirectSendClient())
 	}
 }

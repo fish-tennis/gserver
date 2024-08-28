@@ -65,7 +65,7 @@ func onLoginReq(connection Connection, packet Packet) {
 		}
 		logger.Debug("%v(%v) -> %v", account.Name, account.GetXId(), loginRes.GameServer)
 	}
-	network.SendPacketAdapt(connection, packet, internal.NewPacket(loginRes))
+	network.SendPacketAdapt(connection, packet, network.NewPacket(loginRes))
 }
 
 // 选择一个游戏服给登录成功的客户端
@@ -87,7 +87,7 @@ func onAccountReg(connection Connection, packet Packet) {
 	result := ""
 	newAccountIdValue, err := db.GetKvDb().Inc(db.AccountIdKeyName, int64(1), true)
 	if err != nil {
-		network.SendPacketAdapt(connection, packet, internal.NewPacket(&pb.AccountRes{
+		network.SendPacketAdapt(connection, packet, network.NewPacket(&pb.AccountRes{
 			Error: "IdError",
 		}))
 		logger.Error("onAccountReg err:%v", err)
@@ -114,7 +114,7 @@ func onAccountReg(connection Connection, packet Packet) {
 		}
 		logger.Error("onAccountReg account:%v result:%v err:%v", account.Name, result, err.Error())
 	}
-	network.SendPacketAdapt(connection, packet, internal.NewPacket(&pb.AccountRes{
+	network.SendPacketAdapt(connection, packet, network.NewPacket(&pb.AccountRes{
 		Error:       result,
 		AccountName: account.Name,
 		AccountId:   account.XId,

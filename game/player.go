@@ -100,7 +100,7 @@ func (this *Player) OnDisconnect(connection Connection) {
 // 发包(protobuf)
 // NOTE:调用Send(command,message)之后,不要再对message进行读写!
 func (this *Player) Send(message proto.Message, opts ...SendOption) bool {
-	clientCmd := internal.GetClientCommandByProto(message)
+	clientCmd := network.GetCommandByProto(message)
 	if clientCmd <= 0 {
 		slog.Error("clientCmdNotFound", "messageName", proto.MessageName(message))
 		return false

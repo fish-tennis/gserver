@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gnet"
+	"github.com/fish-tennis/gserver/network"
 	"google.golang.org/protobuf/proto"
 	"log/slog"
 	"reflect"
@@ -128,7 +129,7 @@ func (this *PacketHandlerMgr) scanMethods(obj any, packetHandlerRegister gnet.Pa
 			slog.Debug("methodName not match", "method", method.Name)
 			continue
 		}
-		messageId := GetCommandByProto(reflect.New(reqArg.Elem()).Interface().(proto.Message))
+		messageId := network.GetCommandByProto(reflect.New(reqArg.Elem()).Interface().(proto.Message))
 		if messageId == 0 {
 			slog.Debug("messageId==0", "method", method.Name, "messageName", messageName)
 			continue
@@ -150,7 +151,7 @@ func (this *PacketHandlerMgr) scanMethods(obj any, packetHandlerRegister gnet.Pa
 				continue
 			}
 			resMessageElem = resArg.Elem()
-			resCmd = GetCommandByProto(reflect.New(resMessageElem).Interface().(proto.Message))
+			resCmd = network.GetCommandByProto(reflect.New(resMessageElem).Interface().(proto.Message))
 			if resCmd == 0 {
 				slog.Debug("resCmd==0", "method", method.Name)
 				continue

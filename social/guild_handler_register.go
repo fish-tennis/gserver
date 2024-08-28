@@ -6,6 +6,7 @@ import (
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/game"
 	"github.com/fish-tennis/gserver/internal"
+	"github.com/fish-tennis/gserver/network"
 	"github.com/fish-tennis/gserver/pb"
 	"google.golang.org/protobuf/proto"
 	"log/slog"
@@ -19,7 +20,7 @@ var _guildPacketHandlerMgr = make(map[PacketCommand]*internal.PacketHandlerInfo)
 func InitGuildStructAndHandler() {
 	tmpGuild := NewGuild(&pb.GuildLoadData{})
 	gentity.ParseEntitySaveableStruct(tmpGuild)
-	AutoRegisterGuildPacketHandler(tmpGuild, internal.HandlerMethodNamePrefix, internal.ProtoPackageName)
+	AutoRegisterGuildPacketHandler(tmpGuild, internal.HandlerMethodNamePrefix, network.ProtoPackageName)
 }
 
 // 公会的消息回调接口使用了特殊的形式,所以自己写接口注册流程
@@ -65,7 +66,7 @@ func scanGuildMethods(obj any, methodNamePrefix, protoPackageName string) {
 			slog.Debug("methodName not match", "method", method.Name)
 			continue
 		}
-		reqCmd := internal.GetCommandByProto(reflect.New(methodArg2.Elem()).Interface().(proto.Message))
+		reqCmd := network.GetCommandByProto(reflect.New(methodArg2.Elem()).Interface().(proto.Message))
 		if reqCmd == 0 {
 			slog.Debug("reqCmd==0", "method", method.Name)
 			continue
@@ -85,7 +86,7 @@ func scanGuildMethods(obj any, methodNamePrefix, protoPackageName string) {
 			continue
 		}
 		resMessageElem = resArg.Elem()
-		resCmd = internal.GetCommandByProto(reflect.New(resMessageElem).Interface().(proto.Message))
+		resCmd = network.GetCommandByProto(reflect.New(resMessageElem).Interface().(proto.Message))
 		if resCmd == 0 {
 			slog.Debug("resCmd==0", "method", method.Name)
 			continue
@@ -111,7 +112,7 @@ func GuildServerHandlerRegister(handler PacketHandlerRegister) {
 		err := ParseRoutePacket(_guildMgr, connection, packet, req.FromGuildId)
 		if err != nil {
 			// 回复一个结果,避免rpc调用方超时
-			routePacket := NewProtoPacketEx(internal.GetResCommand(req.PacketCommand), nil)
+			routePacket := NewProtoPacketEx(network.GetResCommand(req.PacketCommand), nil)
 			if rpcCallIdSetter, ok := packet.(RpcCallIdSetter); ok {
 				routePacket.SetRpcCallId(rpcCallIdSetter.RpcCallId())
 			}

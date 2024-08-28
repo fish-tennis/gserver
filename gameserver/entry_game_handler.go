@@ -18,7 +18,7 @@ import (
 func onPlayerEntryGameReq(connection Connection, packet Packet) {
 	req := packet.Message().(*pb.PlayerEntryGameReq)
 	if connection.GetTag() != nil {
-		network.SendPacketAdapt(connection, packet, internal.NewPacket(&pb.PlayerEntryGameRes{
+		network.SendPacketAdapt(connection, packet, network.NewPacket(&pb.PlayerEntryGameRes{
 			Error: "HasLogin",
 		}))
 		return
@@ -26,7 +26,7 @@ func onPlayerEntryGameReq(connection Connection, packet Packet) {
 	accountId := req.GetAccountId()
 	// 验证LoginSession
 	if !cache.VerifyLoginSession(accountId, req.GetLoginSession()) {
-		network.SendPacketAdapt(connection, packet, internal.NewPacket(&pb.PlayerEntryGameRes{
+		network.SendPacketAdapt(connection, packet, network.NewPacket(&pb.PlayerEntryGameRes{
 			Error: "SessionError",
 		}))
 		return
@@ -34,7 +34,7 @@ func onPlayerEntryGameReq(connection Connection, packet Packet) {
 	playerId, err := db.GetPlayerDb().FindPlayerIdByAccountId(accountId, req.GetRegionId())
 	//hasData,err := db.GetPlayerDb().FindPlayerByAccountId(req.GetAccountId(), req.GetRegionId(), playerData)
 	if err != nil {
-		network.SendPacketAdapt(connection, packet, internal.NewPacket(&pb.PlayerEntryGameRes{
+		network.SendPacketAdapt(connection, packet, network.NewPacket(&pb.PlayerEntryGameRes{
 			Error: "DbError",
 		}))
 		logger.Error(err.Error())
@@ -43,7 +43,7 @@ func onPlayerEntryGameReq(connection Connection, packet Packet) {
 	var entryPlayer *game.Player
 	isReconnect := false
 	if playerId == 0 {
-		network.SendPacketAdapt(connection, packet, internal.NewPacket(&pb.PlayerEntryGameRes{
+		network.SendPacketAdapt(connection, packet, network.NewPacket(&pb.PlayerEntryGameRes{
 			Error:     "NoPlayer",
 			AccountId: req.GetAccountId(),
 			RegionId:  req.GetRegionId(),
@@ -79,7 +79,7 @@ func onPlayerEntryGameReq(connection Connection, packet Packet) {
 				}
 			}
 			// 通知客户端稍后重新登录
-			network.SendPacketAdapt(connection, packet, internal.NewPacket(&pb.PlayerEntryGameRes{
+			network.SendPacketAdapt(connection, packet, network.NewPacket(&pb.PlayerEntryGameRes{
 				Error: "TryLater",
 			}))
 			return
@@ -88,7 +88,7 @@ func onPlayerEntryGameReq(connection Connection, packet Packet) {
 		hasData, err := db.GetPlayerDb().FindEntityById(playerId, playerData)
 		if err != nil {
 			cache.RemoveOnlineAccount(accountId)
-			network.SendPacketAdapt(connection, packet, internal.NewPacket(&pb.PlayerEntryGameRes{
+			network.SendPacketAdapt(connection, packet, network.NewPacket(&pb.PlayerEntryGameRes{
 				Error: "DbError",
 			}))
 			logger.Error(err.Error())
@@ -96,7 +96,7 @@ func onPlayerEntryGameReq(connection Connection, packet Packet) {
 		}
 		if !hasData {
 			cache.RemoveOnlineAccount(accountId)
-			network.SendPacketAdapt(connection, packet, internal.NewPacket(&pb.PlayerEntryGameRes{
+			network.SendPacketAdapt(connection, packet, network.NewPacket(&pb.PlayerEntryGameRes{
 				Error:     "NoPlayer",
 				AccountId: req.GetAccountId(),
 				RegionId:  req.GetRegionId(),
@@ -114,7 +114,7 @@ func onPlayerEntryGameReq(connection Connection, packet Packet) {
 		entryPlayer = game.CreatePlayerFromData(playerData)
 		if entryPlayer == nil {
 			cache.RemoveOnlineAccount(accountId)
-			network.SendPacketAdapt(connection, packet, internal.NewPacket(&pb.PlayerEntryGameRes{
+			network.SendPacketAdapt(connection, packet, network.NewPacket(&pb.PlayerEntryGameRes{
 				Error:     "DbError",
 				AccountId: req.GetAccountId(),
 				RegionId:  req.GetRegionId(),
@@ -128,7 +128,7 @@ func onPlayerEntryGameReq(connection Connection, packet Packet) {
 		entryPlayer.RunRoutine()
 	}
 	logger.Debug("entry entryPlayer:%v %v", entryPlayer.GetId(), entryPlayer.GetName())
-	network.SendPacketAdapt(connection, packet, internal.NewPacket(&pb.PlayerEntryGameRes{
+	network.SendPacketAdapt(connection, packet, network.NewPacket(&pb.PlayerEntryGameRes{
 		AccountId:  entryPlayer.GetAccountId(),
 		PlayerId:   entryPlayer.GetId(),
 		RegionId:   entryPlayer.GetRegionId(),
@@ -146,21 +146,21 @@ func onCreatePlayerReq(connection Connection, packet Packet) {
 	logger.Debug("onCreatePlayerReq %v", packet.Message())
 	req := packet.Message().(*pb.CreatePlayerReq)
 	if connection.GetTag() != nil {
-		network.SendPacketAdapt(connection, packet, internal.NewPacket(&pb.CreatePlayerRes{
+		network.SendPacketAdapt(connection, packet, network.NewPacket(&pb.CreatePlayerRes{
 			Error: "HasLogin",
 		}))
 		return
 	}
 	// 验证LoginSession
 	if !cache.VerifyLoginSession(req.GetAccountId(), req.GetLoginSession()) {
-		network.SendPacketAdapt(connection, packet, internal.NewPacket(&pb.CreatePlayerRes{
+		network.SendPacketAdapt(connection, packet, network.NewPacket(&pb.CreatePlayerRes{
 			Error: "SessionError",
 		}))
 		return
 	}
 	newPlayerIdValue, err := db.GetKvDb().Inc(db.PlayerIdKeyName, int64(1), true)
 	if err != nil {
-		network.SendPacketAdapt(connection, packet, internal.NewPacket(&pb.CreatePlayerRes{
+		network.SendPacketAdapt(connection, packet, network.NewPacket(&pb.CreatePlayerRes{
 			Error: "IdError",
 		}))
 		logger.Error("onCreatePlayerReq err:%v", err)
@@ -180,7 +180,7 @@ func onCreatePlayerReq(connection Connection, packet Packet) {
 	}
 	newPlayer := game.CreatePlayerFromData(playerData)
 	if newPlayer == nil {
-		network.SendPacketAdapt(connection, packet, internal.NewPacket(&pb.CreatePlayerRes{
+		network.SendPacketAdapt(connection, packet, network.NewPacket(&pb.CreatePlayerRes{
 			Error: "DbError",
 		}))
 		logger.Error("CreatePlayerFromData")
@@ -198,7 +198,7 @@ func onCreatePlayerReq(connection Connection, packet Packet) {
 		if isDuplicateKey {
 			result = "DuplicateName"
 		}
-		network.SendPacketAdapt(connection, packet, internal.NewPacket(&pb.CreatePlayerRes{
+		network.SendPacketAdapt(connection, packet, network.NewPacket(&pb.CreatePlayerRes{
 			Error: result,
 			Name:  playerData.Name,
 		}))
@@ -206,7 +206,7 @@ func onCreatePlayerReq(connection Connection, packet Packet) {
 		return
 	}
 	logger.Debug("CreatePlayer:%v %v", playerData.XId, playerData.Name)
-	network.SendPacketAdapt(connection, packet, internal.NewPacket(&pb.CreatePlayerRes{
+	network.SendPacketAdapt(connection, packet, network.NewPacket(&pb.CreatePlayerRes{
 		AccountId: req.AccountId,
 		RegionId:  req.RegionId,
 		Name:      req.Name,

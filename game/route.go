@@ -6,6 +6,7 @@ import (
 	"github.com/fish-tennis/gserver/cache"
 	"github.com/fish-tennis/gserver/db"
 	"github.com/fish-tennis/gserver/internal"
+	"github.com/fish-tennis/gserver/network"
 	"github.com/fish-tennis/gserver/pb"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
@@ -157,7 +158,7 @@ func RoutePlayerPacket(playerId int64, packet Packet, opts ...RouteOption) bool 
 	if routeOpts.Error != nil {
 		errStr = routeOpts.Error.Error()
 	}
-	routePacket := internal.NewServerPacket(&pb.RoutePlayerMessage{
+	routePacket := network.NewPacket(&pb.RoutePlayerMessage{
 		Error:            errStr,
 		ToPlayerId:       playerId,
 		PacketCommand:    int32(packet.Command()),

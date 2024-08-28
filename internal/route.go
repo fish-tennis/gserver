@@ -4,6 +4,7 @@ import (
 	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/logger"
+	"github.com/fish-tennis/gserver/network"
 	"github.com/fish-tennis/gserver/pb"
 	"google.golang.org/protobuf/types/known/anypb"
 )
@@ -37,5 +38,5 @@ func PacketToGuildRoutePacket(fromPlayerId int64, fromPlayerName string, reqPack
 		PacketCommand:  int32(reqPacket.Command()),
 		PacketData:     anyPacket,
 	}
-	return NewServerPacket(routePacket)
+	return network.NewPacket(routePacket)
 }

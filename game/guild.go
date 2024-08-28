@@ -8,6 +8,7 @@ import (
 	"github.com/fish-tennis/gserver/db"
 	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
+	"github.com/fish-tennis/gserver/network"
 	"github.com/fish-tennis/gserver/pb"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -201,7 +202,7 @@ func (this *Guild) RoutePacketToGuild(cmd gnet.PacketCommand, message proto.Mess
 func (this *Guild) RouteRpcToTargetGuild(targetGuildId int64, message proto.Message, reply proto.Message) error {
 	// 转换成给公会服务的路由消息,附带上玩家信息
 	routePacket := internal.PacketToGuildRoutePacket(this.GetPlayer().GetId(), this.GetPlayer().GetName(),
-		internal.NewPacket(message), targetGuildId)
+		network.NewPacket(message), targetGuildId)
 	toServerId := internal.RouteGuildServerId(targetGuildId)
 	slog.Debug("RouteRpcToTargetGuild", "playerId", this.GetPlayerId(), "guildId", targetGuildId, "toServerId", toServerId, "req", proto.MessageName(message))
 	routePlayerMessage := new(pb.RoutePlayerMessage)
