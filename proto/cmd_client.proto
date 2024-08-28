@@ -16,6 +16,7 @@ enum CmdClient {
 	Cmd_PlayerEntryGameRes = 1006;
 	Cmd_CreatePlayerReq = 1007;
 	Cmd_CreatePlayerRes = 1008;
+	Cmd_TestCmd = 1009; // 测试命令
 	
 	// Money
 	Cmd_CoinReq = 1101; // 请求加coin的测试消息

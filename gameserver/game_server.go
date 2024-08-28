@@ -14,7 +14,6 @@ import (
 	"github.com/fish-tennis/gserver/network"
 	"github.com/fish-tennis/gserver/pb"
 	"github.com/fish-tennis/gserver/social"
-	"google.golang.org/protobuf/proto"
 	"os"
 	"sync"
 )
@@ -162,7 +161,7 @@ func (this *GameServer) initNetwork() {
 
 	this.gateListener = network.ListenGate(this.config.GateListenAddr, this.registerGatePacket)
 	if this.gateListener == nil {
-		panic("listen gate failed")
+		panic("listen gateserver failed")
 	}
 
 	this.GetServerList().SetCache(cache.Get())
@@ -208,7 +207,6 @@ func (this *GameServer) registerClientPacket(handler *DefaultConnectionHandler) 
 	// 手动注册特殊的消息回调
 	handler.Register(PacketCommand(pb.CmdClient_Cmd_PlayerEntryGameReq), onPlayerEntryGameReq, new(pb.PlayerEntryGameReq))
 	handler.Register(PacketCommand(pb.CmdClient_Cmd_CreatePlayerReq), onCreatePlayerReq, new(pb.CreatePlayerReq))
-	this.registerGatePlayerPacket(handler, PacketCommand(pb.CmdInner_Cmd_TestCmd), onTestCmd, new(pb.TestCmd))
 	handler.SetUnRegisterHandler(func(connection Connection, packet Packet) {
 		var playerId int64
 		var playerPacket *ProtoPacket
@@ -258,44 +256,10 @@ func (this *GameServer) registerGatePacket(handler *DefaultConnectionHandler) {
 	})
 }
 
-// 注册func(player *Player, packet Packet)格式的消息回调函数,支持网关模式和客户端直连模式
-func (this *GameServer) registerGatePlayerPacket(gateHandler PacketHandlerRegister, packetCommand PacketCommand, playerHandler func(player *game.Player, packet Packet), protoMessage proto.Message) {
-	gateHandler.Register(packetCommand, func(connection Connection, packet Packet) {
-		var playerId int64
-		if gatePacket, ok := packet.(*network.GatePacket); ok {
-			// 网关转发的消息,包含playerId
-			playerId = gatePacket.PlayerId()
-		} else {
-			// 客户端直连的模式
-			if connection.GetTag() == nil {
-				return
-			}
-			playerId, ok = connection.GetTag().(int64)
-			if !ok {
-				return
-			}
-		}
-		player := game.GetPlayer(playerId)
-		if player == nil {
-			return
-		}
-		// 网关模式,使用的GatePacket
-		if gatePacket, ok := packet.(*network.GatePacket); ok {
-			// 转换成ProtoPacket,业务层统一接口
-			player.OnRecvPacket(gatePacket.ToProtoPacket())
-		} else {
-			// 客户端直连模式,使用的ProtoPacket
-			player.OnRecvPacket(packet.(*ProtoPacket))
-		}
-	}, protoMessage)
-	game.RegisterPlayerHandler(packetCommand, playerHandler)
-}
-
 // 注册服务器消息回调
 func (this *GameServer) registerServerPacket(handler *DefaultConnectionHandler) {
 	handler.Register(PacketCommand(pb.CmdInner_Cmd_KickPlayer), this.onKickPlayer, new(pb.KickPlayer))
 	handler.Register(PacketCommand(pb.CmdServer_Cmd_RoutePlayerMessage), this.onRoutePlayerMessage, new(pb.RoutePlayerMessage))
-	//serverHandler.autoRegisterPlayerComponentProto()
 }
 
 // 添加一个在线玩家
@@ -322,6 +286,7 @@ func (this *GameServer) GetPlayer(playerId int64) IPlayer {
 }
 
 // 踢玩家下线
+// TODO: GameServer也建一个实体,把onKickPlayer放到组件rpc回调上
 func (this *GameServer) onKickPlayer(connection Connection, packet Packet) {
 	req := packet.Message().(*pb.KickPlayer)
 	player := game.GetPlayer(req.GetPlayerId())

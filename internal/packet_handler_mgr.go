@@ -16,9 +16,9 @@ type PacketHandlerInfo struct {
 	ComponentName string
 	// req消息号
 	Cmd gnet.PacketCommand
-	// res消息号,用于rpc
+	// res消息号
 	ResCmd gnet.PacketCommand
-	// res类型
+	// res消息type
 	ResMessageElem reflect.Type
 	// 函数信息
 	Method reflect.Method
@@ -53,12 +53,12 @@ func (this *PacketHandlerMgr) AddHandlerInfo(handlerInfo *PacketHandlerInfo) {
 //	类似Java的注解功能
 //	用于服务器内部的逻辑消息
 //	可以在组件里编写函数: HandleXxx(cmd PacketCommand, req *pb.Xxx)
-func (this *PacketHandlerMgr) AutoRegister(entity gentity.Entity, methodNamePrefix, protoPackageName string) {
+func (this *PacketHandlerMgr) AutoRegister(entity gentity.Entity, methodNamePrefix string) {
 	// 扫描entity上的消息回调接口
-	this.scanMethods(entity, nil, "", methodNamePrefix, protoPackageName)
+	this.scanMethods(entity, nil, "", methodNamePrefix)
 	// 扫描entity的组件上的消息回调接口
 	entity.RangeComponent(func(component gentity.Component) bool {
-		this.scanMethods(component, nil, "", methodNamePrefix, protoPackageName)
+		this.scanMethods(component, nil, "", methodNamePrefix)
 		return true
 	})
 }
@@ -72,33 +72,32 @@ func (this *PacketHandlerMgr) AutoRegister(entity gentity.Entity, methodNamePref
 //	可以在组件里编写函数: OnXxx(cmd PacketCommand, req *pb.Xxx)
 //	2.服务器内部的逻辑消息
 //	可以在组件里编写函数: HandleXxx(cmd PacketCommand, req *pb.Xxx)
-func (this *PacketHandlerMgr) AutoRegisterWithClient(entity gentity.Entity, packetHandlerRegister gnet.PacketHandlerRegister, clientHandlerPrefix, otherHandlerPrefix, protoPackageName string) {
+func (this *PacketHandlerMgr) AutoRegisterWithClient(entity gentity.Entity, packetHandlerRegister gnet.PacketHandlerRegister, clientHandlerPrefix, otherHandlerPrefix string) {
 	// 扫描entity上的消息回调接口
-	this.scanMethods(entity, packetHandlerRegister, clientHandlerPrefix, otherHandlerPrefix, protoPackageName)
+	this.scanMethods(entity, packetHandlerRegister, clientHandlerPrefix, otherHandlerPrefix)
 	// 扫描entity的组件上的消息回调接口
 	entity.RangeComponent(func(component gentity.Component) bool {
-		this.scanMethods(component, packetHandlerRegister, clientHandlerPrefix, otherHandlerPrefix, protoPackageName)
+		this.scanMethods(component, packetHandlerRegister, clientHandlerPrefix, otherHandlerPrefix)
 		return true
 	})
 }
 
 // 扫描一个struct的函数
 func (this *PacketHandlerMgr) scanMethods(obj any, packetHandlerRegister gnet.PacketHandlerRegister,
-	clientHandlerPrefix, otherHandlerPrefix, protoPackageName string) {
+	clientHandlerPrefix, otherHandlerPrefix string) {
 	typ := reflect.TypeOf(obj)
 	componentName := ""
 	component, ok := obj.(gentity.Component)
 	if ok {
 		componentName = component.GetName()
 	}
-	// 如: game.Quest -> Quest
-	componentStructName := typ.String()[strings.LastIndex(typ.String(), ".")+1:]
 	for i := 0; i < typ.NumMethod(); i++ {
 		method := typ.Method(i)
 		if !method.IsExported() {
 			continue
 		}
-		// TODO: 扩展func (c *Component) OnXxx(req *pb.Xxx) (*pb.Xxx,error)
+		// func (c *Component) OnXxxReq(req *pb.XxxReq)
+		// func (c *Component) OnXxxReq(req *pb.XxxReq) (*pb.XxxRes,error)
 		if method.Type.NumIn() != 2 {
 			continue
 		}
@@ -131,27 +130,52 @@ func (this *PacketHandlerMgr) scanMethods(obj any, packetHandlerRegister gnet.Pa
 		}
 		messageId := GetCommandByProto(reflect.New(reqArg.Elem()).Interface().(proto.Message))
 		if messageId == 0 {
-			slog.Debug("messageId==0", "method", method.Name)
+			slog.Debug("messageId==0", "method", method.Name, "messageName", messageName)
 			continue
 		}
-		cmd := gnet.PacketCommand(messageId)
+		var (
+			resCmd         int32
+			resMessageElem reflect.Type
+		)
+		//if method.Type.NumOut() < 2 {
+		//	slog.Debug("len(returnValues)<2", "method", method.Name)
+		//	continue
+		//}
+		// func (c *Component) OnXxxReq(req *pb.XxxReq) (*pb.XxxRes,error)
+		if method.Type.NumOut() == 2 {
+			resArg := method.Type.Out(0)
+			// 返回值1是proto定义的消息体
+			if !resArg.Implements(reflect.TypeOf((*proto.Message)(nil)).Elem()) {
+				slog.Debug("resArg not proto.Message", "method", method.Name)
+				continue
+			}
+			resMessageElem = resArg.Elem()
+			resCmd = GetCommandByProto(reflect.New(resMessageElem).Interface().(proto.Message))
+			if resCmd == 0 {
+				slog.Debug("resCmd==0", "method", method.Name)
+				continue
+			}
+		}
+		reqCmd := gnet.PacketCommand(messageId)
 		this.AddHandlerInfo(&PacketHandlerInfo{
-			ComponentName: componentName,
-			Cmd:           cmd,
-			Method:        method,
+			ComponentName:  componentName,
+			Cmd:            reqCmd,
+			ResCmd:         gnet.PacketCommand(resCmd),
+			ResMessageElem: resMessageElem,
+			Method:         method,
 		})
 		// 注册客户端消息
 		if isClientMessage && packetHandlerRegister != nil {
-			packetHandlerRegister.Register(cmd, nil, reflect.New(reqArg.Elem()).Interface().(proto.Message))
+			packetHandlerRegister.Register(reqCmd, nil, reflect.New(reqArg.Elem()).Interface().(proto.Message))
 		}
-		slog.Debug("scanMethods", "component", componentStructName, "method", method.Name, "cmd", messageId, "isClient", isClientMessage)
+		slog.Debug("scanMethods", "component", componentName, "method", method.Name, "reqCmd", messageId, "isClient", isClientMessage)
 	}
 }
 
 // 执行注册的消息回调接口
 // return true表示执行了接口
 // return false表示未执行
-func (this *PacketHandlerMgr) Invoke(entity gentity.Entity, packet gnet.Packet) bool {
+func (this *PacketHandlerMgr) Invoke(entity gentity.Entity, packet gnet.Packet, processReturnValues func(*PacketHandlerInfo, []reflect.Value)) bool {
 	// 先找组件接口
 	handlerInfo := this.HandlerInfos[packet.Command()]
 	if handlerInfo != nil {
@@ -162,9 +186,12 @@ func (this *PacketHandlerMgr) Invoke(entity gentity.Entity, packet gnet.Packet) 
 					slog.Error("InvokeErr method invalid", "cmd", packet.Command())
 					return false
 				}
-				// 反射调用函数
-				handlerInfo.Method.Func.Call([]reflect.Value{reflect.ValueOf(component),
+				// 反射调用函数 func (q *Quest) OnFinishQuestReq(cmd PacketCommand, req *pb.FinishQuestReq)
+				returnValues := handlerInfo.Method.Func.Call([]reflect.Value{reflect.ValueOf(component),
 					reflect.ValueOf(packet.Message())})
+				if len(returnValues) > 0 && processReturnValues != nil && handlerInfo.ResCmd > 0 {
+					processReturnValues(handlerInfo, returnValues)
+				}
 				return true
 			}
 		} else {
@@ -173,8 +200,11 @@ func (this *PacketHandlerMgr) Invoke(entity gentity.Entity, packet gnet.Packet) 
 				return false
 			}
 			// 反射调用函数
-			handlerInfo.Method.Func.Call([]reflect.Value{reflect.ValueOf(entity),
+			returnValues := handlerInfo.Method.Func.Call([]reflect.Value{reflect.ValueOf(entity),
 				reflect.ValueOf(packet.Message())})
+			if len(returnValues) > 0 && processReturnValues != nil && handlerInfo.ResCmd > 0 {
+				processReturnValues(handlerInfo, returnValues)
+			}
 			return true
 		}
 	}

@@ -1,23 +1,22 @@
-package gameserver
+package game
 
 import (
 	"github.com/fish-tennis/gentity/util"
-	. "github.com/fish-tennis/gnet"
+	"github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cfg"
-	"github.com/fish-tennis/gserver/game"
-	"github.com/fish-tennis/gserver/logger"
+	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/pb"
 	"log/slog"
 	"strings"
 )
 
-// 客户端字符串形式的测试命令,仅用于测试环境!
-func onTestCmd(player *game.Player, packet Packet) {
-	logger.Info("onTestCmd %v", packet.Message())
-	req := packet.Message().(*pb.TestCmd)
+// 直接写在实体上的消息回调
+func (p *Player) OnTestCmd(req *pb.TestCmd) {
+	slog.Info("OnTestCmd", "cmd", req.Cmd)
+	cmd := gnet.PacketCommand(internal.GetCommandByProto(req))
 	cmdStrs := strings.Split(req.GetCmd(), " ")
 	if len(cmdStrs) == 0 {
-		player.SendErrorRes(packet.Command(), "empty cmd")
+		p.SendErrorRes(cmd, "empty cmd")
 		return
 	}
 	cmdKey := strings.ToLower(cmdStrs[0])
@@ -26,26 +25,26 @@ func onTestCmd(player *game.Player, packet Packet) {
 	case strings.ToLower("AddExp"):
 		// 加经验值
 		if len(cmdArgs) != 1 {
-			player.SendErrorRes(packet.Command(), "AddExp cmdArgs error")
+			p.SendErrorRes(cmd, "AddExp cmdArgs error")
 			return
 		}
 		value := int32(util.Atoi(cmdArgs[0]))
 		if value < 1 {
-			player.SendErrorRes(packet.Command(), "AddExp value error")
+			p.SendErrorRes(cmd, "AddExp value error")
 			return
 		}
-		player.GetBaseInfo().IncExp(value)
+		p.GetBaseInfo().IncExp(value)
 
 	case strings.ToLower("AddItem"):
 		// 加物品
 		if len(cmdArgs) < 1 {
-			player.SendErrorRes(packet.Command(), "AddItem cmdArgs error")
+			p.SendErrorRes(cmd, "AddItem cmdArgs error")
 			return
 		}
 		itemCfgId := int32(util.Atoi(cmdArgs[0]))
 		itemCfg := cfg.GetItemCfgMgr().GetItemCfg(itemCfgId)
 		if itemCfg == nil {
-			player.SendErrorRes(packet.Command(), "AddItem itemCfgId error")
+			p.SendErrorRes(cmd, "AddItem itemCfgId error")
 			return
 		}
 		itemNum := int32(1)
@@ -53,27 +52,27 @@ func onTestCmd(player *game.Player, packet Packet) {
 			itemNum = int32(util.Atoi(cmdArgs[1]))
 		}
 		if itemNum < 1 {
-			player.SendErrorRes(packet.Command(), "AddItem itemNum error")
+			p.SendErrorRes(cmd, "AddItem itemNum error")
 			return
 		}
-		player.GetBag().AddItem(itemCfgId, itemNum)
+		p.GetBag().AddItem(itemCfgId, itemNum)
 
 	case strings.ToLower("FinishQuest"), strings.ToLower("FinishQuests"):
 		if len(cmdArgs) < 1 {
-			player.SendErrorRes(packet.Command(), "FinishQuest cmdArgs error")
+			p.SendErrorRes(cmd, "FinishQuest cmdArgs error")
 			return
 		}
 		// 完成所有任务
 		if strings.ToLower(cmdArgs[0]) == "all" {
-			for cfgId, _ := range player.GetQuest().Quests.Data {
-				player.GetQuest().OnFinishQuestReq(&pb.FinishQuestReq{
+			for cfgId, _ := range p.GetQuest().Quests.Data {
+				p.GetQuest().OnFinishQuestReq(&pb.FinishQuestReq{
 					QuestCfgId: cfgId,
 				})
 			}
 		} else {
 			// 完成某一个任务
 			cfgId := int32(util.Atoi(cmdArgs[0]))
-			player.GetQuest().OnFinishQuestReq(&pb.FinishQuestReq{
+			p.GetQuest().OnFinishQuestReq(&pb.FinishQuestReq{
 				QuestCfgId: cfgId,
 			})
 		}
@@ -81,7 +80,7 @@ func onTestCmd(player *game.Player, packet Packet) {
 	case strings.ToLower("Fight"):
 		// 模拟一个战斗事件
 		evt := &pb.EventFight{
-			PlayerId: player.GetId(),
+			PlayerId: p.GetId(),
 		}
 		if len(cmdArgs) >= 1 && cmdArgs[0] == "true" {
 			evt.IsPvp = true
@@ -89,90 +88,90 @@ func onTestCmd(player *game.Player, packet Packet) {
 		if len(cmdArgs) >= 2 && cmdArgs[1] == "true" {
 			evt.IsWin = true
 		}
-		player.FireConditionEvent(evt)
+		p.FireConditionEvent(evt)
 
 	case strings.ToLower("SignIn"):
 		evt := &pb.EventPlayerPropertyInc{
-			PlayerId:      player.GetId(),
+			PlayerId:      p.GetId(),
 			PropertyName:  "SignIn", // 签到事件
 			PropertyValue: 1,
 		}
-		player.FireEvent(evt)
+		p.FireEvent(evt)
 
 	case strings.ToLower("Pay"):
 		if len(cmdArgs) < 1 {
-			player.SendErrorRes(packet.Command(), "Pay cmdArgs error")
+			p.SendErrorRes(cmd, "Pay cmdArgs error")
 			return
 		}
 		payValue := int32(util.Atoi(cmdArgs[0]))
-		player.GetBaseInfo().Data.TotalPay += payValue
+		p.GetBaseInfo().Data.TotalPay += payValue
 		evt := &pb.EventPlayerPropertyInc{
-			PlayerId:      player.GetId(),
+			PlayerId:      p.GetId(),
 			PropertyName:  "TotalPay",
 			PropertyValue: payValue,
 		}
-		player.FireEvent(evt)
+		p.FireEvent(evt)
 
 	case strings.ToLower("PlayerPropertyInc"):
 		if len(cmdArgs) < 2 {
-			player.SendErrorRes(packet.Command(), "PlayerPropertyInc cmdArgs error")
+			p.SendErrorRes(cmd, "PlayerPropertyInc cmdArgs error")
 			return
 		}
 		evt := &pb.EventPlayerPropertyInc{
-			PlayerId:      player.GetId(),
+			PlayerId:      p.GetId(),
 			PropertyName:  cmdArgs[0],
 			PropertyValue: int32(util.Atoi(cmdArgs[1])),
 		}
-		player.FireEvent(evt)
+		p.FireEvent(evt)
 
 	case strings.ToLower("AddActivity"):
 		if len(cmdArgs) < 1 {
-			player.SendErrorRes(packet.Command(), "AddActivity cmdArgs error")
+			p.SendErrorRes(cmd, "AddActivity cmdArgs error")
 			return
 		}
 		arg := cmdArgs[0]
 		if arg == "all" {
-			player.GetActivities().AddAllActivities(player.GetTimerEntries().Now())
+			p.GetActivities().AddAllActivities(p.GetTimerEntries().Now())
 		} else {
 			activityId := int32(util.Atoi(arg))
 			activityCfg := cfg.GetActivityCfgMgr().GetActivityCfg(activityId)
-			player.GetActivities().AddNewActivity(activityCfg, player.GetTimerEntries().Now())
+			p.GetActivities().AddNewActivity(activityCfg, p.GetTimerEntries().Now())
 		}
 
 	case strings.ToLower("ActivityReceiveReward"):
 		if len(cmdArgs) < 2 {
-			player.SendErrorRes(packet.Command(), "ActivityReceiveReward cmdArgs error")
+			p.SendErrorRes(cmd, "ActivityReceiveReward cmdArgs error")
 			return
 		}
 		activityId := int32(util.Atoi(cmdArgs[0]))
 		cfgId := int32(util.Atoi(cmdArgs[1]))
-		activity := player.GetActivities().GetActivity(activityId)
+		activity := p.GetActivities().GetActivity(activityId)
 		if activity == nil {
 			return
 		}
-		if activityDefault, ok := activity.(*game.ActivityDefault); ok {
+		if activityDefault, ok := activity.(*ActivityDefault); ok {
 			activityDefault.ReceiveReward(cfgId)
 		}
 
 	case strings.ToLower("ActivityExchange"):
 		if len(cmdArgs) < 2 {
-			player.SendErrorRes(packet.Command(), "ActivityExchange cmdArgs error")
+			p.SendErrorRes(cmd, "ActivityExchange cmdArgs error")
 			return
 		}
 		activityId := int32(util.Atoi(cmdArgs[0]))
 		cfgId := int32(util.Atoi(cmdArgs[1]))
-		activity := player.GetActivities().GetActivity(activityId)
+		activity := p.GetActivities().GetActivity(activityId)
 		if activity == nil {
 			return
 		}
-		if activityDefault, ok := activity.(*game.ActivityDefault); ok {
+		if activityDefault, ok := activity.(*ActivityDefault); ok {
 			activityDefault.Exchange(cfgId)
 		}
 
 	case strings.ToLower("GuildRouteError"):
 		// 模拟一个rpc错误,向一个不存在的公会发送rpc消息
 		reply := new(pb.GuildJoinRes)
-		err := player.GetGuild().RouteRpcToTargetGuild(123456789,
+		err := p.GetGuild().RouteRpcToTargetGuild(123456789,
 			&pb.GuildJoinReq{Id: 123456789}, reply)
 		if err != nil {
 			slog.Info("GuildRouteError", "err", err.Error())
@@ -181,6 +180,6 @@ func onTestCmd(player *game.Player, packet Packet) {
 		slog.Debug("GuildRouteError reply", "reply", reply)
 
 	default:
-		player.SendErrorRes(packet.Command(), "unsupport test cmd")
+		p.SendErrorRes(cmd, "unsupport test cmd")
 	}
 }

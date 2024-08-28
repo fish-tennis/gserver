@@ -1,8 +1,8 @@
 package game
 
 import (
+	"errors"
 	"github.com/fish-tennis/gentity"
-	"github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cfg"
 	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
@@ -84,7 +84,7 @@ func (this *Quest) OnEvent(event interface{}) {
 
 // 完成任务的消息回调
 // 这种格式写的函数可以自动注册客户端消息回调
-func (this *Quest) OnFinishQuestReq(req *pb.FinishQuestReq) {
+func (this *Quest) OnFinishQuestReq(req *pb.FinishQuestReq) (*pb.FinishQuestRes, error) {
 	logger.Debug("OnFinishQuestReq:%v", req)
 	if questData, ok := this.Quests.Data[req.QuestCfgId]; ok {
 		questCfg := cfg.GetQuestCfgMgr().GetQuestCfg(questData.GetCfgId())
@@ -95,13 +95,11 @@ func (this *Quest) OnFinishQuestReq(req *pb.FinishQuestReq) {
 			for _, idNum := range questCfg.GetRewards() {
 				this.GetPlayer().GetBag().AddItem(idNum.GetCfgId(), idNum.GetNum())
 			}
-			this.GetPlayer().Send(&pb.FinishQuestRes{
+			return &pb.FinishQuestRes{
 				QuestCfgId: questData.GetCfgId(),
-			})
-			return
+			}, nil
 		}
-		this.GetPlayer().SendErrorRes(gnet.PacketCommand(pb.CmdClient_Cmd_FinishQuestReq), "quest not finish")
-		return
+		return nil, errors.New("quest not finish")
 	}
-	this.GetPlayer().SendErrorRes(gnet.PacketCommand(pb.CmdClient_Cmd_FinishQuestReq), "quest not exist")
+	return nil, errors.New("quest not exist")
 }

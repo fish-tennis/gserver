@@ -130,7 +130,7 @@ func (this *LoginServer) initNetwork() {
 		panic("listen client failed")
 	}
 	if network.ListenGate(this.config.GateListenAddr, this.registerServerPacket) == nil {
-		panic("listen gate failed")
+		panic("listen gateserver failed")
 	}
 	this.GetServerList().SetCache(cache.Get())
 	this.BaseServer.GetServerList().SetFetchServerTypes(ServerType_Game)

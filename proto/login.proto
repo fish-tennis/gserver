@@ -74,3 +74,8 @@ message CreatePlayerRes {
   int32 regionId = 3; // 区服id
   string name = 4; // 玩家名
 }
+
+// 测试命令
+message TestCmd {
+  string cmd = 1;
+}

@@ -13,6 +13,8 @@ const (
 	CmdClientEnumName = "CmdClient" // 对应proto/cmd_client.proto里的enum CmdClient
 	// 服务器之间的消息号定义
 	CmdServerEnumName = "CmdServer" // 对应proto/cmd_server.proto里的enum CmdServer
+	// 内部消息号定义
+	CmdInnerEnumName = "CmdInner" // 对应proto/inner.proto里的enum CmdInner
 )
 
 // 本项目的request和response的消息号规范: resCmd = reqCmd + 1
@@ -37,7 +39,7 @@ func GetCommandByProto(protoMessage proto.Message) int32 {
 }
 
 func getCommandByProto(cmdEnumName string, protoMessage proto.Message) int32 {
-	// CmdClient或CmdServer
+	// CmdClient或CmdServer或CmdInner
 	cmdEnumName = fmt.Sprintf("%v.%v", ProtoPackageName, cmdEnumName)
 	enumType, err := protoregistry.GlobalTypes.FindEnumByName(protoreflect.FullName(cmdEnumName))
 	if err != nil {

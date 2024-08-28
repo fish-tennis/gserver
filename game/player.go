@@ -227,27 +227,28 @@ func (this *Player) processMessage(message *ProtoPacket) {
 		}
 	}()
 	logger.Debug("processMessage %v", proto.MessageName(message.Message()).Name())
-	// 先找注册的消息回调接口,格式:func (q *Quest) OnFinishQuestReq(cmd PacketCommand, req *pb.FinishQuestReq)
-	// TODO: func (q *Quest) OnFinishQuestReq(req *pb.FinishQuestReq) *pb.FinishQuestRes
-	if _playerPacketHandlerMgr.Invoke(this, message) {
+	// func (c *Component) OnXxxReq(req *pb.XxxReq)
+	// func (c *Component) OnXxxReq(req *pb.XxxReq) (*pb.XxxRes,error)
+	if _playerPacketHandlerMgr.Invoke(this, message, func(handlerInfo *internal.PacketHandlerInfo, returnValues []reflect.Value) {
+		if handlerInfo.ResCmd == 0 || len(returnValues) != 2 {
+			return
+		}
+		resProto, _ := returnValues[0].Interface().(proto.Message)
+		resErr, _ := returnValues[1].Interface().(error)
+		if resProto == nil {
+			resProto = reflect.New(handlerInfo.ResMessageElem).Interface().(proto.Message)
+		}
+		// 返回消息给客户端
+		if resErr != nil {
+			this.SendErrorRes(handlerInfo.ResCmd, resErr.Error())
+		} else {
+			this.Send(resProto)
+		}
+	}) {
 		// 如果有需要保存的数据修改了,即时保存缓存
 		this.SaveCache(cache.Get())
 		return
 	}
-	// 再找func(player *Player, packet Packet)格式的回调接口
-	if playerHandler, ok := _playerHandlerRegister[message.Command()]; ok {
-		playerHandler(this, message)
-		this.SaveCache(cache.Get())
-		return
-	}
-	//// 再找func(connection Connection, packet Packet)的回调接口
-	//packetHandler := _clientConnectionHandler.GetPacketHandler(message.Command())
-	//if packetHandler != nil {
-	//	packetHandler(this.GetConnection(), message)
-	//	// 如果有需要保存的数据修改了,即时保存缓存
-	//	this.SaveCache(cache.Get())
-	//	return
-	//}
 	logger.Error("unhandled cmd:%v message:%v", message.Command(), proto.MessageName(message.Message()).Name())
 }
 

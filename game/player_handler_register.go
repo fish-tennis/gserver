@@ -8,9 +8,8 @@ import (
 
 // 玩家接口注册
 var (
+	// 玩家的消息回调接口注册
 	_playerPacketHandlerMgr = internal.NewPacketHandlerMgr()
-	// 玩家的普通回调接口注册
-	_playerHandlerRegister = make(map[PacketCommand]func(player *Player, packet Packet))
 	// 玩家的事件响应接口注册
 	_playerEventHandlerMgr = gentity.NewEventHandlerMgr()
 )
@@ -20,12 +19,7 @@ var (
 func AutoRegisterPlayerPacketHandler(packetHandlerRegister PacketHandlerRegister) {
 	tmpPlayer := CreateTempPlayer(0, 0)
 	_playerPacketHandlerMgr.AutoRegisterWithClient(tmpPlayer, packetHandlerRegister,
-		internal.ClientHandlerMethodNamePrefix, internal.HandlerMethodNamePrefix, internal.ProtoPackageName)
-}
-
-// 注册普通接口
-func RegisterPlayerHandler(cmd PacketCommand, handler func(player *Player, packet Packet)) {
-	_playerHandlerRegister[cmd] = handler
+		internal.ClientHandlerMethodNamePrefix, internal.HandlerMethodNamePrefix)
 }
 
 func InitPlayerStructAndHandler() {

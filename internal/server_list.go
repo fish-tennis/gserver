@@ -6,6 +6,7 @@ import (
 	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gentity/util"
 	"github.com/fish-tennis/gnet"
+	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/network"
 	"github.com/fish-tennis/gserver/pb"
 	"google.golang.org/protobuf/proto"
@@ -88,7 +89,7 @@ func (this *ServerList) SetCache(cache gentity.KvCache) {
 func (this *ServerList) initDefaultServerConnectorConfig() {
 	var codec gnet.Codec
 	if this.localServerInfo.ServerType == ServerType_Gate {
-		// gate -> otherServer
+		// gateserver -> otherServer
 		codec = network.NewGateCodec(nil)
 	} else {
 		// otherServer -> otherServer
@@ -114,7 +115,7 @@ func (this *ServerList) initDefaultServerConnectorConfig() {
 		this.OnServerConnectorDisconnect(serverId)
 	})
 	if this.localServerInfo.ServerType == ServerType_Gate {
-		// gate -> otherServer
+		// gateserver -> otherServer
 		handler.RegisterHeartBeat(func() gnet.Packet {
 			return network.NewGatePacket(0, gnet.PacketCommand(pb.CmdInner_Cmd_HeartBeatReq), &pb.HeartBeatReq{
 				Timestamp: util.GetCurrentMS(),
@@ -144,10 +145,10 @@ func (this *ServerList) initDefaultServerListenerConfig() {
 	this.serverListenerConfig.AcceptConfig.Handler = acceptServerHandler
 	acceptServerHandler.Register(gnet.PacketCommand(pb.CmdInner_Cmd_HeartBeatReq), func(connection gnet.Connection, packet gnet.Packet) {
 		req := packet.Message().(*pb.HeartBeatReq)
-		network.SendPacketAdapt(connection, packet, gnet.PacketCommand(pb.CmdInner_Cmd_HeartBeatRes), &pb.HeartBeatRes{
+		network.SendPacketAdapt(connection, packet, gnet.NewProtoPacketEx(pb.CmdInner_Cmd_HeartBeatRes, &pb.HeartBeatRes{
 			RequestTimestamp:  req.GetTimestamp(),
 			ResponseTimestamp: util.GetCurrentMS(),
-		})
+		}))
 	}, new(pb.HeartBeatReq))
 	acceptServerHandler.Register(gnet.PacketCommand(pb.CmdInner_Cmd_ServerHello), func(connection gnet.Connection, packet gnet.Packet) {
 		serverHello := packet.Message().(*pb.ServerHello)
@@ -180,7 +181,7 @@ func (this *ServerList) FindAndConnectServers(ctx context.Context) {
 		serverInfos := make(map[int32]*pb.ServerInfo)
 		err := this.cache.GetMap(fmt.Sprintf("servers:%v", serverType), serverInfos)
 		if gentity.IsRedisError(err) {
-			gentity.GetLogger().Error("get %v info err:%v", serverType, err)
+			logger.Error("get %v info err:%v", serverType, err)
 			continue
 		}
 		for _, serverInfo := range serverInfos {
@@ -258,7 +259,7 @@ func (this *ServerList) ConnectServer(ctx context.Context, info *pb.ServerInfo) 
 	}
 	targetAddr := info.GetServerListenAddr()
 	if this.localServerInfo.GetServerType() == ServerType_Gate {
-		// gate -> otherServer
+		// gateserver -> otherServer
 		targetAddr = info.GetGateListenAddr()
 	}
 	serverConn := gnet.GetNetMgr().NewConnector(ctx, targetAddr, &this.serverConnectorConfig, info.GetServerId())
@@ -266,9 +267,9 @@ func (this *ServerList) ConnectServer(ctx context.Context, info *pb.ServerInfo) 
 		this.connectedServersMutex.Lock()
 		this.connectedServers[info.GetServerId()] = serverConn
 		this.connectedServersMutex.Unlock()
-		gentity.GetLogger().Info("ConnectServer %v, %v", info.GetServerId(), info.GetServerType())
+		logger.Info("ConnectServer %v, %v", info.GetServerId(), info.GetServerType())
 	} else {
-		gentity.GetLogger().Info("ConnectServerError %v, %v", info.GetServerId(), info.GetServerType())
+		logger.Info("ConnectServerError %v, %v", info.GetServerId(), info.GetServerType())
 	}
 }
 
@@ -297,7 +298,7 @@ func (this *ServerList) OnServerConnectorDisconnect(serverId int32) {
 	this.connectedServersMutex.Lock()
 	delete(this.connectedServers, serverId)
 	this.connectedServersMutex.Unlock()
-	gentity.GetLogger().Debug("DisconnectServer %v", serverId)
+	logger.Debug("DisconnectServer %v", serverId)
 }
 
 // 其他服务器连接上,我方作为listener
@@ -313,20 +314,20 @@ func (this *ServerList) OnServerConnected(serverId int32, connection gnet.Connec
 	this.connectedServersMutex.Lock()
 	this.connectedServers[serverId] = connection
 	this.connectedServersMutex.Unlock()
-	gentity.GetLogger().Debug("OnServerConnected %v", serverId)
+	logger.Debug("OnServerConnected %v", serverId)
 }
 
 // 设置要获取的服务器类型
 func (this *ServerList) SetFetchServerTypes(serverTypes ...string) {
 	this.fetchServerTypes = append(this.fetchServerTypes, serverTypes...)
-	gentity.GetLogger().Debug("fetch:%v", serverTypes)
+	logger.Debug("fetch:%v", serverTypes)
 }
 
 // 设置要获取并连接的服务器类型
 func (this *ServerList) SetFetchAndConnectServerTypes(serverTypes ...string) {
 	this.fetchServerTypes = append(this.fetchServerTypes, serverTypes...)
 	this.connectServerTypes = append(this.connectServerTypes, serverTypes...)
-	gentity.GetLogger().Info("fetch connect:%v", serverTypes)
+	logger.Info("fetch connect:%v", serverTypes)
 }
 
 // 获取某类服务器的信息列表

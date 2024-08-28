@@ -38,8 +38,6 @@ func scanGuildMethods(obj any, methodNamePrefix, protoPackageName string) {
 	if ok {
 		componentName = component.GetName()
 	}
-	// 如: guild.JoinRequests -> JoinRequests
-	componentStructName := typ.String()[strings.LastIndex(typ.String(), ".")+1:]
 	for i := 0; i < typ.NumMethod(); i++ {
 		method := typ.Method(i)
 		if method.Type.NumIn() != 3 {
@@ -49,7 +47,7 @@ func scanGuildMethods(obj any, methodNamePrefix, protoPackageName string) {
 		if !strings.HasPrefix(method.Name, methodNamePrefix) {
 			continue
 		}
-		// rpc回调格式: HandleXxxReq(guildMessage *GuildMessage, req *pb.XxxReq) (*pb.XxxRes,error)
+		// rpc回调格式:func (c *Component) HandleXxxReq(m *GuildMessage, req *pb.XxxReq) (*pb.XxxRes,error)
 		methodArg1 := method.Type.In(1)
 		if !methodArg1.ConvertibleTo(reflect.TypeOf(&GuildMessage{})) {
 			continue
@@ -100,7 +98,7 @@ func scanGuildMethods(obj any, methodNamePrefix, protoPackageName string) {
 			ResMessageElem: resMessageElem,
 			Method:         method,
 		}
-		slog.Info("scanGuildMethods", "component", componentStructName, "method", method.Name, "cmd", reqCmd)
+		slog.Info("scanGuildMethods", "component", componentName, "method", method.Name, "cmd", reqCmd)
 	}
 }
 

@@ -96,7 +96,7 @@ func (this *GlobalEntity) processMessage(message *ProtoPacket) {
 	}()
 	logger.Debug("processMessage %v", proto.MessageName(message.Message()).Name())
 	// 先找注册的消息回调接口
-	if _globalEntityPacketHandlerMgr.Invoke(this, message) {
+	if _globalEntityPacketHandlerMgr.Invoke(this, message, nil) {
 		return
 	}
 	logger.Error("unhandle message:%v", message.Command())
@@ -140,5 +140,5 @@ func createGlobalEntityFromData(globalEntity *GlobalEntity, globalEntityData *pb
 func InitGlobalEntityStructAndHandler() {
 	tmpGlobalEntity := createTempGlobalEntity()
 	gentity.ParseEntitySaveableStruct(tmpGlobalEntity)
-	_globalEntityPacketHandlerMgr.AutoRegister(tmpGlobalEntity, internal.HandlerMethodNamePrefix, internal.ProtoPackageName)
+	_globalEntityPacketHandlerMgr.AutoRegister(tmpGlobalEntity, internal.HandlerMethodNamePrefix)
 }

@@ -13,8 +13,7 @@ enum CmdInner {
 	Cmd_HeartBeatRes = 2; // 心跳返回
 	Cmd_ErrorRes     = 3; // 通用的错误返回消息
 	Cmd_KickPlayer   = 4; // 踢玩家下线
-	Cmd_TestCmd      = 5; // 测试命令
-	Cmd_ClientDisconnect = 6; // 客户端掉线
+	Cmd_ClientDisconnect = 5; // 客户端掉线
 	
 	Cmd_ServerHello  = 10; // 服务器连接上其他服务器时,发的初始化信息
 }
@@ -53,11 +52,6 @@ message ServerInfo {
 message KickPlayer {
   int64 accountId = 1; // 账号id
   int64 playerId = 2; // 玩家id
-}
-
-// 测试命令
-message TestCmd {
-  string cmd = 1;
 }
 
 // 客户端掉线

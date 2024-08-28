@@ -637,6 +637,54 @@ func (x *CreatePlayerRes) GetName() string {
 	return ""
 }
 
+// 测试命令
+type TestCmd struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Cmd string `protobuf:"bytes,1,opt,name=cmd,proto3" json:"cmd,omitempty"`
+}
+
+func (x *TestCmd) Reset() {
+	*x = TestCmd{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_login_proto_msgTypes[9]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *TestCmd) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TestCmd) ProtoMessage() {}
+
+func (x *TestCmd) ProtoReflect() protoreflect.Message {
+	mi := &file_login_proto_msgTypes[9]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TestCmd.ProtoReflect.Descriptor instead.
+func (*TestCmd) Descriptor() ([]byte, []int) {
+	return file_login_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *TestCmd) GetCmd() string {
+	if x != nil {
+		return x.Cmd
+	}
+	return ""
+}
+
 var File_login_proto protoreflect.FileDescriptor
 
 var file_login_proto_rawDesc = []byte{
@@ -713,8 +761,10 @@ var file_login_proto_rawDesc = []byte{
 	0x03, 0x52, 0x09, 0x61, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x49, 0x64, 0x12, 0x1a, 0x0a, 0x08,
 	0x72, 0x65, 0x67, 0x69, 0x6f, 0x6e, 0x49, 0x64, 0x18, 0x03, 0x20, 0x01, 0x28, 0x05, 0x52, 0x08,
 	0x72, 0x65, 0x67, 0x69, 0x6f, 0x6e, 0x49, 0x64, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65,
-	0x18, 0x04, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x42, 0x06, 0x5a, 0x04,
-	0x2e, 0x2f, 0x70, 0x62, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x18, 0x04, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x22, 0x1b, 0x0a, 0x07,
+	0x54, 0x65, 0x73, 0x74, 0x43, 0x6d, 0x64, 0x12, 0x10, 0x0a, 0x03, 0x63, 0x6d, 0x64, 0x18, 0x01,
+	0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x63, 0x6d, 0x64, 0x42, 0x06, 0x5a, 0x04, 0x2e, 0x2f, 0x70,
+	0x62, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -729,7 +779,7 @@ func file_login_proto_rawDescGZIP() []byte {
 	return file_login_proto_rawDescData
 }
 
-var file_login_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_login_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_login_proto_goTypes = []interface{}{
 	(*LoginReq)(nil),           // 0: gserver.LoginReq
 	(*LoginRes)(nil),           // 1: gserver.LoginRes
@@ -740,16 +790,17 @@ var file_login_proto_goTypes = []interface{}{
 	(*PlayerEntryGameRes)(nil), // 6: gserver.PlayerEntryGameRes
 	(*CreatePlayerReq)(nil),    // 7: gserver.CreatePlayerReq
 	(*CreatePlayerRes)(nil),    // 8: gserver.CreatePlayerRes
-	(*PlayerGuildData)(nil),    // 9: gserver.PlayerGuildData
+	(*TestCmd)(nil),            // 9: gserver.TestCmd
+	(*PlayerGuildData)(nil),    // 10: gserver.PlayerGuildData
 }
 var file_login_proto_depIdxs = []int32{
-	4, // 0: gserver.LoginRes.gameServer:type_name -> gserver.GameServerInfo
-	9, // 1: gserver.PlayerEntryGameRes.guildData:type_name -> gserver.PlayerGuildData
-	2, // [2:2] is the sub-list for method output_type
-	2, // [2:2] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	4,  // 0: gserver.LoginRes.gameServer:type_name -> gserver.GameServerInfo
+	10, // 1: gserver.PlayerEntryGameRes.guildData:type_name -> gserver.PlayerGuildData
+	2,  // [2:2] is the sub-list for method output_type
+	2,  // [2:2] is the sub-list for method input_type
+	2,  // [2:2] is the sub-list for extension type_name
+	2,  // [2:2] is the sub-list for extension extendee
+	0,  // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_login_proto_init() }
@@ -867,6 +918,18 @@ func file_login_proto_init() {
 				return nil
 			}
 		}
+		file_login_proto_msgTypes[9].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*TestCmd); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -874,7 +937,7 @@ func file_login_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_login_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   9,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

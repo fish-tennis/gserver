@@ -1,4 +1,4 @@
-package gate
+package gateserver
 
 import (
 	"context"
@@ -123,7 +123,7 @@ func (this *GateServer) registerClientPacket(clientHandler *DefaultConnectionHan
 //	//req := packet.Message().(*pb.BindConnReq)
 //}
 
-// client -> gate -> loginServer
+// client -> gateserver -> loginServer
 func (this *GateServer) routeToLoginServer(connection Connection, packet Packet) {
 	message := packet.Message()
 	data := packet.GetStreamData()

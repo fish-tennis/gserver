@@ -8,7 +8,7 @@ import (
 	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/gameserver"
-	"github.com/fish-tennis/gserver/gate"
+	"github.com/fish-tennis/gserver/gateserver"
 	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/loginserver"
@@ -110,9 +110,8 @@ func daemon() {
 }
 
 func initLog(logFileName string, useStdOutput bool) {
-	gnet.SetLogLevel(gnet.DebugLevel)
 	gnet.SetLogger(logger.GetLogger(), gnet.DebugLevel)
-	gentity.SetLogger(gnet.GetLogger(), gnet.DebugLevel)
+	gentity.SetLogger(logger.GetLogger(), gnet.DebugLevel)
 
 	os.Mkdir("log", 0750)
 	// 日志轮转与切割
@@ -134,13 +133,7 @@ func initLog(logFileName string, useStdOutput bool) {
 			if a.Key == slog.SourceKey {
 				source := a.Value.Any().(*slog.Source)
 				source.Function = ""
-				idx := strings.LastIndexByte(source.File, '/')
-				if idx >= 0 {
-					idx = strings.LastIndexByte(source.File[:idx], '/')
-					if idx >= 0 {
-						source.File = source.File[idx+1:] // 让source简短些
-					}
-				}
+				source.File = logger.GetShortFileName(source.File)
 			}
 			return a
 		},
@@ -158,7 +151,7 @@ func getServerTypeFromConfigFile(configFile string) string {
 func createServer(ctx context.Context, serverType, configFile string) gentity.Application {
 	switch strings.ToLower(serverType) {
 	case strings.ToLower(internal.ServerType_Gate):
-		return gate.NewGateServer(ctx, configFile)
+		return gateserver.NewGateServer(ctx, configFile)
 	case strings.ToLower(internal.ServerType_Login):
 		return loginserver.NewLoginServer(ctx, configFile)
 	case strings.ToLower(internal.ServerType_Game):

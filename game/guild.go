@@ -3,7 +3,6 @@ package game
 import (
 	"context"
 	"errors"
-	"fmt"
 	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/db"
@@ -56,7 +55,7 @@ func (this *Guild) SetGuildId(guildId int64) {
 }
 
 // 查询公会列表
-func (this *Guild) OnGuildListReq(req *pb.GuildListReq) {
+func (this *Guild) OnGuildListReq(req *pb.GuildListReq) (*pb.GuildListRes, error) {
 	logger.Debug("OnGuildListReq")
 	guildDb := db.GetGuildDb()
 	col := guildDb.(*gentity.MongoCollection).GetCollection()
@@ -64,12 +63,12 @@ func (this *Guild) OnGuildListReq(req *pb.GuildListReq) {
 	count, err := col.CountDocuments(context.Background(), bson.D{}, nil)
 	if err != nil {
 		logger.Error("db err:%v", err)
-		return
+		return nil, errors.New("DbError")
 	}
 	cursor, dbErr := col.Find(context.Background(), bson.D{}, options.Find().SetSkip(pageSize*int64(req.PageIndex)).SetLimit(pageSize))
 	if dbErr != nil {
 		logger.Error("db err:%v", dbErr)
-		return
+		return nil, errors.New("DbError")
 	}
 	type guildBaseInfo struct {
 		BaseInfo *pb.GuildInfo `json:"baseinfo"`
@@ -78,7 +77,7 @@ func (this *Guild) OnGuildListReq(req *pb.GuildListReq) {
 	err = cursor.All(context.Background(), &guildInfos)
 	if err != nil {
 		logger.Error("db err:%v", err)
-		return
+		return nil, errors.New("DbError")
 	}
 	res := &pb.GuildListRes{
 		PageIndex:  req.PageIndex,
@@ -88,29 +87,23 @@ func (this *Guild) OnGuildListReq(req *pb.GuildListReq) {
 	for i, info := range guildInfos {
 		res.GuildInfos[i] = info.BaseInfo
 	}
-	this.GetPlayer().Send(res)
+	return res, nil
 }
 
 // 创建公会
-func (this *Guild) OnGuildCreateReq(req *pb.GuildCreateReq) {
-	logger.Debug("OnGuildCreateReq")
+func (this *Guild) OnGuildCreateReq(req *pb.GuildCreateReq) (*pb.GuildCreateRes, error) {
+	slog.Debug("OnGuildCreateReq")
 	player := this.GetPlayer()
 	if this.Data.GuildId > 0 {
-		this.GetPlayer().Send(&pb.GuildCreateRes{
-			Error: "AlreadyHaveGuild",
-		})
-		return
+		return nil, errors.New("AlreadyHaveGuild")
 	}
 	// TODO:如果玩家之前已经提交了一个加入其他联盟的请求,玩家又自己创建联盟
 	// 其他联盟的管理员又接受了该玩家的加入请求,如何防止该玩家同时存在于2个联盟?
 	// 利用mongodb加一个类似原子锁的操作?
 	newGuildIdValue, err := db.GetKvDb().Inc(db.GuildIdKeyName, int64(1), true)
 	if err != nil {
-		this.GetPlayer().Send(&pb.GuildCreateRes{
-			Error: "IdError",
-		})
 		logger.Error("OnGuildCreateReq err:%v", err)
-		return
+		return nil, errors.New("IdError")
 	}
 	newGuildId := newGuildIdValue.(int64)
 	newGuildData := &pb.GuildData{
@@ -138,65 +131,44 @@ func (this *Guild) OnGuildCreateReq(req *pb.GuildCreateReq) {
 	dbErr, isDuplicateName := guildDb.InsertEntity(newGuildData.Id, saveData)
 	if dbErr != nil {
 		logger.Error("OnGuildCreateReq dbErr:%v", dbErr)
-		player.Send(&pb.GuildCreateRes{
-			Error: "DbError",
-		})
-		return
+		return nil, errors.New("DbError")
 	}
 	if isDuplicateName {
-		player.Send(&pb.GuildCreateRes{
-			Error: "DuplicateName",
-		})
-		return
+		return nil, errors.New("DuplicateName")
 	}
 	// 利用mongodb的原子操作,来防止该玩家同时加入多个公会
 	if !AtomicSetGuildId(this.GetPlayerId(), newGuildData.Id, 0) {
 		db.GetGuildDb().DeleteEntity(newGuildData.Id)
-		player.Send(&pb.GuildCreateRes{
-			Error: "ConcurrentError",
-		})
-		return
+		return nil, errors.New("ConcurrentError")
 	}
 	this.SetGuildId(newGuildData.Id)
-	player.Send(&pb.GuildCreateRes{
+	logger.Debug("create guild:%v %v", newGuildData.Id, newGuildData.BaseInfo.Name)
+	return &pb.GuildCreateRes{
 		Id:   newGuildData.Id,
 		Name: newGuildData.BaseInfo.Name,
-	})
-	logger.Debug("create guild:%v %v", newGuildData.Id, newGuildData.BaseInfo.Name)
+	}, nil
 }
 
 // 加入公会请求
-func (this *Guild) OnGuildJoinReq(req *pb.GuildJoinReq) {
+func (this *Guild) OnGuildJoinReq(req *pb.GuildJoinReq) (*pb.GuildJoinRes, error) {
 	if this.Data.GuildId > 0 {
-		this.player.SendErrorRes(gnet.PacketCommand(pb.CmdClient_Cmd_GuildJoinReq), "AlreadyHaveGuild")
-		return
+		return nil, errors.New("AlreadyHaveGuild")
 	}
 	// 向公会所在的服务器发rpc请求
 	reply := new(pb.GuildJoinRes)
 	err := this.RouteRpcToTargetGuild(req.Id, req, reply)
-	if err != nil {
-		this.player.SendErrorRes(gnet.PacketCommand(pb.CmdClient_Cmd_GuildJoinReq), fmt.Sprintf("server internal error:%v", err.Error()))
-		return
-	}
-	slog.Debug("OnGuildJoinReq reply", "reply", reply)
-	this.GetPlayer().Send(reply)
+	return reply, err
 }
 
 // 公会管理员处理申请者的入会申请
-func (this *Guild) OnGuildJoinAgreeReq(req *pb.GuildJoinAgreeReq) {
+func (this *Guild) OnGuildJoinAgreeReq(req *pb.GuildJoinAgreeReq) (*pb.GuildJoinAgreeRes, error) {
 	if this.Data.GuildId == 0 {
-		this.player.SendErrorRes(gnet.PacketCommand(pb.CmdClient_Cmd_GuildJoinAgreeReq), "not a guild member")
-		return
+		return nil, errors.New("not a guild member")
 	}
 	// 向公会所在的服务器发rpc请求
 	reply := new(pb.GuildJoinAgreeRes)
 	err := this.RouteRpcToSelfGuild(req, reply)
-	if err != nil {
-		this.player.SendErrorRes(gnet.PacketCommand(pb.CmdClient_Cmd_GuildJoinAgreeReq), fmt.Sprintf("server internal error:%v", err.Error()))
-		return
-	}
-	slog.Debug("OnGuildJoinAgreeReq reply", "reply", reply)
-	this.GetPlayer().Send(reply)
+	return reply, err
 }
 
 // 自己的入会申请的操作结果
@@ -258,18 +230,13 @@ func (this *Guild) RouteRpcToSelfGuild(message proto.Message, reply proto.Messag
 }
 
 // 查看自己公会的信息
-func (this *Guild) OnGuildDataViewReq(req *pb.GuildDataViewReq) {
+func (this *Guild) OnGuildDataViewReq(req *pb.GuildDataViewReq) (*pb.GuildDataViewRes, error) {
 	if this.Data.GuildId == 0 {
-		this.GetPlayer().SendErrorRes(gnet.PacketCommand(pb.CmdClient_Cmd_GuildDataViewReq), "not a guild member")
-		return
+		return nil, errors.New("not a guild member")
 	}
 	reply := new(pb.GuildDataViewRes)
 	err := this.RouteRpcToSelfGuild(req, reply)
-	if err != nil {
-		this.GetPlayer().SendErrorRes(gnet.PacketCommand(pb.CmdClient_Cmd_GuildDataViewReq), fmt.Sprintf("server internal error:%v", err.Error()))
-		return
-	}
-	this.GetPlayer().Send(reply)
+	return reply, err
 }
 
 // mongodb中对玩家公会id进行原子化操作,防止玩家同时存在于多个公会

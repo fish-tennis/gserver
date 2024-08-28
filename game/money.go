@@ -48,10 +48,10 @@ func (this *Money) IncDiamond(diamond int32) {
 
 // 请求加coin的消息回调
 // 这种格式写的函数可以自动注册客户端消息回调
-func (this *Money) OnCoinReq(req *pb.CoinReq) {
+func (this *Money) OnCoinReq(req *pb.CoinReq) (*pb.CoinRes, error) {
 	logger.Debug("OnCoinReq:%v", req)
 	this.IncCoin(req.GetAddCoin())
-	this.GetPlayer().Send(&pb.CoinRes{
+	return &pb.CoinRes{
 		TotalCoin: this.Data.GetCoin(),
-	})
+	}, nil
 }

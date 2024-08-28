@@ -45,3 +45,14 @@ func (h *JsonHandlerWithStdOutput) Handle(ctx context.Context, r slog.Record) er
 	}
 	return h.JSONHandler.Handle(ctx, r)
 }
+
+func GetShortFileName(file string) string {
+	idx := strings.LastIndexByte(file, '/')
+	if idx >= 0 {
+		idx = strings.LastIndexByte(file[:idx], '/')
+		if idx >= 0 {
+			return file[idx+1:] // 让source简短些
+		}
+	}
+	return file
+}
