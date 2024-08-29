@@ -42,10 +42,10 @@ gserver提供了数据绑定的方案,业务层只需要标记哪些数据需要
 ```go
 // 玩家的一个组件
 type Money struct {
-	PlayerDataComponent
-	// 该字段必须导出(首字母大写)
-	// 使用struct tag来标记该字段需要存数据库
-	Data *pb.Money `db:""`
+  PlayerDataComponent
+  // 该字段必须导出(首字母大写)
+  // 使用struct tag来标记该字段需要存数据库
+  Data *pb.Money `db:""`
 }
 ```
 
@@ -53,9 +53,9 @@ type Money struct {
 ```go
 // 玩家基础信息组件
 type BaseInfo struct {
-	PlayerDataComponent
-	// plain表示明文存储,在保存到mongo时,不会进行proto序列化
-	Data *pb.BaseInfo `db:"plain"`
+  PlayerDataComponent
+  // plain表示明文存储,在保存到mongo时,不会进行proto序列化
+  Data *pb.BaseInfo `db:"plain"`
 }
 ```
 
@@ -63,13 +63,13 @@ type BaseInfo struct {
 ```go
 // 玩家的任务组件
 type Quest struct {
-	BasePlayerComponent
-	// 保存数据的子模块:已完成的任务 使用明文保存方式
-	// wrapper of []int32
-	Finished *gentity.SliceData[int32] `child:"Finished;plain"`
-    // 保存数据的子模块:当前任务列表
-    // wrapper of map[int32]*pb.QuestData
-    Quests *gentity.MapData[int32, *pb.QuestData] `child:"Quests"`
+  BasePlayerComponent
+  // 保存数据的子模块:已完成的任务 使用明文保存方式
+  // wrapper of []int32
+  Finished *gentity.SliceData[int32] `child:"Finished;plain"`
+  // 保存数据的子模块:当前任务列表
+  // wrapper of map[int32]*pb.QuestData
+  Quests *gentity.MapData[int32, *pb.QuestData] `child:"Quests"`
 }
 ```
 
@@ -79,21 +79,21 @@ type Quest struct {
 // 客户端发给服务器的完成任务的消息回调
 // 这种格式写的函数可以自动注册客户端消息回调
 func (this *Quest) OnFinishQuestReq(req *pb.FinishQuestReq) (*pb.FinishQuestRes, error) {
-	// logic code ...
-	return &pb.FinishQuestRes{ QuestCfgId: id, }, nil
+  // logic code ...
+  return &pb.FinishQuestRes{ QuestCfgId: id, }, nil
 }
 ```
 ```go
 // 这种格式写的函数可以自动注册非客户端的消息回调
 func (this *BaseInfo) HandlePlayerEntryGameOk(msg *pb.PlayerEntryGameOk) { 
-	// logic code ...
+  // logic code ...
 }
 ```
 ```go
 // 这种格式写的函数可以自动注册事件响应接口
 // 当执行player.FireEvent(&EventPlayerEntryGame{})时,该响应接口会被调用
 func (this *Quest) TriggerPlayerEntryGame(event *EventPlayerEntryGame) {
-	// logic code ...
+  // logic code ...
 }
 ```
 
@@ -101,22 +101,22 @@ func (this *Quest) TriggerPlayerEntryGame(event *EventPlayerEntryGame) {
 ```go
 // 客户端请求查看自己所在公会的信息
 func (g *Guild) OnGuildDataViewReq(req *pb.GuildDataViewReq) (*pb.GuildDataViewRes, error) {
-    if 玩家还没加入公会 {
-        return nil, errors.New("not a guild member")
-    }
-	// 向公会所在服务器发起rpc
-    reply := new(pb.GuildDataViewRes)
-    err := this.RouteRpcToSelfGuild(req, reply)
-    return reply, err
+  if 玩家还没加入公会 {
+    return nil, errors.New("not a guild member")
+  }
+  // 向公会所在服务器发起rpc
+  reply := new(pb.GuildDataViewRes)
+  err := this.RouteRpcToSelfGuild(req, reply)
+  return reply, err
 }
 
 // 公会服务响应rpc请求
 func (this *GuildBaseInfo) HandleGuildDataViewReq(guildMessage *GuildMessage, req *pb.GuildDataViewReq) (*pb.GuildDataViewRes, error) {
-    g := this.GetGuild()
-    if 请求玩家不是本公会成员 {
-        return nil, errors.New("not a member")
-    }
-    return &pb.GuildDataViewRes{...}, nil
+  g := this.GetGuild()
+  if 请求玩家不是本公会成员 {
+    return nil, errors.New("not a member")
+  }
+  return &pb.GuildDataViewRes{...}, nil
 }
 ```
 
