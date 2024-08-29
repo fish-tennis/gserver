@@ -6,13 +6,13 @@ package gserver;
 
 // 心跳包请求
 message HeartBeatReq {
-  int64 timestamp = 1; // 请求方的时间戳
+  int64 timestamp = 1; // 请求方的时间戳(毫秒)
 }
 
 // 心跳包回复
 message HeartBeatRes {
-  int64 requestTimestamp = 1; // 请求方的时间戳
-  int64 responseTimestamp = 2;// 回复方的时间戳
+  int64 requestTimestamp = 1; // 请求方的时间戳(毫秒)
+  int64 responseTimestamp = 2;// 回复方的时间戳(毫秒)
 }
 
 // 通用的错误返回消息

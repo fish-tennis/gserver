@@ -121,3 +121,12 @@ C#: [gnet_csharp](https://github.com/fish-tennis/gnet_csharp)
 
 ## 讨论
 QQ群: 764912827
+
+欢迎有如下兴趣的小伙伴加入
+
+- 客户端demo
+- 服务器框架改进
+- mysql的db接口实现
+- 非redis的缓存cache接口实现
+- 文档和示例
+- 工具demo(如配置编辑等)

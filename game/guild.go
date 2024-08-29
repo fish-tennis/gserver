@@ -98,9 +98,9 @@ func (this *Guild) OnGuildCreateReq(req *pb.GuildCreateReq) (*pb.GuildCreateRes,
 	if this.Data.GuildId > 0 {
 		return nil, errors.New("AlreadyHaveGuild")
 	}
-	// TODO:如果玩家之前已经提交了一个加入其他联盟的请求,玩家又自己创建联盟
+	// NOTE:如果玩家之前已经提交了一个加入其他联盟的请求,玩家又自己创建联盟
 	// 其他联盟的管理员又接受了该玩家的加入请求,如何防止该玩家同时存在于2个联盟?
-	// 利用mongodb加一个类似原子锁的操作?
+	// 利用mongodb加一个类似原子锁的操作
 	newGuildIdValue, err := db.GetKvDb().Inc(db.GuildIdKeyName, int64(1), true)
 	if err != nil {
 		logger.Error("OnGuildCreateReq err:%v", err)

@@ -129,7 +129,8 @@ func (this *ServerList) initDefaultServerConnectorConfig() {
 		})
 	}
 	handler.Register(gnet.PacketCommand(pb.CmdClient_Cmd_HeartBeatRes), func(connection gnet.Connection, packet gnet.Packet) {
-		// TODO: set ping (ServerInfo)
+		res := packet.Message().(*pb.HeartBeatRes)
+		this.localServerInfo.Ping = int32(util.GetCurrentMS() - res.RequestTimestamp)
 	}, new(pb.HeartBeatRes))
 	this.serverConnectorConfig = network.ServerConnectionConfig
 	this.serverConnectorConfig.Codec = codec

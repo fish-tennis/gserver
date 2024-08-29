@@ -26,7 +26,7 @@ type HeartBeatReq struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Timestamp int64 `protobuf:"varint,1,opt,name=timestamp,proto3" json:"timestamp,omitempty"` // 请求方的时间戳
+	Timestamp int64 `protobuf:"varint,1,opt,name=timestamp,proto3" json:"timestamp,omitempty"` // 请求方的时间戳(毫秒)
 }
 
 func (x *HeartBeatReq) Reset() {
@@ -74,8 +74,8 @@ type HeartBeatRes struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	RequestTimestamp  int64 `protobuf:"varint,1,opt,name=requestTimestamp,proto3" json:"requestTimestamp,omitempty"`   // 请求方的时间戳
-	ResponseTimestamp int64 `protobuf:"varint,2,opt,name=responseTimestamp,proto3" json:"responseTimestamp,omitempty"` // 回复方的时间戳
+	RequestTimestamp  int64 `protobuf:"varint,1,opt,name=requestTimestamp,proto3" json:"requestTimestamp,omitempty"`   // 请求方的时间戳(毫秒)
+	ResponseTimestamp int64 `protobuf:"varint,2,opt,name=responseTimestamp,proto3" json:"responseTimestamp,omitempty"` // 回复方的时间戳(毫秒)
 }
 
 func (x *HeartBeatRes) Reset() {

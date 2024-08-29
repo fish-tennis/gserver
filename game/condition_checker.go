@@ -2,42 +2,19 @@ package game
 
 import (
 	"github.com/fish-tennis/gserver/internal"
-	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
+	"log/slog"
 )
 
+// 注册条件接口
 func RegisterConditionCheckers() *internal.ConditionMgr {
 	conditionMgr := internal.NewConditionMgr()
 
-	conditionMgr.Register(int32(pb.ConditionType_ConditionType_PlayerPropertyCompare), func(arg interface{}, conditionCfg *internal.ConditionCfg) bool {
-		player,ok := arg.(*Player)
-		if !ok {
-			logger.Error("arg not Player: %v", arg)
-			return false
-		}
-		propertyName := conditionCfg.GetPropertyString("PropertyName")
-		if propertyName == "" {
-			logger.Error("not find PropertyName: %v", conditionCfg)
-			return false
-		}
-		propertyValue := player.GetPropertyInt32(propertyName)
-		return compareConditionArg(conditionCfg, propertyValue)
-	})
+	conditionMgr.Register(int32(pb.ConditionType_ConditionType_PlayerPropertyCompare),
+		checkPlayerPropertyCompare)
 
-	conditionMgr.Register(int32(pb.ConditionType_ConditionType_ActivityPropertyCompare), func(arg interface{}, conditionCfg *internal.ConditionCfg) bool {
-		activityConditionArg,ok := arg.(*ActivityConditionArg)
-		if !ok {
-			logger.Error("arg not ActivityConditionArg: %v", arg)
-			return false
-		}
-		propertyName := conditionCfg.GetPropertyString("PropertyName")
-		if propertyName == "" {
-			logger.Error("not find PropertyName: %v", conditionCfg)
-			return false
-		}
-		propertyValue := activityConditionArg.Activity.GetPropertyInt32(propertyName)
-		return compareConditionArg(conditionCfg, propertyValue)
-	})
+	conditionMgr.Register(int32(pb.ConditionType_ConditionType_ActivityPropertyCompare),
+		checkActivityPropertyCompare)
 
 	return conditionMgr
 }
@@ -56,6 +33,38 @@ func compareConditionArg(conditionCfg *internal.ConditionCfg, compareValue int32
 	case "<=":
 		return compareValue <= conditionCfg.Arg
 	}
-	logger.Error("wrong op:%v", conditionCfg.Op)
+	slog.Error("compareConditionArgErr", "op", conditionCfg.Op)
 	return false
+}
+
+// 玩家属性值比较
+func checkPlayerPropertyCompare(arg interface{}, conditionCfg *internal.ConditionCfg) bool {
+	player, ok := arg.(*Player)
+	if !ok {
+		slog.Error("checkPlayerPropertyCompareErr", "arg", arg)
+		return false
+	}
+	propertyName := conditionCfg.GetPropertyString("PropertyName")
+	if propertyName == "" {
+		slog.Error("checkPlayerPropertyCompareErr", "conditionCfg", conditionCfg)
+		return false
+	}
+	propertyValue := player.GetPropertyInt32(propertyName)
+	return compareConditionArg(conditionCfg, propertyValue)
+}
+
+// 活动属性值比较
+func checkActivityPropertyCompare(arg interface{}, conditionCfg *internal.ConditionCfg) bool {
+	activityConditionArg, ok := arg.(*ActivityConditionArg)
+	if !ok {
+		slog.Error("checkActivityPropertyCompareErr", "arg", arg)
+		return false
+	}
+	propertyName := conditionCfg.GetPropertyString("PropertyName")
+	if propertyName == "" {
+		slog.Error("checkActivityPropertyCompareErr", "conditionCfg", conditionCfg)
+		return false
+	}
+	propertyValue := activityConditionArg.Activity.GetPropertyInt32(propertyName)
+	return compareConditionArg(conditionCfg, propertyValue)
 }

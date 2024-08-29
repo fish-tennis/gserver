@@ -13,6 +13,7 @@ import (
 // 直接写在实体上的消息回调
 func (p *Player) OnTestCmd(req *pb.TestCmd) {
 	slog.Info("OnTestCmd", "cmd", req.Cmd)
+	// NOTE: 实际项目中,这里要检查一下是否是测试环境
 	cmd := gnet.PacketCommand(network.GetCommandByProto(req))
 	cmdStrs := strings.Split(req.GetCmd(), " ")
 	if len(cmdStrs) == 0 {
