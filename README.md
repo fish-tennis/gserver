@@ -15,7 +15,6 @@
 - 客户端直连模式和网关模式可选,网关模式支持WebSocket
 - 一个账号同时只能登录一个服务器(数据一致性前提)
 - 游戏服宕机后重启,自动修复缓存数据,防止玩家数据回档
-- 工具生成消息注册和发送消息代码[proto_code_gen](https://github.com/fish-tennis/proto_code_gen)
 - 通过反射自动注册消息回调,事件响应接口(业务代码和网络库解耦)
 - 采用Entity-Component设计,模块解耦
 - Entity事件分发
@@ -106,12 +105,12 @@ func (g *Guild) OnGuildDataViewReq(req *pb.GuildDataViewReq) (*pb.GuildDataViewR
   }
   // 向公会所在服务器发起rpc
   reply := new(pb.GuildDataViewRes)
-  err := this.RouteRpcToSelfGuild(req, reply)
+  err := g.RouteRpcToSelfGuild(req, reply)
   return reply, err
 }
 
 // 公会服务响应rpc请求
-func (g *GuildBaseInfo) HandleGuildDataViewReq(guildMessage *GuildMessage, req *pb.GuildDataViewReq) (*pb.GuildDataViewRes, error) {
+func (g *GuildBaseInfo) HandleGuildDataViewReq(m *GuildMessage, req *pb.GuildDataViewReq) (*pb.GuildDataViewRes, error) {
   if 请求玩家不是本公会成员 {
     return nil, errors.New("not a member")
   }
