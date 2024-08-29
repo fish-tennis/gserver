@@ -78,13 +78,14 @@ type Quest struct {
 ```go
 // 客户端发给服务器的完成任务的消息回调
 // 这种格式写的函数可以自动注册客户端消息回调
-func (this *Quest) OnFinishQuestReq(reqCmd gnet.PacketCommand, req *pb.FinishQuestReq) {
+func (this *Quest) OnFinishQuestReq(req *pb.FinishQuestReq) (*pb.FinishQuestRes, error) {
 	// logic code ...
+	return &pb.FinishQuestRes{ QuestCfgId: id, }, nil
 }
 ```
 ```go
 // 这种格式写的函数可以自动注册非客户端的消息回调
-func (this *BaseInfo) HandlePlayerEntryGameOk(cmd gnet.PacketCommand, msg *pb.PlayerEntryGameOk) { 
+func (this *BaseInfo) HandlePlayerEntryGameOk(msg *pb.PlayerEntryGameOk) { 
 	// logic code ...
 }
 ```
@@ -93,6 +94,29 @@ func (this *BaseInfo) HandlePlayerEntryGameOk(cmd gnet.PacketCommand, msg *pb.Pl
 // 当执行player.FireEvent(&EventPlayerEntryGame{})时,该响应接口会被调用
 func (this *Quest) TriggerPlayerEntryGame(event *EventPlayerEntryGame) {
 	// logic code ...
+}
+```
+
+## rpc
+```go
+// 客户端请求查看自己所在公会的信息
+func (g *Guild) OnGuildDataViewReq(req *pb.GuildDataViewReq) (*pb.GuildDataViewRes, error) {
+    if 玩家还没加入公会 {
+        return nil, errors.New("not a guild member")
+    }
+	// 向公会所在服务器发起rpc
+    reply := new(pb.GuildDataViewRes)
+    err := this.RouteRpcToSelfGuild(req, reply)
+    return reply, err
+}
+
+// 公会服务响应rpc请求
+func (this *GuildBaseInfo) HandleGuildDataViewReq(guildMessage *GuildMessage, req *pb.GuildDataViewReq) (*pb.GuildDataViewRes, error) {
+    g := this.GetGuild()
+    if 请求玩家不是本公会成员 {
+        return nil, errors.New("not a member")
+    }
+    return &pb.GuildDataViewRes{...}, nil
 }
 ```
 
