@@ -78,21 +78,21 @@ type Quest struct {
 ```go
 // 客户端发给服务器的完成任务的消息回调
 // 这种格式写的函数可以自动注册客户端消息回调
-func (this *Quest) OnFinishQuestReq(req *pb.FinishQuestReq) (*pb.FinishQuestRes, error) {
+func (q *Quest) OnFinishQuestReq(req *pb.FinishQuestReq) (*pb.FinishQuestRes, error) {
   // logic code ...
   return &pb.FinishQuestRes{ QuestCfgId: id, }, nil
 }
 ```
 ```go
 // 这种格式写的函数可以自动注册非客户端的消息回调
-func (this *BaseInfo) HandlePlayerEntryGameOk(msg *pb.PlayerEntryGameOk) { 
+func (b *BaseInfo) HandlePlayerEntryGameOk(msg *pb.PlayerEntryGameOk) { 
   // logic code ...
 }
 ```
 ```go
 // 这种格式写的函数可以自动注册事件响应接口
 // 当执行player.FireEvent(&EventPlayerEntryGame{})时,该响应接口会被调用
-func (this *Quest) TriggerPlayerEntryGame(event *EventPlayerEntryGame) {
+func (q *Quest) TriggerPlayerEntryGame(event *EventPlayerEntryGame) {
   // logic code ...
 }
 ```
@@ -111,8 +111,7 @@ func (g *Guild) OnGuildDataViewReq(req *pb.GuildDataViewReq) (*pb.GuildDataViewR
 }
 
 // 公会服务响应rpc请求
-func (this *GuildBaseInfo) HandleGuildDataViewReq(guildMessage *GuildMessage, req *pb.GuildDataViewReq) (*pb.GuildDataViewRes, error) {
-  g := this.GetGuild()
+func (g *GuildBaseInfo) HandleGuildDataViewReq(guildMessage *GuildMessage, req *pb.GuildDataViewReq) (*pb.GuildDataViewRes, error) {
   if 请求玩家不是本公会成员 {
     return nil, errors.New("not a member")
   }
