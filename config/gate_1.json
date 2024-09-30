@@ -1,7 +1,0 @@
-{
-  "ServerId": 1,
-  "ClientListenAddr": "127.0.0.1:10001",
-  "WsClientListenAddr": "127.0.0.1:8080",
-  "RedisUri": ["127.0.0.1:6379"],
-  "RedisCluster": true
-}

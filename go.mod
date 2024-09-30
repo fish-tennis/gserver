@@ -9,6 +9,7 @@ require (
 	go.mongodb.org/mongo-driver v1.14.0
 	google.golang.org/protobuf v1.33.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (

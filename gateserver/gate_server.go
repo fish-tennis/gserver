@@ -2,7 +2,6 @@ package gateserver
 
 import (
 	"context"
-	"encoding/json"
 	"github.com/fish-tennis/gentity"
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
@@ -10,6 +9,7 @@ import (
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/network"
 	"github.com/fish-tennis/gserver/pb"
+	"gopkg.in/yaml.v3"
 	"math/rand"
 	"os"
 	"sync"
@@ -33,10 +33,9 @@ type GateServer struct {
 
 // gate服配置
 type GateServerConfig struct {
-	BaseServerConfig
+	BaseServerConfig `yaml:",inline"`
 	// WebSocket测试
-	WsClientListenAddr     string
-	WsClientListenerConfig ListenerConfig
+	WsClient ListerConfig `yaml:"WsClient"`
 }
 
 func NewGateServer(ctx context.Context, configFile string) *GateServer {
@@ -67,19 +66,19 @@ func (this *GateServer) readConfig() {
 	if err != nil {
 		panic("read config file err")
 	}
-	this.config = new(GateServerConfig)
-	err = json.Unmarshal(fileData, this.config)
+	this.config = &GateServerConfig{}
+	err = yaml.Unmarshal(fileData, this.config)
 	if err != nil {
 		panic("decode config file err")
 	}
 	logger.Debug("%v", this.config)
 	this.BaseServer.GetServerInfo().ServerId = this.config.ServerId
-	this.BaseServer.GetServerInfo().ClientListenAddr = this.config.ClientListenAddr
+	this.BaseServer.GetServerInfo().ClientListenAddr = this.config.Client.Addr
 }
 
 // 初始化redis缓存
 func (this *GateServer) initCache() {
-	cache.NewRedis(this.config.RedisUri, this.config.RedisUsername, this.config.RedisPassword, this.config.RedisCluster)
+	cache.NewRedis(this.config.Redis.Uri, this.config.Redis.UserName, this.config.Redis.Password, this.config.Redis.Cluster)
 	pong, err := cache.GetRedis().Ping(context.Background()).Result()
 	if err != nil || pong == "" {
 		panic("redis connect error")
@@ -88,15 +87,15 @@ func (this *GateServer) initCache() {
 
 func (this *GateServer) initNetwork() {
 	// 监听普通TCP客户端
-	this.clientListener = network.ListenGateClient(this.config.ClientListenAddr, &ClientListerHandler{}, this.registerClientPacket)
+	this.clientListener = network.ListenGateClient(this.config.Client.Addr, &ClientListerHandler{}, this.registerClientPacket)
 	if this.clientListener == nil {
 		panic("listen client failed")
 	}
 
 	// 监听WebSocket客户端
-	if this.config.WsClientListenAddr != "" {
+	if this.config.WsClient.Addr != "" {
 		// WebSocket测试
-		this.wsClientListener = network.ListenWebSocketClient(this.config.WsClientListenAddr, &ClientListerHandler{}, this.registerClientPacket)
+		this.wsClientListener = network.ListenWebSocketClient(this.config.WsClient.Addr, &ClientListerHandler{}, this.registerClientPacket)
 		if this.wsClientListener == nil {
 			panic("listen websocket client failed")
 		}

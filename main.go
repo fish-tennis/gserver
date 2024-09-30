@@ -34,7 +34,7 @@ func main() {
 
 	isDaemon := false
 	configFile := ""
-	// 配置文件名格式: serverType_serverId.json
+	// 配置文件名格式: serverType_xxx.json
 	flag.StringVar(&configFile, "conf", "", "server's config file")
 	flag.BoolVar(&isDaemon, "d", false, "daemon mode")
 	flag.Parse()
@@ -48,9 +48,9 @@ func main() {
 	rand.Seed(time.Now().UnixNano())
 
 	// 根据命令行参数 创建不同的服务器实例
-	baseFileName := filepath.Base(configFile)                                   // login_test.json
+	baseFileName := filepath.Base(configFile)                                   // login_test.yaml
 	baseFileName = strings.TrimSuffix(baseFileName, filepath.Ext(baseFileName)) // login_test
-	serverType := getServerTypeFromConfigFile(configFile)
+	serverType := getServerTypeFromConfigFile(configFile)                       // login
 	initLog(baseFileName, !isDaemon)
 	ctx, cancel := context.WithCancel(context.Background())
 	server := createServer(ctx, serverType, configFile)
@@ -142,8 +142,12 @@ func initLog(logFileName string, useStdOutput bool) {
 
 // 从配置文件名解析出服务器类型
 func getServerTypeFromConfigFile(configFile string) string {
-	baseFileName := filepath.Base(configFile) // login_test.json
-	idx := strings.Index(baseFileName, "_")
+	baseFileName := filepath.Base(configFile)
+	idx := strings.Index(baseFileName, "_") // login_test.yaml
+	if idx > 0 {
+		return baseFileName[0:idx]
+	}
+	idx = strings.Index(baseFileName, ".") // login.yaml
 	return baseFileName[0:idx]
 }
 

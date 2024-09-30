@@ -16,29 +16,30 @@ import (
 	"time"
 )
 
+type ListerConfig struct {
+	Addr string `yaml:"Addr"`
+}
+
+type MongoConfig struct {
+	Uri string `yaml:"Uri"`
+	Db  string `yaml:"Db"`
+}
+
+type RedisConfig struct {
+	Uri      []string `yaml:"Uri"`
+	UserName string   `yaml:"UserName"`
+	Password string   `yaml:"Password"`
+	Cluster  bool     `yaml:"Cluster"`
+}
+
 type BaseServerConfig struct {
 	// 服务器id
-	ServerId int32
-	// 客户端监听地址
-	ClientListenAddr string
-	//// 客户端监听配置
-	//ClientConnConfig ConnectionConfig
-	// 网关监听地址
-	GateListenAddr string
-	// 其他服务器监听地址
-	ServerListenAddr string
-	//// 服务器连接配置
-	//ServerConnConfig ConnectionConfig
-	// mongodb地址
-	MongoUri string
-	// mongodb db name
-	MongoDbName string
-	// redis地址
-	RedisUri      []string
-	RedisUsername string
-	RedisPassword string
-	// 是否使用redis集群模式
-	RedisCluster bool
+	ServerId int32        `yaml:"ServerId"`
+	Client   ListerConfig `yaml:"Client"`
+	Gate     ListerConfig `yaml:"Gate"`
+	Server   ListerConfig `yaml:"Server"`
+	Mongo    MongoConfig  `yaml:"Mongo"`
+	Redis    RedisConfig  `yaml:"Redis"`
 }
 
 // 服务器基础流程

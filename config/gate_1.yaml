@@ -1,0 +1,15 @@
+#服务器进程唯一id
+ServerId: 1
+#监听客户端
+Client:
+  Addr: 127.0.0.1:10001
+#监听WebSocket客户端
+WsClient:
+  Addr: 127.0.0.1:8080
+#缓存
+Redis:
+  Uri:
+    - 127.0.0.1:6379
+  UserName:
+  Password:
+  Cluster: true

@@ -1,9 +1,0 @@
-{
-  "ServerId": 11,
-  "ClientListenAddr": "127.0.0.1:10002",
-  "GateListenAddr": "127.0.0.1:10003",
-  "MongoUri": "mongodb://127.0.0.1:27017",
-  "MongoDbName": "testdb",
-  "RedisUri": ["127.0.0.1:6379"],
-  "RedisCluster": true
-}

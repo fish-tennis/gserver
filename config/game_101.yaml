@@ -1,0 +1,22 @@
+#服务器进程唯一id
+ServerId: 101
+#监听客户端
+Client:
+  Addr: 127.0.0.1:10101
+#监听网关
+Gate:
+  Addr: 127.0.0.1:10102
+#监听其他服务器
+Server:
+  Addr: 127.0.0.1:10103
+#数据库
+Mongo:
+  Uri: mongodb://127.0.0.1:27017
+  Db: testdb
+#缓存
+Redis:
+  Uri:
+    - 127.0.0.1:6379
+  UserName:
+  Password:
+  Cluster: true
