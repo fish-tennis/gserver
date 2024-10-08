@@ -18,15 +18,21 @@ func NewBagCountItem() *BagCountItem {
 	return bag
 }
 
-func (this *BagCountItem) GetItemCount(itemCfgId int32) int32 {
-	return this.Data[itemCfgId]
+// 背包容量
+func (b *BagCountItem) GetCapacity() int32 {
+	// 实际项目读取配置或者是个变量,比如可以扩展背包容量
+	return 100
 }
 
-func (this *BagCountItem) AddItem(itemCfgId, addCount int32) int32 {
+func (b *BagCountItem) GetItemCount(itemCfgId int32) int32 {
+	return b.Data[itemCfgId]
+}
+
+func (b *BagCountItem) AddItem(itemCfgId, addCount int32) int32 {
 	if addCount <= 0 {
 		return 0
 	}
-	curCount, ok := this.Data[itemCfgId]
+	curCount, ok := b.Data[itemCfgId]
 	if ok {
 		// 检查数值溢出
 		if int64(curCount)+int64(addCount) > math.MaxInt32 {
@@ -36,27 +42,31 @@ func (this *BagCountItem) AddItem(itemCfgId, addCount int32) int32 {
 			curCount += addCount
 		}
 	} else {
+		if len(b.Data) >= int(b.GetCapacity()) {
+			logger.Debug("BagFull cfgId:%v addCount:%v", itemCfgId, addCount)
+			return 0
+		}
 		curCount = addCount
 	}
-	this.Set(itemCfgId, curCount)
+	b.Set(itemCfgId, curCount)
 	logger.Debug("AddItem cfgId:%v curCount:%v addCount:%v", itemCfgId, curCount, addCount)
 	return addCount
 }
 
-func (this *BagCountItem) DelItem(itemCfgId, delCount int32) int32 {
+func (b *BagCountItem) DelItem(itemCfgId, delCount int32) int32 {
 	if delCount <= 0 {
 		return 0
 	}
-	curCount, ok := this.Data[itemCfgId]
+	curCount, ok := b.Data[itemCfgId]
 	if !ok {
 		return 0
 	}
 	if delCount >= curCount {
-		this.Delete(itemCfgId)
+		b.Delete(itemCfgId)
 		logger.Debug("DelItem cfgId:%v delCount:%v/%v", itemCfgId, curCount, delCount)
 		return curCount
 	} else {
-		this.Set(itemCfgId, curCount-delCount)
+		b.Set(itemCfgId, curCount-delCount)
 		logger.Debug("DelItem cfgId:%v delCount:%v", itemCfgId, delCount)
 		return delCount
 	}

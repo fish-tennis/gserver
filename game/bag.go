@@ -2,7 +2,6 @@ package game
 
 import (
 	"github.com/fish-tennis/gentity"
-	"github.com/fish-tennis/gentity/util"
 	"github.com/fish-tennis/gserver/cfg"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
@@ -46,12 +45,7 @@ func (this *Bag) AddItem(cfgId int32, num int32) bool {
 		return false
 	}
 	if itemCfg.GetUnique() {
-		for i := 0; i < int(num); i++ {
-			this.BagUniqueItem.AddUniqueItem(&pb.UniqueItem{
-				CfgId:    cfgId,
-				UniqueId: util.GenUniqueId(),
-			})
-		}
+		this.BagUniqueItem.AddItem(cfgId, num)
 	} else {
 		this.BagCountItem.AddItem(cfgId, num)
 	}
