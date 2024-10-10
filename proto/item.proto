@@ -10,8 +10,17 @@ message CountItem {
   int32 count = 2; // 物品数量
 }
 
-// 不可叠加的物品
-message UniqueItem {
+// 不可叠加的普通物品(比如普通物品加了限时属性,就是不可叠加的了)
+message UniqueCountItem {
   int64 uniqueId = 1; // 唯一id
   int32 cfgId = 2; // 物品配置id
+  int32 timeout = 3; // 超时时间戳(秒)
+}
+
+// 装备(不可叠加的)
+message Equip {
+  int64 uniqueId = 1; // 唯一id
+  int32 cfgId = 2; // 物品配置id
+  int32 timeout = 3; // 超时时间戳(秒)
+  // NOTE: 其他装备属性,如强化等级等
 }

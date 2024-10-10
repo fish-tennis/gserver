@@ -1,7 +1,9 @@
 package internal
 
+import "github.com/fish-tennis/gserver/pb"
+
 // 背包通用操作接口
-type BagOp interface {
+type Bag interface {
 	// 背包容量
 	GetCapacity() int32
 
@@ -9,14 +11,17 @@ type BagOp interface {
 	GetItemCount(itemCfgId int32) int32
 
 	// 添加物品,返回实际添加数量
-	AddItem(itemCfgId, addCount int32) int32
+	AddItem(arg *pb.AddItemArg) int32
 
 	// 删除指定数量物品,返回实际删除数量
-	DelItem(itemCfgId, delCount int32) int32
+	DelItem(arg *pb.DelItemArg) int32
 }
 
 // 有唯一id的对象
 type Uniquely interface {
+	// 配置id
+	GetCfgId() int32
+	// uuid
 	GetUniqueId() int64
 }
 
@@ -24,4 +29,5 @@ type Uniquely interface {
 type TimeLimited interface {
 	// 超时时间戳
 	GetTimeout() int32
+	//SetTimeout(timeout int32)
 }

@@ -44,8 +44,70 @@ func (r *ItemCfgReader) GetDetail() string {
 	return r.v.GetDetail()
 }
 
-func (r *ItemCfgReader) GetUnique() bool {
-	return r.v.GetUnique()
+func (r *ItemCfgReader) GetItemType() int32 {
+	return r.v.GetItemType()
+}
+
+func (r *ItemCfgReader) GetTimeType() int32 {
+	return r.v.GetTimeType()
+}
+
+func (r *ItemCfgReader) GetTimeout() int32 {
+	return r.v.GetTimeout()
+}
+
+type AddItemArgReader struct {
+	v *AddItemArg
+}
+
+func NewAddItemArgReader(src *AddItemArg) *AddItemArgReader {
+	return &AddItemArgReader{v:src}
+}
+
+
+func (r *AddItemArgReader) GetCfgId() int32 {
+	return r.v.GetCfgId()
+}
+
+func (r *AddItemArgReader) GetNum() int32 {
+	return r.v.GetNum()
+}
+
+func (r *AddItemArgReader) GetTimeType() int32 {
+	return r.v.GetTimeType()
+}
+
+func (r *AddItemArgReader) GetTimeout() int32 {
+	return r.v.GetTimeout()
+}
+
+func (r *AddItemArgReader) GetSource() int32 {
+	return r.v.GetSource()
+}
+
+type DelItemArgReader struct {
+	v *DelItemArg
+}
+
+func NewDelItemArgReader(src *DelItemArg) *DelItemArgReader {
+	return &DelItemArgReader{v:src}
+}
+
+
+func (r *DelItemArgReader) GetUniqueId() int64 {
+	return r.v.GetUniqueId()
+}
+
+func (r *DelItemArgReader) GetCfgId() int32 {
+	return r.v.GetCfgId()
+}
+
+func (r *DelItemArgReader) GetNum() int32 {
+	return r.v.GetNum()
+}
+
+func (r *DelItemArgReader) GetSource() int32 {
+	return r.v.GetSource()
 }
 
 type BaseQuestCfgReader struct {
@@ -69,14 +131,14 @@ func (r *BaseQuestCfgReader) GetDetail() string {
 	return r.v.GetDetail()
 }
 
-func (r *BaseQuestCfgReader) GetRewards() []*ItemNumReader {
+func (r *BaseQuestCfgReader) GetRewards() []*AddItemArgReader {
 	src := r.v.GetRewards()
 	if src == nil {
 		return nil
 	}
-	sliceReader := make([]*ItemNumReader,len(src))
+	sliceReader := make([]*AddItemArgReader,len(src))
 	for i,v := range src {
-		sliceReader[i] = NewItemNumReader(v)
+		sliceReader[i] = NewAddItemArgReader(v)
 	}
 	return sliceReader
 }
@@ -223,26 +285,26 @@ func (r *ExchangeCfgReader) GetCfgId() int32 {
 	return r.v.GetCfgId()
 }
 
-func (r *ExchangeCfgReader) GetConsumeItems() []*ItemNumReader {
+func (r *ExchangeCfgReader) GetConsumeItems() []*DelItemArgReader {
 	src := r.v.GetConsumeItems()
 	if src == nil {
 		return nil
 	}
-	sliceReader := make([]*ItemNumReader,len(src))
+	sliceReader := make([]*DelItemArgReader,len(src))
 	for i,v := range src {
-		sliceReader[i] = NewItemNumReader(v)
+		sliceReader[i] = NewDelItemArgReader(v)
 	}
 	return sliceReader
 }
 
-func (r *ExchangeCfgReader) GetRewards() []*ItemNumReader {
+func (r *ExchangeCfgReader) GetRewards() []*AddItemArgReader {
 	src := r.v.GetRewards()
 	if src == nil {
 		return nil
 	}
-	sliceReader := make([]*ItemNumReader,len(src))
+	sliceReader := make([]*AddItemArgReader,len(src))
 	for i,v := range src {
-		sliceReader[i] = NewItemNumReader(v)
+		sliceReader[i] = NewAddItemArgReader(v)
 	}
 	return sliceReader
 }

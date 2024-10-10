@@ -146,7 +146,7 @@ func (this *ActivityDefault) ReceiveReward(cfgId int32) {
 		return
 	}
 	progress.IsReceiveReward = true
-	this.Activities.GetPlayer().GetBag().AddItems(questCfg.GetRewards())
+	this.Activities.GetPlayer().GetBags().AddItems(questCfg.GetRewards())
 	this.SetDirty()
 	logger.Debug("%v ReceiveReward %v %v", this.Activities.GetPlayer().GetId(), this.GetId(), cfgId)
 }
@@ -170,13 +170,13 @@ func (this *ActivityDefault) Exchange(exchangeCfgId int32) {
 		logger.Debug("%v Exchange CountLimit nil %v %v %v", this.Activities.GetPlayer().GetId(), this.GetId(), exchangeCfgId, exchangeCount)
 		return
 	}
-	if !this.Activities.GetPlayer().GetBag().IsEnough(exchangeCfg.ConsumeItems) {
+	if !this.Activities.GetPlayer().GetBags().IsEnough(exchangeCfg.ConsumeItems) {
 		logger.Debug("%v Exchange ConsumeItems notEnough %v %v", this.Activities.GetPlayer().GetId(), this.GetId(), exchangeCfgId)
 		return
 	}
 	this.addExchangeCount(exchangeCfgId, 1)
-	this.Activities.GetPlayer().GetBag().DelItems(exchangeCfg.ConsumeItems)
-	this.Activities.GetPlayer().GetBag().AddItems(exchangeCfg.Rewards)
+	this.Activities.GetPlayer().GetBags().DelItems(exchangeCfg.ConsumeItems)
+	this.Activities.GetPlayer().GetBags().AddItems(exchangeCfg.Rewards)
 }
 
 func (this *ActivityDefault) getExchangeCount(exchangeCfgId int32) int32 {

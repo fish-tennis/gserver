@@ -26,6 +26,12 @@ enum TimeType {
   TimeType_Date       = 2; // 日期(格式:20240219) 
 }
 
+// 物品类型
+enum ItemType {
+  ItemType_None 	= 0; // 普通物品
+  ItemType_Equip  	= 1; // 装备
+}
+
 // 物品数量
 message ItemNum {
   int32 CfgId = 1; // 物品配置id
@@ -37,7 +43,27 @@ message ItemCfg {
   int32 CfgId = 1;
   string Name = 2;
   string Detail = 3;
-  bool Unique = 4; // 是否不可叠加
+  int32 ItemType = 4; // 物品类型(enum ItemType)
+  int32 TimeType = 5; // 时间类型(enum TimeType)
+  int32 Timeout = 6; // 结束时间
+}
+
+// 添加物品参数
+message AddItemArg {
+	int32 CfgId = 1; // 物品配置id
+	int32 Num = 2; // 物品数量
+	int32 TimeType = 3; // 时间类型(enum TimeType)
+	int32 Timeout = 4; // 结束时间
+	int32 Source = 5; // 来源(一般用于数据分析)
+	// NOTE: 有些项目有物品绑定属性,可以在这里加
+}
+
+// 删除物品参数
+message DelItemArg {
+	int64 UniqueId = 1; // 唯一id(删除指定的不可叠加的物品才需要)
+	int32 CfgId = 2; // 物品配置id
+	int32 Num = 3; // 物品数量
+	int32 Source = 4; // 来源(一般用于数据分析)
 }
 
 // 任务基础配置
@@ -45,7 +71,7 @@ message BaseQuestCfg {
   int32 CfgId = 1;
   string Name = 2;
   string Detail = 3;
-  repeated ItemNum Rewards = 4;
+  repeated AddItemArg Rewards = 4;
   int32 PreQuest = 5; // 前置任务
 }
 
@@ -85,8 +111,8 @@ message BaseActivityCfg {
 // 兑换配置
 message ExchangeCfg {
   int32 CfgId = 1;
-  repeated ItemNum ConsumeItems = 2; // 需要消耗的物品
-  repeated ItemNum Rewards = 3; // 获得物品
+  repeated DelItemArg ConsumeItems = 2; // 需要消耗的物品
+  repeated AddItemArg Rewards = 3; // 获得物品
   int32 CountLimit = 4; // 兑换次数限制
 }
 

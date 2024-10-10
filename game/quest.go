@@ -92,9 +92,7 @@ func (this *Quest) OnFinishQuestReq(req *pb.FinishQuestReq) (*pb.FinishQuestRes,
 			this.Quests.Delete(questData.GetCfgId())
 			this.Finished.Add(questData.GetCfgId())
 			// 任务奖励
-			for _, idNum := range questCfg.GetRewards() {
-				this.GetPlayer().GetBag().AddItem(idNum.GetCfgId(), idNum.GetNum())
-			}
+			this.GetPlayer().GetBags().AddItems(questCfg.GetRewards())
 			return &pb.FinishQuestRes{
 				QuestCfgId: questData.GetCfgId(),
 			}, nil

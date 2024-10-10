@@ -16,9 +16,10 @@ func (x *ActivityProgressData) SetProgress(progress int32) {
 	}
 }
 
+// 给BaseActivityCfg增加方法
 func (x *BaseActivityCfg) GetExchangeCfg(cfgId int32) *ExchangeCfg {
 	if x != nil {
-		for _,cfg := range x.Exchanges {
+		for _, cfg := range x.Exchanges {
 			if cfg.CfgId == cfgId {
 				return cfg
 			}

@@ -13,12 +13,12 @@
     "CfgId": 3,
     "Name": "装备3",
     "Detail": "装备3",
-    "Unique": true
+    "ItemType": 1
   },
   {
     "CfgId": 4,
     "Name": "装备4",
     "Detail": "装备4",
-    "Unique": true
+    "ItemType": 1
   }
 ]

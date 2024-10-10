@@ -3,6 +3,7 @@ package game
 import (
 	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gserver/logger"
+	"github.com/fish-tennis/gserver/pb"
 	"math"
 )
 
@@ -28,11 +29,12 @@ func (b *BagCountItem) GetItemCount(itemCfgId int32) int32 {
 	return b.Data[itemCfgId]
 }
 
-func (b *BagCountItem) AddItem(itemCfgId, addCount int32) int32 {
+func (b *BagCountItem) AddItem(arg *pb.AddItemArg) int32 {
+	addCount := arg.GetNum()
 	if addCount <= 0 {
 		return 0
 	}
-	curCount, ok := b.Data[itemCfgId]
+	curCount, ok := b.Data[arg.GetCfgId()]
 	if ok {
 		// 检查数值溢出
 		if int64(curCount)+int64(addCount) > math.MaxInt32 {
@@ -43,31 +45,32 @@ func (b *BagCountItem) AddItem(itemCfgId, addCount int32) int32 {
 		}
 	} else {
 		if len(b.Data) >= int(b.GetCapacity()) {
-			logger.Debug("BagFull cfgId:%v addCount:%v", itemCfgId, addCount)
+			logger.Debug("BagFull cfgId:%v addCount:%v", arg.GetCfgId(), addCount)
 			return 0
 		}
 		curCount = addCount
 	}
-	b.Set(itemCfgId, curCount)
-	logger.Debug("AddItem cfgId:%v curCount:%v addCount:%v", itemCfgId, curCount, addCount)
+	b.Set(arg.GetCfgId(), curCount)
+	logger.Debug("AddItem cfgId:%v curCount:%v addCount:%v", arg.GetCfgId(), curCount, addCount)
 	return addCount
 }
 
-func (b *BagCountItem) DelItem(itemCfgId, delCount int32) int32 {
+func (b *BagCountItem) DelItem(arg *pb.DelItemArg) int32 {
+	delCount := arg.GetNum()
 	if delCount <= 0 {
 		return 0
 	}
-	curCount, ok := b.Data[itemCfgId]
+	curCount, ok := b.Data[arg.GetCfgId()]
 	if !ok {
 		return 0
 	}
 	if delCount >= curCount {
-		b.Delete(itemCfgId)
-		logger.Debug("DelItem cfgId:%v delCount:%v/%v", itemCfgId, curCount, delCount)
+		b.Delete(arg.GetCfgId())
+		logger.Debug("DelItem cfgId:%v delCount:%v/%v", arg.GetCfgId(), curCount, delCount)
 		return curCount
 	} else {
-		b.Set(itemCfgId, curCount-delCount)
-		logger.Debug("DelItem cfgId:%v delCount:%v", itemCfgId, delCount)
+		b.Set(arg.GetCfgId(), curCount-delCount)
+		logger.Debug("DelItem cfgId:%v delCount:%v", arg.GetCfgId(), delCount)
 		return delCount
 	}
 }

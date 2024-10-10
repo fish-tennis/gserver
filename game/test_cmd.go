@@ -56,7 +56,10 @@ func (p *Player) OnTestCmd(req *pb.TestCmd) {
 			p.SendErrorRes(cmd, "AddItem itemNum error")
 			return
 		}
-		p.GetBag().AddItem(itemCfgId, itemNum)
+		p.GetBags().AddItem(&pb.AddItemArg{
+			CfgId: itemCfgId,
+			Num:   itemNum,
+		})
 
 	case strings.ToLower("FinishQuest"), strings.ToLower("FinishQuests"):
 		if len(cmdArgs) < 1 {
