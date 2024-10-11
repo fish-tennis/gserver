@@ -4,13 +4,9 @@ import (
 	"encoding/csv"
 	"errors"
 	"github.com/fish-tennis/gentity"
-	"github.com/fish-tennis/gentity/util"
-	"log/slog"
 	"os"
 	"reflect"
 	"slices"
-	"strconv"
-	"strings"
 )
 
 // 字段转换接口
@@ -27,11 +23,15 @@ type CsvOption struct {
 	// 如数组分隔符为;时,则1;2;3可以表示[1,2,3]的数组
 	SliceSeparator string
 
-	// Map的分隔符
-	// 如MapKVSeparator为_ MapSeparator为;
-	// 则a_1;b_2;c_3可以表示{"a":1,"b":2,"c":3}的map
+	// Map的的kv分隔符
+	// 如MapKVSeparator为_ MapSeparator为#
+	// 则a_1#b_2#c_3可以表示{"a":1,"b":2,"c":3}的map
 	MapKVSeparator string
-	MapSeparator   string
+
+	// Map的不同kv之间的分隔符
+	// 如MapKVSeparator为_ MapSeparator为#
+	// 则a_1#b_2#c_3可以表示{"a":1,"b":2,"c":3}的map
+	MapSeparator string
 
 	// 自定义转换函数
 	// 把csv的字符串转换成其他对象 以列名作为关键字
@@ -223,165 +223,7 @@ func ReadCsvFromDataObject[V any](rows [][]string, v V, option *CsvOption) error
 			fieldVal.Set(fieldObj)                          // 如 obj.Name = new(string)
 			fieldVal = fieldObj.Elem()                      // 如 *(obj.Name)
 		}
-		ConvertStringToFieldValue(val, fieldVal, columnName, fieldString, option)
+		ConvertStringToFieldValue(val, fieldVal, columnName, fieldString, option, false)
 	}
 	return nil
-}
-
-// 字段赋值,根据字段的类型,把字符串转换成对应的值
-func ConvertStringToFieldValue(object, fieldVal reflect.Value, columnName, fieldString string, option *CsvOption) {
-	if !fieldVal.IsValid() {
-		slog.Debug("unknown column", "columnName", columnName)
-		return
-	}
-	if !fieldVal.CanSet() {
-		slog.Error("field cant set", "columnName", columnName)
-		return
-	}
-	fieldConverter := option.GetConverterByColumnName(columnName)
-	if fieldConverter != nil {
-		// 自定义的转换接口
-		v := fieldConverter(object.Interface(), columnName, fieldString)
-		fieldVal.Set(reflect.ValueOf(v))
-	} else {
-		var convertFieldToElem bool
-		fieldConverter, convertFieldToElem = option.GetConverterByTypePtrOrStruct(fieldVal.Type())
-		if fieldConverter != nil {
-			// 自定义的转换接口
-			v := fieldConverter(object.Interface(), columnName, fieldString)
-			if v == nil {
-				slog.Debug("field parse error", "columnName", columnName, "fieldString", fieldString)
-				return
-			}
-			if convertFieldToElem {
-				fieldVal.Set(reflect.ValueOf(v).Elem())
-			} else {
-				fieldVal.Set(reflect.ValueOf(v))
-			}
-			return
-		}
-		switch fieldVal.Type().Kind() {
-		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-			fieldVal.SetInt(util.Atoi64(fieldString))
-
-		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-			fieldVal.SetUint(util.Atou(fieldString))
-
-		case reflect.String:
-			fieldVal.SetString(fieldString)
-
-		case reflect.Float32:
-			f32, err := strconv.ParseFloat(fieldString, 32)
-			if err != nil {
-				slog.Error("float64 convert error:", "columnName", columnName, "fieldString", fieldString, "err", err)
-				break
-			}
-			fieldVal.SetFloat(f32)
-
-		case reflect.Float64:
-			f64, err := strconv.ParseFloat(fieldString, 64)
-			if err != nil {
-				slog.Error("float64 convert error:", "columnName", columnName, "fieldString", fieldString, "err", err)
-				break
-			}
-			fieldVal.SetFloat(f64)
-
-		case reflect.Bool:
-			fieldVal.SetBool(fieldString == "true" || fieldString == "1")
-
-		case reflect.Slice:
-			// 常规数组解析
-			if fieldString == "" {
-				return
-			}
-			newSlice := reflect.MakeSlice(fieldVal.Type(), 0, 0)
-			sliceElemType := fieldVal.Type().Elem()
-			converter, convertToElem := option.GetConverterByTypePtrOrStruct(sliceElemType)
-			sArray := strings.Split(fieldString, option.SliceSeparator)
-			for _, str := range sArray {
-				if str == "" {
-					continue
-				}
-				var sliceElemValue any
-				if converter != nil {
-					sliceElemValue = converter(object.Interface(), columnName, str)
-				} else {
-					sliceElemValue = gentity.ConvertStringToRealType(sliceElemType, str)
-				}
-				if sliceElemValue == nil {
-					slog.Error("slice item parse error", "columnName", columnName, "fieldString", fieldString, "str", str)
-					continue
-				}
-				if convertToElem {
-					newSlice = reflect.Append(newSlice, reflect.ValueOf(sliceElemValue).Elem())
-				} else {
-					newSlice = reflect.Append(newSlice, reflect.ValueOf(sliceElemValue))
-				}
-			}
-			fieldVal.Set(newSlice)
-
-		case reflect.Map:
-			// 常规map解析
-			if fieldString == "" {
-				return
-			}
-			newMap := reflect.MakeMap(fieldVal.Type())
-			fieldKeyType := fieldVal.Type().Key()
-			fieldValueType := fieldVal.Type().Elem()
-			converter, convertToElem := option.GetConverterByTypePtrOrStruct(fieldValueType)
-			mapItemStrs := strings.Split(fieldString, option.MapSeparator)
-			for _, mapItemStr := range mapItemStrs {
-				kvStr := strings.Split(mapItemStr, option.MapKVSeparator)
-				if len(kvStr) == 2 {
-					fieldKeyValue := gentity.ConvertStringToRealType(fieldKeyType, kvStr[0])
-					var fieldValueValue any
-					if converter != nil {
-						fieldValueValue = converter(object.Interface(), columnName, kvStr[1])
-					} else {
-						fieldValueValue = gentity.ConvertStringToRealType(fieldValueType, kvStr[1])
-					}
-					if fieldValueValue == nil {
-						slog.Error("map value parse error", "columnName", columnName, "fieldString", fieldString, "kvStr", kvStr)
-						continue
-					}
-					if convertToElem {
-						newMap.SetMapIndex(reflect.ValueOf(fieldKeyValue), reflect.ValueOf(fieldValueValue).Elem())
-					} else {
-						newMap.SetMapIndex(reflect.ValueOf(fieldKeyValue), reflect.ValueOf(fieldValueValue))
-					}
-				} else {
-					slog.Error("map kv len error", "columnName", columnName, "fieldString", fieldString, "kvStr", kvStr)
-				}
-			}
-			fieldVal.Set(newMap)
-
-		default:
-			slog.Error("unsupported kind", "columnName", columnName, "fieldVal", fieldVal, "kind", fieldVal.Type().Kind())
-			return
-		}
-	}
-}
-
-func ConvertCsvLineToValue(valueType reflect.Type, row []string, columnNames []string, option *CsvOption) reflect.Value {
-	valueElemType := valueType
-	if valueType.Kind() == reflect.Ptr {
-		valueElemType = valueType.Elem() // *pb.ItemCfg -> pb.ItemCfg
-	}
-	newObject := reflect.New(valueElemType) // 如new(pb.ItemCfg)
-	newObjectElem := newObject.Elem()
-	if valueType.Kind() == reflect.Struct {
-		newObject = newObject.Elem() // *pb.ItemCfg -> pb.ItemCfg
-	}
-	for columnIndex := 0; columnIndex < len(columnNames); columnIndex++ {
-		columnName := columnNames[columnIndex]
-		fieldString := row[columnIndex]
-		fieldVal := newObjectElem.FieldByName(columnName)
-		if fieldVal.Kind() == reflect.Ptr { // 指针类型的字段,如 Name *string
-			fieldObj := reflect.New(fieldVal.Type().Elem()) // 如new(string)
-			fieldVal.Set(fieldObj)                          // 如 obj.Name = new(string)
-			fieldVal = fieldObj.Elem()                      // 如 *(obj.Name)
-		}
-		ConvertStringToFieldValue(newObject, fieldVal, columnName, fieldString, option)
-	}
-	return newObject
 }

@@ -77,17 +77,19 @@ message BaseQuestCfg {
 
 // 条件基础配置
 message BaseConditionCfg {
-  int32 Type = 1;
-  int32 Arg = 2;
-  string Op = 3;
+  int32 Type = 1; // 条件类型(enum ConditionType)
+  string Op = 2; // 操作符 = > >= < <=
+  int32 Arg = 3; // 参数
+  string Key = 4; // 额外的关键字,如ConditionType_PlayerPropertyCompare对应的属性名
 }
 
 // 进度基础配置
 message BaseProgressCfg {
-  int32 Type = 1; // 进度类型
+  int32 Type = 1; // 进度类型(enum ProgressType)
   int32 CountType = 2; // 计数类型
   int32 Total = 3; // 总进度要求
-  repeated string Events = 4; // 响应事件
+  //string Key = 4; // 额外的关键字,如ProgressType_PlayerPropertyInc对应的属性名
+  //repeated string Events = 5; // 响应事件
 }
 
 // 活动基础配置

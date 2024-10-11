@@ -8,7 +8,7 @@ type Properties interface {
 
 // 动态属性
 type BaseProperties struct {
-	Properties map[string]interface{} `json:"Properties"` // 动态属性
+	Properties map[string]any `json:"Properties"` // 动态属性
 }
 
 func (this *BaseProperties) GetProperty(name string) interface{} {

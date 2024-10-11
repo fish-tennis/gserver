@@ -85,9 +85,7 @@
             "Type": 2,
             "Arg": 1,
             "Op": ">=",
-            "Properties": {
-              "PropertyName": "DayCount"
-            }
+            "Key": "DayCount"
           }
 		],
         "ProgressCfg": {
@@ -111,9 +109,7 @@
             "Type": 2,
             "Arg": 2,
             "Op": ">=",
-            "Properties": {
-              "PropertyName": "DayCount"
-            }
+            "Key": "DayCount"
           }
         ],
         "ProgressCfg": {
@@ -137,9 +133,7 @@
             "Type": 2,
             "Arg": 3,
             "Op": ">=",
-            "Properties": {
-              "PropertyName": "DayCount"
-            }
+            "Key": "DayCount"
           }
         ],
         "ProgressCfg": {

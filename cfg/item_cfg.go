@@ -11,7 +11,7 @@ var (
 
 func init() {
 	_itemCfgLoader = RegisterCfgLoader(new(ItemCfgMgr), &CfgLoaderOption{
-		FileName: "itemcfg.json",
+		FileName: "itemcfg.csv",
 	})
 }
 
@@ -26,6 +26,6 @@ func GetItemCfgMgr() *ItemCfgMgr {
 }
 
 // 提供一个只读接口
-func (this *ItemCfgMgr) GetItemCfg(cfgId int32) *gen.ItemCfgReader {
-	return gen.NewItemCfgReader(this.GetCfg(cfgId))
+func (m *ItemCfgMgr) GetItemCfg(cfgId int32) *gen.ItemCfgReader {
+	return gen.NewItemCfgReader(m.GetCfg(cfgId))
 }

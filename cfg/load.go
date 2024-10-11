@@ -37,10 +37,7 @@ type CfgLoaderOption struct {
 func RegisterCfgLoader(cfgLoader CfgLoader, loaderOpt *CfgLoaderOption) *CfgLoaderOption {
 	if loaderOpt.CsvOption == nil {
 		// 默认csv设置
-		loaderOpt.CsvOption = &tool.CsvOption{
-			ColumnNameRowIndex: 0,
-			DataBeginRowIndex:  1, // csv行索引
-		}
+		loaderOpt.CsvOption = &DefaultCsvOption
 	}
 	loaderOpt.Value.Store(cfgLoader)
 	_cfgLoaders = append(_cfgLoaders, loaderOpt)

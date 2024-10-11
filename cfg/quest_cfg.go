@@ -11,7 +11,7 @@ var (
 
 func init() {
 	_questCfgLoader = RegisterCfgLoader(new(QuestCfgMgr), &CfgLoaderOption{
-		FileName: "questcfg.json",
+		FileName: "questcfg.csv",
 	})
 }
 
@@ -35,22 +35,22 @@ func GetQuestCfgMgr() *QuestCfgMgr {
 	return _questCfgLoader.Value.Load().(*QuestCfgMgr)
 }
 
-func (this *QuestCfgMgr) GetQuestCfg(cfgId int32) *QuestCfg {
-	return this.cfgs[cfgId]
+func (m *QuestCfgMgr) GetQuestCfg(cfgId int32) *QuestCfg {
+	return m.cfgs[cfgId]
 }
 
-func (this *QuestCfgMgr) GetProgressMgr() *ProgressMgr {
-	return this.progressMgr
+func (m *QuestCfgMgr) GetProgressMgr() *ProgressMgr {
+	return m.progressMgr
 }
 
-func (this *QuestCfgMgr) SetProgressMgr(progressMgr *ProgressMgr) {
-	this.progressMgr = progressMgr
+func (m *QuestCfgMgr) SetProgressMgr(progressMgr *ProgressMgr) {
+	m.progressMgr = progressMgr
 }
 
-func (this *QuestCfgMgr) GetConditionMgr() *ConditionMgr {
-	return this.conditionMgr
+func (m *QuestCfgMgr) GetConditionMgr() *ConditionMgr {
+	return m.conditionMgr
 }
 
-func (this *QuestCfgMgr) SetConditionMgr(conditionMgr *ConditionMgr) {
-	this.conditionMgr = conditionMgr
+func (m *QuestCfgMgr) SetConditionMgr(conditionMgr *ConditionMgr) {
+	m.conditionMgr = conditionMgr
 }

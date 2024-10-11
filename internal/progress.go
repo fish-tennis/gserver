@@ -2,6 +2,7 @@ package internal
 
 import (
 	"github.com/fish-tennis/gserver/pb"
+	"github.com/fish-tennis/gserver/util"
 	"math"
 	"reflect"
 )
@@ -183,7 +184,7 @@ func (this *ProgressMgr) CheckProgress(event interface{}, progressCfg *ProgressC
 }
 
 // 默认的进度检查接口
-func DefaultProgressChecker(event interface{}, progressCfg *ProgressCfg) int32 {
+func DefaultProgressChecker(event any, progressCfg *ProgressCfg) int32 {
 	if len(progressCfg.Properties) == 0 {
 		return 1
 	}
@@ -197,27 +198,27 @@ func DefaultProgressChecker(event interface{}, progressCfg *ProgressCfg) int32 {
 		switch eventFieldVal.Kind() {
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 			eventFieldInt := eventFieldVal.Int()
-			progressFieldInt, _ := fieldValue.(int) // json的值类型
+			progressFieldInt := util.ToInt(fieldValue) // 兼容json和csv
 			if eventFieldInt != int64(progressFieldInt) {
 				return 0
 			}
 		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 			eventFieldInt := eventFieldVal.Uint()
-			progressFieldInt, _ := fieldValue.(int) // json的值类型
+			progressFieldInt := util.ToUint(fieldValue) // // 兼容json和csv
 			if eventFieldInt != uint64(progressFieldInt) {
 				return 0
 			}
 		case reflect.Float32, reflect.Float64:
 			eventFieldFloat := eventFieldVal.Float()
-			progressFieldFloat, _ := fieldValue.(float64) // json的值类型
+			progressFieldFloat := util.ToFloat(fieldValue) // 兼容json和csv
 			// 浮点数比较大小,设置一个精度
 			if math.Abs(eventFieldFloat-progressFieldFloat) >= 0.000001 {
 				return 0
 			}
 		case reflect.Bool:
 			eventFieldBool := eventFieldVal.Bool()
-			progressFieldInt, _ := fieldValue.(bool) // json的值类型
-			if eventFieldBool != progressFieldInt {
+			progressFieldBool := util.ToBool(fieldValue) // 兼容json和csv
+			if eventFieldBool != progressFieldBool {
 				return 0
 			}
 		case reflect.String:

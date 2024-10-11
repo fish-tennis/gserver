@@ -17,8 +17,8 @@
   },
   {
     "CfgId": 2,
-    "Name": "2场战斗",
-    "Detail": "2场战斗,奖励xxx",
+    "Name": "5场战斗",
+    "Detail": "5场战斗,奖励xxx",
     "ProgressCfg": {
       "Type": 2,
       "CountType": 1,
@@ -26,15 +26,15 @@
     },
     "Rewards": [
       {
-        "CfgId": 1,
+        "CfgId": 2,
         "Num": 3
       }
     ]
   },
   {
     "CfgId": 3,
-    "Name": "2场PVP",
-    "Detail": "2场PVP,奖励xxx",
+    "Name": "5场PVP",
+    "Detail": "5场PVP,奖励xxx",
     "ProgressCfg": {
       "Type": 2,
       "Total": 5,
@@ -46,13 +46,25 @@
       {
         "CfgId": 1,
         "Num": 5
+      },
+	  {
+        "CfgId": 3,
+        "Num": 1
       }
     ]
   },
   {
     "CfgId": 4,
-    "Name": "赢2场PVP",
-    "Detail": "赢2场PVP,奖励xxx",
+    "Name": "赢5场PVP",
+    "Detail": "赢5场PVP,奖励xxx",
+	"Conditions":[
+	  {
+		"Type": 1,
+		"Op": ">=",
+		"Arg": 1,
+		"Key": "Level"
+	  }
+	],
     "ProgressCfg": {
       "Type": 2,
       "Total": 5,
@@ -63,8 +75,12 @@
     },
     "Rewards": [
       {
-        "CfgId": 3,
-        "Num": 1
+        "CfgId": 1,
+        "Num": 5
+      },
+	  {
+        "CfgId": 4,
+        "Num": 2
       }
     ]
   }

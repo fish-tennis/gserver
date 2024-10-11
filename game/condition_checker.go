@@ -32,6 +32,7 @@ func compareConditionArg(conditionCfg *internal.ConditionCfg, compareValue int32
 		return compareValue < conditionCfg.Arg
 	case "<=":
 		return compareValue <= conditionCfg.Arg
+		// TODO: 可扩展关键字: and or not
 	}
 	slog.Error("compareConditionArgErr", "op", conditionCfg.Op)
 	return false
@@ -44,7 +45,7 @@ func checkPlayerPropertyCompare(arg interface{}, conditionCfg *internal.Conditio
 		slog.Error("checkPlayerPropertyCompareErr", "arg", arg)
 		return false
 	}
-	propertyName := conditionCfg.GetPropertyString("PropertyName")
+	propertyName := conditionCfg.GetKey()
 	if propertyName == "" {
 		slog.Error("checkPlayerPropertyCompareErr", "conditionCfg", conditionCfg)
 		return false
@@ -60,7 +61,7 @@ func checkActivityPropertyCompare(arg interface{}, conditionCfg *internal.Condit
 		slog.Error("checkActivityPropertyCompareErr", "arg", arg)
 		return false
 	}
-	propertyName := conditionCfg.GetPropertyString("PropertyName")
+	propertyName := conditionCfg.GetKey()
 	if propertyName == "" {
 		slog.Error("checkActivityPropertyCompareErr", "conditionCfg", conditionCfg)
 		return false

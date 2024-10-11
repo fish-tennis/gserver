@@ -48,18 +48,23 @@ func (p *Player) OnTestCmd(req *pb.TestCmd) {
 			p.SendErrorRes(cmd, "AddItem itemCfgId error")
 			return
 		}
-		itemNum := int32(1)
-		if len(cmdArgs) >= 2 {
-			itemNum = int32(util.Atoi(cmdArgs[1]))
+		addItemArg := &pb.AddItemArg{
+			CfgId: itemCfgId,
+			Num:   1,
 		}
-		if itemNum < 1 {
+		if len(cmdArgs) > 1 {
+			addItemArg.Num = int32(util.Atoi(cmdArgs[1]))
+		}
+		// 参数3: 限时秒数
+		if len(cmdArgs) > 2 {
+			addItemArg.TimeType = int32(pb.TimeType_TimeType_Timestamp)
+			addItemArg.Timeout = int32(util.Atoi(cmdArgs[2]))
+		}
+		if addItemArg.Num < 1 {
 			p.SendErrorRes(cmd, "AddItem itemNum error")
 			return
 		}
-		p.GetBags().AddItem(&pb.AddItemArg{
-			CfgId: itemCfgId,
-			Num:   itemNum,
-		})
+		p.GetBags().AddItem(addItemArg)
 
 	case strings.ToLower("FinishQuest"), strings.ToLower("FinishQuests"):
 		if len(cmdArgs) < 1 {
@@ -184,6 +189,6 @@ func (p *Player) OnTestCmd(req *pb.TestCmd) {
 		slog.Debug("GuildRouteError reply", "reply", reply)
 
 	default:
-		p.SendErrorRes(cmd, "unsupport test cmd")
+		p.SendErrorRes(cmd, "unsupported test cmd")
 	}
 }

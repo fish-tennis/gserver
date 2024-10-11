@@ -12,6 +12,15 @@ import (
 	"testing"
 )
 
+var (
+	defaultOption = CsvOption{
+		DataBeginRowIndex: 1,
+		SliceSeparator:    ";",
+		MapKVSeparator:    "_",
+		MapSeparator:      "#",
+	}
+)
+
 func init() {
 	debugLevel := &slog.LevelVar{}
 	debugLevel.Set(slog.LevelDebug)
@@ -39,15 +48,9 @@ func TestReadCsvFromDataProto(t *testing.T) {
 		{"2", "普通物品2", "普通物品2详细信息", "false", "test"},
 		{"3", "装备3", "装备3详细信息", "true", ""},
 	}
-	option := &CsvOption{
-		DataBeginRowIndex: 1,
-		SliceSeparator:    ";",
-		MapKVSeparator:    "_",
-		MapSeparator:      ";",
-	}
 	// proto.Message格式的map
 	m := make(map[int32]*pb.ItemCfg)
-	err := ReadCsvFromDataMap(rows, m, option)
+	err := ReadCsvFromDataMap(rows, m, &defaultOption)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -59,15 +62,9 @@ func TestReadCsvFromDataProto(t *testing.T) {
 func TestReadCsvFromDataStruct(t *testing.T) {
 	rows := [][]string{
 		{"Name", "Detail", "Unique", "SliceTest", "MapTest"},
-		{"item1", "普通物品1详细信息", "false", "1;2;3", "a_1;b_2;c_3"},
+		{"item1", "普通物品1详细信息", "false", "1;2;3", "a_1#b_2#c_3"},
 		{"item2", "普通物品2详细信息", "false", "4", "d_4"},
 		{"item3", "装备3详细信息", "true", "", ""},
-	}
-	option := &CsvOption{
-		DataBeginRowIndex: 1,
-		SliceSeparator:    ";",
-		MapKVSeparator:    "_",
-		MapSeparator:      ";",
 	}
 	// 测试非proto.Message的map格式
 	type testItemCfg struct {
@@ -79,7 +76,7 @@ func TestReadCsvFromDataStruct(t *testing.T) {
 	}
 	// map的key也可以是字符串
 	m := make(map[string]testItemCfg)
-	err := ReadCsvFromDataMap(rows, m, option)
+	err := ReadCsvFromDataMap(rows, m, &defaultOption)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -92,8 +89,8 @@ func TestReadCsvFromDataStruct(t *testing.T) {
 func TestReadCsvFromDataConverter(t *testing.T) {
 	rows := [][]string{
 		{"CfgId", "Name", "Item", "Items", "ColorFlags", "Color", "ColorPtr", "ItemStruct", "ItemStructs", "ItemMap"},
-		{"1", "Name1", "123_1", "123_1;456_2", "Red;Green;Blue", "Red", "Red", "123_1", "321_1;654_2", "1#321_1;2#654_2"},
-		{"2", "Name2", "456_5", "123_1", "Gray;Yellow", "Gray", "Gray", "456_5", "321_1", "1#321_1"},
+		{"1", "Name1", "123_1", "123_1;456_2", "Red;Green;Blue", "Red", "Red", "123_1", "321_1;654_2", "1_321_1#2_654_2"},
+		{"2", "Name2", "456_5", "123_1", "Gray;Yellow", "Gray", "Gray", "456_5", "321_1", "1_321_1"},
 		{"3", "Name3", "789_10", "", "", "", "", "", "", ""},
 	}
 	type testCfg struct {
@@ -112,12 +109,7 @@ func TestReadCsvFromDataConverter(t *testing.T) {
 		ColorFlags int32     // 颜色的组合值,如 Red | Green
 	}
 
-	option := &CsvOption{
-		DataBeginRowIndex: 1,
-		SliceSeparator:    ";",
-		MapKVSeparator:    "#",
-		MapSeparator:      ";",
-	}
+	option := defaultOption
 
 	// 注册pb.ItemNum的解析接口
 	option.RegisterConverterByType(reflect.TypeOf(&pb.ItemNum{}), func(obj interface{}, columnName, fieldStr string) interface{} {
@@ -153,12 +145,17 @@ func TestReadCsvFromDataConverter(t *testing.T) {
 	})
 
 	m := make(map[int]*testCfg)
-	err := ReadCsvFromDataMap(rows, m, option)
+	err := ReadCsvFromDataMap(rows, m, &option)
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, cfg := range m {
 		t.Logf("%v", cfg)
+		t.Logf("%v", cfg.Item)
+		t.Logf("%v", &cfg.ItemStruct)
+		t.Logf("%v", cfg.Items)
+		t.Logf("%v", cfg.ItemStructs)
+		t.Logf("%v", cfg.ItemMap)
 	}
 }
 
@@ -190,14 +187,8 @@ func TestReadCsvFromDataSlice(t *testing.T) {
 		{"2", "普通物品2", "普通物品2详细信息", "false", "test"},
 		{"3", "装备3", "装备3详细信息", "true", ""},
 	}
-	option := &CsvOption{
-		DataBeginRowIndex: 1,
-		SliceSeparator:    ";",
-		MapKVSeparator:    "_",
-		MapSeparator:      ";",
-	}
 	s := make([]*pb.ItemCfg, 0)
-	newSlice, err := ReadCsvFromDataSlice(rows, s, option)
+	newSlice, err := ReadCsvFromDataSlice(rows, s, &defaultOption)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -214,12 +205,6 @@ func TestReadCsvFromDataObject(t *testing.T) {
 		{"Detail", "物品详情", "comment3"},
 		{"Unique", "true", "comment4"},
 	}
-	option := &CsvOption{
-		DataBeginRowIndex: 1,
-		SliceSeparator:    ";",
-		MapKVSeparator:    "_",
-		MapSeparator:      ";",
-	}
 	type testCfg struct {
 		CfgId  int32
 		Name   string
@@ -227,7 +212,7 @@ func TestReadCsvFromDataObject(t *testing.T) {
 		Unique bool
 	}
 	obj := new(testCfg)
-	err := ReadCsvFromDataObject(rows, obj, option)
+	err := ReadCsvFromDataObject(rows, obj, &defaultOption)
 	if err != nil {
 		t.Fatal(err)
 	}

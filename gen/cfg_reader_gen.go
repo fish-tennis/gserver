@@ -160,12 +160,16 @@ func (r *BaseConditionCfgReader) GetType() int32 {
 	return r.v.GetType()
 }
 
+func (r *BaseConditionCfgReader) GetOp() string {
+	return r.v.GetOp()
+}
+
 func (r *BaseConditionCfgReader) GetArg() int32 {
 	return r.v.GetArg()
 }
 
-func (r *BaseConditionCfgReader) GetOp() string {
-	return r.v.GetOp()
+func (r *BaseConditionCfgReader) GetKey() string {
+	return r.v.GetKey()
 }
 
 type BaseProgressCfgReader struct {
@@ -187,16 +191,6 @@ func (r *BaseProgressCfgReader) GetCountType() int32 {
 
 func (r *BaseProgressCfgReader) GetTotal() int32 {
 	return r.v.GetTotal()
-}
-
-func (r *BaseProgressCfgReader) GetEvents() []string {
-	src := r.v.GetEvents()
-	if src == nil {
-		return nil
-	}
-	copySlice := make([]string,len(src))
-	copy(copySlice, src)
-	return copySlice
 }
 
 type BaseActivityCfgReader struct {

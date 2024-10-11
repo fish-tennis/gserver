@@ -1,0 +1,5 @@
+CfgId,Name,Conditions,ProgressCfg,Rewards,Detail
+1,升到5级,,Type_1#CountType_2#Total_5,CfgId_1#Num_2,升级任务示例
+2,5场战斗,,Type_2#CountType_1#Total_5,CfgId_2#Num_3,5场战斗示例
+3,5场PVP,,Type_2#Total_5#Properties_{IsPvp_true#IsWin_true},CfgId_1#Num_5;CfgId_3#Num_1,5场PVP示例.演示同一个进度类型使用动态属性而编辑出新的任务
+4,赢5场PVP,,Type_2#Total_5#Properties_{IsPvp_true},CfgId_1#Num_5;CfgId_4#Num_2,赢5场PVP示例.演示同一个进度类型使用动态属性而编辑出新的任务

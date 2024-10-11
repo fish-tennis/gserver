@@ -7,7 +7,6 @@ import (
 // 条件配置数据
 type ConditionCfg struct {
 	pb.BaseConditionCfg
-	BaseProperties // 动态属性
 }
 
 // 条件检查接口
@@ -34,8 +33,8 @@ func (this *ConditionMgr) Register(conditionType int32, checker ConditionCheckFu
 }
 
 func (this *ConditionMgr) CheckConditions(arg interface{}, conditions []*ConditionCfg) bool {
-	for _,conditionCfg := range conditions {
-		checker,ok := this.conditionCheckers[conditionCfg.Type]
+	for _, conditionCfg := range conditions {
+		checker, ok := this.conditionCheckers[conditionCfg.Type]
 		if !ok {
 			return false
 		}
