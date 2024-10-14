@@ -9,27 +9,7 @@
     "TimeType": 1,
     "BeginTime": 0,
     "EndTime": 0,
-    "Quests": [
-      {
-        "CfgId": 1,
-        "Name": "每日签到",
-        "Detail": "签到拿奖励,每天一次",
-        "ProgressCfg": {
-          "Type": 3,
-          "CountType": 1,
-          "Total": 1,
-          "Properties": {
-            "PropertyName": "SignIn"
-          }
-        },
-        "Rewards": [
-          {
-            "CfgId": 1,
-            "Num": 1
-          }
-        ]
-      }
-    ]
+    "Quests": [10001]
   },
 
   {
@@ -42,27 +22,7 @@
     "TimeType": 1,
     "BeginTime": 0,
     "EndTime": 0,
-    "Quests": [
-      {
-        "CfgId": 1,
-        "Name": "累充礼包",
-        "Detail": "累计充值达到100,奖励XXX",
-        "ProgressCfg": {
-          "Type": 3,
-          "CountType": 1,
-          "Total": 100,
-          "Properties": {
-            "PropertyName": "TotalPay"
-          }
-        },
-        "Rewards": [
-          {
-            "CfgId": 1,
-            "Num": 2
-          }
-        ]
-      }
-    ]
+    "Quests": [10002]
   },
 
   {
@@ -75,80 +35,7 @@
     "TimeType": 1,
     "BeginTime": 0,
     "EndTime": 0,
-    "Quests": [
-      {
-        "CfgId": 1,
-        "Name": "第1天",
-        "Detail": "",
-		"Conditions":[
-          {
-            "Type": 2,
-            "Arg": 1,
-            "Op": ">=",
-            "Key": "DayCount"
-          }
-		],
-        "ProgressCfg": {
-          "Type": 1,
-          "CountType": 1,
-          "Total": 1
-        },
-        "Rewards": [
-          {
-            "CfgId": 1,
-            "Num": 1
-          }
-        ]
-      },
-      {
-        "CfgId": 2,
-        "Name": "第2天",
-        "Detail": "",
-        "Conditions":[
-          {
-            "Type": 2,
-            "Arg": 2,
-            "Op": ">=",
-            "Key": "DayCount"
-          }
-        ],
-        "ProgressCfg": {
-          "Type": 1,
-          "CountType": 1,
-          "Total": 1
-        },
-        "Rewards": [
-          {
-            "CfgId": 1,
-            "Num": 2
-          }
-        ]
-      },
-      {
-        "CfgId": 3,
-        "Name": "第3天",
-        "Detail": "",
-        "Conditions":[
-          {
-            "Type": 2,
-            "Arg": 3,
-            "Op": ">=",
-            "Key": "DayCount"
-          }
-        ],
-        "ProgressCfg": {
-          "Type": 1,
-          "CountType": 1,
-          "Total": 1
-        },
-        "Rewards": [
-          {
-            "CfgId": 1,
-            "Num": 3
-          }
-        ]
-      }
-    ]
+    "Quests": [10003,10004,10005]
   },
 
   {
@@ -161,65 +48,7 @@
     "TimeType": 1,
     "BeginTime": 0,
     "EndTime": 0,
-    "Quests": [
-      {
-        "CfgId": 1,
-        "Name": "1分钟",
-        "Detail": "",
-        "ProgressCfg": {
-          "Type": 3,
-          "CountType": 1,
-          "Total": 1,
-          "Properties": {
-            "PropertyName": "OnlineMinute"
-          }
-        },
-        "Rewards": [
-          {
-            "CfgId": 1,
-            "Num": 1
-          }
-        ]
-      },
-      {
-        "CfgId": 2,
-        "Name": "5分钟",
-        "Detail": "",
-        "ProgressCfg": {
-          "Type": 3,
-          "CountType": 1,
-          "Total": 5,
-          "Properties": {
-            "PropertyName": "OnlineMinute"
-          }
-        },
-        "Rewards": [
-          {
-            "CfgId": 1,
-            "Num": 5
-          }
-        ]
-      },
-      {
-        "CfgId": 3,
-        "Name": "10分钟",
-        "Detail": "",
-        "ProgressCfg": {
-          "Type": 3,
-          "CountType": 1,
-          "Total": 10,
-          "Properties": {
-            "PropertyName": "OnlineMinute"
-          }
-        },
-        "Rewards": [
-          {
-            "CfgId": 1,
-            "Num": 10
-          }
-        ]
-      }
-    ]
+    "Quests": [10006,10007,10008]
   },
 
   {
@@ -238,20 +67,40 @@
         "ConsumeItems": [
           {
             "CfgId": 1,
-            "Num": 2
+            "Num": 1
           },
 		  {
             "CfgId": 2,
-            "Num": 3
+            "Num": 2
           }
         ],
         "Rewards": [
           {
-            "CfgId": 2,
+            "CfgId": 3,
             "Num": 1
           }
         ],
         "CountLimit": 2
+      },
+	  {
+        "CfgId": 2,
+        "ConsumeItems": [
+          {
+            "CfgId": 3,
+            "Num": 1
+          },
+		  {
+            "CfgId": 4,
+            "Num": 2
+          }
+        ],
+        "Rewards": [
+          {
+            "CfgId": 1,
+            "Num": 10
+          }
+        ],
+        "CountLimit": 1
       }
     ]
   }

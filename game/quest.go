@@ -62,8 +62,12 @@ func (this *Quest) TriggerPlayerEntryGame(event *internal.EventPlayerEntryGame) 
 	// 测试代码:给新玩家添加初始任务
 	if len(this.Quests.Data) == 0 && len(this.Finished.Data) == 0 {
 		cfg.GetQuestCfgMgr().Range(func(questCfg *cfg.QuestCfg) bool {
+			// 排除其他模块的子任务
+			if questCfg.GetQuestType() != 0 {
+				return true
+			}
 			if !cfg.GetQuestCfgMgr().GetConditionMgr().CheckConditions(this.GetPlayer(), questCfg.Conditions) {
-				return false
+				return true
 			}
 			questData := &pb.QuestData{CfgId: questCfg.CfgId}
 			this.AddQuest(questData)

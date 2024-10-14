@@ -3,6 +3,7 @@ package cfg
 import (
 	. "github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/pb"
+	"slices"
 )
 
 var (
@@ -11,24 +12,21 @@ var (
 
 func init() {
 	_activityCfgLoader = RegisterCfgLoader(new(ActivityCfgMgr), &CfgLoaderOption{
-		FileName: "activitycfg.json",
+		FileName: "activitycfg.csv",
 	})
 }
 
 // 活动配置数据
 type ActivityCfg struct {
-	pb.BaseActivityCfg                        // 活动基础数据
-	Quests             []*QuestCfg            // 一个活动可以包含N个子任务
-	Properties         map[string]interface{} `json:"Properties"` // 动态属性
+	pb.BaseActivityCfg                // 活动基础数据
+	Properties         map[string]any `json:"Properties"` // 动态属性
 }
 
 func (this *ActivityCfg) GetQuestCfg(cfgId int32) *QuestCfg {
-	for _, questCfg := range this.Quests {
-		if questCfg.GetCfgId() == cfgId {
-			return questCfg
-		}
+	if !slices.Contains(this.Quests, cfgId) {
+		return nil
 	}
-	return nil
+	return GetQuestCfgMgr().GetQuestCfg(cfgId)
 }
 
 // 活动配置数据管理

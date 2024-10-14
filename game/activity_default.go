@@ -72,8 +72,12 @@ func (this *ActivityDefault) OnEvent(event interface{}) {
 		this.OnDateChange(e.OldDate, e.CurDate)
 		return
 	}
-	for _, questCfg := range activityCfg.Quests {
-		progress := this.getProgress(questCfg.CfgId)
+	for _, questId := range activityCfg.Quests {
+		questCfg := activityCfg.GetQuestCfg(questId)
+		if questCfg == nil {
+			continue
+		}
+		progress := this.getProgress(questId)
 		if progress == nil {
 			progress = this.addProgress(questCfg)
 			if progress == nil {
@@ -104,7 +108,11 @@ func (this *ActivityDefault) OnDateChange(oldDate time.Time, curDate time.Time) 
 func (this *ActivityDefault) Reset() {
 	this.Base.Progresses = nil
 	activityCfg := this.GetActivityCfg()
-	for _, questCfg := range activityCfg.Quests {
+	for _, questId := range activityCfg.Quests {
+		questCfg := activityCfg.GetQuestCfg(questId)
+		if questCfg == nil {
+			continue
+		}
 		this.addProgress(questCfg)
 	}
 	this.Base.ExchangeRecord = nil

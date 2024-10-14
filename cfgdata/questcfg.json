@@ -3,6 +3,7 @@
     "CfgId": 1,
     "Name": "升到5级",
     "Detail": "升到5级,奖励xxx",
+	"QuestType":0,
     "ProgressCfg": {
       "Type": 1,
       "CountType": 2,
@@ -19,6 +20,7 @@
     "CfgId": 2,
     "Name": "5场战斗",
     "Detail": "5场战斗,奖励xxx",
+	"QuestType":0,
     "ProgressCfg": {
       "Type": 2,
       "CountType": 1,
@@ -35,6 +37,7 @@
     "CfgId": 3,
     "Name": "5场PVP",
     "Detail": "5场PVP,奖励xxx",
+	"QuestType":0,
     "ProgressCfg": {
       "Type": 2,
       "Total": 5,
@@ -57,12 +60,13 @@
     "CfgId": 4,
     "Name": "赢5场PVP",
     "Detail": "赢5场PVP,奖励xxx",
+	"QuestType":0,
 	"Conditions":[
 	  {
 		"Type": 1,
+		"Key": "Level",
 		"Op": ">=",
-		"Arg": 1,
-		"Key": "Level"
+		"Arg": 1
 	  }
 	],
     "ProgressCfg": {
@@ -83,5 +87,180 @@
         "Num": 2
       }
     ]
+  },
+  {
+	"CfgId": 10001,
+	"Name": "每日签到",
+	"Detail": "签到拿奖励,每天一次",
+	"QuestType":1,
+	"ProgressCfg": {
+	  "Type": 3,
+	  "CountType": 1,
+	  "Total": 1,
+	  "Properties": {
+		"PropertyName": "SignIn"
+	  }
+	},
+	"Rewards": [
+	  {
+		"CfgId": 1,
+		"Num": 1
+	  }
+	]
+  },
+  {
+	"CfgId": 10002,
+	"Name": "累充礼包",
+	"Detail": "累计充值达到100,奖励XXX",
+	"QuestType":1,
+	"ProgressCfg": {
+	  "Type": 3,
+	  "CountType": 1,
+	  "Total": 100,
+	  "Properties": {
+		"PropertyName": "TotalPay"
+	  }
+	},
+	"Rewards": [
+	  {
+		"CfgId": 1,
+		"Num": 2
+	  }
+	]
+  },
+  {
+	"CfgId": 10003,
+	"Name": "第1天",
+	"Detail": "",
+	"QuestType":1,
+	"Conditions":[
+	  {
+		"Type": 2,
+		"Arg": 1,
+		"Op": ">=",
+		"Key": "DayCount"
+	  }
+	],
+	"ProgressCfg": {
+	  "Type": 1,
+	  "CountType": 1,
+	  "Total": 1
+	},
+	"Rewards": [
+	  {
+		"CfgId": 1,
+		"Num": 1
+	  }
+	]
+  },
+  {
+	"CfgId": 10004,
+	"Name": "第2天",
+	"Detail": "",
+	"QuestType":1,
+	"Conditions":[
+	  {
+		"Type": 2,
+		"Arg": 2,
+		"Op": ">=",
+		"Key": "DayCount"
+	  }
+	],
+	"ProgressCfg": {
+	  "Type": 1,
+	  "CountType": 1,
+	  "Total": 1
+	},
+	"Rewards": [
+	  {
+		"CfgId": 1,
+		"Num": 2
+	  }
+	]
+  },
+  {
+	"CfgId": 10005,
+	"Name": "第3天",
+	"Detail": "",
+	"QuestType":1,
+	"Conditions":[
+	  {
+		"Type": 2,
+		"Arg": 3,
+		"Op": ">=",
+		"Key": "DayCount"
+	  }
+	],
+	"ProgressCfg": {
+	  "Type": 1,
+	  "CountType": 1,
+	  "Total": 1
+	},
+	"Rewards": [
+	  {
+		"CfgId": 1,
+		"Num": 3
+	  }
+	]
+  },
+  {
+	"CfgId": 10006,
+	"Name": "1分钟",
+	"Detail": "",
+	"QuestType":1,
+	"ProgressCfg": {
+	  "Type": 3,
+	  "CountType": 1,
+	  "Total": 1,
+	  "Properties": {
+		"PropertyName": "OnlineMinute"
+	  }
+	},
+	"Rewards": [
+	  {
+		"CfgId": 1,
+		"Num": 1
+	  }
+	]
+  },
+  {
+	"CfgId": 10007,
+	"Name": "5分钟",
+	"Detail": "",
+	"QuestType":1,
+	"ProgressCfg": {
+	  "Type": 3,
+	  "CountType": 1,
+	  "Total": 5,
+	  "Properties": {
+		"PropertyName": "OnlineMinute"
+	  }
+	},
+	"Rewards": [
+	  {
+		"CfgId": 1,
+		"Num": 5
+	  }
+	]
+  },
+  {
+	"CfgId": 10008,
+	"Name": "10分钟",
+	"Detail": "",
+	"QuestType":1,
+	"ProgressCfg": {
+	  "Type": 3,
+	  "CountType": 1,
+	  "Total": 10,
+	  "Properties": {
+		"PropertyName": "OnlineMinute"
+	  }
+	},
+	"Rewards": [
+	  {
+		"CfgId": 1,
+		"Num": 10
+	  }
+	]
   }
 ]

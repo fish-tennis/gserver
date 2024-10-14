@@ -127,8 +127,8 @@ func (r *BaseQuestCfgReader) GetName() string {
 	return r.v.GetName()
 }
 
-func (r *BaseQuestCfgReader) GetDetail() string {
-	return r.v.GetDetail()
+func (r *BaseQuestCfgReader) GetQuestType() int32 {
+	return r.v.GetQuestType()
 }
 
 func (r *BaseQuestCfgReader) GetRewards() []*AddItemArgReader {
@@ -147,6 +147,10 @@ func (r *BaseQuestCfgReader) GetPreQuest() int32 {
 	return r.v.GetPreQuest()
 }
 
+func (r *BaseQuestCfgReader) GetDetail() string {
+	return r.v.GetDetail()
+}
+
 type BaseConditionCfgReader struct {
 	v *BaseConditionCfg
 }
@@ -160,16 +164,16 @@ func (r *BaseConditionCfgReader) GetType() int32 {
 	return r.v.GetType()
 }
 
+func (r *BaseConditionCfgReader) GetKey() string {
+	return r.v.GetKey()
+}
+
 func (r *BaseConditionCfgReader) GetOp() string {
 	return r.v.GetOp()
 }
 
 func (r *BaseConditionCfgReader) GetArg() int32 {
 	return r.v.GetArg()
-}
-
-func (r *BaseConditionCfgReader) GetKey() string {
-	return r.v.GetKey()
 }
 
 type BaseProgressCfgReader struct {
@@ -264,6 +268,16 @@ func (r *BaseActivityCfgReader) GetMinPlayerLevel() int32 {
 
 func (r *BaseActivityCfgReader) GetMaxPlayerLevel() int32 {
 	return r.v.GetMaxPlayerLevel()
+}
+
+func (r *BaseActivityCfgReader) GetQuests() []int32 {
+	src := r.v.GetQuests()
+	if src == nil {
+		return nil
+	}
+	copySlice := make([]int32,len(src))
+	copy(copySlice, src)
+	return copySlice
 }
 
 type ExchangeCfgReader struct {

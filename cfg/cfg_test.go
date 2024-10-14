@@ -1,6 +1,7 @@
 package cfg
 
 import (
+	"fmt"
 	"github.com/fish-tennis/gserver/internal"
 	"log/slog"
 	"testing"
@@ -17,7 +18,14 @@ func TestCfgLoad(t *testing.T) {
 	GetActivityCfgMgr().SetProgressMgr(progressMgr)
 	GetActivityCfgMgr().SetConditionMgr(conditionMgr)
 	GetQuestCfgMgr().Range(func(e *QuestCfg) bool {
-		slog.Info("QuestCfg", "ProgressCfg", e.ProgressCfg, "map", e.ProgressCfg.Properties)
+		slog.Info("QuestCfg", "Conditions", e.Conditions, "ProgressCfg", e.ProgressCfg, "Properties", e.ProgressCfg.Properties)
+		return true
+	})
+	GetActivityCfgMgr().Range(func(e *ActivityCfg) bool {
+		slog.Info("ActivityCfg", "CfgId", e.CfgId, "Properties", e.Properties)
+		for i, exchange := range e.Exchanges {
+			slog.Info(fmt.Sprintf("Exchanges[%v]", i), "exchange", exchange)
+		}
 		return true
 	})
 	time.Sleep(time.Second)

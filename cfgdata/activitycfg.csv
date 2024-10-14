@@ -1,0 +1,6 @@
+CfgId,Name,Template,RefreshType,CycleType,TimeType,BeginTime,EndTime,Quests,Exchanges,Properties,Detail
+1,每日签到,default,1,1,1,0,0,,,,签到拿奖励.每天一次
+2,累充礼包,default,1,1,1,0,0,,,,累计充值达到100.奖励XXX
+3,3日目标,default,1,1,1,0,0,,,,每天一个小目标.3天一个大目标
+4,在线奖励,default,1,1,1,0,0,,,,累计在线一定时长.即可领取礼包
+5,活动商店,default,1,1,1,0,0,,CfgId_1#ConsumeItems_{CfgId_1#Num_1;CfgId_2#Num_2}#Rewards_{CfgId_3#Num_1}#CountLimit_2;CfgId_2#ConsumeItems_{CfgId_3#Num_1;CfgId_4#Num_2}#Rewards_{CfgId_1#Num_10}#CountLimit_1,,活动商店
