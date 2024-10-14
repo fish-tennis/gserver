@@ -77,6 +77,8 @@ func onPlayerEntryGameReq(connection Connection, packet Packet) {
 					slog.Error("kick rpcErr", "accountId", accountId, "playerId", playerId,
 						"gameServerId", gameServerId, "rpcErr", rpcErr)
 				}
+			} else {
+				// TODO: RemoveOnlineAccount?
 			}
 			// 通知客户端稍后重新登录
 			network.SendPacketAdapt(connection, packet, &pb.PlayerEntryGameRes{

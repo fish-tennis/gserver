@@ -26,8 +26,9 @@ message Money {
 
 // 背包模块数据
 message BagSaveData {
-  map<int32,int32> countItem = 1;
-  map<int64,bytes> uniqueItem = 2;
+  map<int32,int32> CountItem = 1;
+  map<int64,bytes> UniqueItem = 2;
+  map<int64,bytes> Equip = 3;
 }
 
 // 任务模块数据
@@ -56,7 +57,7 @@ message PlayerData {
   int32 regionId = 4; // 区服id
   BaseInfo baseInfo = 5;
   bytes money = 6;
-  BagSaveData bag = 7;
+  BagSaveData bags = 7;
   QuestSaveData quest = 8;
   PlayerGuildData guild = 9;
   map<int64,bytes> pendingMessages = 10;

@@ -273,7 +273,15 @@ func CreatePlayer(playerId int64, playerName string, accountId int64, regionId i
 
 // 从加载的数据构造出玩家对象
 func CreatePlayerFromData(playerData *pb.PlayerData) *Player {
-	player := CreatePlayer(playerData.XId, playerData.Name, playerData.AccountId, playerData.RegionId)
+	var player *Player
+	defer func() {
+		if err := recover(); err != nil {
+			player = nil
+			logger.Error("fatal %v", err.(error))
+			LogStack()
+		}
+	}()
+	player = CreatePlayer(playerData.XId, playerData.Name, playerData.AccountId, playerData.RegionId)
 	err := gentity.LoadEntityData(player, playerData)
 	if err != nil {
 		slog.Error("LoadPlayerDataErr", "playerId", player.GetId(), "err", err)

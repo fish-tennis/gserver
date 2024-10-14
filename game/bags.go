@@ -146,12 +146,10 @@ func (b *Bags) IsEnough(items []*pb.DelItemArg) bool {
 
 // 响应事件:玩家进入游戏
 func (b *Bags) TriggerPlayerEntryGame(event *internal.EventPlayerEntryGame) {
-	slog.Debug("TriggerPlayerEntryGame")
 	b.BagUniqueItem.initTimeoutList()
 	b.BagEquip.initTimeoutList()
 	// 超时检查回调
 	b.GetPlayer().GetTimerEntries().After(time.Second, func() time.Duration {
-		slog.Debug("Bags second check")
 		now := int32(b.GetPlayer().GetTimerEntries().Now().Unix())
 		b.BagUniqueItem.checkTimeout(now)
 		b.BagEquip.checkTimeout(now)

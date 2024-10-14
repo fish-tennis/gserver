@@ -22,7 +22,7 @@ func TestCfgLoad(t *testing.T) {
 		return true
 	})
 	GetActivityCfgMgr().Range(func(e *ActivityCfg) bool {
-		slog.Info("ActivityCfg", "CfgId", e.CfgId, "Properties", e.Properties)
+		slog.Info("ActivityCfg", "CfgId", e.CfgId, "Quests", e.Quests, "Properties", e.Properties)
 		for i, exchange := range e.Exchanges {
 			slog.Info(fmt.Sprintf("Exchanges[%v]", i), "exchange", exchange)
 		}
