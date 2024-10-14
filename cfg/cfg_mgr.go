@@ -3,8 +3,8 @@ package cfg
 import (
 	"encoding/json"
 	"errors"
+	"github.com/fish-tennis/csv"
 	"github.com/fish-tennis/gserver/internal"
-	"github.com/fish-tennis/gserver/tool"
 	"log/slog"
 	"os"
 	"strings"
@@ -66,9 +66,9 @@ func (this *DataMap[E]) LoadJson(fileName string) error {
 }
 
 // 从csv文件加载数据
-func (this *DataMap[E]) LoadCsv(fileName string, option *tool.CsvOption) error {
+func (this *DataMap[E]) LoadCsv(fileName string, option *csv.CsvOption) error {
 	cfgMap := make(map[int32]E)
-	err := tool.ReadCsvFileMap(fileName, cfgMap, option)
+	err := csv.ReadCsvFileMap(fileName, cfgMap, option)
 	if err != nil {
 		slog.Error("LoadCsvErr", "fileName", fileName, "err", err)
 		return err
@@ -128,10 +128,10 @@ func (this *DataSlice[E]) LoadJson(fileName string) error {
 	return nil
 }
 
-func (this *DataSlice[E]) LoadCsv(fileName string, option *tool.CsvOption) error {
+func (this *DataSlice[E]) LoadCsv(fileName string, option *csv.CsvOption) error {
 	s := make([]E, 0)
 	var err error
-	this.cfgs, err = tool.ReadCsvFileSlice(fileName, s, option)
+	this.cfgs, err = csv.ReadCsvFileSlice(fileName, s, option)
 	if err != nil {
 		slog.Error("LoadCsvErr", "fileName", fileName, "err", err)
 		return err

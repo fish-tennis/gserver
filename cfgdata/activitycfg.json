@@ -239,6 +239,10 @@
           {
             "CfgId": 1,
             "Num": 2
+          },
+		  {
+            "CfgId": 2,
+            "Num": 3
           }
         ],
         "Rewards": [

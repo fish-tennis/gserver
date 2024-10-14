@@ -2,7 +2,7 @@ package cfg
 
 import (
 	"cmp"
-	"github.com/fish-tennis/gserver/tool"
+	"github.com/fish-tennis/csv"
 	"log/slog"
 	"reflect"
 	"slices"
@@ -28,7 +28,7 @@ type CfgLoaderOption struct {
 	// 加载顺序,数值小的,先执行
 	// 因为有的数据可能有依赖关系
 	Order     int
-	CsvOption *tool.CsvOption // csv配置文件才需要
+	CsvOption *csv.CsvOption // csv配置文件才需要
 
 	Value atomic.Value // 原子Value,用于热更新时的并发保护
 }
