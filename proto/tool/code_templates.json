@@ -1,0 +1,11 @@
+{
+  "Reader": {
+	"Template": "./reader_gen.go.template",
+    "OutDir": "./../../gen",
+    "FileFilter": [
+      "cfg.pb.go"
+    ],
+    "MessageFilter": [
+    ]
+  }
+}
