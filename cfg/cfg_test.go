@@ -12,7 +12,7 @@ func TestCfgLoad(t *testing.T) {
 	dir := "./../cfgdata/"
 	progressMgr := internal.NewProgressMgr()
 	conditionMgr := internal.NewConditionMgr()
-	LoadAllCfgs(dir)
+	LoadAllCfgs(dir, LoadCfgFilter)
 	GetQuestCfgMgr().SetProgressMgr(progressMgr)
 	GetQuestCfgMgr().SetConditionMgr(conditionMgr)
 	GetActivityCfgMgr().SetProgressMgr(progressMgr)

@@ -7,14 +7,10 @@ import (
 )
 
 var (
-	_activityCfgLoader *CfgLoaderOption
+	_activityCfgLoader = Register(func() any {
+		return new(ActivityCfgMgr)
+	}, Mid)
 )
-
-func init() {
-	_activityCfgLoader = RegisterCfgLoader(new(ActivityCfgMgr), &CfgLoaderOption{
-		FileName: "activitycfg.csv",
-	})
-}
 
 // 活动配置数据
 type ActivityCfg struct {
@@ -22,8 +18,8 @@ type ActivityCfg struct {
 	Properties         map[string]any `json:"Properties"` // 动态属性
 }
 
-func (this *ActivityCfg) GetQuestCfg(cfgId int32) *QuestCfg {
-	if !slices.Contains(this.Quests, cfgId) {
+func (c *ActivityCfg) GetQuestCfg(cfgId int32) *QuestCfg {
+	if !slices.Contains(c.Quests, cfgId) {
 		return nil
 	}
 	return GetQuestCfgMgr().GetQuestCfg(cfgId)
@@ -31,32 +27,32 @@ func (this *ActivityCfg) GetQuestCfg(cfgId int32) *QuestCfg {
 
 // 活动配置数据管理
 type ActivityCfgMgr struct {
-	DataMap[*ActivityCfg]
-	progressMgr  *ProgressMgr
-	conditionMgr *ConditionMgr
+	*DataMap[*ActivityCfg] `cfg:"activitycfg.csv"`
+	progressMgr            *ProgressMgr
+	conditionMgr           *ConditionMgr
 }
 
 // singleton
 func GetActivityCfgMgr() *ActivityCfgMgr {
-	return _activityCfgLoader.Value.Load().(*ActivityCfgMgr)
+	return _activityCfgLoader.Load().(*ActivityCfgMgr)
 }
 
-func (this *ActivityCfgMgr) GetActivityCfg(cfgId int32) *ActivityCfg {
-	return this.cfgs[cfgId]
+func (m *ActivityCfgMgr) GetActivityCfg(cfgId int32) *ActivityCfg {
+	return m.cfgs[cfgId]
 }
 
-func (this *ActivityCfgMgr) GetProgressMgr() *ProgressMgr {
-	return this.progressMgr
+func (m *ActivityCfgMgr) GetProgressMgr() *ProgressMgr {
+	return m.progressMgr
 }
 
-func (this *ActivityCfgMgr) SetProgressMgr(progressMgr *ProgressMgr) {
-	this.progressMgr = progressMgr
+func (m *ActivityCfgMgr) SetProgressMgr(progressMgr *ProgressMgr) {
+	m.progressMgr = progressMgr
 }
 
-func (this *ActivityCfgMgr) GetConditionMgr() *ConditionMgr {
-	return this.conditionMgr
+func (m *ActivityCfgMgr) GetConditionMgr() *ConditionMgr {
+	return m.conditionMgr
 }
 
-func (this *ActivityCfgMgr) SetConditionMgr(conditionMgr *ConditionMgr) {
-	this.conditionMgr = conditionMgr
+func (m *ActivityCfgMgr) SetConditionMgr(conditionMgr *ConditionMgr) {
+	m.conditionMgr = conditionMgr
 }

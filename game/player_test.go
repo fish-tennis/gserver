@@ -72,7 +72,7 @@ func initTestEnv(t *testing.T) {
 	AutoRegisterPlayerPacketHandler(nil)
 	progressMgr := RegisterProgressCheckers()
 	conditionMgr := RegisterConditionCheckers()
-	cfg.LoadAllCfgs("./../cfgdata")
+	cfg.LoadAllCfgs("./../cfgdata", cfg.LoadCfgFilter)
 	cfg.GetQuestCfgMgr().SetProgressMgr(progressMgr)
 	cfg.GetQuestCfgMgr().SetConditionMgr(conditionMgr)
 	cfg.GetActivityCfgMgr().SetProgressMgr(progressMgr)

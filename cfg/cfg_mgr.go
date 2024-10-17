@@ -28,7 +28,7 @@ func (this *DataMap[E]) Range(f func(e E) bool) {
 }
 
 // 加载配置数据,支持json和csv
-func (this *DataMap[E]) Load(fileName string, loaderOption *CfgLoaderOption) error {
+func (this *DataMap[E]) Load(fileName string, loaderOption *LoaderOption) error {
 	if this.cfgs == nil {
 		this.cfgs = make(map[int32]E)
 	}
@@ -100,7 +100,7 @@ func (this *DataSlice[E]) Range(f func(e E) bool) {
 }
 
 // 加载配置数据,支持json和csv
-func (this *DataSlice[E]) Load(fileName string, loaderOption *CfgLoaderOption) error {
+func (this *DataSlice[E]) Load(fileName string, loaderOption *LoaderOption) error {
 	if strings.HasSuffix(fileName, ".json") {
 		return this.LoadJson(fileName)
 	} else if strings.HasSuffix(fileName, ".csv") {

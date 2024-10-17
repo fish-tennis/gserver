@@ -5,32 +5,28 @@ import (
 )
 
 var (
-	_levelCfgLoader *CfgLoaderOption
+	_levelCfgLoader = Register(func() any {
+		return new(LevelCfgMgr)
+	}, First)
 )
-
-func init() {
-	_levelCfgLoader = RegisterCfgLoader(new(LevelCfgMgr), &CfgLoaderOption{
-		FileName: "levelcfg.csv",
-	})
-}
 
 // 等级配置数据管理
 type LevelCfgMgr struct {
 	// 每一级升级所需要的经验
-	DataSlice[*pb.LevelExp]
+	*DataSlice[*pb.LevelExp] `cfg:"levelcfg.csv"`
 }
 
 // singleton
 func GetLevelCfgMgr() *LevelCfgMgr {
-	return _levelCfgLoader.Value.Load().(*LevelCfgMgr)
+	return _levelCfgLoader.Load().(*LevelCfgMgr)
 }
 
 // 最大等级
-func (this *LevelCfgMgr) GetMaxLevel() int32 {
-	return int32(this.Len())
+func (m *LevelCfgMgr) GetMaxLevel() int32 {
+	return int32(m.Len())
 }
 
 // 下一级所需要经验值
-func (this *LevelCfgMgr) GetNeedExp(nextLevel int32) int32 {
-	return this.cfgs[nextLevel-1].NeedExp
+func (m *LevelCfgMgr) GetNeedExp(nextLevel int32) int32 {
+	return m.cfgs[nextLevel-1].NeedExp
 }

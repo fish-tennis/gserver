@@ -6,14 +6,10 @@ import (
 )
 
 var (
-	_questCfgLoader *CfgLoaderOption
+	_questCfgLoader = Register(func() any {
+		return new(QuestCfgMgr)
+	}, Mid)
 )
-
-func init() {
-	_questCfgLoader = RegisterCfgLoader(new(QuestCfgMgr), &CfgLoaderOption{
-		FileName: "questcfg.csv",
-	})
-}
 
 // 任务配置数据
 type QuestCfg struct {
@@ -25,14 +21,14 @@ type QuestCfg struct {
 
 // 任务配置数据管理
 type QuestCfgMgr struct {
-	DataMap[*QuestCfg]
-	progressMgr  *ProgressMgr
-	conditionMgr *ConditionMgr
+	*DataMap[*QuestCfg] `cfg:"questcfg.csv"`
+	progressMgr         *ProgressMgr
+	conditionMgr        *ConditionMgr
 }
 
 // singleton
 func GetQuestCfgMgr() *QuestCfgMgr {
-	return _questCfgLoader.Value.Load().(*QuestCfgMgr)
+	return _questCfgLoader.Load().(*QuestCfgMgr)
 }
 
 func (m *QuestCfgMgr) GetQuestCfg(cfgId int32) *QuestCfg {

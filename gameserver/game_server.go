@@ -115,7 +115,7 @@ func (this *GameServer) readConfig() {
 func (this *GameServer) loadCfgs() {
 	progressMgr := game.RegisterProgressCheckers()
 	conditionMgr := game.RegisterConditionCheckers()
-	cfg.LoadAllCfgs("cfgdata")
+	cfg.LoadAllCfgs("cfgdata", cfg.LoadCfgFilter)
 	cfg.GetQuestCfgMgr().SetProgressMgr(progressMgr)
 	cfg.GetQuestCfgMgr().SetConditionMgr(conditionMgr)
 	cfg.GetActivityCfgMgr().SetProgressMgr(progressMgr)

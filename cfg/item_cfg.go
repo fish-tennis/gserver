@@ -6,26 +6,22 @@ import (
 )
 
 var (
-	_itemCfgLoader *CfgLoaderOption
+	_itemCfgLoader = Register(func() any {
+		return new(ItemCfgMgr)
+	}, First)
 )
-
-func init() {
-	_itemCfgLoader = RegisterCfgLoader(new(ItemCfgMgr), &CfgLoaderOption{
-		FileName: "itemcfg.csv",
-	})
-}
 
 // 任务配置数据管理
 type ItemCfgMgr struct {
-	DataMap[*pb.ItemCfg]
+	*DataMap[*pb.ItemCfg] `cfg:"itemcfg.csv"`
 }
 
 // singleton
 func GetItemCfgMgr() *ItemCfgMgr {
-	return _itemCfgLoader.Value.Load().(*ItemCfgMgr)
+	return _itemCfgLoader.Load().(*ItemCfgMgr)
 }
 
 // 提供一个只读接口
-func (m *ItemCfgMgr) GetItemCfg(cfgId int32) *gen.ItemCfgReader {
-	return gen.NewItemCfgReader(m.GetCfg(cfgId))
+func (m *ItemCfgMgr) GetItemCfg(cfgId int32) *gen.ItemCfgR {
+	return gen.NewItemCfgR(m.GetCfg(cfgId))
 }

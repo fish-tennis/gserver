@@ -4,7 +4,6 @@ import (
 	"github.com/fish-tennis/csv"
 	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/pb"
-	"log/slog"
 	"reflect"
 )
 
@@ -65,13 +64,13 @@ func parseExchangeCfgSlice(obj any, columnName, fieldStr string) any {
 	// ]
 	pairsSlice := csv.ParseNestStringSlice(fieldStr, &DefaultCsvOption, "ConsumeItems", "Rewards")
 	for _, pairs := range pairsSlice {
-		slog.Info("pairsSlice", "pairs", pairs)
+		//slog.Info("pairsSlice", "pairs", pairs)
 		exchangeCfg := &pb.ExchangeCfg{}
 		objVal := reflect.ValueOf(exchangeCfg).Elem()
 		// pairs:
 		// [{K:CfgId,V:1},{K:ConsumeItems,V:CfgId_1#Num_1;CfgId_2#Num_2},{K:Rewards,V:CfgId_3#Num_1}]
 		for _, pair := range pairs {
-			slog.Info("pair of ExchangeCfg", "k", pair.Key, "v", pair.Value)
+			//slog.Info("pair of ExchangeCfg", "k", pair.Key, "v", pair.Value)
 			fieldVal := objVal.FieldByName(pair.Key)
 			csv.ConvertStringToFieldValue(objVal, fieldVal, pair.Key, pair.Value, &DefaultCsvOption, false)
 		}
