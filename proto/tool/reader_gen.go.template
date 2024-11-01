@@ -16,31 +16,57 @@ func New{{.MessageName}}R(src *pb.{{.MessageName}}) *{{.MessageName}}R {
 	return &{{.MessageName}}R{v:src}
 }
 
+func (r *{{.MessageName}}R) IsNil() bool {
+	return r == nil || r.v == nil
+}
+
 func (r *{{.MessageName}}R) Raw() *pb.{{.MessageName}} {
+    if r == nil {
+        return nil
+    }
 	return r.v
 }
 {{range .Fields}}
 {{if .IsStruct}}
 func (r *{{$element.MessageName}}R) Get{{.FieldName}}() {{.FieldType}}R {
 	return New{{.FieldTypeWithoutPtr}}R(r.v.Get{{.FieldName}}())
-}{{else if .IsNormalSlice}}func (r *{{$element.MessageName}}R) Get{{.FieldName}}() []{{.ElemTypeName}} {
-	src := r.v.Get{{.FieldName}}()
-    if src == nil {
-        return nil
+}{{else if .IsNormalSlice}}func (r *{{$element.MessageName}}R) LenOf{{.FieldName}}() int {
+    return len(r.v.Get{{.FieldName}}())
+}
+func (r *{{$element.MessageName}}R) ElemOf{{.FieldName}}(index int) {{.ElemTypeName}} {
+    return r.v.Get{{.FieldName}}()[index]
+}{{else if .IsPtrSlice}}func (r *{{$element.MessageName}}R) LenOf{{.FieldName}}() int {
+    return len(r.v.Get{{.FieldName}}())
+}
+func (r *{{$element.MessageName}}R) ElemOf{{.FieldName}}(index int) *{{.ElemTypeName}}R {
+    return New{{.ElemTypeName}}R(r.v.Get{{.FieldName}}()[index])
+}{{else if .IsNormalMap}}func (r *{{$element.MessageName}}R) LenOf{{.FieldName}}() int {
+    return len(r.v.Get{{.FieldName}}())
+}
+func (r *{{$element.MessageName}}R) ElemOf{{.FieldName}}(key {{.MapKeyTypeName}}) {{.ElemTypeName}} {
+    return r.v.Get{{.FieldName}}()[key]
+}
+func (r *{{$element.MessageName}}R) Range{{.FieldName}}(f func(k {{.MapKeyTypeName}},v {{.ElemTypeName}}) bool) {
+    for k,v := range r.v.Get{{.FieldName}}() {
+        if !f(k,v) {
+            return
+        }
     }
-    copySlice := make([]{{.ElemTypeName}},len(src))
-    copy(copySlice, src)
-    return copySlice
-}{{else if .IsPtrSlice}}func (r *{{$element.MessageName}}R) Get{{.FieldName}}() []*{{.ElemTypeName}}R {
-	src := r.v.Get{{.FieldName}}()
-    if src == nil {
-        return nil
+}{{else if .IsPtrMap}}func (r *{{$element.MessageName}}R) LenOf{{.FieldName}}() int {
+    return len(r.v.Get{{.FieldName}}())
+}
+func (r *{{$element.MessageName}}R) ElemOf{{.FieldName}}(key {{.MapKeyTypeName}}) *{{.ElemTypeName}}R {
+    if v,ok := r.v.Get{{.FieldName}}()[key]; ok {
+        return New{{.ElemTypeName}}R(v)
     }
-    sliceReader := make([]*{{.ElemTypeName}}R,len(src))
-    for i,v := range src {
-        sliceReader[i] = New{{.ElemTypeName}}R(v)
+    return nil
+}
+func (r *{{$element.MessageName}}R) Range{{.FieldName}}(f func(k {{.MapKeyTypeName}},v *{{.ElemTypeName}}R) bool) {
+    for k,v := range r.v.Get{{.FieldName}}() {
+        if !f(k,New{{.ElemTypeName}}R(v)) {
+            return
+        }
     }
-    return sliceReader
 }{{else}}func (r *{{$element.MessageName}}R) Get{{.FieldName}}() {{.FieldType}} {
 	return r.v.Get{{.FieldName}}()
 }{{end}}

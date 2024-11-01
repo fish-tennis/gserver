@@ -13,7 +13,7 @@ import (
 
 var (
 	// 活动模板的构造函数注册表
-	_activityTemplateCtorMap = make(map[string]func(activities internal.ActivityMgr, activityCfg *cfg.ActivityCfg, args interface{}) internal.Activity)
+	_activityTemplateCtorMap = make(map[string]func(activities internal.ActivityMgr, activityCfg *pb.ActivityCfg, args interface{}) internal.Activity)
 )
 
 const (
@@ -60,7 +60,7 @@ func (this *Activities) GetActivity(activityId int32) internal.Activity {
 	return activity
 }
 
-func (this *Activities) AddNewActivity(activityCfg *cfg.ActivityCfg, t time.Time) internal.Activity {
+func (this *Activities) AddNewActivity(activityCfg *pb.ActivityCfg, t time.Time) internal.Activity {
 	activity := CreateNewActivity(activityCfg.CfgId, this, t)
 	if activity == nil {
 		logger.Error("activity nil %v", activityCfg.CfgId)
@@ -76,7 +76,7 @@ func (this *Activities) RemoveActivity(activityId int32) {
 }
 
 func (this *Activities) AddAllActivities(t time.Time) {
-	cfg.GetActivityCfgMgr().Range(func(activityCfg *cfg.ActivityCfg) bool {
+	cfg.GetActivityCfgMgr().Range(func(activityCfg *pb.ActivityCfg) bool {
 		if this.GetActivity(activityCfg.CfgId) == nil {
 			if this.CanJoin(activityCfg, t) {
 				this.AddNewActivity(activityCfg, t)
@@ -114,7 +114,7 @@ func (this *Activities) OnEvent(event interface{}) {
 }
 
 // 检查活动是否能参加
-func (this *Activities) CanJoin(activityCfg *cfg.ActivityCfg, t time.Time) bool {
+func (this *Activities) CanJoin(activityCfg *pb.ActivityCfg, t time.Time) bool {
 	if activityCfg.IsOff {
 		return false
 	}
@@ -131,7 +131,7 @@ func (this *Activities) CanJoin(activityCfg *cfg.ActivityCfg, t time.Time) bool 
 }
 
 // 检查活动时间能否参加
-func (this *Activities) CheckJoinTime(activityCfg *cfg.ActivityCfg, t time.Time) bool {
+func (this *Activities) CheckJoinTime(activityCfg *pb.ActivityCfg, t time.Time) bool {
 	switch activityCfg.TimeType {
 	case int32(pb.TimeType_TimeType_Timestamp):
 		now := t.Unix()
@@ -155,7 +155,7 @@ func (this *Activities) CheckJoinTime(activityCfg *cfg.ActivityCfg, t time.Time)
 }
 
 // 检查活动时间是否结束
-func (this *Activities) CheckEndTime(activityCfg *cfg.ActivityCfg, t time.Time) bool {
+func (this *Activities) CheckEndTime(activityCfg *pb.ActivityCfg, t time.Time) bool {
 	switch activityCfg.TimeType {
 	case int32(pb.TimeType_TimeType_Timestamp):
 		now := t.Unix()
@@ -199,7 +199,7 @@ type ChildActivity struct {
 //}
 
 // 活动配置数据
-func (this *ChildActivity) GetActivityCfg() *cfg.ActivityCfg {
+func (this *ChildActivity) GetActivityCfg() *pb.ActivityCfg {
 	return cfg.GetActivityCfgMgr().GetActivityCfg(this.GetId())
 }
 

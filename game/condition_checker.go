@@ -6,6 +6,12 @@ import (
 	"log/slog"
 )
 
+// 条件检查参数
+type ConditionCheckerArg struct {
+	Player   *Player
+	Activity internal.Activity
+}
+
 // 注册条件接口
 func RegisterConditionCheckers() *internal.ConditionMgr {
 	conditionMgr := internal.NewConditionMgr()
@@ -20,7 +26,7 @@ func RegisterConditionCheckers() *internal.ConditionMgr {
 }
 
 // 条件参数数值比较
-func compareConditionArg(conditionCfg *internal.ConditionCfg, compareValue int32) bool {
+func compareConditionArg(conditionCfg *pb.ConditionCfg, compareValue int32) bool {
 	switch conditionCfg.Op {
 	case "=":
 		return compareValue == conditionCfg.Arg
@@ -38,10 +44,32 @@ func compareConditionArg(conditionCfg *internal.ConditionCfg, compareValue int32
 	return false
 }
 
+func parsePlayerArg(arg any) *Player {
+	switch v := arg.(type) {
+	case *Player:
+		return v
+	case *ConditionCheckerArg:
+		return v.Player
+	default:
+		return nil
+	}
+}
+
+func parseActivityArg(arg any) internal.Activity {
+	switch v := arg.(type) {
+	case internal.Activity:
+		return v
+	case *ConditionCheckerArg:
+		return v.Activity
+	default:
+		return nil
+	}
+}
+
 // 玩家属性值比较
-func checkPlayerPropertyCompare(arg interface{}, conditionCfg *internal.ConditionCfg) bool {
-	player, ok := arg.(*Player)
-	if !ok {
+func checkPlayerPropertyCompare(arg any, conditionCfg *pb.ConditionCfg) bool {
+	player := parsePlayerArg(arg)
+	if player == nil {
 		slog.Error("checkPlayerPropertyCompareErr", "arg", arg)
 		return false
 	}
@@ -55,9 +83,9 @@ func checkPlayerPropertyCompare(arg interface{}, conditionCfg *internal.Conditio
 }
 
 // 活动属性值比较
-func checkActivityPropertyCompare(arg interface{}, conditionCfg *internal.ConditionCfg) bool {
-	activityConditionArg, ok := arg.(*ActivityConditionArg)
-	if !ok {
+func checkActivityPropertyCompare(arg any, conditionCfg *pb.ConditionCfg) bool {
+	activity := parsePlayerArg(arg)
+	if activity == nil {
 		slog.Error("checkActivityPropertyCompareErr", "arg", arg)
 		return false
 	}
@@ -66,6 +94,6 @@ func checkActivityPropertyCompare(arg interface{}, conditionCfg *internal.Condit
 		slog.Error("checkActivityPropertyCompareErr", "conditionCfg", conditionCfg)
 		return false
 	}
-	propertyValue := activityConditionArg.Activity.GetPropertyInt32(propertyName)
+	propertyValue := activity.GetPropertyInt32(propertyName)
 	return compareConditionArg(conditionCfg, propertyValue)
 }

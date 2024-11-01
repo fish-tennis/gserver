@@ -3,6 +3,7 @@ package cfg
 import (
 	. "github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/pb"
+	"log/slog"
 )
 
 var (
@@ -11,19 +12,11 @@ var (
 	}, Mid)
 )
 
-// 任务配置数据
-type QuestCfg struct {
-	pb.BaseQuestCfg
-	Conditions     []*ConditionCfg `json:"Conditions"`  // 条件配置
-	ProgressCfg    *ProgressCfg    `json:"ProgressCfg"` // 进度配置
-	BaseProperties                 // 动态属性
-}
-
 // 任务配置数据管理
 type QuestCfgMgr struct {
-	*DataMap[*QuestCfg] `cfg:"questcfg.csv"`
-	progressMgr         *ProgressMgr
-	conditionMgr        *ConditionMgr
+	*DataMap[*pb.QuestCfg] `cfg:"questcfg.csv"`
+	progressMgr            *ProgressMgr
+	conditionMgr           *ConditionMgr
 }
 
 // singleton
@@ -31,7 +24,7 @@ func GetQuestCfgMgr() *QuestCfgMgr {
 	return _questCfgLoader.Load().(*QuestCfgMgr)
 }
 
-func (m *QuestCfgMgr) GetQuestCfg(cfgId int32) *QuestCfg {
+func (m *QuestCfgMgr) GetQuestCfg(cfgId int32) *pb.QuestCfg {
 	return m.cfgs[cfgId]
 }
 
@@ -49,4 +42,17 @@ func (m *QuestCfgMgr) GetConditionMgr() *ConditionMgr {
 
 func (m *QuestCfgMgr) SetConditionMgr(conditionMgr *ConditionMgr) {
 	m.conditionMgr = conditionMgr
+}
+
+func (m *QuestCfgMgr) AfterLoad() {
+	templateCfg := GetTemplateCfgMgr()
+	m.Range(func(e *pb.QuestCfg) bool {
+		e.Conditions = templateCfg.convertConditionCfgs(e.ConditionTemplates)
+		if e.ProgressTemplate == nil {
+			slog.Error("ProgressTemplate nil", "QuestCfgId", e.GetCfgId())
+			return true
+		}
+		e.Progress = templateCfg.convertProgressCfg(e.ProgressTemplate)
+		return true
+	})
 }

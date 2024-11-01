@@ -51,8 +51,8 @@ func (this *Quest) AddQuest(questData *pb.QuestData) {
 	}
 	this.Quests.Set(questData.CfgId, questData)
 	// 初始化进度
-	if questCfg.ProgressCfg != nil {
-		cfg.GetQuestCfgMgr().GetProgressMgr().InitProgress(this.GetPlayer(), questCfg.ProgressCfg, questData)
+	if questCfg.Progress != nil {
+		cfg.GetQuestCfgMgr().GetProgressMgr().InitProgress(this.GetPlayer(), questCfg.Progress, questData)
 	}
 	logger.Debug("AddQuest:%v", questData)
 }
@@ -61,7 +61,7 @@ func (this *Quest) AddQuest(questData *pb.QuestData) {
 func (this *Quest) TriggerPlayerEntryGame(event *internal.EventPlayerEntryGame) {
 	// 测试代码:给新玩家添加初始任务
 	if len(this.Quests.Data) == 0 && len(this.Finished.Data) == 0 {
-		cfg.GetQuestCfgMgr().Range(func(questCfg *cfg.QuestCfg) bool {
+		cfg.GetQuestCfgMgr().Range(func(questCfg *pb.QuestCfg) bool {
 			// 排除其他模块的子任务
 			if questCfg.GetQuestType() != 0 {
 				return true
@@ -79,7 +79,7 @@ func (this *Quest) TriggerPlayerEntryGame(event *internal.EventPlayerEntryGame) 
 func (this *Quest) OnEvent(event interface{}) {
 	for _, questData := range this.Quests.Data {
 		questCfg := cfg.GetQuestCfgMgr().GetQuestCfg(questData.GetCfgId())
-		if cfg.GetQuestCfgMgr().GetProgressMgr().CheckProgress(event, questCfg.ProgressCfg, questData) {
+		if cfg.GetQuestCfgMgr().GetProgressMgr().CheckProgress(event, questCfg.Progress, questData) {
 			this.Quests.SetDirty(questData.GetCfgId(), true)
 			logger.Debug("quest %v progress:%v", questData.GetCfgId(), questData.GetProgress())
 		}
@@ -92,7 +92,7 @@ func (this *Quest) OnFinishQuestReq(req *pb.FinishQuestReq) (*pb.FinishQuestRes,
 	logger.Debug("OnFinishQuestReq:%v", req)
 	if questData, ok := this.Quests.Data[req.QuestCfgId]; ok {
 		questCfg := cfg.GetQuestCfgMgr().GetQuestCfg(questData.GetCfgId())
-		if questData.GetProgress() >= questCfg.ProgressCfg.GetTotal() {
+		if questData.GetProgress() >= questCfg.Progress.GetTotal() {
 			this.Quests.Delete(questData.GetCfgId())
 			this.Finished.Add(questData.GetCfgId())
 			// 任务奖励

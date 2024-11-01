@@ -4,13 +4,8 @@ import (
 	"github.com/fish-tennis/gserver/pb"
 )
 
-// 条件配置数据
-type ConditionCfg struct {
-	pb.BaseConditionCfg
-}
-
 // 条件检查接口
-type ConditionCheckFunc func(arg interface{}, conditionCfg *ConditionCfg) bool
+type ConditionCheckFunc func(arg any, conditionCfg *pb.ConditionCfg) bool
 
 // 条件相关接口管理
 type ConditionMgr struct {
@@ -23,18 +18,18 @@ func NewConditionMgr() *ConditionMgr {
 	}
 }
 
-func (this *ConditionMgr) GetConditionChecker(conditionType int32) ConditionCheckFunc {
-	return this.conditionCheckers[conditionType]
+func (m *ConditionMgr) GetConditionChecker(conditionType int32) ConditionCheckFunc {
+	return m.conditionCheckers[conditionType]
 }
 
 // 注册条件检查接口
-func (this *ConditionMgr) Register(conditionType int32, checker ConditionCheckFunc) {
-	this.conditionCheckers[conditionType] = checker
+func (m *ConditionMgr) Register(conditionType int32, checker ConditionCheckFunc) {
+	m.conditionCheckers[conditionType] = checker
 }
 
-func (this *ConditionMgr) CheckConditions(arg interface{}, conditions []*ConditionCfg) bool {
+func (m *ConditionMgr) CheckConditions(arg any, conditions []*pb.ConditionCfg) bool {
 	for _, conditionCfg := range conditions {
-		checker, ok := this.conditionCheckers[conditionCfg.Type]
+		checker, ok := m.conditionCheckers[conditionCfg.Type]
 		if !ok {
 			return false
 		}

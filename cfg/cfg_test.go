@@ -1,8 +1,8 @@
 package cfg
 
 import (
-	"fmt"
 	"github.com/fish-tennis/gserver/internal"
+	"github.com/fish-tennis/gserver/pb"
 	"log/slog"
 	"testing"
 	"time"
@@ -17,15 +17,12 @@ func TestCfgLoad(t *testing.T) {
 	GetQuestCfgMgr().SetConditionMgr(conditionMgr)
 	GetActivityCfgMgr().SetProgressMgr(progressMgr)
 	GetActivityCfgMgr().SetConditionMgr(conditionMgr)
-	GetQuestCfgMgr().Range(func(e *QuestCfg) bool {
-		slog.Info("QuestCfg", "Conditions", e.Conditions, "ProgressCfg", e.ProgressCfg, "Properties", e.ProgressCfg.Properties)
+	GetQuestCfgMgr().Range(func(e *pb.QuestCfg) bool {
+		slog.Info("QuestCfg", "CfgId", e.CfgId, "Conditions", e.Conditions, "Progress", e.Progress, "Properties", e.Properties)
 		return true
 	})
-	GetActivityCfgMgr().Range(func(e *ActivityCfg) bool {
-		slog.Info("ActivityCfg", "CfgId", e.CfgId, "Quests", e.Quests, "Properties", e.Properties)
-		for i, exchange := range e.Exchanges {
-			slog.Info(fmt.Sprintf("Exchanges[%v]", i), "exchange", exchange)
-		}
+	GetActivityCfgMgr().Range(func(e *pb.ActivityCfg) bool {
+		slog.Info("ActivityCfg", "CfgId", e.CfgId, "QuestIds", e.QuestIds, "ExchangeIds", e.ExchangeIds)
 		return true
 	})
 	time.Sleep(time.Second)

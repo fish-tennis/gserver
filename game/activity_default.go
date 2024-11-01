@@ -7,12 +7,13 @@ import (
 	. "github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
+	"slices"
 	"time"
 )
 
 func init() {
 	// 自动注册默认活动模板构造函数
-	_activityTemplateCtorMap["default"] = func(activities ActivityMgr, activityCfg *cfg.ActivityCfg, args interface{}) Activity {
+	_activityTemplateCtorMap["default"] = func(activities ActivityMgr, activityCfg *pb.ActivityCfg, args interface{}) Activity {
 		t := args.(time.Time)
 		newActivity := &ActivityDefault{
 			Base: &pb.ActivityDefaultBaseData{
@@ -43,11 +44,8 @@ func (this *ActivityDefault) getProgress(cfgId int32) *pb.ActivityProgressData {
 }
 
 // 添加一个活动进度
-func (this *ActivityDefault) addProgress(questCfg *cfg.QuestCfg) *pb.ActivityProgressData {
-	if !cfg.GetActivityCfgMgr().GetConditionMgr().CheckConditions(&ActivityConditionArg{
-		Activities: this.Activities,
-		Activity:   this,
-	}, questCfg.Conditions) {
+func (this *ActivityDefault) addProgress(questCfg *pb.QuestCfg) *pb.ActivityProgressData {
+	if !cfg.GetActivityCfgMgr().GetConditionMgr().CheckConditions(this, questCfg.Conditions) {
 		return nil
 	}
 	if this.Base.Progresses == nil {
@@ -56,7 +54,7 @@ func (this *ActivityDefault) addProgress(questCfg *cfg.QuestCfg) *pb.ActivityPro
 	progress := &pb.ActivityProgressData{
 		CfgId: questCfg.CfgId,
 	}
-	cfg.GetActivityCfgMgr().GetProgressMgr().InitProgress(this.Activities.GetPlayer(), questCfg.ProgressCfg, progress)
+	cfg.GetActivityCfgMgr().GetProgressMgr().InitProgress(this, questCfg.Progress, progress)
 	this.Base.Progresses[progress.CfgId] = progress
 	this.SetDirty()
 	return progress
@@ -72,8 +70,8 @@ func (this *ActivityDefault) OnEvent(event interface{}) {
 		this.OnDateChange(e.OldDate, e.CurDate)
 		return
 	}
-	for _, questId := range activityCfg.Quests {
-		questCfg := activityCfg.GetQuestCfg(questId)
+	for _, questId := range activityCfg.QuestIds {
+		questCfg := cfg.GetQuestCfgMgr().GetQuestCfg(questId)
 		if questCfg == nil {
 			continue
 		}
@@ -85,7 +83,7 @@ func (this *ActivityDefault) OnEvent(event interface{}) {
 			}
 		}
 		// 检查进度更新
-		if cfg.GetActivityCfgMgr().GetProgressMgr().CheckProgress(event, questCfg.ProgressCfg, progress) {
+		if cfg.GetActivityCfgMgr().GetProgressMgr().CheckProgress(event, questCfg.Progress, progress) {
 			this.SetDirty()
 			logger.Debug("Activity %v progress:%v", this.GetId(), progress.GetProgress())
 		}
@@ -108,8 +106,8 @@ func (this *ActivityDefault) OnDateChange(oldDate time.Time, curDate time.Time) 
 func (this *ActivityDefault) Reset() {
 	this.Base.Progresses = nil
 	activityCfg := this.GetActivityCfg()
-	for _, questId := range activityCfg.Quests {
-		questCfg := activityCfg.GetQuestCfg(questId)
+	for _, questId := range activityCfg.QuestIds {
+		questCfg := cfg.GetQuestCfgMgr().GetQuestCfg(questId)
 		if questCfg == nil {
 			continue
 		}
@@ -143,14 +141,17 @@ func (this *ActivityDefault) ReceiveReward(cfgId int32) {
 		logger.Debug("%v ReceiveReward repeat %v %v", this.Activities.GetPlayer().GetId(), this.GetId(), cfgId)
 		return
 	}
-	questCfg := activityCfg.GetQuestCfg(cfgId)
+	if !slices.Contains(activityCfg.QuestIds, cfgId) {
+		return
+	}
+	questCfg := cfg.GetQuestCfgMgr().GetQuestCfg(cfgId)
 	if questCfg == nil {
 		logger.Debug("%v ReceiveReward questCfg nil %v %v", this.Activities.GetPlayer().GetId(), this.GetId(), cfgId)
 		return
 	}
-	if progress.Progress < questCfg.ProgressCfg.GetTotal() {
+	if progress.Progress < questCfg.Progress.GetTotal() {
 		logger.Debug("%v ReceiveReward progress err %v %v (%v < %v)", this.Activities.GetPlayer().GetId(), this.GetId(), cfgId,
-			progress.Progress, questCfg.ProgressCfg.GetTotal())
+			progress.Progress, questCfg.Progress.GetTotal())
 		return
 	}
 	progress.IsReceiveReward = true
@@ -168,7 +169,10 @@ func (this *ActivityDefault) Exchange(exchangeCfgId int32) {
 		logger.Debug("%v Exchange activityCfg nil %v", this.Activities.GetPlayer().GetId(), this.GetId())
 		return
 	}
-	exchangeCfg := activityCfg.GetExchangeCfg(exchangeCfgId)
+	if !slices.Contains(activityCfg.ExchangeIds, exchangeCfgId) {
+		return
+	}
+	exchangeCfg := cfg.GetTemplateCfgMgr().GetExchangeCfg(exchangeCfgId)
 	if exchangeCfg == nil {
 		logger.Debug("%v Exchange exchangeCfg nil %v %v", this.Activities.GetPlayer().GetId(), this.GetId(), exchangeCfgId)
 		return
@@ -178,6 +182,7 @@ func (this *ActivityDefault) Exchange(exchangeCfgId int32) {
 		logger.Debug("%v Exchange CountLimit nil %v %v %v", this.Activities.GetPlayer().GetId(), this.GetId(), exchangeCfgId, exchangeCount)
 		return
 	}
+	// TODO: 检查兑换条件
 	if !this.Activities.GetPlayer().GetBags().IsEnough(exchangeCfg.ConsumeItems) {
 		logger.Debug("%v Exchange ConsumeItems notEnough %v %v", this.Activities.GetPlayer().GetId(), this.GetId(), exchangeCfgId)
 		return

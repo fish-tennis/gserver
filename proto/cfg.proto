@@ -66,41 +66,88 @@ message DelItemArg {
 	int32 Source = 4; // 来源(一般用于数据分析)
 }
 
+// CfgId + Arg
+message CfgArg {
+  int32 CfgId = 1; // 配置id
+  int32 Arg = 2; // 参数
+}
+
 // 时间类型
 enum QuestType {
   QuestType_None		= 0;
   QuestType_SubQuest 	= 1; // 其他系统的子任务(如活动的子任务)
 }
 
-// 任务基础配置
-message BaseQuestCfg {
+// 任务配置
+message QuestCfg {
   int32 CfgId = 1;
   string Name = 2;
   int32 QuestType = 3; // 任务类型(enum QuestType)
   repeated AddItemArg Rewards = 4; // 任务奖励
   int32 PreQuest = 5; // 前置任务
-  string Detail = 6; // 任务描述
+  repeated int32 NextQuests = 6; // 完成该任务后,自动接后续的任务(任务链)
+  repeated ConditionCfg Conditions = 7; // 任务条件
+  ProgressCfg Progress = 8; // 任务进度
+  map<string,string> Properties = 9; // 扩展属性
+  string Detail = 10; // 任务描述
+
+  repeated CfgArg ConditionTemplates = 11; // 关联的配置模板id和参数,简化配置表用,业务代码不要调用
+  CfgArg ProgressTemplate = 12; // 关联的配置模板id和参数,简化配置表用,业务代码不要调用
 }
 
-// 条件基础配置
-message BaseConditionCfg {
+// 条件配置
+message ConditionCfg {
   int32 Type = 1; // 条件类型(enum ConditionType)
   string Key = 2; // 关键字,如ConditionType_PlayerPropertyCompare对应的属性名
   string Op = 3; // 操作符 = > >= < <=
   int32 Arg = 4; // 参数
+  map<string,string> Properties = 5; // 扩展属性
 }
 
-// 进度基础配置
-message BaseProgressCfg {
+// 条件模板配置
+message ConditionTemplateCfg {
+  int32 CfgId = 4; // 配置id
+  int32 Type = 1; // 条件类型(enum ConditionType)
+  string Key = 2; // 关键字,如ConditionType_PlayerPropertyCompare对应的属性名
+  string Op = 3; // 操作符 = > >= < <=
+  map<string,string> Properties = 5; // 扩展属性
+}
+
+// 进度配置
+message ProgressCfg {
   int32 Type = 1; // 进度类型(enum ProgressType)
   int32 CountType = 2; // 计数类型
   int32 Total = 3; // 总进度要求
-  //string Key = 4; // 额外的关键字,如ProgressType_PlayerPropertyInc对应的属性名
-  //repeated string Events = 5; // 响应事件
+  bool NeedInit = 4;
+  string Event = 5; // 关联的特定事件
+  string EventField = 6; // 以事件字段值作为进度
+  map<string,string> Properties = 7; // 扩展属性
+}
+
+// 进度模板配置
+message ProgressTemplateCfg {
+  int32 CfgId = 3; // 配置id
+  int32 Type = 1; // 进度类型(enum ProgressType)
+  int32 CountType = 2; // 计数类型
+  bool NeedInit = 4;
+  string Event = 5;
+  string EventField = 6;
+  map<string,string> Properties = 7; // 扩展属性
+}
+
+// 兑换配置
+message ExchangeCfg {
+  int32 CfgId = 1;
+  repeated ConditionCfg Conditions = 2; // 任务条件
+  repeated DelItemArg ConsumeItems = 3; // 需要消耗的物品
+  repeated AddItemArg Rewards = 4; // 获得物品
+  int32 CountLimit = 5; // 兑换次数限制
+  map<string,string> Properties = 6; // 扩展属性
+  repeated CfgArg ConditionTemplates = 11; // 关联的配置模板id和参数,简化配置表用,业务代码不要调用
 }
 
 // 活动基础配置
-message BaseActivityCfg {
+message ActivityCfg {
   int32 CfgId = 1;
   string Name = 2;
   string Detail = 3;
@@ -110,20 +157,13 @@ message BaseActivityCfg {
   int32 TimeType = 7; // 时间类型
   int32 BeginTime = 8; // 开始时间
   int32 EndTime = 9; // 结束时间
-  repeated ExchangeCfg Exchanges = 10; // 兑换配置
+  repeated int32 ExchangeIds = 10; // 兑换配置
   bool IsOff = 11; // 是否关闭
   bool RemoveDataWhenEnd = 12; // 活动结束时,是否删除活动数据
   int32 MinPlayerLevel = 14; // 参与活动的最低玩家等级要求
   int32 MaxPlayerLevel = 15; // 参与活动的最大玩家等级上限
-  repeated int32 Quests = 16; // 活动子任务
-}
-
-// 兑换配置
-message ExchangeCfg {
-  int32 CfgId = 1;
-  repeated DelItemArg ConsumeItems = 2; // 需要消耗的物品
-  repeated AddItemArg Rewards = 3; // 获得物品
-  int32 CountLimit = 4; // 兑换次数限制
+  repeated int32 QuestIds = 16; // 活动子任务
+  map<string,string> Properties = 17; // 扩展属性
 }
 
 // 升级经验

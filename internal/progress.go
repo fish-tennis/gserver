@@ -3,30 +3,10 @@ package internal
 import (
 	"github.com/fish-tennis/gserver/pb"
 	"github.com/fish-tennis/gserver/util"
+	"log/slog"
 	"math"
 	"reflect"
 )
-
-// 进度计数类型
-const (
-	// 简单计数,每触发一次事件,进度+1
-	// example:
-	//   进度: 进行10场战斗
-	//   每触发一次战斗事件,进度就+1
-	CountType_Counter = 1
-
-	// 每次事件触发时,重置进度
-	// example:
-	//   进度: 升到10级
-	//   每触发一次升级事件,进度重置为当前等级
-	CountType_Reset = 2
-)
-
-// 进度配置数据
-type ProgressCfg struct {
-	pb.BaseProgressCfg
-	BaseProperties // 动态属性
-}
 
 // 进度读取接口
 type ProgressHolder interface {
@@ -60,11 +40,11 @@ func NewProgressMgr() *ProgressMgr {
 //	进度: 抽卡100次
 //	事件: 抽卡(5连抽)
 //	进度+5
-type ProgressCheckFunc func(event interface{}, progressCfg *ProgressCfg) int32
+type ProgressCheckFunc func(event any, progressCfg *pb.ProgressCfg) int32
 
 // 进度初始化接口
 // 返回初始进度
-type ProgressInitFunc func(arg interface{}, progressCfg *ProgressCfg) int32
+type ProgressInitFunc func(arg any, progressCfg *pb.ProgressCfg) int32
 
 // 事件和进度的映射信息
 type eventMappingInfo struct {
@@ -82,39 +62,39 @@ type eventMappingInfo struct {
 
 // 注册事件和进度检查接口
 // checker可以为nil
-func (this *ProgressMgr) Register(progressType int32, event interface{}, checker ProgressCheckFunc) {
-	this.RegisterWithInit(progressType, event, checker, nil)
+func (m *ProgressMgr) Register(progressType int32, event any, checker ProgressCheckFunc) {
+	m.RegisterWithInit(progressType, event, checker, nil)
 }
 
 // 注册事件和进度检查接口
 //
 //	checker: 进度检查接口,可以为nil
 //	init: 初始化时,更新当前进度,可以为nil
-func (this *ProgressMgr) RegisterWithInit(progressType int32, event interface{}, checker ProgressCheckFunc, init ProgressInitFunc) {
+func (m *ProgressMgr) RegisterWithInit(progressType int32, event any, checker ProgressCheckFunc, init ProgressInitFunc) {
 	eventTyp := reflect.TypeOf(event).Elem()
-	info, ok := this.eventMapping[eventTyp]
+	info, ok := m.eventMapping[eventTyp]
 	if !ok {
 		info = &eventMappingInfo{
 			eventTyp:         eventTyp,
 			progressCheckers: make(map[int32]ProgressCheckFunc),
 		}
-		this.eventMapping[eventTyp] = info
+		m.eventMapping[eventTyp] = info
 	}
 	info.progressCheckers[progressType] = checker
 	if init != nil {
-		this.progressInits[progressType] = init
+		m.progressInits[progressType] = init
 	}
 }
 
 // 注册默认的进度检查接口
-func (this *ProgressMgr) RegisterDefault(progressType int32, event interface{}) {
-	this.Register(progressType, event, DefaultProgressChecker)
+func (m *ProgressMgr) RegisterDefault(progressType int32, event any) {
+	m.Register(progressType, event, DefaultProgressChecker)
 }
 
 // 检查事件是否关联某个进度
-func (this *ProgressMgr) IsMatchEvent(event interface{}, progressType int32) bool {
+func (m *ProgressMgr) IsMatchEvent(event any, progressType int32) bool {
 	eventTyp := reflect.TypeOf(event).Elem()
-	info, ok := this.eventMapping[eventTyp]
+	info, ok := m.eventMapping[eventTyp]
 	if !ok {
 		return false
 	}
@@ -123,9 +103,9 @@ func (this *ProgressMgr) IsMatchEvent(event interface{}, progressType int32) boo
 }
 
 // 获取事件,进度对应的检查接口
-func (this *ProgressMgr) GetProgressChecker(event interface{}, progressType int32) (ProgressCheckFunc, bool) {
+func (m *ProgressMgr) GetProgressChecker(event any, progressType int32) (ProgressCheckFunc, bool) {
 	eventTyp := reflect.TypeOf(event).Elem()
-	info, ok := this.eventMapping[eventTyp]
+	info, ok := m.eventMapping[eventTyp]
 	if !ok {
 		return nil, false
 	}
@@ -137,8 +117,8 @@ func (this *ProgressMgr) GetProgressChecker(event interface{}, progressType int3
 //
 //	examples:
 //	任务举例:玩家升级到10级,当5级玩家接任务时,初始进度就是5/10
-func (this *ProgressMgr) InitProgress(arg interface{}, progressCfg *ProgressCfg, progressHolder ProgressHolder) bool {
-	initFunc, ok := this.progressInits[progressCfg.Type]
+func (m *ProgressMgr) InitProgress(arg any, progressCfg *pb.ProgressCfg, progressHolder ProgressHolder) bool {
+	initFunc, ok := m.progressInits[progressCfg.Type]
 	if !ok {
 		return false
 	}
@@ -154,8 +134,8 @@ func (this *ProgressMgr) InitProgress(arg interface{}, progressCfg *ProgressCfg,
 }
 
 // 检查事件是否触发进度的更新,并更新进度
-func (this *ProgressMgr) CheckProgress(event interface{}, progressCfg *ProgressCfg, progressHolder ProgressHolder) bool {
-	checker, ok := this.GetProgressChecker(event, progressCfg.Type)
+func (m *ProgressMgr) CheckProgress(event any, progressCfg *pb.ProgressCfg, progressHolder ProgressHolder) bool {
+	checker, ok := m.GetProgressChecker(event, progressCfg.Type)
 	if !ok {
 		return false
 	}
@@ -163,13 +143,13 @@ func (this *ProgressMgr) CheckProgress(event interface{}, progressCfg *ProgressC
 		return false
 	}
 	progress := int32(0)
-	if progressCfg.CountType == CountType_Counter {
+	if progressCfg.CountType == int32(pb.CountType_CountType_Counter) {
 		progress = 1
 	}
 	if checker != nil {
 		progress = checker(event, progressCfg)
 	}
-	if progressCfg.CountType == CountType_Reset {
+	if progressCfg.CountType == int32(pb.CountType_CountType_Reset) {
 		if progressHolder.GetProgress() != progress {
 			progressHolder.SetProgress(progress)
 			return true
@@ -184,7 +164,7 @@ func (this *ProgressMgr) CheckProgress(event interface{}, progressCfg *ProgressC
 }
 
 // 默认的进度检查接口
-func DefaultProgressChecker(event any, progressCfg *ProgressCfg) int32 {
+func DefaultProgressChecker(event any, progressCfg *pb.ProgressCfg) int32 {
 	if len(progressCfg.Properties) == 0 {
 		return 1
 	}
@@ -223,11 +203,30 @@ func DefaultProgressChecker(event any, progressCfg *ProgressCfg) int32 {
 			}
 		case reflect.String:
 			eventFieldStr := eventFieldVal.String()
-			progressFieldStr := fieldValue.(string)
-			if eventFieldStr != progressFieldStr {
+			if eventFieldStr != fieldValue {
 				return 0
 			}
 		default:
+			return 0
+		}
+	}
+	// 检查progressCfg.EventField
+	if progressCfg.GetCountType() == int32(pb.CountType_CountType_EventField) {
+		eventFieldVal := eventVal.FieldByName(progressCfg.GetEventField())
+		if !eventFieldVal.IsValid() {
+			// event没有这个属性
+			slog.Error("unsupported field", "name", progressCfg.GetEventField(), "event", event)
+			return 0
+		}
+		switch eventFieldVal.Kind() {
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+			return int32(eventFieldVal.Int())
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+			return int32(eventFieldVal.Uint())
+		case reflect.Float32, reflect.Float64:
+			return int32(eventFieldVal.Float())
+		default:
+			slog.Error("unsupported field", "name", progressCfg.GetEventField(), "event", event)
 			return 0
 		}
 	}

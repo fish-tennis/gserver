@@ -61,6 +61,7 @@ func (this *BaseInfo) HandlePlayerEntryGameOk(msg *pb.PlayerEntryGameOk) {
 }
 
 func (this *BaseInfo) IncExp(incExp int32) {
+	oldLevel := this.Data.Level
 	this.Data.Exp += incExp
 	for {
 		if this.Data.Level < cfg.GetLevelCfgMgr().GetMaxLevel() {
@@ -68,16 +69,19 @@ func (this *BaseInfo) IncExp(incExp int32) {
 			if needExp > 0 && this.Data.Exp >= needExp {
 				this.Data.Level++
 				this.Data.Exp -= needExp
-				this.GetPlayer().FireConditionEvent(&pb.EventPlayerLevelup{
-					PlayerId: this.GetPlayerId(),
-					Level:    this.Data.Level,
-				})
 				continue
 			}
 		}
 		break
 	}
 	logger.Debug("%v exp:%v lvl:%v", this.GetPlayerId(), this.Data.Exp, this.Data.Level)
+	if oldLevel != this.Data.Level {
+		this.GetPlayer().FireConditionEvent(&pb.EventPlayerPropertyInc{
+			PlayerId:      this.GetPlayerId(),
+			PropertyName:  "Level",
+			PropertyValue: this.Data.Level - oldLevel,
+		})
+	}
 	// 修改了需要保存的数据后,必须设置标记
 	this.SetDirty()
 }
