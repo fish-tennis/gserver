@@ -10,7 +10,9 @@ import (
 func RegisterProgressCheckers() *internal.ProgressMgr {
 	progressMgr := internal.NewProgressMgr()
 
-	progressMgr.RegisterDefault(int32(pb.ProgressType_ProgressType_Fight), &pb.EventFight{})
+	progressMgr.RegisterDefault(int32(pb.ProgressType_ProgressType_Event),
+		&pb.EventFight{},
+	)
 
 	progressMgr.RegisterWithInit(int32(pb.ProgressType_ProgressType_PlayerPropertyInc), &pb.EventPlayerPropertyInc{},
 		onPlayerPropertyIncUpdate, onPlayerPropertyIncInit)

@@ -87,8 +87,10 @@ func (m *ProgressMgr) RegisterWithInit(progressType int32, event any, checker Pr
 }
 
 // 注册默认的进度检查接口
-func (m *ProgressMgr) RegisterDefault(progressType int32, event any) {
-	m.Register(progressType, event, DefaultProgressChecker)
+func (m *ProgressMgr) RegisterDefault(progressType int32, event ...any) {
+	for _, evt := range event {
+		m.Register(progressType, evt, DefaultProgressChecker)
+	}
 }
 
 // 检查事件是否关联某个进度

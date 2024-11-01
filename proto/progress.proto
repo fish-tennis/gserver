@@ -7,8 +7,8 @@ package gserver;
 // 进度类型
 enum ProgressType {
   ProgressType_None    = 0; // 解决"The first enum value must be zero in proto3."的报错
-  ProgressType_Fight         = 2; // 战斗
-  ProgressType_PlayerPropertyInc = 3; // 玩家属性值增加(int32)
+  ProgressType_Event = 1; // 通用事件
+  ProgressType_PlayerPropertyInc = 2; // 玩家属性值增加(int32)
 }
 
 // 进度计数类型
@@ -31,12 +31,6 @@ enum CountType {
   //   进度: 在商店购买10个药水
   //   单次批量购买4个药水,触发购买事件,假设事件的其中一个字段是购买数量(这里就是4),则进度+4
   CountType_EventField = 3;
-}
-
-// 玩家升级事件
-message EventPlayerLevelup {
-  int64 playerId = 1;
-  int32 level = 2;
 }
 
 // 战斗事件
