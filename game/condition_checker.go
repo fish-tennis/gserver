@@ -44,31 +44,9 @@ func compareConditionArg(conditionCfg *pb.ConditionCfg, compareValue int32) bool
 	return false
 }
 
-func parsePlayerArg(arg any) *Player {
-	switch v := arg.(type) {
-	case *Player:
-		return v
-	case *ConditionCheckerArg:
-		return v.Player
-	default:
-		return nil
-	}
-}
-
-func parseActivityArg(arg any) internal.Activity {
-	switch v := arg.(type) {
-	case internal.Activity:
-		return v
-	case *ConditionCheckerArg:
-		return v.Activity
-	default:
-		return nil
-	}
-}
-
 // 玩家属性值比较
 func checkPlayerPropertyCompare(arg any, conditionCfg *pb.ConditionCfg) bool {
-	player := parsePlayerArg(arg)
+	player := parsePlayer(arg)
 	if player == nil {
 		slog.Error("checkPlayerPropertyCompareErr", "arg", arg)
 		return false
@@ -84,7 +62,7 @@ func checkPlayerPropertyCompare(arg any, conditionCfg *pb.ConditionCfg) bool {
 
 // 活动属性值比较
 func checkActivityPropertyCompare(arg any, conditionCfg *pb.ConditionCfg) bool {
-	activity := parsePlayerArg(arg)
+	activity := parseActivity(arg)
 	if activity == nil {
 		slog.Error("checkActivityPropertyCompareErr", "arg", arg)
 		return false

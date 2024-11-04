@@ -8,7 +8,8 @@ package gserver;
 enum ProgressType {
   ProgressType_None    = 0; // 解决"The first enum value must be zero in proto3."的报错
   ProgressType_Event = 1; // 通用事件
-  ProgressType_PlayerPropertyInc = 2; // 玩家属性值增加(int32)
+  ProgressType_PlayerProperty = 2; // 玩家属性值(int32)
+  ProgressType_ActivityProperty = 3; // 活动属性值(int32)
 }
 
 // 进度计数类型
@@ -35,14 +36,21 @@ enum CountType {
 
 // 战斗事件
 message EventFight {
-  int64 playerId = 1;
-  bool isPvp = 2;
-  bool isWin = 3;
+  int64 PlayerId = 1;
+  bool IsPvp = 2;
+  bool IsWin = 3;
 }
 
-// 玩家属性值增加(int32)
-message EventPlayerPropertyInc {
-  int64 playerId = 1;
-  string propertyName = 2;
-  int32 propertyValue = 3;
+// 玩家属性值(int32)
+message EventPlayerProperty {
+  int64 PlayerId = 1;
+  string PropertyName = 2;
+  int32 PropertyValue = 3;
+}
+
+// 活动属性值(int32)
+message EventActivityProperty {
+  int32 ActivityId = 1;
+  string PropertyName = 2;
+  int32 PropertyValue = 3;
 }

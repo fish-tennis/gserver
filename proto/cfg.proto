@@ -139,7 +139,7 @@ message ProgressTemplateCfg {
 message ExchangeCfg {
   int32 CfgId = 1;
   repeated ConditionCfg Conditions = 2; // 任务条件
-  repeated DelItemArg ConsumeItems = 3; // 需要消耗的物品
+  repeated DelItemArg Consumes = 3; // 需要消耗的物品
   repeated AddItemArg Rewards = 4; // 获得物品
   int32 CountLimit = 5; // 兑换次数限制
   map<string,string> Properties = 6; // 扩展属性

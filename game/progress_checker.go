@@ -2,8 +2,8 @@ package game
 
 import (
 	"github.com/fish-tennis/gserver/internal"
-	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
+	"log/slog"
 )
 
 // 注册进度接口
@@ -14,25 +14,56 @@ func RegisterProgressCheckers() *internal.ProgressMgr {
 		&pb.EventFight{},
 	)
 
-	progressMgr.RegisterWithInit(int32(pb.ProgressType_ProgressType_PlayerPropertyInc), &pb.EventPlayerPropertyInc{},
-		onPlayerPropertyIncUpdate, onPlayerPropertyIncInit)
+	progressMgr.RegisterWithInit(int32(pb.ProgressType_ProgressType_PlayerProperty), &pb.EventPlayerProperty{},
+		onPlayerPropertyUpdate, onPlayerPropertyInit)
+	//progressMgr.RegisterWithInit(int32(pb.ProgressType_ProgressType_ActivityProperty), &pb.EventActivityProperty{},
+	//	onActivityPropertyUpdate, onActivityPropertyInit)
 	return progressMgr
 }
 
+func parsePlayer(arg any) *Player {
+	switch v := arg.(type) {
+	case *Player:
+		return v
+	case *ActivityDefault:
+		return v.Activities.player
+	default:
+		slog.Error("parsePlayerErr", "arg", arg)
+		return nil
+	}
+}
+
+func parseActivity(arg any) internal.Activity {
+	switch v := arg.(type) {
+	case *ActivityDefault:
+		return v
+	default:
+		return nil
+	}
+}
+
 // 玩家属性值对应的进度初始化
-func onPlayerPropertyIncInit(arg interface{}, progressCfg *pb.ProgressCfg) int32 {
+func onPlayerPropertyInit(arg any, progressCfg *pb.ProgressCfg) int32 {
 	// 当前属性值
 	propertyName := progressCfg.Properties["PropertyName"]
-	logger.Debug("PlayerPropertyIncInit name:%v value:%v", propertyName, arg.(*Player).GetPropertyInt32(propertyName))
-	return arg.(*Player).GetPropertyInt32(propertyName)
+	player := parsePlayer(arg)
+	if player == nil {
+		return 0
+	}
+	slog.Debug("onPlayerPropertyInit", "name", propertyName, "value", player.GetPropertyInt32(propertyName))
+	return player.GetPropertyInt32(propertyName)
 }
 
 // 玩家属性值变化对应的进度更新
-func onPlayerPropertyIncUpdate(event interface{}, progressCfg *pb.ProgressCfg) int32 {
+func onPlayerPropertyUpdate(event any, progressCfg *pb.ProgressCfg) int32 {
 	propertyName := progressCfg.Properties["PropertyName"]
-	eventPropertyInc := event.(*pb.EventPlayerPropertyInc)
+	eventPropertyInc, ok := event.(*pb.EventPlayerProperty)
+	if !ok {
+		slog.Error("onPlayerPropertyUpdateErr", "event", event, "progressCfg", progressCfg)
+		return 0
+	}
 	if propertyName != "" && eventPropertyInc.GetPropertyName() == propertyName {
-		logger.Debug("PlayerPropertyInc name:%v value:%v", propertyName, eventPropertyInc.GetPropertyValue())
+		slog.Debug("onPlayerPropertyUpdate", "name", propertyName, "value", eventPropertyInc.GetPropertyValue())
 		return eventPropertyInc.GetPropertyValue()
 	}
 	return 0

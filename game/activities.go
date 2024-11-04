@@ -8,6 +8,7 @@ import (
 	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
+	"log/slog"
 	"time"
 )
 
@@ -63,11 +64,11 @@ func (this *Activities) GetActivity(activityId int32) internal.Activity {
 func (this *Activities) AddNewActivity(activityCfg *pb.ActivityCfg, t time.Time) internal.Activity {
 	activity := CreateNewActivity(activityCfg.CfgId, this, t)
 	if activity == nil {
-		logger.Error("activity nil %v", activityCfg.CfgId)
+		slog.Error("AddNewActivityErr", "activityId", activityCfg.CfgId)
 		return nil
 	}
 	this.Data.Set(activity.GetId(), activity)
-	logger.Debug("AddNewActivity playerId:%v activityId:%v", this.GetPlayer().GetId(), activityCfg.CfgId)
+	slog.Debug("AddNewActivity", "playerId", this.GetPlayer().GetId(), "activityId", activityCfg.CfgId)
 	return activity
 }
 

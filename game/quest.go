@@ -76,7 +76,8 @@ func (this *Quest) TriggerPlayerEntryGame(event *internal.EventPlayerEntryGame) 
 	}
 }
 
-func (this *Quest) OnEvent(event interface{}) {
+func (this *Quest) OnEvent(event any) {
+	// TODO: 优化事件->任务的映射,减少遍历次数
 	for _, questData := range this.Quests.Data {
 		questCfg := cfg.GetQuestCfgMgr().GetQuestCfg(questData.GetCfgId())
 		if cfg.GetQuestCfgMgr().GetProgressMgr().CheckProgress(event, questCfg.Progress, questData) {

@@ -522,11 +522,11 @@ func (r *ExchangeCfgR) ElemOfConditions(index int) *ConditionCfgR {
     return NewConditionCfgR(r.v.GetConditions()[index])
 }
 
-func (r *ExchangeCfgR) LenOfConsumeItems() int {
-    return len(r.v.GetConsumeItems())
+func (r *ExchangeCfgR) LenOfConsumes() int {
+    return len(r.v.GetConsumes())
 }
-func (r *ExchangeCfgR) ElemOfConsumeItems(index int) *DelItemArgR {
-    return NewDelItemArgR(r.v.GetConsumeItems()[index])
+func (r *ExchangeCfgR) ElemOfConsumes(index int) *DelItemArgR {
+    return NewDelItemArgR(r.v.GetConsumes()[index])
 }
 
 func (r *ExchangeCfgR) LenOfRewards() int {

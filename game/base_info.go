@@ -76,7 +76,7 @@ func (this *BaseInfo) IncExp(incExp int32) {
 	}
 	logger.Debug("%v exp:%v lvl:%v", this.GetPlayerId(), this.Data.Exp, this.Data.Level)
 	if oldLevel != this.Data.Level {
-		this.GetPlayer().FireConditionEvent(&pb.EventPlayerPropertyInc{
+		this.GetPlayer().FireConditionEvent(&pb.EventPlayerProperty{
 			PlayerId:      this.GetPlayerId(),
 			PropertyName:  "Level",
 			PropertyValue: this.Data.Level - oldLevel,

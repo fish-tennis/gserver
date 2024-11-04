@@ -154,21 +154,14 @@ func TestActivity(t *testing.T) {
 		activities.AddNewActivity(activityCfg, time.Now())
 	}
 
-	eventSignIn := &pb.EventPlayerPropertyInc{
-		PlayerId:      player.GetId(),
-		PropertyName:  "SignIn", // 签到事件
-		PropertyValue: 1,
-	}
-	player.FireEvent(eventSignIn)
-
-	eventTotalPay := &pb.EventPlayerPropertyInc{
+	eventTotalPay := &pb.EventPlayerProperty{
 		PlayerId:      player.GetId(),
 		PropertyName:  "TotalPay", //累计充值
 		PropertyValue: 10,
 	}
 	player.FireEvent(eventTotalPay)
 
-	eventOnlineTime := &pb.EventPlayerPropertyInc{
+	eventOnlineTime := &pb.EventPlayerProperty{
 		PlayerId:      player.GetId(),
 		PropertyName:  "OnlineMinute", //在线时长
 		PropertyValue: 2,
@@ -176,21 +169,37 @@ func TestActivity(t *testing.T) {
 	player.FireEvent(eventOnlineTime)
 
 	for _, activityId := range activityIds {
-		activity := activities.GetActivity(activityId)
-		t.Log(fmt.Sprintf("%v %v", activityId, activity.(*ActivityDefault)))
+		activity := activities.GetActivity(activityId).(*ActivityDefault)
+		t.Log(fmt.Sprintf("%v Progresses:%v", activityId, activity.Base.Progresses))
+		t.Log(fmt.Sprintf("%v ExchangeRecord:%v", activityId, activity.Base.ExchangeRecord))
 	}
 
-	exchangeActivity := activities.GetActivity(5)
+	exchangeActivity := activities.GetActivity(1) // 每日签到
+	if exchangeActivity != nil {
+		activity := exchangeActivity.(*ActivityDefault)
+		for _, exchangeId := range activity.GetActivityCfg().GetExchangeIds() {
+			activity.Exchange(exchangeId)
+		}
+		t.Log(fmt.Sprintf("%v ExchangeRecord:%v", 1, exchangeActivity.(*ActivityDefault).Base.ExchangeRecord))
+	}
+	exchangeActivity = activities.GetActivity(5) // 活动商店
 	if exchangeActivity != nil {
 		if activity, ok := exchangeActivity.(*ActivityDefault); ok {
 			player.GetBags().AddItemById(1, 100)
+			player.GetBags().AddItemById(2, 100)
 			t.Log(fmt.Sprintf("item1 count:%v", player.GetBags().GetItemCount(1)))
 			t.Log(fmt.Sprintf("item2 count:%v", player.GetBags().GetItemCount(2)))
+			t.Log(fmt.Sprintf("item3 count:%v", player.GetBags().GetItemCount(3)))
+			t.Log(fmt.Sprintf("item4 count:%v", player.GetBags().GetItemCount(4)))
 			for i := 0; i < 3; i++ {
-				activity.Exchange(1)
+				for _, exchangeId := range activity.GetActivityCfg().GetExchangeIds() {
+					activity.Exchange(exchangeId)
+				}
 			}
 			t.Log(fmt.Sprintf("item1 count:%v", player.GetBags().GetItemCount(1)))
 			t.Log(fmt.Sprintf("item2 count:%v", player.GetBags().GetItemCount(2)))
+			t.Log(fmt.Sprintf("item3 count:%v", player.GetBags().GetItemCount(3)))
+			t.Log(fmt.Sprintf("item4 count:%v", player.GetBags().GetItemCount(4)))
 		}
 	}
 

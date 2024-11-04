@@ -1,3 +1,4 @@
 CfgId,CountLimit,ConditionTemplates,Consumes,Rewards,Comment
+10001,1,,,CfgId_1#Num_2,活动1的兑换配置1
 50001,1,,CfgId_1#Num_1;CfgId_2#Num_2,CfgId_3#Num_1,活动5的兑换配置1
 50002,2,,CfgId_3#Num_1;CfgId_4#Num_2,CfgId_1#Num_10,活动5的兑换配置2

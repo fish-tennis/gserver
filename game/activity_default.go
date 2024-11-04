@@ -7,6 +7,7 @@ import (
 	. "github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
+	"log/slog"
 	"slices"
 	"time"
 )
@@ -85,7 +86,7 @@ func (this *ActivityDefault) OnEvent(event interface{}) {
 		// 检查进度更新
 		if cfg.GetActivityCfgMgr().GetProgressMgr().CheckProgress(event, questCfg.Progress, progress) {
 			this.SetDirty()
-			logger.Debug("Activity %v progress:%v", this.GetId(), progress.GetProgress())
+			slog.Debug("ActivityProgressUpdate", "playerId", this.GetId(), "questId", questId, "progress", progress.GetProgress())
 		}
 	}
 }
@@ -115,7 +116,7 @@ func (this *ActivityDefault) Reset() {
 	}
 	this.Base.ExchangeRecord = nil
 	this.SetDirty()
-	logger.Debug("%v Reset %v", this.Activities.GetPlayer().GetId(), this.GetId())
+	slog.Debug("Reset", "playerId", this.Activities.GetPlayer().GetId(), "activityId", this.GetId())
 }
 
 func (this *ActivityDefault) OnEnd(t time.Time) {
@@ -179,16 +180,16 @@ func (this *ActivityDefault) Exchange(exchangeCfgId int32) {
 	}
 	exchangeCount := this.getExchangeCount(exchangeCfgId)
 	if exchangeCount >= exchangeCfg.CountLimit {
-		logger.Debug("%v Exchange CountLimit nil %v %v %v", this.Activities.GetPlayer().GetId(), this.GetId(), exchangeCfgId, exchangeCount)
+		logger.Debug("%v Exchange CountLimit %v %v %v", this.Activities.GetPlayer().GetId(), this.GetId(), exchangeCfgId, exchangeCount)
 		return
 	}
 	// TODO: 检查兑换条件
-	if !this.Activities.GetPlayer().GetBags().IsEnough(exchangeCfg.ConsumeItems) {
+	if !this.Activities.GetPlayer().GetBags().IsEnough(exchangeCfg.Consumes) {
 		logger.Debug("%v Exchange ConsumeItems notEnough %v %v", this.Activities.GetPlayer().GetId(), this.GetId(), exchangeCfgId)
 		return
 	}
 	this.addExchangeCount(exchangeCfgId, 1)
-	this.Activities.GetPlayer().GetBags().DelItems(exchangeCfg.ConsumeItems)
+	this.Activities.GetPlayer().GetBags().DelItems(exchangeCfg.Consumes)
 	this.Activities.GetPlayer().GetBags().AddItems(exchangeCfg.Rewards)
 }
 

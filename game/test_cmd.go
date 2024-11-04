@@ -99,14 +99,6 @@ func (p *Player) OnTestCmd(req *pb.TestCmd) {
 		}
 		p.FireConditionEvent(evt)
 
-	case strings.ToLower("SignIn"):
-		evt := &pb.EventPlayerPropertyInc{
-			PlayerId:      p.GetId(),
-			PropertyName:  "SignIn", // 签到事件
-			PropertyValue: 1,
-		}
-		p.FireEvent(evt)
-
 	case strings.ToLower("Pay"):
 		if len(cmdArgs) < 1 {
 			p.SendErrorRes(cmd, "Pay cmdArgs error")
@@ -114,7 +106,7 @@ func (p *Player) OnTestCmd(req *pb.TestCmd) {
 		}
 		payValue := int32(util.Atoi(cmdArgs[0]))
 		p.GetBaseInfo().Data.TotalPay += payValue
-		evt := &pb.EventPlayerPropertyInc{
+		evt := &pb.EventPlayerProperty{
 			PlayerId:      p.GetId(),
 			PropertyName:  "TotalPay",
 			PropertyValue: payValue,
@@ -126,7 +118,7 @@ func (p *Player) OnTestCmd(req *pb.TestCmd) {
 			p.SendErrorRes(cmd, "PlayerPropertyInc cmdArgs error")
 			return
 		}
-		evt := &pb.EventPlayerPropertyInc{
+		evt := &pb.EventPlayerProperty{
 			PlayerId:      p.GetId(),
 			PropertyName:  cmdArgs[0],
 			PropertyValue: int32(util.Atoi(cmdArgs[1])),

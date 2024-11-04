@@ -18,10 +18,6 @@ func init() {
 		"OnlineMinute": func(p *Player, propertyName string) int32 {
 			return p.GetBaseInfo().GetTotalOnlineSeconds() / 60
 		},
-		// 签到特殊处理,用于条件初始化时
-		"SignIn": func(p *Player, propertyName string) int32 {
-			return 0
-		},
 	}
 }
 

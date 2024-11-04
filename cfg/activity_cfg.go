@@ -11,19 +11,6 @@ var (
 	}, Mid+1) // 任务配置加载完,再加载活动配置
 )
 
-//// 活动配置数据
-//type ActivityCfg struct {
-//	pb.BaseActivityCfg                // 活动基础数据
-//	Properties         map[string]any `json:"Properties"` // 动态属性
-//}
-
-//func (c *ActivityCfg) GetQuestCfg(cfgId int32) *QuestCfg {
-//	if !slices.Contains(c.Quests, cfgId) {
-//		return nil
-//	}
-//	return GetQuestCfgMgr().GetQuestCfg(cfgId)
-//}
-
 // 活动配置数据管理
 type ActivityCfgMgr struct {
 	*DataMap[*pb.ActivityCfg] `cfg:"activitycfg.csv"`

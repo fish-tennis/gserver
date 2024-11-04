@@ -207,7 +207,7 @@ func (this *Player) RunRoutine() bool {
 	if ok {
 		// 每分钟执行一次,刷新在线时间
 		this.GetTimerEntries().After(time.Minute, func() time.Duration {
-			evt := &pb.EventPlayerPropertyInc{
+			evt := &pb.EventPlayerProperty{
 				PlayerId:      this.GetId(),
 				PropertyName:  "OnlineMinute",
 				PropertyValue: 1,
