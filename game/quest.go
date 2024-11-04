@@ -51,7 +51,7 @@ func (this *Quest) AddQuest(questData *pb.QuestData) {
 	}
 	this.Quests.Set(questData.CfgId, questData)
 	// 初始化进度
-	if questCfg.Progress != nil {
+	if questCfg.Progress != nil && questCfg.Progress.NeedInit {
 		cfg.GetQuestCfgMgr().GetProgressMgr().InitProgress(this.GetPlayer(), questCfg.Progress, questData)
 	}
 	logger.Debug("AddQuest:%v", questData)

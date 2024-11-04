@@ -118,7 +118,7 @@ message ProgressCfg {
   int32 Type = 1; // 进度类型(enum ProgressType)
   int32 CountType = 2; // 计数类型
   int32 Total = 3; // 总进度要求
-  bool NeedInit = 4;
+  bool NeedInit = 4; // 接任务时,是否初始化一下当前进度
   string Event = 5; // 关联的特定事件
   string EventField = 6; // 以事件字段值作为进度
   map<string,string> Properties = 7; // 扩展属性
@@ -129,7 +129,7 @@ message ProgressTemplateCfg {
   int32 CfgId = 3; // 配置id
   int32 Type = 1; // 进度类型(enum ProgressType)
   int32 CountType = 2; // 计数类型
-  bool NeedInit = 4;
+  bool NeedInit = 4; // 接任务时,是否初始化一下当前进度
   string Event = 5;
   string EventField = 6;
   map<string,string> Properties = 7; // 扩展属性

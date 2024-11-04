@@ -49,13 +49,18 @@ func (this *ActivityDefault) addProgress(questCfg *pb.QuestCfg) *pb.ActivityProg
 	if !cfg.GetActivityCfgMgr().GetConditionMgr().CheckConditions(this, questCfg.Conditions) {
 		return nil
 	}
+	if questCfg.Progress == nil {
+		return nil
+	}
 	if this.Base.Progresses == nil {
 		this.Base.Progresses = make(map[int32]*pb.ActivityProgressData)
 	}
 	progress := &pb.ActivityProgressData{
 		CfgId: questCfg.CfgId,
 	}
-	cfg.GetActivityCfgMgr().GetProgressMgr().InitProgress(this, questCfg.Progress, progress)
+	if questCfg.Progress.NeedInit {
+		cfg.GetActivityCfgMgr().GetProgressMgr().InitProgress(this, questCfg.Progress, progress)
+	}
 	this.Base.Progresses[progress.CfgId] = progress
 	this.SetDirty()
 	return progress
@@ -158,6 +163,14 @@ func (this *ActivityDefault) ReceiveReward(cfgId int32) {
 	progress.IsReceiveReward = true
 	this.Activities.GetPlayer().GetBags().AddItems(questCfg.GetRewards())
 	this.SetDirty()
+	// 自动接后续任务
+	for _, nextQuestId := range questCfg.GetNextQuests() {
+		nextQuestCfg := cfg.GetQuestCfgMgr().GetQuestCfg(nextQuestId)
+		if nextQuestCfg == nil {
+			continue
+		}
+		this.addProgress(nextQuestCfg)
+	}
 	logger.Debug("%v ReceiveReward %v %v", this.Activities.GetPlayer().GetId(), this.GetId(), cfgId)
 }
 
