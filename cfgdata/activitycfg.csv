@@ -4,4 +4,3 @@ CfgId,Name,Template,RefreshType,CycleType,TimeType,BeginTime,EndTime,QuestIds,Ex
 3,3日目标,default,1,1,1,0,0,30001;30002;30003,,,每天一个小目标.3天一个大目标
 4,在线奖励,default,1,1,1,0,0,40001,,,累计在线一定时长.即可领取礼包
 5,活动商店,default,1,1,1,0,0,,50001;50002,,活动商店
-,,,,,,,,,,,

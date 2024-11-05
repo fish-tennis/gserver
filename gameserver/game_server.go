@@ -14,6 +14,7 @@ import (
 	"github.com/fish-tennis/gserver/pb"
 	"github.com/fish-tennis/gserver/social"
 	"gopkg.in/yaml.v3"
+	"log/slog"
 	"os"
 	"sync"
 )
@@ -226,12 +227,20 @@ func (this *GameServer) registerClientPacket(handler *DefaultConnectionHandler) 
 			playerPacket = packet.(*ProtoPacket)
 		}
 		player := this.GetPlayer(playerId)
-		if player != nil {
-			if gamePlayer, ok := player.(*game.Player); ok {
-				if gamePlayer.GetConnection() == connection {
-					// 在线玩家的消息,转到玩家消息处理协程去处理
-					gamePlayer.OnRecvPacket(playerPacket)
-				}
+		if player == nil {
+			slog.Debug("playerNil", "playerId", playerId, "command", packet.Command())
+			// 告诉网关,这个玩家不在本服务器上
+			network.SendPacketAdapt(connection, packet, &pb.GateRouteClientPacketError{
+				PlayerId:  playerId,
+				Command:   int32(packet.Command()),
+				ResultStr: "PlayerNil",
+			})
+			return
+		}
+		if gamePlayer, ok := player.(*game.Player); ok {
+			if gamePlayer.GetConnection() == connection {
+				// 在线玩家的消息,转到玩家消息处理协程去处理
+				gamePlayer.OnRecvPacket(playerPacket)
 			}
 		}
 	})
@@ -243,17 +252,19 @@ func (this *GameServer) registerClientPacket(handler *DefaultConnectionHandler) 
 func (this *GameServer) registerGatePacket(handler *DefaultConnectionHandler) {
 	this.registerClientPacket(handler)
 	handler.Register(PacketCommand(pb.CmdServer_Cmd_ClientDisconnect), onClientDisconnect, new(pb.ClientDisconnect))
-	// 网关服务器掉线,该网关上的所有玩家都掉线
-	handler.SetOnDisconnectedFunc(func(connection Connection) {
-		this.playerMap.Range(func(key, value interface{}) bool {
-			if player, ok := value.(*game.Player); ok {
-				if player.GetConnection() == connection {
-					player.OnDisconnect(connection)
-				}
-			}
-			return true
-		})
-	})
+	// 网关服务器掉线,等待网关服务器重连上
+	//// 网关服务器掉线,该网关上的所有玩家都掉线
+	//handler.SetOnDisconnectedFunc(func(connection Connection) {
+	//	slog.Info("onGateDisconnect", "connId", connection.GetConnectionId(), "tag", connection.GetTag())
+	//	this.playerMap.Range(func(key, value any) bool {
+	//		if player, ok := value.(*game.Player); ok {
+	//			if player.GetConnection() == connection {
+	//				player.OnDisconnect(connection)
+	//			}
+	//		}
+	//		return true
+	//	})
+	//})
 }
 
 // 注册服务器消息回调

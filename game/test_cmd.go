@@ -113,9 +113,9 @@ func (p *Player) OnTestCmd(req *pb.TestCmd) {
 		}
 		p.FireEvent(evt)
 
-	case strings.ToLower("PlayerPropertyInc"):
+	case strings.ToLower("PlayerProperty"):
 		if len(cmdArgs) < 2 {
-			p.SendErrorRes(cmd, "PlayerPropertyInc cmdArgs error")
+			p.SendErrorRes(cmd, "PlayerProperty cmdArgs error")
 			return
 		}
 		evt := &pb.EventPlayerProperty{

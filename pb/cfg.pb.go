@@ -923,10 +923,10 @@ type ProgressCfg struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Type       int32             `protobuf:"varint,1,opt,name=Type,proto3" json:"Type,omitempty"`           // 进度类型(enum ProgressType)
-	CountType  int32             `protobuf:"varint,2,opt,name=CountType,proto3" json:"CountType,omitempty"` // 计数类型
-	Total      int32             `protobuf:"varint,3,opt,name=Total,proto3" json:"Total,omitempty"`         // 总进度要求
-	NeedInit   bool              `protobuf:"varint,4,opt,name=NeedInit,proto3" json:"NeedInit,omitempty"`
+	Type       int32             `protobuf:"varint,1,opt,name=Type,proto3" json:"Type,omitempty"`                                                                                                    // 进度类型(enum ProgressType)
+	CountType  int32             `protobuf:"varint,2,opt,name=CountType,proto3" json:"CountType,omitempty"`                                                                                          // 计数类型
+	Total      int32             `protobuf:"varint,3,opt,name=Total,proto3" json:"Total,omitempty"`                                                                                                  // 总进度要求
+	NeedInit   bool              `protobuf:"varint,4,opt,name=NeedInit,proto3" json:"NeedInit,omitempty"`                                                                                            // 接任务时,是否初始化一下当前进度
 	Event      string            `protobuf:"bytes,5,opt,name=Event,proto3" json:"Event,omitempty"`                                                                                                   // 关联的特定事件
 	EventField string            `protobuf:"bytes,6,opt,name=EventField,proto3" json:"EventField,omitempty"`                                                                                         // 以事件字段值作为进度
 	Properties map[string]string `protobuf:"bytes,7,rep,name=Properties,proto3" json:"Properties,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"` // 扩展属性
@@ -1022,7 +1022,7 @@ type ProgressTemplateCfg struct {
 	CfgId      int32             `protobuf:"varint,3,opt,name=CfgId,proto3" json:"CfgId,omitempty"`         // 配置id
 	Type       int32             `protobuf:"varint,1,opt,name=Type,proto3" json:"Type,omitempty"`           // 进度类型(enum ProgressType)
 	CountType  int32             `protobuf:"varint,2,opt,name=CountType,proto3" json:"CountType,omitempty"` // 计数类型
-	NeedInit   bool              `protobuf:"varint,4,opt,name=NeedInit,proto3" json:"NeedInit,omitempty"`
+	NeedInit   bool              `protobuf:"varint,4,opt,name=NeedInit,proto3" json:"NeedInit,omitempty"`   // 接任务时,是否初始化一下当前进度
 	Event      string            `protobuf:"bytes,5,opt,name=Event,proto3" json:"Event,omitempty"`
 	EventField string            `protobuf:"bytes,6,opt,name=EventField,proto3" json:"EventField,omitempty"`
 	Properties map[string]string `protobuf:"bytes,7,rep,name=Properties,proto3" json:"Properties,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"` // 扩展属性

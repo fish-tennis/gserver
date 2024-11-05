@@ -223,6 +223,7 @@ func onClientDisconnect(connection Connection, packet Packet) {
 		if player == nil {
 			return
 		}
+		slog.Info("onClientDisconnect", "playerId", playerId, "connId", connection.GetConnectionId())
 		player.OnDisconnect(connection)
 	}
 }

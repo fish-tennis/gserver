@@ -10,7 +10,8 @@ enum CmdClient {
 	Cmd_HeartBeatReq = 1; // 心跳请求
     Cmd_HeartBeatRes = 2; // 心跳返回
     Cmd_ErrorRes     = 3; // 通用的错误返回消息
-	
+	Cmd_GateRouteClientPacketError = 4; // 网关转发客户端消息到其他服务器,发生错误
+
 	// Login
 	Cmd_LoginReq = 1001;
 	Cmd_LoginRes = 1002;

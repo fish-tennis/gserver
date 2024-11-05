@@ -91,7 +91,7 @@ func (this *ActivityDefault) OnEvent(event interface{}) {
 		// 检查进度更新
 		if cfg.GetActivityCfgMgr().GetProgressMgr().CheckProgress(event, questCfg.Progress, progress) {
 			this.SetDirty()
-			slog.Debug("ActivityProgressUpdate", "playerId", this.GetId(), "questId", questId, "progress", progress.GetProgress())
+			slog.Debug("ActivityProgressUpdate", "id", this.GetId(), "questId", questId, "progress", progress.GetProgress())
 		}
 	}
 }
