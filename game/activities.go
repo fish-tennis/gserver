@@ -36,6 +36,7 @@ func init() {
 type Activities struct {
 	*PlayerMapDataComponent
 	Data *gentity.MapData[int32, internal.Activity] `db:""`
+	// eventMapping map[string][]ProgressHolder // key:eventName
 }
 
 func (this *Player) GetActivities() *Activities {

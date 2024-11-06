@@ -167,8 +167,15 @@ func (m *ProgressMgr) CheckProgress(event any, progressCfg *pb.ProgressCfg, prog
 
 // 默认的进度检查接口
 func DefaultProgressChecker(event any, progressCfg *pb.ProgressCfg) int32 {
-	if len(progressCfg.Properties) == 0 {
-		return 1
+	// 通用事件匹配,先检查事件名是否匹配
+	if progressCfg.GetType() == int32(pb.ProgressType_ProgressType_Event) {
+		eventTyp := reflect.TypeOf(event)
+		if eventTyp.Kind() == reflect.Pointer {
+			eventTyp = eventTyp.Elem()
+		}
+		if eventTyp.Name() != "Event"+progressCfg.GetEvent() {
+			return 0
+		}
 	}
 	eventVal := reflect.ValueOf(event).Elem()
 	// 匹配事件参数

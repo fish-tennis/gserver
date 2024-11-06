@@ -6,6 +6,10 @@ import (
 	"log/slog"
 )
 
+const (
+	PropertyKey = "Property"
+)
+
 // 注册进度接口
 func RegisterProgressCheckers() *internal.ProgressMgr {
 	progressMgr := internal.NewProgressMgr()
@@ -19,6 +23,22 @@ func RegisterProgressCheckers() *internal.ProgressMgr {
 	progressMgr.RegisterWithInit(int32(pb.ProgressType_ProgressType_ActivityProperty), &pb.EventActivityProperty{},
 		onActivityPropertyUpdate, onActivityPropertyInit)
 	return progressMgr
+}
+
+// 进度对应的事件名(这里假设一个进度只对应一个事件)
+func getEventName(progressCfg *pb.ProgressCfg) string {
+	switch progressCfg.GetType() {
+	case int32(pb.ProgressType_ProgressType_Event):
+		// 配置ProgressCfg里面不需要填写Event前缀
+		return "Event" + progressCfg.GetEvent()
+	case int32(pb.ProgressType_ProgressType_PlayerProperty):
+		return "EventPlayerProperty"
+	case int32(pb.ProgressType_ProgressType_ActivityProperty):
+		return "EventActivityProperty"
+	default:
+		slog.Error("getEventNameErr", "type", progressCfg.GetType())
+		return ""
+	}
 }
 
 func parsePlayer(arg any) *Player {
@@ -45,7 +65,7 @@ func parseActivity(arg any) internal.Activity {
 // 玩家属性值对应的进度初始化
 func onPlayerPropertyInit(arg any, progressCfg *pb.ProgressCfg) int32 {
 	// 当前属性值
-	propertyName := progressCfg.Properties["PropertyName"]
+	propertyName := progressCfg.Properties["Property"]
 	player := parsePlayer(arg)
 	if player == nil {
 		return 0
@@ -56,7 +76,7 @@ func onPlayerPropertyInit(arg any, progressCfg *pb.ProgressCfg) int32 {
 
 // 玩家属性值变化对应的进度更新
 func onPlayerPropertyUpdate(event any, progressCfg *pb.ProgressCfg) int32 {
-	propertyName := progressCfg.Properties["PropertyName"]
+	propertyName := progressCfg.Properties[PropertyKey]
 	eventPropertyInc, ok := event.(*pb.EventPlayerProperty)
 	if !ok {
 		slog.Error("onPlayerPropertyUpdateErr", "event", event, "progressCfg", progressCfg)
@@ -72,7 +92,7 @@ func onPlayerPropertyUpdate(event any, progressCfg *pb.ProgressCfg) int32 {
 // 活动属性值对应的进度初始化
 func onActivityPropertyInit(arg any, progressCfg *pb.ProgressCfg) int32 {
 	// 当前属性值
-	propertyName := progressCfg.Properties["PropertyName"]
+	propertyName := progressCfg.Properties[PropertyKey]
 	activity := parseActivity(arg)
 	if activity == nil {
 		return 0
@@ -83,7 +103,7 @@ func onActivityPropertyInit(arg any, progressCfg *pb.ProgressCfg) int32 {
 
 // 活动属性值变化对应的进度更新
 func onActivityPropertyUpdate(event any, progressCfg *pb.ProgressCfg) int32 {
-	propertyName := progressCfg.Properties["PropertyName"]
+	propertyName := progressCfg.Properties[PropertyKey]
 	eventPropertyInc, ok := event.(*pb.EventActivityProperty)
 	if !ok {
 		slog.Error("onActivityPropertyUpdateErr", "event", event, "progressCfg", progressCfg)

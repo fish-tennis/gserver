@@ -51,8 +51,11 @@ func (this *Quest) AddQuest(questData *pb.QuestData) {
 	}
 	this.Quests.Set(questData.CfgId, questData)
 	// 初始化进度
-	if questCfg.Progress != nil && questCfg.Progress.NeedInit {
-		cfg.GetQuestCfgMgr().GetProgressMgr().InitProgress(this.GetPlayer(), questCfg.Progress, questData)
+	if questCfg.Progress != nil {
+		if questCfg.Progress.NeedInit {
+			cfg.GetQuestCfgMgr().GetProgressMgr().InitProgress(this.GetPlayer(), questCfg.Progress, questData)
+		}
+		this.GetPlayer().progressEventMapping.addProgress(questCfg.Progress, questData)
 	}
 	logger.Debug("AddQuest:%v", questData)
 }
@@ -76,17 +79,6 @@ func (this *Quest) TriggerPlayerEntryGame(event *internal.EventPlayerEntryGame) 
 	}
 }
 
-func (this *Quest) OnEvent(event any) {
-	// TODO: 优化事件->任务的映射,减少遍历次数
-	for _, questData := range this.Quests.Data {
-		questCfg := cfg.GetQuestCfgMgr().GetQuestCfg(questData.GetCfgId())
-		if cfg.GetQuestCfgMgr().GetProgressMgr().CheckProgress(event, questCfg.Progress, questData) {
-			this.Quests.SetDirty(questData.GetCfgId(), true)
-			logger.Debug("quest %v progress:%v", questData.GetCfgId(), questData.GetProgress())
-		}
-	}
-}
-
 // 完成任务的消息回调
 // 这种格式写的函数可以自动注册客户端消息回调
 func (this *Quest) OnFinishQuestReq(req *pb.FinishQuestReq) (*pb.FinishQuestRes, error) {
@@ -96,6 +88,7 @@ func (this *Quest) OnFinishQuestReq(req *pb.FinishQuestReq) (*pb.FinishQuestRes,
 		if questData.GetProgress() >= questCfg.Progress.GetTotal() {
 			this.Quests.Delete(questData.GetCfgId())
 			this.Finished.Add(questData.GetCfgId())
+			this.GetPlayer().progressEventMapping.removeProgress(questCfg.Progress, questData.GetCfgId())
 			// 任务奖励
 			this.GetPlayer().GetBags().AddItems(questCfg.GetRewards())
 			return &pb.FinishQuestRes{

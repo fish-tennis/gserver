@@ -39,6 +39,8 @@ type Player struct {
 	connection Connection
 	// 事件分发的嵌套检测
 	fireEventLoopChecker map[reflect.Type]int32
+	// 进度更新
+	progressEventMapping *ProgressEventMapping
 }
 
 // 玩家名(unique)
@@ -171,13 +173,15 @@ func (this *Player) FireEvent(event any) {
 		eventReceiver.OnEvent(event)
 		return true
 	})
+	// 进度更新
+	this.progressEventMapping.OnTriggerEvent(event)
 }
 
 // 分发条件相关事件
 func (this *Player) FireConditionEvent(event interface{}) {
 	logger.Debug("%v FireConditionEvent:%v", this.GetId(), event)
-	this.GetQuest().OnEvent(event)
-	this.GetActivities().OnEvent(event)
+	// 进度更新
+	this.progressEventMapping.OnTriggerEvent(event)
 }
 
 func (this *Player) GetLevel() int32 {
@@ -266,6 +270,9 @@ func CreatePlayer(playerId int64, playerName string, accountId int64, regionId i
 		BaseRoutineEntity: *gentity.NewRoutineEntity(32),
 	}
 	player.Id = playerId
+	player.progressEventMapping = &ProgressEventMapping{
+		player: player,
+	}
 	// 初始化玩家的各个模块
 	_playerComponentRegister.InitComponents(player, nil)
 	return player

@@ -156,7 +156,7 @@ func TestActivity(t *testing.T) {
 
 	eventTotalPay := &pb.EventPlayerProperty{
 		PlayerId:      player.GetId(),
-		PropertyName:  "TotalPay", //累计充值
+		PropertyName:  "TotalPay", //累充
 		PropertyValue: 10,
 	}
 	player.FireEvent(eventTotalPay)
@@ -167,6 +167,13 @@ func TestActivity(t *testing.T) {
 		PropertyValue: 2,
 	}
 	player.FireEvent(eventOnlineTime)
+
+	eventFight := &pb.EventFight{
+		PlayerId: player.GetId(),
+		IsPvp:    true,
+		IsWin:    true,
+	}
+	player.FireEvent(eventFight)
 
 	for _, activityId := range activityIds {
 		activity := activities.GetActivity(activityId).(*ActivityDefault)

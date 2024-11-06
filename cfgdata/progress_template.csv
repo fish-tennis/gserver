@@ -1,7 +1,7 @@
 CfgId,Type,CountType,Event,EventField,Properties,NeedInit,Comment
-1,2,2,,,PropertyName_Level,,玩家等级达到X
+1,2,2,,,Property_Level,,玩家等级达到X
 2,1,1,Fight,,,,战斗次数达到X
 3,1,1,Fight,,IsPvp_true,,PVP次数达到X
 4,1,1,Fight,,IsPvp_true#IsWin_true,,PVP胜场达到X
-6,2,1,,,PropertyName_TotalPay,,累充达到X
-7,2,1,,,PropertyName_OnlineMinute,,在线分钟达到X
+6,2,1,,,Property_TotalPay,,累充达到X
+7,2,1,,,Property_OnlineMinute,,在线分钟达到X

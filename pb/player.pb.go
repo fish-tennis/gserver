@@ -30,7 +30,7 @@ type BaseInfo struct {
 	Gender              int32 `protobuf:"varint,1,opt,name=gender,proto3" json:"gender,omitempty"`                           // 性别
 	Level               int32 `protobuf:"varint,2,opt,name=level,proto3" json:"level,omitempty"`                             // 等级
 	Exp                 int32 `protobuf:"varint,3,opt,name=exp,proto3" json:"exp,omitempty"`                                 // 经验值
-	TotalPay            int32 `protobuf:"varint,4,opt,name=totalPay,proto3" json:"totalPay,omitempty"`                       // 累计充值总额
+	TotalPay            int32 `protobuf:"varint,4,opt,name=totalPay,proto3" json:"totalPay,omitempty"`                       // 累充总额
 	LastUpdateDate      int32 `protobuf:"varint,5,opt,name=lastUpdateDate,proto3" json:"lastUpdateDate,omitempty"`           // 上次刷新日期,格式:yyyymmdd
 	LastLoginTimestamp  int64 `protobuf:"varint,6,opt,name=lastLoginTimestamp,proto3" json:"lastLoginTimestamp,omitempty"`   // 最近一次登录时间戳
 	LastLogoutTimestamp int64 `protobuf:"varint,7,opt,name=lastLogoutTimestamp,proto3" json:"lastLogoutTimestamp,omitempty"` // 最近一次退出时间戳

@@ -11,7 +11,7 @@ message BaseInfo {
   int32 gender = 1; // 性别
   int32 level = 2; // 等级
   int32 exp = 3; // 经验值
-  int32 totalPay = 4; // 累计充值总额
+  int32 totalPay = 4; // 累充总额
   int32 lastUpdateDate = 5; // 上次刷新日期,格式:yyyymmdd
   int64 lastLoginTimestamp = 6; // 最近一次登录时间戳
   int64 lastLogoutTimestamp = 7; // 最近一次退出时间戳

@@ -63,6 +63,10 @@ func (this *ActivityDefault) addProgress(questCfg *pb.QuestCfg) *pb.ActivityProg
 	}
 	this.Base.Progresses[progress.CfgId] = progress
 	this.SetDirty()
+	this.Activities.GetPlayer().progressEventMapping.addProgress(questCfg.Progress, &ActivityProgressDataWrapper{
+		ActivityProgressData: progress,
+		ActivityId:           this.GetId(),
+	})
 	return progress
 }
 
@@ -75,24 +79,6 @@ func (this *ActivityDefault) OnEvent(event interface{}) {
 	case *EventDateChange:
 		this.OnDateChange(e.OldDate, e.CurDate)
 		return
-	}
-	for _, questId := range activityCfg.QuestIds {
-		questCfg := cfg.GetQuestCfgMgr().GetQuestCfg(questId)
-		if questCfg == nil {
-			continue
-		}
-		progress := this.getProgress(questId)
-		if progress == nil {
-			progress = this.addProgress(questCfg)
-			if progress == nil {
-				continue
-			}
-		}
-		// 检查进度更新
-		if cfg.GetActivityCfgMgr().GetProgressMgr().CheckProgress(event, questCfg.Progress, progress) {
-			this.SetDirty()
-			slog.Debug("ActivityProgressUpdate", "id", this.GetId(), "questId", questId, "progress", progress.GetProgress())
-		}
 	}
 }
 
@@ -110,6 +96,13 @@ func (this *ActivityDefault) OnDateChange(oldDate time.Time, curDate time.Time) 
 
 // 重置数据
 func (this *ActivityDefault) Reset() {
+	for _, progress := range this.Base.Progresses {
+		questCfg := cfg.GetQuestCfgMgr().GetQuestCfg(progress.GetCfgId())
+		if questCfg == nil {
+			continue
+		}
+		this.Activities.GetPlayer().progressEventMapping.removeProgress(questCfg.Progress, progress.GetCfgId())
+	}
 	this.Base.Progresses = nil
 	activityCfg := this.GetActivityCfg()
 	for _, questId := range activityCfg.QuestIds {
