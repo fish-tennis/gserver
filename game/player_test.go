@@ -171,6 +171,13 @@ func TestActivity(t *testing.T) {
 	eventFight := &pb.EventFight{
 		PlayerId: player.GetId(),
 		IsPvp:    true,
+		IsWin:    false,
+	}
+	player.FireEvent(eventFight)
+
+	eventFight = &pb.EventFight{
+		PlayerId: player.GetId(),
+		IsPvp:    true,
 		IsWin:    true,
 	}
 	player.FireEvent(eventFight)

@@ -36,7 +36,7 @@ func (p *ProgressEventMapping) getKey(progressCfg *pb.ProgressCfg) string {
 		return fmt.Sprintf("property:%v", property)
 	} else {
 		// 事件映射
-		return progressCfg.GetEvent()
+		return fmt.Sprintf("Event%v", progressCfg.GetEvent())
 	}
 }
 
@@ -104,7 +104,7 @@ func (p *ProgressEventMapping) OnTriggerEvent(event any) {
 		key = fmt.Sprintf("property:%v", evt.GetPropertyName())
 	default:
 		// 通用事件
-		key = reflect.TypeOf(event).Name()
+		key = reflect.TypeOf(event).Elem().Name()
 	}
 	// 属性值更新
 	if progressSlice, ok := p.mapping[key]; ok {
