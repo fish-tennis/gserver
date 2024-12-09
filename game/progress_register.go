@@ -65,7 +65,7 @@ func parseActivity(arg any) internal.Activity {
 // 玩家属性值对应的进度初始化
 func onPlayerPropertyInit(arg any, progressCfg *pb.ProgressCfg) int32 {
 	// 当前属性值
-	propertyName := progressCfg.Properties["Property"]
+	propertyName := progressCfg.Properties[PropertyKey]
 	player := parsePlayer(arg)
 	if player == nil {
 		return 0

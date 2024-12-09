@@ -9,6 +9,7 @@ import (
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/network"
 	"github.com/fish-tennis/gserver/pb"
+	"google.golang.org/protobuf/proto"
 	"gopkg.in/yaml.v3"
 	"log/slog"
 	"math/rand"
@@ -190,8 +191,8 @@ func (s *GateServer) routeToGameServer(connection Connection, packet Packet) {
 			})
 			return
 		}
-		logger.Debug("routeToGameServer clientConn:%v playerId:%v cmd:%v serverId:%v", connection.GetConnectionId(),
-			clientData.PlayerId, packet.Command(), clientData.GameServerId)
+		logger.Debug("routeToGameServer clientConn:%v playerId:%v cmd:%v serverId:%v message:%v", connection.GetConnectionId(),
+			clientData.PlayerId, packet.Command(), clientData.GameServerId, proto.MessageName(message))
 	}
 }
 
@@ -211,7 +212,7 @@ func (s *GateServer) routeToClientWithConnId(connection Connection, packet Packe
 	if clientConn == nil {
 		return
 	}
-	clientConn.SendPacket(NewProtoPacketEx(packet.Command(), packet.Message(), packet.GetStreamData()))
+	clientConn.SendPacket(NewProtoPacketEx(packet.Command(), packet.Message(), packet.GetStreamData()).SetErrorCode(packet.ErrorCode()))
 }
 
 func (s *GateServer) onLoginRes(connection Connection, packet Packet) {
@@ -221,10 +222,10 @@ func (s *GateServer) onLoginRes(connection Connection, packet Packet) {
 	clientConn := s.getClientConnectionByConnId(clientConnId)
 	if clientConn == nil {
 		logger.Debug("onLoginRes clientConnNil connId:%v account:%v err:%v", clientConnId,
-			res.AccountName, res.Error)
+			res.AccountName, packet.ErrorCode())
 		return
 	}
-	if res.Error == "" {
+	if packet.ErrorCode() == 0 {
 		// 客户端登录成功,为该客户端连接设置绑定信息
 		clientData := &network.ClientData{
 			ConnId:       clientConn.GetConnectionId(),
@@ -233,9 +234,10 @@ func (s *GateServer) onLoginRes(connection Connection, packet Packet) {
 		}
 		clientConn.SetTag(clientData)
 	}
-	clientConn.Send(packet.Command(), packet.Message())
+	clientPacket := NewProtoPacket(packet.Command(), packet.Message()).SetErrorCode(packet.ErrorCode())
+	clientConn.SendPacket(clientPacket)
 	logger.Debug("onLoginRes connId:%v account:%v accountId:%v err:%v GameServerId:%v", clientConn.GetConnectionId(),
-		res.AccountName, res.AccountId, res.Error, res.GetGameServer().GetServerId())
+		res.AccountName, res.AccountId, packet.ErrorCode(), res.GetGameServer().GetServerId())
 }
 
 func (s *GateServer) onPlayerEntryGameRes(connection Connection, packet Packet) {
@@ -245,10 +247,10 @@ func (s *GateServer) onPlayerEntryGameRes(connection Connection, packet Packet) 
 	clientConn := s.getClientConnectionByConnId(clientConnId)
 	if clientConn == nil {
 		logger.Debug("onPlayerEntryGameRes clientConnNil connId:%v accountId:%v err:%v", clientConnId,
-			res.AccountId, res.Error)
+			res.AccountId, packet.ErrorCode())
 		return
 	}
-	if res.Error == "" {
+	if packet.ErrorCode() == 0 {
 		if clientData, ok := clientConn.GetTag().(*network.ClientData); ok {
 			// 登录游戏服成功后,绑定客户端连接和playerId,后续的消息都可以用playerId来关联
 			clientData.PlayerId = res.PlayerId
@@ -258,9 +260,10 @@ func (s *GateServer) onPlayerEntryGameRes(connection Connection, packet Packet) 
 			logger.Debug("bindPlayerId connId:%v playerId:%v", clientConn.GetConnectionId(), res.PlayerId)
 		}
 	}
-	clientConn.Send(packet.Command(), packet.Message())
+	clientPacket := NewProtoPacket(packet.Command(), packet.Message()).SetErrorCode(packet.ErrorCode())
+	clientConn.SendPacket(clientPacket)
 	logger.Debug("onPlayerEntryGameRes connId:%v playerId:%v err:%v", clientConn.GetConnectionId(),
-		res.PlayerId, res.Error)
+		res.PlayerId, packet.ErrorCode())
 }
 
 func (s *GateServer) routeToClient(connection Connection, packet Packet) {
@@ -280,7 +283,8 @@ func (s *GateServer) routeToClient(connection Connection, packet Packet) {
 			clientData.PlayerId, packet.Command(), packet.Message(), len(packet.GetStreamData()))
 		return
 	}
-	logger.Debug("routeToClientErr playerId:%v packet:%v", gatePacket.PlayerId(), packet)
+	logger.Debug("routeToClientErr playerId:%v cmd:%v message:%v packet:%v", gatePacket.PlayerId(), packet.Command(),
+		proto.MessageName(packet.Message()), packet)
 }
 
 func (s *GateServer) getClientConnectionByConnId(clientConnId uint32) Connection {

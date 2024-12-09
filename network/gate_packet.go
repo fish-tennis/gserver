@@ -10,6 +10,7 @@ type GatePacket struct {
 	playerId int64
 	// use for rpc call
 	rpcCallId uint32
+	errorCode uint32
 	message   proto.Message
 	data      []byte
 }
@@ -54,6 +55,15 @@ func (this *GatePacket) SetRpcCallId(rpcCallId uint32) {
 	this.rpcCallId = rpcCallId
 }
 
+func (this *GatePacket) ErrorCode() uint32 {
+	return this.errorCode
+}
+
+func (this *GatePacket) SetErrorCode(code uint32) *GatePacket {
+	this.errorCode = code
+	return this
+}
+
 func (this *GatePacket) WithStreamData(streamData []byte) *GatePacket {
 	this.data = streamData
 	return this
@@ -63,7 +73,7 @@ func (this *GatePacket) WithRpc(arg any) *GatePacket {
 	switch v := arg.(type) {
 	case uint32:
 		this.rpcCallId = v
-	case RpcCallIdSetter:
+	case Packet:
 		this.rpcCallId = v.RpcCallId()
 	}
 	return this
@@ -79,9 +89,11 @@ func (this *GatePacket) GetStreamData() []byte {
 // deep copy
 func (this *GatePacket) Clone() Packet {
 	newPacket := &GatePacket{
-		command:  this.command,
-		playerId: this.playerId,
-		message:  proto.Clone(this.message),
+		command:   this.command,
+		rpcCallId: this.rpcCallId,
+		errorCode: this.errorCode,
+		playerId:  this.playerId,
+		message:   proto.Clone(this.message),
 	}
 	if len(this.data) > 0 {
 		newPacket.data = make([]byte, len(this.data))
@@ -91,11 +103,15 @@ func (this *GatePacket) Clone() Packet {
 }
 
 func (this *GatePacket) ToProtoPacket() *ProtoPacket {
+	var p *ProtoPacket
 	if this.Message() != nil {
-		return NewProtoPacket(this.Command(), this.Message())
+		p = NewProtoPacket(this.Command(), this.Message())
 	} else {
-		return NewProtoPacketWithData(this.Command(), this.GetStreamData())
+		p = NewProtoPacketWithData(this.Command(), this.GetStreamData())
 	}
+	p.SetRpcCallId(this.rpcCallId)
+	p.SetErrorCode(this.errorCode)
+	return p
 }
 
 func IsGatePacket(packet Packet) bool {
@@ -105,10 +121,15 @@ func IsGatePacket(packet Packet) bool {
 
 // 根据请求消息的类型,自动适配不同的发消息接口
 func SendPacketAdapt(connection Connection, reqPacket Packet, sendMessage proto.Message) bool {
+	return SendPacketAdaptWithError(connection, reqPacket, sendMessage, 0)
+}
+
+func SendPacketAdaptWithError(connection Connection, reqPacket Packet, sendMessage proto.Message, errorCode int32) bool {
 	cmd := GetCommandByProto(sendMessage)
 	if gatePacket, ok := reqPacket.(*GatePacket); ok {
-		return connection.SendPacket(NewGatePacket(gatePacket.PlayerId(), PacketCommand(cmd), sendMessage))
+		return connection.SendPacket(NewGatePacket(gatePacket.PlayerId(), PacketCommand(cmd), sendMessage).SetErrorCode(uint32(errorCode)))
 	} else {
-		return connection.Send(PacketCommand(cmd), sendMessage)
+		packet := NewProtoPacket(PacketCommand(cmd), sendMessage).SetErrorCode(uint32(errorCode))
+		return connection.SendPacket(packet)
 	}
 }

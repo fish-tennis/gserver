@@ -113,9 +113,7 @@ func GuildServerHandlerRegister(handler PacketHandlerRegister) {
 		if err != nil {
 			// 回复一个结果,避免rpc调用方超时
 			routePacket := NewProtoPacketEx(network.GetResCommand(req.PacketCommand), nil)
-			if rpcCallIdSetter, ok := packet.(RpcCallIdSetter); ok {
-				routePacket.SetRpcCallId(rpcCallIdSetter.RpcCallId())
-			}
+			routePacket.SetRpcCallId(packet.RpcCallId())
 			game.RoutePlayerPacket(req.FromPlayerId, routePacket, game.WithConnection(connection), game.WithError(err))
 		}
 	}, new(pb.GuildRoutePlayerMessageReq))

@@ -17,37 +17,42 @@ import (
 // 在Connection的收包协程中调用
 func onPlayerEntryGameReq(connection Connection, packet Packet) {
 	req := packet.Message().(*pb.PlayerEntryGameReq)
+	res := &pb.PlayerEntryGameRes{
+		AccountId: req.AccountId,
+		RegionId:  req.RegionId,
+	}
+	var errorCode pb.ErrorCode
+	var entryPlayer *game.Player
+	isReconnect := false
+	defer func() {
+		network.SendPacketAdaptWithError(connection, packet, res, int32(errorCode))
+		if errorCode == 0 && entryPlayer != nil {
+			// 转到玩家协程中去处理
+			entryPlayer.OnRecvPacket(NewProtoPacket(PacketCommand(pb.CmdServer_Cmd_PlayerEntryGameOk), &pb.PlayerEntryGameOk{
+				IsReconnect: isReconnect,
+			}))
+		}
+		logger.Debug("onPlayerEntryGameReq:%v err:%v", res, errorCode)
+	}()
 	if connection.GetTag() != nil {
-		network.SendPacketAdapt(connection, packet, &pb.PlayerEntryGameRes{
-			Error: "HasLogin",
-		})
+		errorCode = pb.ErrorCode_ErrorCode_HasLogin
 		return
 	}
 	accountId := req.GetAccountId()
 	// 验证LoginSession
 	if !cache.VerifyLoginSession(accountId, req.GetLoginSession()) {
-		network.SendPacketAdapt(connection, packet, &pb.PlayerEntryGameRes{
-			Error: "SessionError",
-		})
+		errorCode = pb.ErrorCode_ErrorCode_SessionError
 		return
 	}
 	playerId, err := db.GetPlayerDb().FindPlayerIdByAccountId(accountId, req.GetRegionId())
 	//hasData,err := db.GetPlayerDb().FindPlayerByAccountId(req.GetAccountId(), req.GetRegionId(), playerData)
 	if err != nil {
-		network.SendPacketAdapt(connection, packet, &pb.PlayerEntryGameRes{
-			Error: "DbError",
-		})
+		errorCode = pb.ErrorCode_ErrorCode_DbErr
 		logger.Error(err.Error())
 		return
 	}
-	var entryPlayer *game.Player
-	isReconnect := false
 	if playerId == 0 {
-		network.SendPacketAdapt(connection, packet, &pb.PlayerEntryGameRes{
-			Error:     "NoPlayer",
-			AccountId: req.GetAccountId(),
-			RegionId:  req.GetRegionId(),
-		})
+		errorCode = pb.ErrorCode_ErrorCode_NoPlayer
 		return
 	}
 	// 检查该账号是否已经有对应的在线玩家
@@ -81,28 +86,20 @@ func onPlayerEntryGameReq(connection Connection, packet Packet) {
 				// TODO: RemoveOnlineAccount?
 			}
 			// 通知客户端稍后重新登录
-			network.SendPacketAdapt(connection, packet, &pb.PlayerEntryGameRes{
-				Error: "TryLater",
-			})
+			errorCode = pb.ErrorCode_ErrorCode_TryLater
 			return
 		}
 		playerData := &pb.PlayerData{}
 		hasData, err := db.GetPlayerDb().FindEntityById(playerId, playerData)
 		if err != nil {
 			cache.RemoveOnlineAccount(accountId)
-			network.SendPacketAdapt(connection, packet, &pb.PlayerEntryGameRes{
-				Error: "DbError",
-			})
+			errorCode = pb.ErrorCode_ErrorCode_DbErr
 			logger.Error(err.Error())
 			return
 		}
 		if !hasData {
 			cache.RemoveOnlineAccount(accountId)
-			network.SendPacketAdapt(connection, packet, &pb.PlayerEntryGameRes{
-				Error:     "NoPlayer",
-				AccountId: req.GetAccountId(),
-				RegionId:  req.GetRegionId(),
-			})
+			errorCode = pb.ErrorCode_ErrorCode_NoPlayer
 			return
 		}
 		// Q:_id为什么不会赋值?
@@ -116,11 +113,7 @@ func onPlayerEntryGameReq(connection Connection, packet Packet) {
 		entryPlayer = game.CreatePlayerFromData(playerData)
 		if entryPlayer == nil {
 			cache.RemoveOnlineAccount(accountId)
-			network.SendPacketAdapt(connection, packet, &pb.PlayerEntryGameRes{
-				Error:     "DbError",
-				AccountId: req.GetAccountId(),
-				RegionId:  req.GetRegionId(),
-			})
+			errorCode = pb.ErrorCode_ErrorCode_NoPlayer
 			return
 		}
 		// 加入在线玩家表
@@ -130,41 +123,37 @@ func onPlayerEntryGameReq(connection Connection, packet Packet) {
 		entryPlayer.RunRoutine()
 	}
 	logger.Debug("entry entryPlayer:%v %v", entryPlayer.GetId(), entryPlayer.GetName())
-	network.SendPacketAdapt(connection, packet, &pb.PlayerEntryGameRes{
-		AccountId:  entryPlayer.GetAccountId(),
-		PlayerId:   entryPlayer.GetId(),
-		RegionId:   entryPlayer.GetRegionId(),
-		PlayerName: entryPlayer.GetName(),
-		GuildData:  entryPlayer.GetGuild().GetGuildData(),
-	})
-	// 转到玩家协程中去处理
-	entryPlayer.OnRecvPacket(NewProtoPacket(PacketCommand(pb.CmdServer_Cmd_PlayerEntryGameOk), &pb.PlayerEntryGameOk{
-		IsReconnect: isReconnect,
-	}))
+	res.PlayerId = entryPlayer.GetId()
+	res.PlayerName = entryPlayer.GetName()
+	res.GuildData = entryPlayer.GetGuild().GetGuildData()
 }
 
 // 创建角色
 func onCreatePlayerReq(connection Connection, packet Packet) {
 	logger.Debug("onCreatePlayerReq %v", packet.Message())
 	req := packet.Message().(*pb.CreatePlayerReq)
+	res := &pb.CreatePlayerRes{
+		AccountId: req.AccountId,
+		Name:      req.Name,
+		RegionId:  req.RegionId,
+	}
+	var errorCode pb.ErrorCode
+	defer func() {
+		network.SendPacketAdaptWithError(connection, packet, res, int32(errorCode))
+		logger.Debug("onCreatePlayerReq:%v err:%v", res, errorCode)
+	}()
 	if connection.GetTag() != nil {
-		network.SendPacketAdapt(connection, packet, &pb.CreatePlayerRes{
-			Error: "HasLogin",
-		})
+		errorCode = pb.ErrorCode_ErrorCode_HasLogin
 		return
 	}
 	// 验证LoginSession
 	if !cache.VerifyLoginSession(req.GetAccountId(), req.GetLoginSession()) {
-		network.SendPacketAdapt(connection, packet, &pb.CreatePlayerRes{
-			Error: "SessionError",
-		})
+		errorCode = pb.ErrorCode_ErrorCode_SessionError
 		return
 	}
 	newPlayerIdValue, err := db.GetKvDb().Inc(db.PlayerIdKeyName, int64(1), true)
 	if err != nil {
-		network.SendPacketAdapt(connection, packet, &pb.CreatePlayerRes{
-			Error: "IdError",
-		})
+		errorCode = pb.ErrorCode_ErrorCode_DbErr
 		logger.Error("onCreatePlayerReq err:%v", err)
 		return
 	}
@@ -182,10 +171,8 @@ func onCreatePlayerReq(connection Connection, packet Packet) {
 	}
 	newPlayer := game.CreatePlayerFromData(playerData)
 	if newPlayer == nil {
-		network.SendPacketAdapt(connection, packet, &pb.CreatePlayerRes{
-			Error: "DbError",
-		})
-		logger.Error("CreatePlayerFromData")
+		errorCode = pb.ErrorCode_ErrorCode_DbErr
+		logger.Error("CreatePlayerFromDataErr")
 		return
 	}
 	newPlayerSaveData := make(map[string]interface{})
@@ -196,23 +183,13 @@ func onCreatePlayerReq(connection Connection, packet Packet) {
 	gentity.GetEntitySaveData(newPlayer, newPlayerSaveData)
 	err, isDuplicateKey := db.GetPlayerDb().InsertEntity(playerData.XId, newPlayerSaveData)
 	if err != nil {
-		result := "DbError"
+		errorCode = pb.ErrorCode_ErrorCode_DbErr
 		if isDuplicateKey {
-			result = "DuplicateName"
+			errorCode = pb.ErrorCode_ErrorCode_NameDuplicate
 		}
-		network.SendPacketAdapt(connection, packet, &pb.CreatePlayerRes{
-			Error: result,
-			Name:  playerData.Name,
-		})
-		logger.Error("CreatePlayer result:%v err:%v playerData:%v", result, err, playerData)
+		logger.Error("CreatePlayer errorCode:%v err:%v playerData:%v", errorCode, err, playerData)
 		return
 	}
-	logger.Debug("CreatePlayer:%v %v", playerData.XId, playerData.Name)
-	network.SendPacketAdapt(connection, packet, &pb.CreatePlayerRes{
-		AccountId: req.AccountId,
-		RegionId:  req.RegionId,
-		Name:      req.Name,
-	})
 }
 
 // gate转发的客户端掉线消息

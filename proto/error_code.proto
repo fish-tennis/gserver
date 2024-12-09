@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+option go_package = "./pb";
+
+package gserver;
+
+enum ErrorCode {
+	ErrorCode_OK = 0;
+
+	ErrorCode_NotReg = 11; // 未注册
+    ErrorCode_PasswordError = 12; // 密码错误
+	ErrorCode_DbErr = 13; // 数据库错误
+	ErrorCode_NameDuplicate = 14; // 重名
+	ErrorCode_HasLogin = 15;
+	ErrorCode_SessionError = 16;
+	ErrorCode_NoPlayer = 17;
+	ErrorCode_TryLater = 18;
+}

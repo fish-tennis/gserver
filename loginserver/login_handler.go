@@ -15,57 +15,57 @@ import (
 func onLoginReq(connection Connection, packet Packet) {
 	logger.Debug("onLoginReq:%v", packet.Message())
 	req := packet.Message().(*pb.LoginReq)
-	result := ""
-	loginSession := ""
+	var errorCode pb.ErrorCode
+	loginRes := &pb.LoginRes{
+		AccountName: req.GetAccountName(),
+		//AccountId:    account.XId,
+		//LoginSession: loginSession,
+	}
 	account := &pb.Account{}
+	defer func() {
+		network.SendPacketAdaptWithError(connection, packet, loginRes, int32(errorCode))
+		logger.Debug("%v(%v) -> %v err:%v", loginRes.AccountName, account.GetXId(), loginRes.GameServer, errorCode)
+	}()
 	err := _loginServer.getAccountData(req.GetAccountName(), account)
 	if err != nil {
-		result = err.Error()
+		errorCode = pb.ErrorCode_ErrorCode_DbErr
+		return
 	} else {
 		if account.XId == 0 {
-			result = "NotReg"
-		} else if req.GetPassword() == account.GetPassword() {
-			result = ""
-			loginSession = cache.NewLoginSession(account)
-		} else {
-			result = "PasswordError"
+			errorCode = pb.ErrorCode_ErrorCode_NotReg
+			return
+		} else if req.GetPassword() != account.GetPassword() {
+			errorCode = pb.ErrorCode_ErrorCode_PasswordError
+			return
 		}
 	}
-	loginRes := &pb.LoginRes{
-		Error:        result,
-		AccountName:  req.GetAccountName(),
-		AccountId:    account.XId,
-		LoginSession: loginSession,
-	}
-	if result == "" {
-		onlinePlayerId, gameServerId := cache.GetOnlineAccount(account.GetXId())
-		if onlinePlayerId > 0 {
-			// 如果该账号还在游戏中,则需要先将其清理下线
-			logger.Error("exist online account:%v playerId:%v gameServerId:%v",
-				account.GetXId(), onlinePlayerId, gameServerId)
-			if gameServerId > 0 {
-				//// 有可能那台游戏服宕机了,就直接清理缓存,防止"卡号"
-				//if _loginServer.GetServerList().GetServerInfo(gameServerId) == nil {
-				//	cache.RemoveOnlinePlayer(onlinePlayerId, gameServerId)
-				//	cache.RemoveOnlineAccount(account.GetId())
-				//	LogError("RemoveOnlinePlayer account:%v playerId:%v gameServerId:%v",
-				//		account.GetId(), onlinePlayerId, gameServerId)
-				//}
-				internal.GetServerList().Send(gameServerId, PacketCommand(pb.CmdServer_Cmd_KickPlayerReq), &pb.KickPlayerReq{
-					AccountId: account.GetXId(),
-					PlayerId:  onlinePlayerId,
-				})
-			}
+	loginRes.AccountId = account.XId
+	loginRes.LoginSession = cache.NewLoginSession(account)
+	onlinePlayerId, gameServerId := cache.GetOnlineAccount(account.GetXId())
+	if onlinePlayerId > 0 {
+		// 如果该账号还在游戏中,则需要先将其清理下线
+		logger.Error("exist online account:%v playerId:%v gameServerId:%v",
+			account.GetXId(), onlinePlayerId, gameServerId)
+		if gameServerId > 0 {
+			//// 有可能那台游戏服宕机了,就直接清理缓存,防止"卡号"
+			//if _loginServer.GetServerList().GetServerInfo(gameServerId) == nil {
+			//	cache.RemoveOnlinePlayer(onlinePlayerId, gameServerId)
+			//	cache.RemoveOnlineAccount(account.GetId())
+			//	LogError("RemoveOnlinePlayer account:%v playerId:%v gameServerId:%v",
+			//		account.GetId(), onlinePlayerId, gameServerId)
+			//}
+			internal.GetServerList().Send(gameServerId, PacketCommand(pb.CmdServer_Cmd_KickPlayerReq), &pb.KickPlayerReq{
+				AccountId: account.GetXId(),
+				PlayerId:  onlinePlayerId,
+			})
 		}
-		// 分配一个游戏服给客户端连接
-		gameServerInfo := selectGameServer(account)
-		loginRes.GameServer = &pb.GameServerInfo{
-			ServerId:         gameServerInfo.GetServerId(),
-			ClientListenAddr: gameServerInfo.GetClientListenAddr(),
-		}
-		logger.Debug("%v(%v) -> %v", account.Name, account.GetXId(), loginRes.GameServer)
 	}
-	network.SendPacketAdapt(connection, packet, loginRes)
+	// 分配一个游戏服给客户端连接
+	gameServerInfo := selectGameServer(account)
+	loginRes.GameServer = &pb.GameServerInfo{
+		ServerId:         gameServerInfo.GetServerId(),
+		ClientListenAddr: gameServerInfo.GetClientListenAddr(),
+	}
 }
 
 // 选择一个游戏服给登录成功的客户端
@@ -83,13 +83,18 @@ func selectGameServer(account *pb.Account) *pb.ServerInfo {
 // 注册账号
 func onAccountReg(connection Connection, packet Packet) {
 	logger.Debug("onAccountReg:%v", packet.Message())
+	var errorCode pb.ErrorCode
 	req := packet.Message().(*pb.AccountReg)
+	res := &pb.AccountRes{
+		AccountName: req.GetAccountName(),
+	}
+	defer func() {
+		network.SendPacketAdaptWithError(connection, packet, res, int32(errorCode))
+	}()
 	result := ""
 	newAccountIdValue, err := db.GetKvDb().Inc(db.AccountIdKeyName, int64(1), true)
 	if err != nil {
-		network.SendPacketAdapt(connection, packet, &pb.AccountRes{
-			Error: "IdError",
-		})
+		errorCode = pb.ErrorCode_ErrorCode_DbErr
 		logger.Error("onAccountReg err:%v", err)
 		return
 	}
@@ -108,15 +113,14 @@ func onAccountReg(connection Connection, packet Packet) {
 	if err != nil {
 		account.XId = 0
 		if isDuplicateKey {
+			errorCode = pb.ErrorCode_ErrorCode_NameDuplicate
 			result = "AccountNameDuplicate"
 		} else {
 			result = "DbError"
+			errorCode = pb.ErrorCode_ErrorCode_DbErr
 		}
 		logger.Error("onAccountReg account:%v result:%v err:%v", account.Name, result, err.Error())
+		return
 	}
-	network.SendPacketAdapt(connection, packet, &pb.AccountRes{
-		Error:       result,
-		AccountName: account.Name,
-		AccountId:   account.XId,
-	})
+	res.AccountId = account.XId
 }

@@ -61,6 +61,12 @@ func (this *ClientCodec) EncodePacket(connection Connection, packet Packet) ([][
 		headerFlags = RpcCall
 		//logger.Debug("write rpcCallId:%v", rpcCallId)
 	}
+	var errorCodeBytes []byte
+	if packet.ErrorCode() != 0 {
+		errorCodeBytes = make([]byte, 4)
+		binary.LittleEndian.PutUint32(errorCodeBytes, packet.ErrorCode())
+		headerFlags |= ErrorCode
+	}
 	var messageBytes []byte
 	if protoMessage != nil {
 		var err error
@@ -77,15 +83,9 @@ func (this *ClientCodec) EncodePacket(connection Connection, packet Packet) ([][
 	// 这里可以继续对messageBytes进行编码,如异或,加密,压缩等
 	// you can continue to encode messageBytes here, such as XOR, encryption, compression, etc
 	if this.ProtoPacketBytesEncoder != nil {
-		if rpcCallId > 0 {
-			return this.ProtoPacketBytesEncoder([][]byte{commandBytes, rpcCallIdBytes, messageBytes}), headerFlags
-		}
-		return this.ProtoPacketBytesEncoder([][]byte{commandBytes, messageBytes}), headerFlags
+		return this.ProtoPacketBytesEncoder([][]byte{commandBytes, rpcCallIdBytes, errorCodeBytes, messageBytes}), headerFlags
 	}
-	if rpcCallId > 0 {
-		return [][]byte{commandBytes, rpcCallIdBytes, messageBytes}, headerFlags
-	}
-	return [][]byte{commandBytes, messageBytes}, headerFlags
+	return [][]byte{commandBytes, rpcCallIdBytes, errorCodeBytes, messageBytes}, headerFlags
 }
 
 func (this *ClientCodec) DecodePacket(connection Connection, packetHeader PacketHeader, packetData []byte) Packet {
@@ -98,45 +98,53 @@ func (this *ClientCodec) DecodePacket(connection Connection, packetHeader Packet
 	if len(decodedPacketData) < 2 {
 		return nil
 	}
-	isRpcCall := false
-	if defaultPacketHeader, ok := packetHeader.(*DefaultPacketHeader); ok {
-		isRpcCall = defaultPacketHeader.HasFlag(RpcCall)
-	}
-	if isRpcCall && len(decodedPacketData) < 6 {
-		return nil
-	}
 	command := binary.LittleEndian.Uint16(decodedPacketData[:2])
-	offset := 2
+	decodedPacketData = decodedPacketData[2:]
 	rpcCallId := uint32(0)
-	if isRpcCall {
-		rpcCallId = binary.LittleEndian.Uint32(decodedPacketData[offset : offset+4])
-		offset += 4
+	errorCode := uint32(0)
+	if packetHeader.HasFlag(RpcCall) {
+		if len(decodedPacketData) < 4 {
+			return nil
+		}
+		rpcCallId = binary.LittleEndian.Uint32(decodedPacketData)
+		decodedPacketData = decodedPacketData[4:]
+		//logger.Debug("read rpcCallId:%v", rpcCallId)
+	}
+	if packetHeader.HasFlag(ErrorCode) {
+		if len(decodedPacketData) < 4 {
+			return nil
+		}
+		errorCode = binary.LittleEndian.Uint32(decodedPacketData)
+		decodedPacketData = decodedPacketData[4:]
 		//logger.Debug("read rpcCallId:%v", rpcCallId)
 	}
 	if protoMessageType, ok := this.MessageCreatorMap[PacketCommand(command)]; ok {
 		// 有一些客户端消息,是gate处理
 		if protoMessageType != nil {
 			newProtoMessage := reflect.New(protoMessageType).Interface().(proto.Message)
-			err := proto.Unmarshal(decodedPacketData[offset:], newProtoMessage)
+			err := proto.Unmarshal(decodedPacketData, newProtoMessage)
 			if err != nil {
 				logger.Error("proto decode err:%v cmd:%v", err, command)
 				return nil
 			}
 			newPacket := NewProtoPacket(PacketCommand(command), newProtoMessage)
 			newPacket.SetRpcCallId(rpcCallId)
+			newPacket.SetErrorCode(errorCode)
 			return newPacket
 		} else {
 			// 支持只注册了消息号,没注册proto结构体的用法
 			// support Register(command, nil), return the direct stream data to application layer
-			newPacket := NewProtoPacketWithData(PacketCommand(command), decodedPacketData[offset:])
+			newPacket := NewProtoPacketWithData(PacketCommand(command), decodedPacketData)
 			newPacket.SetRpcCallId(rpcCallId)
+			newPacket.SetErrorCode(errorCode)
 			return newPacket
 		}
 	}
 	// 其他消息,gate直接转发,附加上playerId
 	if clientData, ok := connection.GetTag().(*ClientData); ok {
-		newPacket := NewGatePacketWithData(clientData.PlayerId, PacketCommand(command), decodedPacketData[offset:])
+		newPacket := NewGatePacketWithData(clientData.PlayerId, PacketCommand(command), decodedPacketData)
 		newPacket.SetRpcCallId(rpcCallId)
+		newPacket.SetErrorCode(errorCode)
 		return newPacket
 	}
 	logger.Error("unSupport command:%v", command)

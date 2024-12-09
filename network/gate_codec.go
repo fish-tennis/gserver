@@ -64,8 +64,14 @@ func (this *GateCodec) EncodePacket(connection Connection, packet Packet) ([][]b
 	if rpcCallId > 0 {
 		rpcCallIdBytes = make([]byte, 4)
 		binary.LittleEndian.PutUint32(rpcCallIdBytes, rpcCallId)
-		headerFlags = RpcCall
+		headerFlags |= RpcCall
 		//logger.Debug("write rpcCallId:%v", rpcCallId)
+	}
+	var errorCodeBytes []byte
+	if packet.ErrorCode() != 0 {
+		errorCodeBytes = make([]byte, 4)
+		binary.LittleEndian.PutUint32(errorCodeBytes, packet.ErrorCode())
+		headerFlags |= ErrorCode
 	}
 	var messageBytes []byte
 	if protoMessage != nil {
@@ -83,15 +89,9 @@ func (this *GateCodec) EncodePacket(connection Connection, packet Packet) ([][]b
 	// 这里可以继续对messageBytes进行编码,如异或,加密,压缩等
 	// you can continue to encode messageBytes here, such as XOR, encryption, compression, etc
 	if this.ProtoPacketBytesEncoder != nil {
-		if rpcCallId > 0 {
-			return this.ProtoPacketBytesEncoder([][]byte{commandBytes, rpcCallIdBytes, messageBytes}), headerFlags
-		}
-		return this.ProtoPacketBytesEncoder([][]byte{commandBytes, messageBytes}), headerFlags
+		return this.ProtoPacketBytesEncoder([][]byte{commandBytes, rpcCallIdBytes, errorCodeBytes, messageBytes}), headerFlags
 	}
-	if rpcCallId > 0 {
-		return [][]byte{commandBytes, rpcCallIdBytes, messageBytes}, headerFlags
-	}
-	return [][]byte{commandBytes, messageBytes}, headerFlags
+	return [][]byte{commandBytes, rpcCallIdBytes, errorCodeBytes, messageBytes}, headerFlags
 }
 
 func (this *GateCodec) DecodePacket(connection Connection, packetHeader PacketHeader, packetData []byte) Packet {
@@ -105,27 +105,30 @@ func (this *GateCodec) DecodePacket(connection Connection, packetHeader PacketHe
 	if len(decodedPacketData) < 10 {
 		return nil
 	}
-	isRpcCall := false
-	if defaultPacketHeader, ok := packetHeader.(*DefaultPacketHeader); ok {
-		isRpcCall = defaultPacketHeader.HasFlag(RpcCall)
-	}
-	// command:2 playerId:8 rpcCallId:4
-	if isRpcCall && len(decodedPacketData) < 14 {
-		return nil
-	}
-	command := binary.LittleEndian.Uint16(decodedPacketData[:2])
-	playerId := int64(binary.LittleEndian.Uint64(decodedPacketData[2:10]))
-	offset := 10
+	command := binary.LittleEndian.Uint16(decodedPacketData)
+	decodedPacketData = decodedPacketData[2:]
+	playerId := int64(binary.LittleEndian.Uint64(decodedPacketData))
+	decodedPacketData = decodedPacketData[8:]
 	rpcCallId := uint32(0)
-	if isRpcCall {
-		rpcCallId = binary.LittleEndian.Uint32(decodedPacketData[offset : offset+4])
-		offset += 4
-		//logger.Debug("read rpcCallId:%v", rpcCallId)
+	if packetHeader.HasFlag(RpcCall) {
+		if len(decodedPacketData) < 4 {
+			return nil
+		}
+		rpcCallId = binary.LittleEndian.Uint32(decodedPacketData)
+		decodedPacketData = decodedPacketData[4:]
+	}
+	errorCode := uint32(0)
+	if packetHeader.HasFlag(ErrorCode) {
+		if len(decodedPacketData) < 4 {
+			return nil
+		}
+		errorCode = binary.LittleEndian.Uint32(decodedPacketData)
+		decodedPacketData = decodedPacketData[4:]
 	}
 	if protoMessageType, ok := this.MessageCreatorMap[PacketCommand(command)]; ok {
 		if protoMessageType != nil {
 			newProtoMessage := reflect.New(protoMessageType).Interface().(proto.Message)
-			err := proto.Unmarshal(decodedPacketData[offset:], newProtoMessage)
+			err := proto.Unmarshal(decodedPacketData, newProtoMessage)
 			if err != nil {
 				logger.Error("proto decode err:%v cmd:%v", err, command)
 				return nil
@@ -134,6 +137,7 @@ func (this *GateCodec) DecodePacket(connection Connection, packetHeader PacketHe
 				command:   PacketCommand(command),
 				playerId:  playerId,
 				rpcCallId: rpcCallId,
+				errorCode: errorCode,
 				message:   newProtoMessage,
 			}
 		} else {
@@ -143,7 +147,8 @@ func (this *GateCodec) DecodePacket(connection Connection, packetHeader PacketHe
 				command:   PacketCommand(command),
 				playerId:  playerId,
 				rpcCallId: rpcCallId,
-				data:      decodedPacketData[offset:],
+				errorCode: errorCode,
+				data:      decodedPacketData,
 			}
 		}
 	}
@@ -152,6 +157,7 @@ func (this *GateCodec) DecodePacket(connection Connection, packetHeader PacketHe
 		command:   PacketCommand(command),
 		playerId:  playerId,
 		rpcCallId: rpcCallId,
-		data:      decodedPacketData[offset:],
+		errorCode: errorCode,
+		data:      decodedPacketData,
 	}
 }

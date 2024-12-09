@@ -14,11 +14,10 @@ message LoginReq {
 
 // 账号登录回复
 message LoginRes {
-  string error = 1;
-  string accountName = 2;
-  int64 accountId = 3;
-  string loginSession = 4; // 账号验证成功后的缓存session
-  GameServerInfo gameServer = 5; // 游戏服信息
+  string accountName = 1;
+  int64 accountId = 2;
+  string loginSession = 3; // 账号验证成功后的缓存session
+  GameServerInfo gameServer = 4; // 游戏服信息
 }
 
 // 注册账号
@@ -29,9 +28,8 @@ message AccountReg {
 
 // 注册账号回复
 message AccountRes {
-  string error = 1;
-  string accountName = 2;
-  int64 accountId = 3;
+  string accountName = 1;
+  int64 accountId = 2;
 }
 
 // 游戏服务器信息
@@ -50,12 +48,11 @@ message PlayerEntryGameReq {
 // 玩家登录游戏服回复
 // @Player
 message PlayerEntryGameRes {
-  string error = 1;
-  int64 accountId = 2;
-  int64 playerId = 3;
-  int32 regionId = 4; // 区服id
-  string playerName = 5;
-  PlayerGuildData guildData = 6; // 公会数据
+  int64 accountId = 1;
+  int64 playerId = 2;
+  int32 regionId = 3; // 区服id
+  string playerName = 4;
+  PlayerGuildData guildData = 5; // 公会数据
 }
 
 // 创建角色
@@ -69,10 +66,9 @@ message CreatePlayerReq {
 
 // 创建角色
 message CreatePlayerRes {
-  string error = 1;
-  int64 accountId = 2;
-  int32 regionId = 3; // 区服id
-  string name = 4; // 玩家名
+  int64 accountId = 1;
+  int32 regionId = 2; // 区服id
+  string name = 3; // 玩家名
 }
 
 // 测试命令
