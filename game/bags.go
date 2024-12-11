@@ -43,6 +43,14 @@ func (p *Player) GetBags() *Bags {
 	return p.GetComponentByName(ComponentNameBag).(*Bags)
 }
 
+func (b *Bags) SyncDataToClient() {
+	b.GetPlayer().Send(&pb.BagsSync{
+		CountItem:  b.BagCountItem.Data,
+		UniqueItem: b.BagUniqueItem.Data,
+		Equip:      b.BagEquip.Data,
+	})
+}
+
 // 根据物品配置获取对应的子背包
 func (b *Bags) GetBag(itemCfgId int32) internal.Bag {
 	return b.GetBagByArg(&pb.AddItemArg{

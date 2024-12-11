@@ -10,6 +10,7 @@ import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
+	sync "sync"
 )
 
 const (
@@ -19,21 +20,533 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// 同步活动数据给客户端
+type ActivitySync struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	ActivityId int32                    `protobuf:"varint,1,opt,name=activityId,proto3" json:"activityId,omitempty"` // 活动id
+	BaseData   *ActivityDefaultBaseData `protobuf:"bytes,2,opt,name=baseData,proto3" json:"baseData,omitempty"`      // 活动数据
+}
+
+func (x *ActivitySync) Reset() {
+	*x = ActivitySync{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_activity_proto_msgTypes[0]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *ActivitySync) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ActivitySync) ProtoMessage() {}
+
+func (x *ActivitySync) ProtoReflect() protoreflect.Message {
+	mi := &file_activity_proto_msgTypes[0]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ActivitySync.ProtoReflect.Descriptor instead.
+func (*ActivitySync) Descriptor() ([]byte, []int) {
+	return file_activity_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *ActivitySync) GetActivityId() int32 {
+	if x != nil {
+		return x.ActivityId
+	}
+	return 0
+}
+
+func (x *ActivitySync) GetBaseData() *ActivityDefaultBaseData {
+	if x != nil {
+		return x.BaseData
+	}
+	return nil
+}
+
+// 活动任务数据更新
+type ActivityQuestUpdate struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	ActivityId int32              `protobuf:"varint,1,opt,name=activityId,proto3" json:"activityId,omitempty"` // 活动id
+	QuestCfgId int32              `protobuf:"varint,2,opt,name=questCfgId,proto3" json:"questCfgId,omitempty"` // 任务id
+	Data       *ActivityQuestData `protobuf:"bytes,3,opt,name=data,proto3" json:"data,omitempty"`              // 活动任务数据
+}
+
+func (x *ActivityQuestUpdate) Reset() {
+	*x = ActivityQuestUpdate{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_activity_proto_msgTypes[1]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *ActivityQuestUpdate) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ActivityQuestUpdate) ProtoMessage() {}
+
+func (x *ActivityQuestUpdate) ProtoReflect() protoreflect.Message {
+	mi := &file_activity_proto_msgTypes[1]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ActivityQuestUpdate.ProtoReflect.Descriptor instead.
+func (*ActivityQuestUpdate) Descriptor() ([]byte, []int) {
+	return file_activity_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *ActivityQuestUpdate) GetActivityId() int32 {
+	if x != nil {
+		return x.ActivityId
+	}
+	return 0
+}
+
+func (x *ActivityQuestUpdate) GetQuestCfgId() int32 {
+	if x != nil {
+		return x.QuestCfgId
+	}
+	return 0
+}
+
+func (x *ActivityQuestUpdate) GetData() *ActivityQuestData {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
+// 活动兑换数据更新
+type ActivityExchangeUpdate struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	ActivityId    int32 `protobuf:"varint,1,opt,name=activityId,proto3" json:"activityId,omitempty"`       // 活动id
+	ExchangeCfgId int32 `protobuf:"varint,2,opt,name=exchangeCfgId,proto3" json:"exchangeCfgId,omitempty"` // 兑换配置id
+	ExchangeCount int32 `protobuf:"varint,3,opt,name=exchangeCount,proto3" json:"exchangeCount,omitempty"` // 已兑换次数
+}
+
+func (x *ActivityExchangeUpdate) Reset() {
+	*x = ActivityExchangeUpdate{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_activity_proto_msgTypes[2]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *ActivityExchangeUpdate) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ActivityExchangeUpdate) ProtoMessage() {}
+
+func (x *ActivityExchangeUpdate) ProtoReflect() protoreflect.Message {
+	mi := &file_activity_proto_msgTypes[2]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ActivityExchangeUpdate.ProtoReflect.Descriptor instead.
+func (*ActivityExchangeUpdate) Descriptor() ([]byte, []int) {
+	return file_activity_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *ActivityExchangeUpdate) GetActivityId() int32 {
+	if x != nil {
+		return x.ActivityId
+	}
+	return 0
+}
+
+func (x *ActivityExchangeUpdate) GetExchangeCfgId() int32 {
+	if x != nil {
+		return x.ExchangeCfgId
+	}
+	return 0
+}
+
+func (x *ActivityExchangeUpdate) GetExchangeCount() int32 {
+	if x != nil {
+		return x.ExchangeCount
+	}
+	return 0
+}
+
+// 活动任务完成req
+type ActivityQuestFinishReq struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	ActivityId int32 `protobuf:"varint,1,opt,name=activityId,proto3" json:"activityId,omitempty"` // 活动ids
+	QuestCfgId int32 `protobuf:"varint,2,opt,name=questCfgId,proto3" json:"questCfgId,omitempty"` // 任务id
+}
+
+func (x *ActivityQuestFinishReq) Reset() {
+	*x = ActivityQuestFinishReq{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_activity_proto_msgTypes[3]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *ActivityQuestFinishReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ActivityQuestFinishReq) ProtoMessage() {}
+
+func (x *ActivityQuestFinishReq) ProtoReflect() protoreflect.Message {
+	mi := &file_activity_proto_msgTypes[3]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ActivityQuestFinishReq.ProtoReflect.Descriptor instead.
+func (*ActivityQuestFinishReq) Descriptor() ([]byte, []int) {
+	return file_activity_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *ActivityQuestFinishReq) GetActivityId() int32 {
+	if x != nil {
+		return x.ActivityId
+	}
+	return 0
+}
+
+func (x *ActivityQuestFinishReq) GetQuestCfgId() int32 {
+	if x != nil {
+		return x.QuestCfgId
+	}
+	return 0
+}
+
+// 活动任务完成res
+type ActivityQuestFinishRes struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	ActivityId int32 `protobuf:"varint,1,opt,name=activityId,proto3" json:"activityId,omitempty"` // 活动ids
+	QuestCfgId int32 `protobuf:"varint,2,opt,name=questCfgId,proto3" json:"questCfgId,omitempty"` // 任务id
+}
+
+func (x *ActivityQuestFinishRes) Reset() {
+	*x = ActivityQuestFinishRes{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_activity_proto_msgTypes[4]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *ActivityQuestFinishRes) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ActivityQuestFinishRes) ProtoMessage() {}
+
+func (x *ActivityQuestFinishRes) ProtoReflect() protoreflect.Message {
+	mi := &file_activity_proto_msgTypes[4]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ActivityQuestFinishRes.ProtoReflect.Descriptor instead.
+func (*ActivityQuestFinishRes) Descriptor() ([]byte, []int) {
+	return file_activity_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *ActivityQuestFinishRes) GetActivityId() int32 {
+	if x != nil {
+		return x.ActivityId
+	}
+	return 0
+}
+
+func (x *ActivityQuestFinishRes) GetQuestCfgId() int32 {
+	if x != nil {
+		return x.QuestCfgId
+	}
+	return 0
+}
+
+// 活动兑换请求req
+type ActivityExchangeReq struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	ActivityId    int32 `protobuf:"varint,1,opt,name=activityId,proto3" json:"activityId,omitempty"`       // 活动id
+	ExchangeCfgId int32 `protobuf:"varint,2,opt,name=exchangeCfgId,proto3" json:"exchangeCfgId,omitempty"` // 兑换配置id
+	ExchangeCount int32 `protobuf:"varint,3,opt,name=exchangeCount,proto3" json:"exchangeCount,omitempty"` // 兑换数量(批量兑换)
+}
+
+func (x *ActivityExchangeReq) Reset() {
+	*x = ActivityExchangeReq{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_activity_proto_msgTypes[5]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *ActivityExchangeReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ActivityExchangeReq) ProtoMessage() {}
+
+func (x *ActivityExchangeReq) ProtoReflect() protoreflect.Message {
+	mi := &file_activity_proto_msgTypes[5]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ActivityExchangeReq.ProtoReflect.Descriptor instead.
+func (*ActivityExchangeReq) Descriptor() ([]byte, []int) {
+	return file_activity_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *ActivityExchangeReq) GetActivityId() int32 {
+	if x != nil {
+		return x.ActivityId
+	}
+	return 0
+}
+
+func (x *ActivityExchangeReq) GetExchangeCfgId() int32 {
+	if x != nil {
+		return x.ExchangeCfgId
+	}
+	return 0
+}
+
+func (x *ActivityExchangeReq) GetExchangeCount() int32 {
+	if x != nil {
+		return x.ExchangeCount
+	}
+	return 0
+}
+
+// 活动兑换请求res
+type ActivityExchangeRes struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	ActivityId    int32 `protobuf:"varint,1,opt,name=activityId,proto3" json:"activityId,omitempty"`       // 活动id
+	ExchangeCfgId int32 `protobuf:"varint,2,opt,name=exchangeCfgId,proto3" json:"exchangeCfgId,omitempty"` // 兑换配置id
+	ExchangeCount int32 `protobuf:"varint,3,opt,name=exchangeCount,proto3" json:"exchangeCount,omitempty"` // 兑换数量(批量兑换)
+	CurrentCount  int32 `protobuf:"varint,4,opt,name=currentCount,proto3" json:"currentCount,omitempty"`   // 当前已兑换数量
+}
+
+func (x *ActivityExchangeRes) Reset() {
+	*x = ActivityExchangeRes{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_activity_proto_msgTypes[6]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *ActivityExchangeRes) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ActivityExchangeRes) ProtoMessage() {}
+
+func (x *ActivityExchangeRes) ProtoReflect() protoreflect.Message {
+	mi := &file_activity_proto_msgTypes[6]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ActivityExchangeRes.ProtoReflect.Descriptor instead.
+func (*ActivityExchangeRes) Descriptor() ([]byte, []int) {
+	return file_activity_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *ActivityExchangeRes) GetActivityId() int32 {
+	if x != nil {
+		return x.ActivityId
+	}
+	return 0
+}
+
+func (x *ActivityExchangeRes) GetExchangeCfgId() int32 {
+	if x != nil {
+		return x.ExchangeCfgId
+	}
+	return 0
+}
+
+func (x *ActivityExchangeRes) GetExchangeCount() int32 {
+	if x != nil {
+		return x.ExchangeCount
+	}
+	return 0
+}
+
+func (x *ActivityExchangeRes) GetCurrentCount() int32 {
+	if x != nil {
+		return x.CurrentCount
+	}
+	return 0
+}
+
 var File_activity_proto protoreflect.FileDescriptor
 
 var file_activity_proto_rawDesc = []byte{
 	0x0a, 0x0e, 0x61, 0x63, 0x74, 0x69, 0x76, 0x69, 0x74, 0x79, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f,
-	0x12, 0x07, 0x67, 0x73, 0x65, 0x72, 0x76, 0x65, 0x72, 0x42, 0x06, 0x5a, 0x04, 0x2e, 0x2f, 0x70,
-	0x62, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x12, 0x07, 0x67, 0x73, 0x65, 0x72, 0x76, 0x65, 0x72, 0x1a, 0x0c, 0x70, 0x6c, 0x61, 0x79, 0x65,
+	0x72, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x22, 0x6c, 0x0a, 0x0c, 0x41, 0x63, 0x74, 0x69, 0x76,
+	0x69, 0x74, 0x79, 0x53, 0x79, 0x6e, 0x63, 0x12, 0x1e, 0x0a, 0x0a, 0x61, 0x63, 0x74, 0x69, 0x76,
+	0x69, 0x74, 0x79, 0x49, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x05, 0x52, 0x0a, 0x61, 0x63, 0x74,
+	0x69, 0x76, 0x69, 0x74, 0x79, 0x49, 0x64, 0x12, 0x3c, 0x0a, 0x08, 0x62, 0x61, 0x73, 0x65, 0x44,
+	0x61, 0x74, 0x61, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x20, 0x2e, 0x67, 0x73, 0x65, 0x72,
+	0x76, 0x65, 0x72, 0x2e, 0x41, 0x63, 0x74, 0x69, 0x76, 0x69, 0x74, 0x79, 0x44, 0x65, 0x66, 0x61,
+	0x75, 0x6c, 0x74, 0x42, 0x61, 0x73, 0x65, 0x44, 0x61, 0x74, 0x61, 0x52, 0x08, 0x62, 0x61, 0x73,
+	0x65, 0x44, 0x61, 0x74, 0x61, 0x22, 0x85, 0x01, 0x0a, 0x13, 0x41, 0x63, 0x74, 0x69, 0x76, 0x69,
+	0x74, 0x79, 0x51, 0x75, 0x65, 0x73, 0x74, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x12, 0x1e, 0x0a,
+	0x0a, 0x61, 0x63, 0x74, 0x69, 0x76, 0x69, 0x74, 0x79, 0x49, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28,
+	0x05, 0x52, 0x0a, 0x61, 0x63, 0x74, 0x69, 0x76, 0x69, 0x74, 0x79, 0x49, 0x64, 0x12, 0x1e, 0x0a,
+	0x0a, 0x71, 0x75, 0x65, 0x73, 0x74, 0x43, 0x66, 0x67, 0x49, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28,
+	0x05, 0x52, 0x0a, 0x71, 0x75, 0x65, 0x73, 0x74, 0x43, 0x66, 0x67, 0x49, 0x64, 0x12, 0x2e, 0x0a,
+	0x04, 0x64, 0x61, 0x74, 0x61, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1a, 0x2e, 0x67, 0x73,
+	0x65, 0x72, 0x76, 0x65, 0x72, 0x2e, 0x41, 0x63, 0x74, 0x69, 0x76, 0x69, 0x74, 0x79, 0x51, 0x75,
+	0x65, 0x73, 0x74, 0x44, 0x61, 0x74, 0x61, 0x52, 0x04, 0x64, 0x61, 0x74, 0x61, 0x22, 0x84, 0x01,
+	0x0a, 0x16, 0x41, 0x63, 0x74, 0x69, 0x76, 0x69, 0x74, 0x79, 0x45, 0x78, 0x63, 0x68, 0x61, 0x6e,
+	0x67, 0x65, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x12, 0x1e, 0x0a, 0x0a, 0x61, 0x63, 0x74, 0x69,
+	0x76, 0x69, 0x74, 0x79, 0x49, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x05, 0x52, 0x0a, 0x61, 0x63,
+	0x74, 0x69, 0x76, 0x69, 0x74, 0x79, 0x49, 0x64, 0x12, 0x24, 0x0a, 0x0d, 0x65, 0x78, 0x63, 0x68,
+	0x61, 0x6e, 0x67, 0x65, 0x43, 0x66, 0x67, 0x49, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x05, 0x52,
+	0x0d, 0x65, 0x78, 0x63, 0x68, 0x61, 0x6e, 0x67, 0x65, 0x43, 0x66, 0x67, 0x49, 0x64, 0x12, 0x24,
+	0x0a, 0x0d, 0x65, 0x78, 0x63, 0x68, 0x61, 0x6e, 0x67, 0x65, 0x43, 0x6f, 0x75, 0x6e, 0x74, 0x18,
+	0x03, 0x20, 0x01, 0x28, 0x05, 0x52, 0x0d, 0x65, 0x78, 0x63, 0x68, 0x61, 0x6e, 0x67, 0x65, 0x43,
+	0x6f, 0x75, 0x6e, 0x74, 0x22, 0x58, 0x0a, 0x16, 0x41, 0x63, 0x74, 0x69, 0x76, 0x69, 0x74, 0x79,
+	0x51, 0x75, 0x65, 0x73, 0x74, 0x46, 0x69, 0x6e, 0x69, 0x73, 0x68, 0x52, 0x65, 0x71, 0x12, 0x1e,
+	0x0a, 0x0a, 0x61, 0x63, 0x74, 0x69, 0x76, 0x69, 0x74, 0x79, 0x49, 0x64, 0x18, 0x01, 0x20, 0x01,
+	0x28, 0x05, 0x52, 0x0a, 0x61, 0x63, 0x74, 0x69, 0x76, 0x69, 0x74, 0x79, 0x49, 0x64, 0x12, 0x1e,
+	0x0a, 0x0a, 0x71, 0x75, 0x65, 0x73, 0x74, 0x43, 0x66, 0x67, 0x49, 0x64, 0x18, 0x02, 0x20, 0x01,
+	0x28, 0x05, 0x52, 0x0a, 0x71, 0x75, 0x65, 0x73, 0x74, 0x43, 0x66, 0x67, 0x49, 0x64, 0x22, 0x58,
+	0x0a, 0x16, 0x41, 0x63, 0x74, 0x69, 0x76, 0x69, 0x74, 0x79, 0x51, 0x75, 0x65, 0x73, 0x74, 0x46,
+	0x69, 0x6e, 0x69, 0x73, 0x68, 0x52, 0x65, 0x73, 0x12, 0x1e, 0x0a, 0x0a, 0x61, 0x63, 0x74, 0x69,
+	0x76, 0x69, 0x74, 0x79, 0x49, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x05, 0x52, 0x0a, 0x61, 0x63,
+	0x74, 0x69, 0x76, 0x69, 0x74, 0x79, 0x49, 0x64, 0x12, 0x1e, 0x0a, 0x0a, 0x71, 0x75, 0x65, 0x73,
+	0x74, 0x43, 0x66, 0x67, 0x49, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x05, 0x52, 0x0a, 0x71, 0x75,
+	0x65, 0x73, 0x74, 0x43, 0x66, 0x67, 0x49, 0x64, 0x22, 0x81, 0x01, 0x0a, 0x13, 0x41, 0x63, 0x74,
+	0x69, 0x76, 0x69, 0x74, 0x79, 0x45, 0x78, 0x63, 0x68, 0x61, 0x6e, 0x67, 0x65, 0x52, 0x65, 0x71,
+	0x12, 0x1e, 0x0a, 0x0a, 0x61, 0x63, 0x74, 0x69, 0x76, 0x69, 0x74, 0x79, 0x49, 0x64, 0x18, 0x01,
+	0x20, 0x01, 0x28, 0x05, 0x52, 0x0a, 0x61, 0x63, 0x74, 0x69, 0x76, 0x69, 0x74, 0x79, 0x49, 0x64,
+	0x12, 0x24, 0x0a, 0x0d, 0x65, 0x78, 0x63, 0x68, 0x61, 0x6e, 0x67, 0x65, 0x43, 0x66, 0x67, 0x49,
+	0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x05, 0x52, 0x0d, 0x65, 0x78, 0x63, 0x68, 0x61, 0x6e, 0x67,
+	0x65, 0x43, 0x66, 0x67, 0x49, 0x64, 0x12, 0x24, 0x0a, 0x0d, 0x65, 0x78, 0x63, 0x68, 0x61, 0x6e,
+	0x67, 0x65, 0x43, 0x6f, 0x75, 0x6e, 0x74, 0x18, 0x03, 0x20, 0x01, 0x28, 0x05, 0x52, 0x0d, 0x65,
+	0x78, 0x63, 0x68, 0x61, 0x6e, 0x67, 0x65, 0x43, 0x6f, 0x75, 0x6e, 0x74, 0x22, 0xa5, 0x01, 0x0a,
+	0x13, 0x41, 0x63, 0x74, 0x69, 0x76, 0x69, 0x74, 0x79, 0x45, 0x78, 0x63, 0x68, 0x61, 0x6e, 0x67,
+	0x65, 0x52, 0x65, 0x73, 0x12, 0x1e, 0x0a, 0x0a, 0x61, 0x63, 0x74, 0x69, 0x76, 0x69, 0x74, 0x79,
+	0x49, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x05, 0x52, 0x0a, 0x61, 0x63, 0x74, 0x69, 0x76, 0x69,
+	0x74, 0x79, 0x49, 0x64, 0x12, 0x24, 0x0a, 0x0d, 0x65, 0x78, 0x63, 0x68, 0x61, 0x6e, 0x67, 0x65,
+	0x43, 0x66, 0x67, 0x49, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x05, 0x52, 0x0d, 0x65, 0x78, 0x63,
+	0x68, 0x61, 0x6e, 0x67, 0x65, 0x43, 0x66, 0x67, 0x49, 0x64, 0x12, 0x24, 0x0a, 0x0d, 0x65, 0x78,
+	0x63, 0x68, 0x61, 0x6e, 0x67, 0x65, 0x43, 0x6f, 0x75, 0x6e, 0x74, 0x18, 0x03, 0x20, 0x01, 0x28,
+	0x05, 0x52, 0x0d, 0x65, 0x78, 0x63, 0x68, 0x61, 0x6e, 0x67, 0x65, 0x43, 0x6f, 0x75, 0x6e, 0x74,
+	0x12, 0x22, 0x0a, 0x0c, 0x63, 0x75, 0x72, 0x72, 0x65, 0x6e, 0x74, 0x43, 0x6f, 0x75, 0x6e, 0x74,
+	0x18, 0x04, 0x20, 0x01, 0x28, 0x05, 0x52, 0x0c, 0x63, 0x75, 0x72, 0x72, 0x65, 0x6e, 0x74, 0x43,
+	0x6f, 0x75, 0x6e, 0x74, 0x42, 0x06, 0x5a, 0x04, 0x2e, 0x2f, 0x70, 0x62, 0x62, 0x06, 0x70, 0x72,
+	0x6f, 0x74, 0x6f, 0x33,
 }
 
-var file_activity_proto_goTypes = []interface{}{}
+var (
+	file_activity_proto_rawDescOnce sync.Once
+	file_activity_proto_rawDescData = file_activity_proto_rawDesc
+)
+
+func file_activity_proto_rawDescGZIP() []byte {
+	file_activity_proto_rawDescOnce.Do(func() {
+		file_activity_proto_rawDescData = protoimpl.X.CompressGZIP(file_activity_proto_rawDescData)
+	})
+	return file_activity_proto_rawDescData
+}
+
+var file_activity_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_activity_proto_goTypes = []interface{}{
+	(*ActivitySync)(nil),            // 0: gserver.ActivitySync
+	(*ActivityQuestUpdate)(nil),     // 1: gserver.ActivityQuestUpdate
+	(*ActivityExchangeUpdate)(nil),  // 2: gserver.ActivityExchangeUpdate
+	(*ActivityQuestFinishReq)(nil),  // 3: gserver.ActivityQuestFinishReq
+	(*ActivityQuestFinishRes)(nil),  // 4: gserver.ActivityQuestFinishRes
+	(*ActivityExchangeReq)(nil),     // 5: gserver.ActivityExchangeReq
+	(*ActivityExchangeRes)(nil),     // 6: gserver.ActivityExchangeRes
+	(*ActivityDefaultBaseData)(nil), // 7: gserver.ActivityDefaultBaseData
+	(*ActivityQuestData)(nil),       // 8: gserver.ActivityQuestData
+}
 var file_activity_proto_depIdxs = []int32{
-	0, // [0:0] is the sub-list for method output_type
-	0, // [0:0] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	7, // 0: gserver.ActivitySync.baseData:type_name -> gserver.ActivityDefaultBaseData
+	8, // 1: gserver.ActivityQuestUpdate.data:type_name -> gserver.ActivityQuestData
+	2, // [2:2] is the sub-list for method output_type
+	2, // [2:2] is the sub-list for method input_type
+	2, // [2:2] is the sub-list for extension type_name
+	2, // [2:2] is the sub-list for extension extendee
+	0, // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_activity_proto_init() }
@@ -41,18 +554,106 @@ func file_activity_proto_init() {
 	if File_activity_proto != nil {
 		return
 	}
+	file_player_proto_init()
+	if !protoimpl.UnsafeEnabled {
+		file_activity_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*ActivitySync); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_activity_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*ActivityQuestUpdate); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_activity_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*ActivityExchangeUpdate); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_activity_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*ActivityQuestFinishReq); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_activity_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*ActivityQuestFinishRes); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_activity_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*ActivityExchangeReq); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_activity_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*ActivityExchangeRes); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_activity_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   0,
+			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
 		GoTypes:           file_activity_proto_goTypes,
 		DependencyIndexes: file_activity_proto_depIdxs,
+		MessageInfos:      file_activity_proto_msgTypes,
 	}.Build()
 	File_activity_proto = out.File
 	file_activity_proto_rawDesc = nil

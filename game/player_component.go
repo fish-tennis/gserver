@@ -9,6 +9,12 @@ var (
 	_playerComponentRegister = gentity.ComponentRegister[*Player]{}
 )
 
+// 同步数据接口
+type DataSyncer interface {
+	// 同步数据给客户端
+	SyncDataToClient()
+}
+
 // 玩家组件接口
 type PlayerComponent interface {
 	gentity.Component

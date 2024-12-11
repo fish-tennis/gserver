@@ -39,8 +39,8 @@ type Activities struct {
 	// eventMapping map[string][]ProgressHolder // key:eventName
 }
 
-func (this *Player) GetActivities() *Activities {
-	return this.GetComponentByName(ComponentNameActivities).(*Activities)
+func (p *Player) GetActivities() *Activities {
+	return p.GetComponentByName(ComponentNameActivities).(*Activities)
 }
 
 // 根据模板创建活动对象
@@ -57,42 +57,47 @@ func CreateNewActivity(activityCfgId int32, activities internal.ActivityMgr, t t
 	return nil
 }
 
-func (this *Activities) GetActivity(activityId int32) internal.Activity {
-	activity, _ := this.Data.Data[activityId]
+func (a *Activities) GetActivity(activityId int32) internal.Activity {
+	activity, _ := a.Data.Data[activityId]
 	return activity
 }
 
-func (this *Activities) AddNewActivity(activityCfg *pb.ActivityCfg, t time.Time) internal.Activity {
-	activity := CreateNewActivity(activityCfg.CfgId, this, t)
+func (a *Activities) GetActivityDefault(activityId int32) *ActivityDefault {
+	activityDefault, _ := a.GetActivity(activityId).(*ActivityDefault)
+	return activityDefault
+}
+
+func (a *Activities) AddNewActivity(activityCfg *pb.ActivityCfg, t time.Time) internal.Activity {
+	activity := CreateNewActivity(activityCfg.CfgId, a, t)
 	if activity == nil {
 		slog.Error("AddNewActivityErr", "activityId", activityCfg.CfgId)
 		return nil
 	}
-	this.Data.Set(activity.GetId(), activity)
-	slog.Debug("AddNewActivity", "playerId", this.GetPlayer().GetId(), "activityId", activityCfg.CfgId)
+	a.Data.Set(activity.GetId(), activity)
+	slog.Debug("AddNewActivity", "playerId", a.GetPlayer().GetId(), "activityId", activityCfg.CfgId)
 	return activity
 }
 
-func (this *Activities) RemoveActivity(activityId int32) {
-	this.Data.Delete(activityId)
+func (a *Activities) RemoveActivity(activityId int32) {
+	a.Data.Delete(activityId)
 }
 
-func (this *Activities) AddAllActivities(t time.Time) {
+func (a *Activities) AddAllActivities(t time.Time) {
 	cfg.GetActivityCfgMgr().Range(func(activityCfg *pb.ActivityCfg) bool {
-		if this.GetActivity(activityCfg.CfgId) == nil {
-			if this.CanJoin(activityCfg, t) {
-				this.AddNewActivity(activityCfg, t)
+		if a.GetActivity(activityCfg.CfgId) == nil {
+			if a.CanJoin(activityCfg, t) {
+				a.AddNewActivity(activityCfg, t)
 			}
 		}
 		return true
 	})
 }
 
-func (this *Activities) LoadFromBytesMap(bytesMap any) error {
+func (a *Activities) LoadFromBytesMap(bytesMap any) error {
 	sourceData := bytesMap.(map[int32][]byte)
 	for activityId, bytes := range sourceData {
 		// 动态构建活动对象
-		activity := CreateNewActivity(activityId, this, this.GetPlayer().GetTimerEntries().Now())
+		activity := CreateNewActivity(activityId, a, a.GetPlayer().GetTimerEntries().Now())
 		if activity == nil {
 			logger.Error(fmt.Sprintf("activity nil id:%v", activityId))
 			continue
@@ -102,38 +107,59 @@ func (this *Activities) LoadFromBytesMap(bytesMap any) error {
 			logger.Error(fmt.Sprintf("activity load %v err:%v", activityId, err.Error()))
 			return err
 		}
-		this.Data.Data[activityId] = activity // 加载数据,不设置dirty
+		a.Data.Data[activityId] = activity // 加载数据,不设置dirty
 	}
 	return nil
 }
 
+func (a *Activities) OnDataLoad() {
+	a.Data.Range(func(k int32, activity internal.Activity) bool {
+		if dataLoader, ok := activity.(internal.DataLoader); ok {
+			dataLoader.OnDataLoad()
+			slog.Debug("OnDataLoad", "id", activity.GetId())
+		}
+		return true
+	})
+}
+
+func (a *Activities) SyncDataToClient() {
+	// 同步各活动的数据给客户端
+	a.Data.Range(func(k int32, activity internal.Activity) bool {
+		if dataSyncer, ok := activity.(DataSyncer); ok {
+			dataSyncer.SyncDataToClient()
+			slog.Debug("SyncDataToClient", "id", activity.GetId())
+		}
+		return true
+	})
+}
+
 // 事件分发
-func (this *Activities) OnEvent(event interface{}) {
-	this.Data.Range(func(k int32, activity internal.Activity) bool {
+func (a *Activities) OnEvent(event interface{}) {
+	a.Data.Range(func(k int32, activity internal.Activity) bool {
 		activity.OnEvent(event)
 		return true
 	})
 }
 
 // 检查活动是否能参加
-func (this *Activities) CanJoin(activityCfg *pb.ActivityCfg, t time.Time) bool {
+func (a *Activities) CanJoin(activityCfg *pb.ActivityCfg, t time.Time) bool {
 	if activityCfg.IsOff {
 		return false
 	}
-	if activityCfg.MinPlayerLevel > 0 && this.GetPlayer().GetLevel() < activityCfg.MinPlayerLevel {
+	if activityCfg.MinPlayerLevel > 0 && a.GetPlayer().GetLevel() < activityCfg.MinPlayerLevel {
 		return false
 	}
-	if activityCfg.MaxPlayerLevel > 0 && this.GetPlayer().GetLevel() > activityCfg.MaxPlayerLevel {
+	if activityCfg.MaxPlayerLevel > 0 && a.GetPlayer().GetLevel() > activityCfg.MaxPlayerLevel {
 		return false
 	}
-	if !this.CheckJoinTime(activityCfg, t) {
+	if !a.CheckJoinTime(activityCfg, t) {
 		return false
 	}
 	return true
 }
 
 // 检查活动时间能否参加
-func (this *Activities) CheckJoinTime(activityCfg *pb.ActivityCfg, t time.Time) bool {
+func (a *Activities) CheckJoinTime(activityCfg *pb.ActivityCfg, t time.Time) bool {
 	switch activityCfg.TimeType {
 	case int32(pb.TimeType_TimeType_Timestamp):
 		now := t.Unix()
@@ -157,7 +183,7 @@ func (this *Activities) CheckJoinTime(activityCfg *pb.ActivityCfg, t time.Time) 
 }
 
 // 检查活动时间是否结束
-func (this *Activities) CheckEndTime(activityCfg *pb.ActivityCfg, t time.Time) bool {
+func (a *Activities) CheckEndTime(activityCfg *pb.ActivityCfg, t time.Time) bool {
 	switch activityCfg.TimeType {
 	case int32(pb.TimeType_TimeType_Timestamp):
 		now := t.Unix()
@@ -175,13 +201,13 @@ func (this *Activities) CheckEndTime(activityCfg *pb.ActivityCfg, t time.Time) b
 }
 
 // 检查已经结束的活动
-func (this *Activities) CheckEnd(t time.Time) {
-	for activityId, activity := range this.Data.Data {
+func (a *Activities) CheckEnd(t time.Time) {
+	for activityId, activity := range a.Data.Data {
 		activityCfg := cfg.GetActivityCfgMgr().GetActivityCfg(activityId)
 		if activityCfg == nil {
 			continue
 		}
-		if this.CheckEndTime(activityCfg, t) {
+		if a.CheckEndTime(activityCfg, t) {
 			activity.OnEnd(t)
 		}
 	}
@@ -203,9 +229,4 @@ type ChildActivity struct {
 // 活动配置数据
 func (this *ChildActivity) GetActivityCfg() *pb.ActivityCfg {
 	return cfg.GetActivityCfgMgr().GetActivityCfg(this.GetId())
-}
-
-type ActivityConditionArg struct {
-	Activities *Activities
-	Activity   internal.Activity
 }

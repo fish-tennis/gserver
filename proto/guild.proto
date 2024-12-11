@@ -4,6 +4,8 @@ option go_package = "./pb";
 
 package gserver;
 
+import "player.proto";
+
 // 公会相关proto
 
 enum GuildPosition {
@@ -42,6 +44,10 @@ message GuildInfo {
   string name = 2; // 名称
   string intro = 3; // 介绍
   int32 memberCount = 4; // 成员数
+}
+
+message GuildSync {
+  PlayerGuildData data = 1;
 }
 
 // 申请加入公会的请求信息

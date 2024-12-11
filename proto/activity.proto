@@ -3,3 +3,52 @@ syntax = "proto3";
 option go_package = "./pb";
 
 package gserver;
+
+import "player.proto";
+
+// 同步活动数据给客户端
+message ActivitySync {
+  int32 activityId = 1; // 活动id
+  ActivityDefaultBaseData baseData = 2; // 活动数据
+}
+
+// 活动任务数据更新
+message ActivityQuestUpdate {
+  int32 activityId = 1; // 活动id
+  int32 questCfgId = 2; // 任务id
+  ActivityQuestData data = 3; // 活动任务数据
+}
+
+// 活动兑换数据更新
+message ActivityExchangeUpdate {
+  int32 activityId = 1; // 活动id
+  int32 exchangeCfgId = 2; // 兑换配置id
+  int32 exchangeCount = 3; // 已兑换次数
+}
+
+// 活动任务完成req
+message ActivityQuestFinishReq {
+  int32 activityId = 1; // 活动ids
+  int32 questCfgId = 2; // 任务id
+}
+
+// 活动任务完成res
+message ActivityQuestFinishRes {
+  int32 activityId = 1; // 活动ids
+  int32 questCfgId = 2; // 任务id
+}
+
+// 活动兑换请求req
+message ActivityExchangeReq {
+  int32 activityId = 1; // 活动id
+  int32 exchangeCfgId = 2; // 兑换配置id
+  int32 exchangeCount = 3; // 兑换数量(批量兑换)
+}
+
+// 活动兑换请求res
+message ActivityExchangeRes {
+  int32 activityId = 1; // 活动id
+  int32 exchangeCfgId = 2; // 兑换配置id
+  int32 exchangeCount = 3; // 兑换数量(批量兑换)
+  int32 currentCount = 4; // 当前已兑换数量
+}

@@ -38,71 +38,59 @@ type BaseInfo struct {
 	Data *pb.BaseInfo `db:"plain"`
 }
 
-func (this *Player) GetBaseInfo() *BaseInfo {
-	return this.GetComponentByName(ComponentNameBaseInfo).(*BaseInfo)
+func (p *Player) GetBaseInfo() *BaseInfo {
+	return p.GetComponentByName(ComponentNameBaseInfo).(*BaseInfo)
 }
 
-// 玩家进游戏服成功,非客户端消息
-// 这种格式写的函数可以自动注册非客户端的消息回调
-func (this *BaseInfo) HandlePlayerEntryGameOk(msg *pb.PlayerEntryGameOk) {
-	logger.Debug("HandlePlayerEntryGameOk:%v", msg)
-	now := this.GetPlayer().GetTimerEntries().Now().Unix()
-	var offlineSeconds int32
-	if this.Data.LastLogoutTimestamp > 0 && now > this.Data.LastLogoutTimestamp {
-		offlineSeconds = int32(now - this.Data.LastLogoutTimestamp)
-	}
-	this.Data.LastLoginTimestamp = now
-	this.SetDirty()
-	// 分发事件:玩家进游戏服
-	this.GetPlayer().FireEvent(&internal.EventPlayerEntryGame{
-		IsReconnect:    msg.IsReconnect,
-		OfflineSeconds: offlineSeconds,
+func (b *BaseInfo) SyncDataToClient() {
+	b.GetPlayer().Send(&pb.BaseInfoSync{
+		Data: b.Data,
 	})
 }
 
-func (this *BaseInfo) IncExp(incExp int32) {
-	oldLevel := this.Data.Level
-	this.Data.Exp += incExp
+func (b *BaseInfo) IncExp(incExp int32) {
+	oldLevel := b.Data.Level
+	b.Data.Exp += incExp
 	for {
-		if this.Data.Level < cfg.GetLevelCfgMgr().GetMaxLevel() {
-			needExp := cfg.GetLevelCfgMgr().GetNeedExp(this.Data.Level + 1)
-			if needExp > 0 && this.Data.Exp >= needExp {
-				this.Data.Level++
-				this.Data.Exp -= needExp
+		if b.Data.Level < cfg.GetLevelCfgMgr().GetMaxLevel() {
+			needExp := cfg.GetLevelCfgMgr().GetNeedExp(b.Data.Level + 1)
+			if needExp > 0 && b.Data.Exp >= needExp {
+				b.Data.Level++
+				b.Data.Exp -= needExp
 				continue
 			}
 		}
 		break
 	}
-	logger.Debug("%v exp:%v lvl:%v", this.GetPlayerId(), this.Data.Exp, this.Data.Level)
-	if oldLevel != this.Data.Level {
-		this.GetPlayer().FireConditionEvent(&pb.EventPlayerProperty{
-			PlayerId:      this.GetPlayerId(),
+	logger.Debug("%v exp:%v lvl:%v", b.GetPlayerId(), b.Data.Exp, b.Data.Level)
+	if oldLevel != b.Data.Level {
+		b.GetPlayer().FireConditionEvent(&pb.EventPlayerProperty{
+			PlayerId:      b.GetPlayerId(),
 			PropertyName:  "Level",
-			PropertyValue: this.Data.Level - oldLevel,
+			PropertyValue: b.Data.Level - oldLevel,
 		})
 	}
 	// 修改了需要保存的数据后,必须设置标记
-	this.SetDirty()
+	b.SetDirty()
 }
 
-func (this *BaseInfo) TriggerPlayerExit(event *internal.EventPlayerExit) {
-	this.Data.TotalOnlineSeconds += this.GetOnlineSecondsThisTime()
-	this.Data.LastLogoutTimestamp = this.GetPlayer().GetTimerEntries().Now().Unix()
-	this.SetDirty()
+func (b *BaseInfo) TriggerPlayerExit(event *internal.EventPlayerExit) {
+	b.Data.TotalOnlineSeconds += b.GetOnlineSecondsThisTime()
+	b.Data.LastLogoutTimestamp = b.GetPlayer().GetTimerEntries().Now().Unix()
+	b.SetDirty()
 }
 
 // 本次登录在线时长
-func (this *BaseInfo) GetOnlineSecondsThisTime() int32 {
-	now := this.GetPlayer().GetTimerEntries().Now().Unix()
+func (b *BaseInfo) GetOnlineSecondsThisTime() int32 {
+	now := b.GetPlayer().GetTimerEntries().Now().Unix()
 	var onlineSeconds int32
-	if this.Data.LastLoginTimestamp > 0 && now > this.Data.LastLoginTimestamp {
-		onlineSeconds = int32(now - this.Data.LastLoginTimestamp)
+	if b.Data.LastLoginTimestamp > 0 && now > b.Data.LastLoginTimestamp {
+		onlineSeconds = int32(now - b.Data.LastLoginTimestamp)
 	}
 	return onlineSeconds
 }
 
 // 总在线时长
-func (this *BaseInfo) GetTotalOnlineSeconds() int32 {
-	return this.Data.TotalOnlineSeconds + this.GetOnlineSecondsThisTime()
+func (b *BaseInfo) GetTotalOnlineSeconds() int32 {
+	return b.Data.TotalOnlineSeconds + b.GetOnlineSecondsThisTime()
 }

@@ -44,120 +44,121 @@ type Player struct {
 }
 
 // 玩家名(unique)
-func (this *Player) GetName() string {
-	return this.name
+func (p *Player) GetName() string {
+	return p.name
 }
 
 // 账号id
-func (this *Player) GetAccountId() int64 {
-	return this.accountId
+func (p *Player) GetAccountId() int64 {
+	return p.accountId
 }
 
 // 区服id
-func (this *Player) GetRegionId() int32 {
-	return this.regionId
+func (p *Player) GetRegionId() int32 {
+	return p.regionId
 }
 
 // 玩家数据保存数据库
-func (this *Player) SaveDb(removeCacheAfterSaveDb bool) error {
-	return gentity.SaveEntityChangedDataToDb(db.GetPlayerDb(), this, cache.Get(), removeCacheAfterSaveDb, PlayerCachePrefix)
+func (p *Player) SaveDb(removeCacheAfterSaveDb bool) error {
+	return gentity.SaveEntityChangedDataToDb(db.GetPlayerDb(), p, cache.Get(), removeCacheAfterSaveDb, PlayerCachePrefix)
 }
 
-func (this *Player) SaveCache(kvCache gentity.KvCache) error {
-	return this.BaseEntity.SaveCache(kvCache, PlayerCachePrefix, this.GetId())
+func (p *Player) SaveCache(kvCache gentity.KvCache) error {
+	return p.BaseEntity.SaveCache(kvCache, PlayerCachePrefix, p.GetId())
 }
 
 // 设置关联的连接,支持客户端直连模式和网关模式
-func (this *Player) SetConnection(connection Connection, useGate bool) {
-	this.useGate = useGate
+func (p *Player) SetConnection(connection Connection, useGate bool) {
+	p.useGate = useGate
 	if !useGate {
 		// 取消之前的连接和该玩家的关联
-		if this.connection != nil && this.connection != connection {
-			this.connection.SetTag(nil)
+		if p.connection != nil && p.connection != connection {
+			p.connection.SetTag(nil)
 		}
 		// 客户端直连模式,设置连接和玩家的关联
 		if connection != nil {
-			connection.SetTag(this.GetId())
+			connection.SetTag(p.GetId())
 		}
 	}
-	this.connection = connection
+	p.connection = connection
 }
 
-func (this *Player) ResetConnection() {
-	this.connection = nil
+func (p *Player) ResetConnection() {
+	p.connection = nil
 }
 
-func (this *Player) GetConnection() Connection {
-	return this.connection
+func (p *Player) GetConnection() Connection {
+	return p.connection
 }
 
-func (this *Player) OnDisconnect(connection Connection) {
-	if this.GetConnection() == connection {
-		this.ResetConnection()
-		this.Stop()
-		logger.Debug("player %v exit", this.GetId())
+func (p *Player) OnDisconnect(connection Connection) {
+	if p.GetConnection() == connection {
+		p.ResetConnection()
+		p.Stop()
+		logger.Debug("player %v exit", p.GetId())
 	}
 }
 
 // 发包(protobuf)
 // NOTE:调用Send(message)之后,不要再对message进行读写!
-func (this *Player) Send(message proto.Message, opts ...SendOption) bool {
+func (p *Player) Send(message proto.Message, opts ...SendOption) bool {
 	clientCmd := network.GetCommandByProto(message)
 	if clientCmd <= 0 {
 		slog.Error("clientCmdNotFound", "messageName", proto.MessageName(message))
 		return false
 	}
-	return this.SendWithCommand(PacketCommand(clientCmd), message, opts...)
+	return p.SendWithCommand(PacketCommand(clientCmd), message, opts...)
 }
 
-func (this *Player) SendWithCommand(cmd PacketCommand, message proto.Message, opts ...SendOption) bool {
-	if this.connection != nil {
-		if this.useGate {
+func (p *Player) SendWithCommand(cmd PacketCommand, message proto.Message, opts ...SendOption) bool {
+	if p.connection != nil {
+		if p.useGate {
 			// 网关模式,自动附加上playerId
-			return this.connection.SendPacket(network.NewGatePacket(this.GetId(), PacketCommand(cmd), message), opts...)
+			return p.connection.SendPacket(network.NewGatePacket(p.GetId(), PacketCommand(cmd), message), opts...)
 		} else {
-			return this.connection.Send(PacketCommand(cmd), message, opts...)
+			return p.connection.Send(PacketCommand(cmd), message, opts...)
 		}
 	}
 	return false
 }
 
-func (this *Player) SendPacket(packet Packet, opts ...SendOption) bool {
-	if this.connection != nil {
-		if this.useGate {
+func (p *Player) SendPacket(packet Packet, opts ...SendOption) bool {
+	if p.connection != nil {
+		if p.useGate {
 			// 网关模式,自动附加上playerId
-			return this.connection.SendPacket(network.NewGatePacket(this.GetId(), packet.Command(), packet.Message()).
+			return p.connection.SendPacket(network.NewGatePacket(p.GetId(), packet.Command(), packet.Message()).
 				WithStreamData(packet.GetStreamData()).WithRpc(packet), opts...)
 		} else {
-			return this.connection.SendPacket(packet, opts...)
+			return p.connection.SendPacket(packet, opts...)
 		}
 	}
 	return false
 }
 
 // 通用的错误返回消息
-func (this *Player) SendErrorRes(errorReqCmd PacketCommand, errorMsg string) bool {
-	return this.SendWithCommand(PacketCommand(pb.CmdClient_Cmd_ErrorRes), &pb.ErrorRes{
+func (p *Player) SendErrorRes(errorReqCmd PacketCommand, errorMsg string) bool {
+	return p.SendWithCommand(PacketCommand(pb.CmdClient_Cmd_ErrorRes), &pb.ErrorRes{
 		Command:   int32(errorReqCmd),
 		ResultStr: errorMsg,
 	})
 }
 
 // 分发事件
-func (this *Player) FireEvent(event any) {
+func (p *Player) FireEvent(event any) {
+	slog.Debug("FireEvent", "pid", p.GetId(), "event", event)
 	// 嵌套检测
-	if this.fireEventLoopChecker == nil {
-		this.fireEventLoopChecker = make(map[reflect.Type]int32)
+	if p.fireEventLoopChecker == nil {
+		p.fireEventLoopChecker = make(map[reflect.Type]int32)
 	}
 	eventTyp := reflect.TypeOf(event)
-	this.fireEventLoopChecker[eventTyp]++
+	p.fireEventLoopChecker[eventTyp]++
 	defer func() {
-		this.fireEventLoopChecker[eventTyp]--
-		if this.fireEventLoopChecker[eventTyp] <= 0 {
-			delete(this.fireEventLoopChecker, eventTyp)
+		p.fireEventLoopChecker[eventTyp]--
+		if p.fireEventLoopChecker[eventTyp] <= 0 {
+			delete(p.fireEventLoopChecker, eventTyp)
 		}
 	}()
-	curLoopCount := this.fireEventLoopChecker[eventTyp]
+	curLoopCount := p.fireEventLoopChecker[eventTyp]
 	if curLoopCount > 1 {
 		slog.Debug("FireEventLoopChecker", "loop", curLoopCount)
 		if curLoopCount > internal.SameEventLoopLimit {
@@ -167,63 +168,63 @@ func (this *Player) FireEvent(event any) {
 		}
 	}
 	// 注册的事件响应接口
-	_playerEventHandlerMgr.Invoke(this, event)
+	_playerEventHandlerMgr.Invoke(p, event)
 	// 有些模块有通用的处理接口
-	this.RangeEventReceiver(func(eventReceiver gentity.EventReceiver) bool {
+	p.RangeEventReceiver(func(eventReceiver gentity.EventReceiver) bool {
 		eventReceiver.OnEvent(event)
 		return true
 	})
 	// 进度更新
-	this.progressEventMapping.OnTriggerEvent(event)
+	p.progressEventMapping.OnTriggerEvent(event)
 }
 
 // 分发条件相关事件
-func (this *Player) FireConditionEvent(event interface{}) {
-	logger.Debug("%v FireConditionEvent:%v", this.GetId(), event)
+func (p *Player) FireConditionEvent(event interface{}) {
+	logger.Debug("%v FireConditionEvent:%v", p.GetId(), event)
 	// 进度更新
-	this.progressEventMapping.OnTriggerEvent(event)
+	p.progressEventMapping.OnTriggerEvent(event)
 }
 
-func (this *Player) GetLevel() int32 {
-	return this.GetBaseInfo().Data.Level
+func (p *Player) GetLevel() int32 {
+	return p.GetBaseInfo().Data.Level
 }
 
 // 开启消息处理协程
 // 每个玩家一个独立的消息处理协程
 // 除了登录消息,其他消息都在玩家自己的协程里处理,因此这里对本玩家的操作不需要加锁
-func (this *Player) RunRoutine() bool {
-	logger.Debug("player RunRoutine %v", this.GetId())
-	ok := this.RunProcessRoutine(this, &gentity.RoutineEntityRoutineArgs{
+func (p *Player) RunRoutine() bool {
+	logger.Debug("player RunRoutine %v", p.GetId())
+	ok := p.RunProcessRoutine(p, &gentity.RoutineEntityRoutineArgs{
 		EndFunc: func(routineEntity gentity.RoutineEntity) {
 			// 分发事件:玩家退出游戏
-			this.FireEvent(&internal.EventPlayerExit{})
+			p.FireEvent(&internal.EventPlayerExit{})
 			// 协程结束的时候,移除玩家
-			GetPlayerMgr().RemovePlayer(this)
+			GetPlayerMgr().RemovePlayer(p)
 		},
 		ProcessMessageFunc: func(routineEntity gentity.RoutineEntity, message any) {
-			this.processMessage(message.(*ProtoPacket))
+			p.processMessage(message.(*ProtoPacket))
 		},
 		AfterTimerExecuteFunc: func(routineEntity gentity.RoutineEntity, t time.Time) {
 			// 如果有需要保存的数据修改了,即时保存数据库
-			this.SaveCache(cache.Get())
+			p.SaveCache(cache.Get())
 		},
 	})
 	if ok {
 		// 每分钟执行一次,刷新在线时间
-		this.GetTimerEntries().After(time.Minute, func() time.Duration {
+		p.GetTimerEntries().After(time.Minute, func() time.Duration {
 			evt := &pb.EventPlayerProperty{
-				PlayerId:      this.GetId(),
+				PlayerId:      p.GetId(),
 				PropertyName:  "OnlineMinute",
 				PropertyValue: 1,
 			}
-			this.FireEvent(evt)
+			p.FireEvent(evt)
 			return time.Minute
 		})
 	}
 	return ok
 }
 
-func (this *Player) processMessage(message *ProtoPacket) {
+func (p *Player) processMessage(message *ProtoPacket) {
 	defer func() {
 		if err := recover(); err != nil {
 			logger.Error("recover:%v", err)
@@ -233,7 +234,7 @@ func (this *Player) processMessage(message *ProtoPacket) {
 	logger.Debug("processMessage %v", proto.MessageName(message.Message()).Name())
 	// func (c *Component) OnXxxReq(req *pb.XxxReq)
 	// func (c *Component) OnXxxReq(req *pb.XxxReq) (*pb.XxxRes,error)
-	if _playerPacketHandlerMgr.Invoke(this, message, func(handlerInfo *internal.PacketHandlerInfo, returnValues []reflect.Value) {
+	if _playerPacketHandlerMgr.Invoke(p, message, func(handlerInfo *internal.PacketHandlerInfo, returnValues []reflect.Value) {
 		if handlerInfo.ResCmd == 0 || len(returnValues) != 2 {
 			return
 		}
@@ -244,22 +245,48 @@ func (this *Player) processMessage(message *ProtoPacket) {
 		}
 		// 返回消息给客户端
 		if resErr != nil {
-			this.SendErrorRes(handlerInfo.ResCmd, resErr.Error())
+			p.SendErrorRes(handlerInfo.ResCmd, resErr.Error())
 		} else {
-			this.Send(resProto)
+			p.Send(resProto)
 		}
 	}) {
 		// 如果有需要保存的数据修改了,即时保存缓存
-		this.SaveCache(cache.Get())
+		p.SaveCache(cache.Get())
 		return
 	}
 	logger.Error("unhandled cmd:%v message:%v", message.Command(), proto.MessageName(message.Message()).Name())
 }
 
 // 放入消息队列
-func (this *Player) OnRecvPacket(packet *ProtoPacket) {
+func (p *Player) OnRecvPacket(packet *ProtoPacket) {
 	logger.Debug("OnRecvPacket %v", proto.MessageName(packet.Message()).Name())
-	this.PushMessage(packet)
+	p.PushMessage(packet)
+}
+
+// 玩家进入游戏服
+func (p *Player) HandlePlayerEntryGameOk(msg *pb.PlayerEntryGameOk) {
+	slog.Debug("HandlePlayerEntryGameOk", "pid", p.GetId(), "msg", msg)
+	// 同步各模块的数据给客户端
+	p.RangeComponent(func(component gentity.Component) bool {
+		if dataSyncer, ok := component.(DataSyncer); ok {
+			dataSyncer.SyncDataToClient()
+			slog.Debug("SyncDataToClient", "pid", p.GetId(), "component", component.GetName())
+		}
+		return true
+	})
+	b := p.GetBaseInfo()
+	now := p.GetTimerEntries().Now().Unix()
+	var offlineSeconds int32
+	if b.Data.LastLogoutTimestamp > 0 && now > b.Data.LastLogoutTimestamp {
+		offlineSeconds = int32(now - b.Data.LastLogoutTimestamp)
+	}
+	b.Data.LastLoginTimestamp = now
+	b.SetDirty()
+	// 分发事件:玩家进游戏服
+	p.FireEvent(&internal.EventPlayerEntryGame{
+		IsReconnect:    msg.IsReconnect,
+		OfflineSeconds: offlineSeconds,
+	})
 }
 
 func CreatePlayer(playerId int64, playerName string, accountId int64, regionId int32) *Player {
@@ -294,6 +321,13 @@ func CreatePlayerFromData(playerData *pb.PlayerData) *Player {
 		slog.Error("LoadPlayerDataErr", "playerId", player.GetId(), "err", err)
 		return nil
 	}
+	player.RangeComponent(func(component gentity.Component) bool {
+		if dataLoader, ok := component.(internal.DataLoader); ok {
+			dataLoader.OnDataLoad()
+			slog.Debug("OnDataLoad", "pid", player.GetId(), "component", component.GetName())
+		}
+		return true
+	})
 	return player
 }
 

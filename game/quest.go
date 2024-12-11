@@ -39,41 +39,65 @@ type Quest struct {
 	Quests *gentity.MapData[int32, *pb.QuestData] `child:""`
 }
 
-func (this *Player) GetQuest() *Quest {
-	return this.GetComponentByName(ComponentNameQuest).(*Quest)
+func (p *Player) GetQuest() *Quest {
+	return p.GetComponentByName(ComponentNameQuest).(*Quest)
 }
 
-func (this *Quest) AddQuest(questData *pb.QuestData) {
+func (q *Quest) OnDataLoad() {
+	// 把已有任务加入到进度更新映射表中
+	q.Quests.Range(func(k int32, questData *pb.QuestData) bool {
+		questCfg := cfg.GetQuestCfgMgr().GetQuestCfg(questData.GetCfgId())
+		if questCfg == nil {
+			logger.Error("questCfg nil %v", questData.GetCfgId())
+			return true
+		}
+		q.GetPlayer().progressEventMapping.addProgress(questCfg.Progress, questData)
+		return true
+	})
+}
+
+func (q *Quest) SyncDataToClient() {
+	q.GetPlayer().Send(&pb.QuestSync{
+		Finished: q.Finished.Data,
+		Quests:   q.Quests.Data,
+	})
+}
+
+func (q *Quest) AddQuest(questData *pb.QuestData) {
 	questCfg := cfg.GetQuestCfgMgr().GetQuestCfg(questData.GetCfgId())
 	if questCfg == nil {
 		logger.Error("questCfg nil %v", questData.GetCfgId())
 		return
 	}
-	this.Quests.Set(questData.CfgId, questData)
+	q.Quests.Set(questData.CfgId, questData)
 	// 初始化进度
 	if questCfg.Progress != nil {
 		if questCfg.Progress.NeedInit {
-			cfg.GetQuestCfgMgr().GetProgressMgr().InitProgress(this.GetPlayer(), questCfg.Progress, questData)
+			cfg.GetQuestCfgMgr().GetProgressMgr().InitProgress(q.GetPlayer(), questCfg.Progress, questData)
 		}
-		this.GetPlayer().progressEventMapping.addProgress(questCfg.Progress, questData)
+		q.GetPlayer().progressEventMapping.addProgress(questCfg.Progress, questData)
 	}
+	q.GetPlayer().Send(&pb.QuestUpdate{
+		QuestCfgId: questData.GetCfgId(),
+		Data:       questData,
+	})
 	logger.Debug("AddQuest:%v", questData)
 }
 
 // 事件接口
-func (this *Quest) TriggerPlayerEntryGame(event *internal.EventPlayerEntryGame) {
+func (q *Quest) TriggerPlayerEntryGame(event *internal.EventPlayerEntryGame) {
 	// 测试代码:给新玩家添加初始任务
-	if len(this.Quests.Data) == 0 && len(this.Finished.Data) == 0 {
+	if len(q.Quests.Data) == 0 && len(q.Finished.Data) == 0 {
 		cfg.GetQuestCfgMgr().Range(func(questCfg *pb.QuestCfg) bool {
 			// 排除其他模块的子任务
 			if questCfg.GetQuestType() != 0 {
 				return true
 			}
-			if !cfg.GetQuestCfgMgr().GetConditionMgr().CheckConditions(this.GetPlayer(), questCfg.Conditions) {
+			if !cfg.GetQuestCfgMgr().GetConditionMgr().CheckConditions(q.GetPlayer(), questCfg.Conditions) {
 				return true
 			}
 			questData := &pb.QuestData{CfgId: questCfg.CfgId}
-			this.AddQuest(questData)
+			q.AddQuest(questData)
 			return true
 		})
 	}
@@ -81,16 +105,16 @@ func (this *Quest) TriggerPlayerEntryGame(event *internal.EventPlayerEntryGame) 
 
 // 完成任务的消息回调
 // 这种格式写的函数可以自动注册客户端消息回调
-func (this *Quest) OnFinishQuestReq(req *pb.FinishQuestReq) (*pb.FinishQuestRes, error) {
+func (q *Quest) OnFinishQuestReq(req *pb.FinishQuestReq) (*pb.FinishQuestRes, error) {
 	logger.Debug("OnFinishQuestReq:%v", req)
-	if questData, ok := this.Quests.Data[req.QuestCfgId]; ok {
+	if questData, ok := q.Quests.Data[req.QuestCfgId]; ok {
 		questCfg := cfg.GetQuestCfgMgr().GetQuestCfg(questData.GetCfgId())
 		if questData.GetProgress() >= questCfg.Progress.GetTotal() {
-			this.Quests.Delete(questData.GetCfgId())
-			this.Finished.Add(questData.GetCfgId())
-			this.GetPlayer().progressEventMapping.removeProgress(questCfg.Progress, questData.GetCfgId())
+			q.Quests.Delete(questData.GetCfgId())
+			q.Finished.Add(questData.GetCfgId())
+			q.GetPlayer().progressEventMapping.removeProgress(questCfg.Progress, questData.GetCfgId())
 			// 任务奖励
-			this.GetPlayer().GetBags().AddItems(questCfg.GetRewards())
+			q.GetPlayer().GetBags().AddItems(questCfg.GetRewards())
 			return &pb.FinishQuestRes{
 				QuestCfgId: questData.GetCfgId(),
 			}, nil

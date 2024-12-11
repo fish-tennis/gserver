@@ -132,6 +132,13 @@ func createGlobalEntityFromData(globalEntity *GlobalEntity, globalEntityData *pb
 		if err != nil {
 			slog.Error("GlobalEntity LoadEntityDataErr", "key", globalEntityData.Key, "err", err)
 		}
+		globalEntity.RangeComponent(func(component gentity.Component) bool {
+			if dataLoader, ok := component.(internal.DataLoader); ok {
+				dataLoader.OnDataLoad()
+				slog.Debug("OnDataLoad", "gid", globalEntity.GetId(), "component", component.GetName())
+			}
+			return true
+		})
 	}
 	return globalEntity
 }

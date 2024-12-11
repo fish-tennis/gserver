@@ -41,22 +41,28 @@ type Guild struct {
 	Data *pb.PlayerGuildData `db:"plain"`
 }
 
-func (this *Player) GetGuild() *Guild {
-	return this.GetComponentByName(ComponentNameGuild).(*Guild)
+func (p *Player) GetGuild() *Guild {
+	return p.GetComponentByName(ComponentNameGuild).(*Guild)
 }
 
-func (this *Guild) GetGuildData() *pb.PlayerGuildData {
-	return this.Data
+func (g *Guild) GetGuildData() *pb.PlayerGuildData {
+	return g.Data
 }
 
-func (this *Guild) SetGuildId(guildId int64) {
-	this.Data.GuildId = guildId
-	this.SetDirty()
-	logger.Debug("%v SetGuildId %v", this.GetPlayerId(), guildId)
+func (g *Guild) SyncDataToClient() {
+	g.GetPlayer().Send(&pb.GuildSync{
+		Data: g.Data,
+	})
+}
+
+func (g *Guild) SetGuildId(guildId int64) {
+	g.Data.GuildId = guildId
+	g.SetDirty()
+	logger.Debug("%v SetGuildId %v", g.GetPlayerId(), guildId)
 }
 
 // 查询公会列表
-func (this *Guild) OnGuildListReq(req *pb.GuildListReq) (*pb.GuildListRes, error) {
+func (g *Guild) OnGuildListReq(req *pb.GuildListReq) (*pb.GuildListRes, error) {
 	logger.Debug("OnGuildListReq")
 	guildDb := db.GetGuildDb()
 	col := guildDb.(*gentity.MongoCollection).GetCollection()
@@ -92,10 +98,10 @@ func (this *Guild) OnGuildListReq(req *pb.GuildListReq) (*pb.GuildListRes, error
 }
 
 // 创建公会
-func (this *Guild) OnGuildCreateReq(req *pb.GuildCreateReq) (*pb.GuildCreateRes, error) {
+func (g *Guild) OnGuildCreateReq(req *pb.GuildCreateReq) (*pb.GuildCreateRes, error) {
 	slog.Debug("OnGuildCreateReq")
-	player := this.GetPlayer()
-	if this.Data.GuildId > 0 {
+	player := g.GetPlayer()
+	if g.Data.GuildId > 0 {
 		return nil, errors.New("AlreadyHaveGuild")
 	}
 	// NOTE:如果玩家之前已经提交了一个加入其他联盟的请求,玩家又自己创建联盟
@@ -138,11 +144,11 @@ func (this *Guild) OnGuildCreateReq(req *pb.GuildCreateReq) (*pb.GuildCreateRes,
 		return nil, errors.New("DuplicateName")
 	}
 	// 利用mongodb的原子操作,来防止该玩家同时加入多个公会
-	if !AtomicSetGuildId(this.GetPlayerId(), newGuildData.Id, 0) {
+	if !AtomicSetGuildId(g.GetPlayerId(), newGuildData.Id, 0) {
 		db.GetGuildDb().DeleteEntity(newGuildData.Id)
 		return nil, errors.New("ConcurrentError")
 	}
-	this.SetGuildId(newGuildData.Id)
+	g.SetGuildId(newGuildData.Id)
 	logger.Debug("create guild:%v %v", newGuildData.Id, newGuildData.BaseInfo.Name)
 	return &pb.GuildCreateRes{
 		Id:   newGuildData.Id,
@@ -151,60 +157,60 @@ func (this *Guild) OnGuildCreateReq(req *pb.GuildCreateReq) (*pb.GuildCreateRes,
 }
 
 // 加入公会请求
-func (this *Guild) OnGuildJoinReq(req *pb.GuildJoinReq) (*pb.GuildJoinRes, error) {
-	if this.Data.GuildId > 0 {
+func (g *Guild) OnGuildJoinReq(req *pb.GuildJoinReq) (*pb.GuildJoinRes, error) {
+	if g.Data.GuildId > 0 {
 		return nil, errors.New("AlreadyHaveGuild")
 	}
 	// 向公会所在的服务器发rpc请求
 	reply := new(pb.GuildJoinRes)
-	err := this.RouteRpcToTargetGuild(req.Id, req, reply)
+	err := g.RouteRpcToTargetGuild(req.Id, req, reply)
 	return reply, err
 }
 
 // 公会管理员处理申请者的入会申请
-func (this *Guild) OnGuildJoinAgreeReq(req *pb.GuildJoinAgreeReq) (*pb.GuildJoinAgreeRes, error) {
-	if this.Data.GuildId == 0 {
+func (g *Guild) OnGuildJoinAgreeReq(req *pb.GuildJoinAgreeReq) (*pb.GuildJoinAgreeRes, error) {
+	if g.Data.GuildId == 0 {
 		return nil, errors.New("not a guild member")
 	}
 	// 向公会所在的服务器发rpc请求
 	reply := new(pb.GuildJoinAgreeRes)
-	err := this.RouteRpcToSelfGuild(req, reply)
+	err := g.RouteRpcToSelfGuild(req, reply)
 	return reply, err
 }
 
 // 自己的入会申请的操作结果
 //
 //	这种格式写的函数可以自动注册非客户端的消息回调
-func (this *Guild) HandleGuildJoinReqOpResult(msg *pb.GuildJoinReqOpResult) {
+func (g *Guild) HandleGuildJoinReqOpResult(msg *pb.GuildJoinReqOpResult) {
 	logger.Debug("HandleGuildJoinReqOpResult:%v", msg)
 	if msg.Error == "" && msg.IsAgree {
 		// 利用mongodb的原子操作,来防止该玩家同时加入多个公会
-		if !AtomicSetGuildId(this.GetPlayerId(), msg.GuildId, 0) {
+		if !AtomicSetGuildId(g.GetPlayerId(), msg.GuildId, 0) {
 			msg.Error = "ConcurrentError"
-			this.GetPlayer().Send(msg)
+			g.GetPlayer().Send(msg)
 			return
 		}
-		this.SetGuildId(msg.GuildId)
+		g.SetGuildId(msg.GuildId)
 	}
-	this.GetPlayer().Send(msg)
+	g.GetPlayer().Send(msg)
 }
 
 // 公会成员的客户端的请求消息路由到自己的公会所在服务器
-func (this *Guild) RoutePacketToGuild(cmd gnet.PacketCommand, message proto.Message) bool {
-	slog.Debug("RoutePacketToGuild", "cmd", cmd, "playerId", this.GetPlayerId(), "guildId", this.Data.GuildId)
+func (g *Guild) RoutePacketToGuild(cmd gnet.PacketCommand, message proto.Message) bool {
+	slog.Debug("RoutePacketToGuild", "cmd", cmd, "playerId", g.GetPlayerId(), "guildId", g.Data.GuildId)
 	// 转换成给公会服务的路由消息,附带上玩家信息
-	routePacket := internal.PacketToGuildRoutePacket(this.GetPlayer().GetId(), this.GetPlayer().GetName(),
-		gnet.NewProtoPacketEx(cmd, message), this.Data.GuildId)
-	return internal.GetServerList().SendPacket(internal.RouteGuildServerId(this.Data.GuildId), routePacket)
+	routePacket := internal.PacketToGuildRoutePacket(g.GetPlayer().GetId(), g.GetPlayer().GetName(),
+		gnet.NewProtoPacketEx(cmd, message), g.Data.GuildId)
+	return internal.GetServerList().SendPacket(internal.RouteGuildServerId(g.Data.GuildId), routePacket)
 }
 
 // 客户端的请求消息路由到目标公会所在服务器,并阻塞等待返回结果
-func (this *Guild) RouteRpcToTargetGuild(targetGuildId int64, message proto.Message, reply proto.Message) error {
+func (g *Guild) RouteRpcToTargetGuild(targetGuildId int64, message proto.Message, reply proto.Message) error {
 	// 转换成给公会服务的路由消息,附带上玩家信息
-	routePacket := internal.PacketToGuildRoutePacket(this.GetPlayer().GetId(), this.GetPlayer().GetName(),
+	routePacket := internal.PacketToGuildRoutePacket(g.GetPlayer().GetId(), g.GetPlayer().GetName(),
 		network.NewPacket(message), targetGuildId)
 	toServerId := internal.RouteGuildServerId(targetGuildId)
-	slog.Debug("RouteRpcToTargetGuild", "playerId", this.GetPlayerId(), "guildId", targetGuildId, "toServerId", toServerId, "req", proto.MessageName(message))
+	slog.Debug("RouteRpcToTargetGuild", "playerId", g.GetPlayerId(), "guildId", targetGuildId, "toServerId", toServerId, "req", proto.MessageName(message))
 	routePlayerMessage := new(pb.RoutePlayerMessage)
 	err := internal.GetServerList().Rpc(toServerId, routePacket, routePlayerMessage)
 	if err != nil {
@@ -225,18 +231,18 @@ func (this *Guild) RouteRpcToTargetGuild(targetGuildId int64, message proto.Mess
 }
 
 // 公会成员的客户端的请求消息路由到自己的公会所在服务器,并阻塞等待返回结果
-func (this *Guild) RouteRpcToSelfGuild(message proto.Message, reply proto.Message) error {
-	slog.Debug("RouteRpcToSelfGuild", "playerId", this.GetPlayerId(), "guildId", this.Data.GuildId, "req", proto.MessageName(message))
-	return this.RouteRpcToTargetGuild(this.Data.GuildId, message, reply)
+func (g *Guild) RouteRpcToSelfGuild(message proto.Message, reply proto.Message) error {
+	slog.Debug("RouteRpcToSelfGuild", "playerId", g.GetPlayerId(), "guildId", g.Data.GuildId, "req", proto.MessageName(message))
+	return g.RouteRpcToTargetGuild(g.Data.GuildId, message, reply)
 }
 
 // 查看自己公会的信息
-func (this *Guild) OnGuildDataViewReq(req *pb.GuildDataViewReq) (*pb.GuildDataViewRes, error) {
-	if this.Data.GuildId == 0 {
+func (g *Guild) OnGuildDataViewReq(req *pb.GuildDataViewReq) (*pb.GuildDataViewRes, error) {
+	if g.Data.GuildId == 0 {
 		return nil, errors.New("not a guild member")
 	}
 	reply := new(pb.GuildDataViewRes)
-	err := this.RouteRpcToSelfGuild(req, reply)
+	err := g.RouteRpcToSelfGuild(req, reply)
 	return reply, err
 }
 

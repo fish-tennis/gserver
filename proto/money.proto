@@ -4,12 +4,8 @@ option go_package = "./pb";
 
 package gserver;
 
-// 请求加coin的测试消息
-message CoinReq {
-  int32 addCoin = 1; // 加多少
-}
+import "player.proto";
 
-// 请求加coin的返回结果
-message CoinRes {
-  int32 totalCoin = 1; // 当前总值
+message MoneySync {
+  Money data = 1;
 }

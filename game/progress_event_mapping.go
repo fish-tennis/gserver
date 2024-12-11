@@ -10,8 +10,8 @@ import (
 )
 
 // 增加活动id,以便于更新进度后,调用Activity.SetDirty
-type ActivityProgressDataWrapper struct {
-	*pb.ActivityProgressData
+type ActivityQuestDataWrapper struct {
+	*pb.ActivityQuestData
 	ActivityId int32
 }
 
@@ -52,7 +52,7 @@ func (p *ProgressEventMapping) addProgress(progressCfg *pb.ProgressCfg, progress
 	progressSlice, _ := p.mapping[key]
 	progressSlice = append(progressSlice, progress)
 	p.mapping[key] = progressSlice
-	slog.Debug("addProgress", "key", key, "questId", progress.GetCfgId())
+	slog.Debug("AddQuest", "key", key, "questId", progress.GetCfgId())
 }
 
 func (p *ProgressEventMapping) removeProgress(progressCfg *pb.ProgressCfg, questId int32) {
@@ -74,9 +74,13 @@ func (p *ProgressEventMapping) CheckProgress(event any, progress internal.CfgDat
 		questCfg := cfg.GetQuestCfgMgr().GetQuestCfg(v.GetCfgId())
 		if cfg.GetQuestCfgMgr().GetProgressMgr().CheckProgress(event, questCfg.Progress, v) {
 			p.player.GetQuest().Quests.SetDirty(v.GetCfgId(), true)
+			p.player.Send(&pb.QuestUpdate{
+				QuestCfgId: v.GetCfgId(),
+				Data:       v,
+			})
 			slog.Debug("QuestProgressUpdate", "questId", v.GetCfgId(), "progress", v.GetProgress())
 		}
-	case *ActivityProgressDataWrapper:
+	case *ActivityQuestDataWrapper:
 		activity := p.player.GetActivities().GetActivity(v.ActivityId)
 		if activity == nil {
 			return
@@ -85,6 +89,11 @@ func (p *ProgressEventMapping) CheckProgress(event any, progress internal.CfgDat
 			questCfg := cfg.GetQuestCfgMgr().GetQuestCfg(v.GetCfgId())
 			if cfg.GetQuestCfgMgr().GetProgressMgr().CheckProgress(event, questCfg.Progress, v) {
 				activityDefault.SetDirty()
+				p.player.Send(&pb.ActivityQuestUpdate{
+					ActivityId: v.ActivityId,
+					QuestCfgId: v.GetCfgId(),
+					Data:       v.ActivityQuestData,
+				})
 				slog.Debug("ActivityProgressUpdate", "activityId", v.ActivityId,
 					"questId", v.GetCfgId(), "progress", v.GetProgress())
 			}

@@ -4,6 +4,7 @@ import (
 	"github.com/fish-tennis/gentity"
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/game"
+	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/network"
 	"github.com/fish-tennis/gserver/pb"
@@ -45,6 +46,13 @@ func NewGuild(guildLoadData *pb.GuildLoadData) *Guild {
 		if err != nil {
 			slog.Error("Guild LoadEntityDataErr", "id", guild.Id, "err", err)
 		}
+		guild.RangeComponent(func(component gentity.Component) bool {
+			if dataLoader, ok := component.(internal.DataLoader); ok {
+				dataLoader.OnDataLoad()
+				slog.Debug("OnDataLoad", "gid", guild.GetId(), "component", component.GetName())
+			}
+			return true
+		})
 	}
 	return guild
 }

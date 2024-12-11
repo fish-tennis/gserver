@@ -125,7 +125,7 @@ func onPlayerEntryGameReq(connection Connection, packet Packet) {
 	logger.Debug("entry entryPlayer:%v %v", entryPlayer.GetId(), entryPlayer.GetName())
 	res.PlayerId = entryPlayer.GetId()
 	res.PlayerName = entryPlayer.GetName()
-	res.GuildData = entryPlayer.GetGuild().GetGuildData()
+	//res.GuildData = entryPlayer.GetGuild().GetGuildData()
 }
 
 // 创建角色

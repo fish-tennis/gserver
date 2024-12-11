@@ -20,6 +20,118 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// 同步任务数据给客户端
+type QuestSync struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Finished []int32              `protobuf:"varint,1,rep,packed,name=finished,proto3" json:"finished,omitempty"`                                                                              // 已完成的任务
+	Quests   map[int32]*QuestData `protobuf:"bytes,2,rep,name=quests,proto3" json:"quests,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"` // 进行中的任务
+}
+
+func (x *QuestSync) Reset() {
+	*x = QuestSync{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_quest_proto_msgTypes[0]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *QuestSync) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QuestSync) ProtoMessage() {}
+
+func (x *QuestSync) ProtoReflect() protoreflect.Message {
+	mi := &file_quest_proto_msgTypes[0]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use QuestSync.ProtoReflect.Descriptor instead.
+func (*QuestSync) Descriptor() ([]byte, []int) {
+	return file_quest_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *QuestSync) GetFinished() []int32 {
+	if x != nil {
+		return x.Finished
+	}
+	return nil
+}
+
+func (x *QuestSync) GetQuests() map[int32]*QuestData {
+	if x != nil {
+		return x.Quests
+	}
+	return nil
+}
+
+// 任务数据更新
+type QuestUpdate struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	QuestCfgId int32      `protobuf:"varint,1,opt,name=questCfgId,proto3" json:"questCfgId,omitempty"` // 任务id
+	Data       *QuestData `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
+}
+
+func (x *QuestUpdate) Reset() {
+	*x = QuestUpdate{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_quest_proto_msgTypes[1]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *QuestUpdate) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QuestUpdate) ProtoMessage() {}
+
+func (x *QuestUpdate) ProtoReflect() protoreflect.Message {
+	mi := &file_quest_proto_msgTypes[1]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use QuestUpdate.ProtoReflect.Descriptor instead.
+func (*QuestUpdate) Descriptor() ([]byte, []int) {
+	return file_quest_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *QuestUpdate) GetQuestCfgId() int32 {
+	if x != nil {
+		return x.QuestCfgId
+	}
+	return 0
+}
+
+func (x *QuestUpdate) GetData() *QuestData {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
 // 完成任务
 type FinishQuestReq struct {
 	state         protoimpl.MessageState
@@ -32,7 +144,7 @@ type FinishQuestReq struct {
 func (x *FinishQuestReq) Reset() {
 	*x = FinishQuestReq{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_quest_proto_msgTypes[0]
+		mi := &file_quest_proto_msgTypes[2]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -45,7 +157,7 @@ func (x *FinishQuestReq) String() string {
 func (*FinishQuestReq) ProtoMessage() {}
 
 func (x *FinishQuestReq) ProtoReflect() protoreflect.Message {
-	mi := &file_quest_proto_msgTypes[0]
+	mi := &file_quest_proto_msgTypes[2]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -58,7 +170,7 @@ func (x *FinishQuestReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FinishQuestReq.ProtoReflect.Descriptor instead.
 func (*FinishQuestReq) Descriptor() ([]byte, []int) {
-	return file_quest_proto_rawDescGZIP(), []int{0}
+	return file_quest_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *FinishQuestReq) GetQuestCfgId() int32 {
@@ -80,7 +192,7 @@ type FinishQuestRes struct {
 func (x *FinishQuestRes) Reset() {
 	*x = FinishQuestRes{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_quest_proto_msgTypes[1]
+		mi := &file_quest_proto_msgTypes[3]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -93,7 +205,7 @@ func (x *FinishQuestRes) String() string {
 func (*FinishQuestRes) ProtoMessage() {}
 
 func (x *FinishQuestRes) ProtoReflect() protoreflect.Message {
-	mi := &file_quest_proto_msgTypes[1]
+	mi := &file_quest_proto_msgTypes[3]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -106,7 +218,7 @@ func (x *FinishQuestRes) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FinishQuestRes.ProtoReflect.Descriptor instead.
 func (*FinishQuestRes) Descriptor() ([]byte, []int) {
-	return file_quest_proto_rawDescGZIP(), []int{1}
+	return file_quest_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *FinishQuestRes) GetQuestCfgId() int32 {
@@ -120,14 +232,31 @@ var File_quest_proto protoreflect.FileDescriptor
 
 var file_quest_proto_rawDesc = []byte{
 	0x0a, 0x0b, 0x71, 0x75, 0x65, 0x73, 0x74, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x12, 0x07, 0x67,
-	0x73, 0x65, 0x72, 0x76, 0x65, 0x72, 0x22, 0x30, 0x0a, 0x0e, 0x46, 0x69, 0x6e, 0x69, 0x73, 0x68,
-	0x51, 0x75, 0x65, 0x73, 0x74, 0x52, 0x65, 0x71, 0x12, 0x1e, 0x0a, 0x0a, 0x71, 0x75, 0x65, 0x73,
-	0x74, 0x43, 0x66, 0x67, 0x49, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x05, 0x52, 0x0a, 0x71, 0x75,
-	0x65, 0x73, 0x74, 0x43, 0x66, 0x67, 0x49, 0x64, 0x22, 0x30, 0x0a, 0x0e, 0x46, 0x69, 0x6e, 0x69,
-	0x73, 0x68, 0x51, 0x75, 0x65, 0x73, 0x74, 0x52, 0x65, 0x73, 0x12, 0x1e, 0x0a, 0x0a, 0x71, 0x75,
-	0x65, 0x73, 0x74, 0x43, 0x66, 0x67, 0x49, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x05, 0x52, 0x0a,
-	0x71, 0x75, 0x65, 0x73, 0x74, 0x43, 0x66, 0x67, 0x49, 0x64, 0x42, 0x06, 0x5a, 0x04, 0x2e, 0x2f,
-	0x70, 0x62, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x73, 0x65, 0x72, 0x76, 0x65, 0x72, 0x1a, 0x0c, 0x70, 0x6c, 0x61, 0x79, 0x65, 0x72, 0x2e, 0x70,
+	0x72, 0x6f, 0x74, 0x6f, 0x22, 0xae, 0x01, 0x0a, 0x09, 0x51, 0x75, 0x65, 0x73, 0x74, 0x53, 0x79,
+	0x6e, 0x63, 0x12, 0x1a, 0x0a, 0x08, 0x66, 0x69, 0x6e, 0x69, 0x73, 0x68, 0x65, 0x64, 0x18, 0x01,
+	0x20, 0x03, 0x28, 0x05, 0x52, 0x08, 0x66, 0x69, 0x6e, 0x69, 0x73, 0x68, 0x65, 0x64, 0x12, 0x36,
+	0x0a, 0x06, 0x71, 0x75, 0x65, 0x73, 0x74, 0x73, 0x18, 0x02, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x1e,
+	0x2e, 0x67, 0x73, 0x65, 0x72, 0x76, 0x65, 0x72, 0x2e, 0x51, 0x75, 0x65, 0x73, 0x74, 0x53, 0x79,
+	0x6e, 0x63, 0x2e, 0x51, 0x75, 0x65, 0x73, 0x74, 0x73, 0x45, 0x6e, 0x74, 0x72, 0x79, 0x52, 0x06,
+	0x71, 0x75, 0x65, 0x73, 0x74, 0x73, 0x1a, 0x4d, 0x0a, 0x0b, 0x51, 0x75, 0x65, 0x73, 0x74, 0x73,
+	0x45, 0x6e, 0x74, 0x72, 0x79, 0x12, 0x10, 0x0a, 0x03, 0x6b, 0x65, 0x79, 0x18, 0x01, 0x20, 0x01,
+	0x28, 0x05, 0x52, 0x03, 0x6b, 0x65, 0x79, 0x12, 0x28, 0x0a, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65,
+	0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x12, 0x2e, 0x67, 0x73, 0x65, 0x72, 0x76, 0x65, 0x72,
+	0x2e, 0x51, 0x75, 0x65, 0x73, 0x74, 0x44, 0x61, 0x74, 0x61, 0x52, 0x05, 0x76, 0x61, 0x6c, 0x75,
+	0x65, 0x3a, 0x02, 0x38, 0x01, 0x22, 0x55, 0x0a, 0x0b, 0x51, 0x75, 0x65, 0x73, 0x74, 0x55, 0x70,
+	0x64, 0x61, 0x74, 0x65, 0x12, 0x1e, 0x0a, 0x0a, 0x71, 0x75, 0x65, 0x73, 0x74, 0x43, 0x66, 0x67,
+	0x49, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x05, 0x52, 0x0a, 0x71, 0x75, 0x65, 0x73, 0x74, 0x43,
+	0x66, 0x67, 0x49, 0x64, 0x12, 0x26, 0x0a, 0x04, 0x64, 0x61, 0x74, 0x61, 0x18, 0x02, 0x20, 0x01,
+	0x28, 0x0b, 0x32, 0x12, 0x2e, 0x67, 0x73, 0x65, 0x72, 0x76, 0x65, 0x72, 0x2e, 0x51, 0x75, 0x65,
+	0x73, 0x74, 0x44, 0x61, 0x74, 0x61, 0x52, 0x04, 0x64, 0x61, 0x74, 0x61, 0x22, 0x30, 0x0a, 0x0e,
+	0x46, 0x69, 0x6e, 0x69, 0x73, 0x68, 0x51, 0x75, 0x65, 0x73, 0x74, 0x52, 0x65, 0x71, 0x12, 0x1e,
+	0x0a, 0x0a, 0x71, 0x75, 0x65, 0x73, 0x74, 0x43, 0x66, 0x67, 0x49, 0x64, 0x18, 0x01, 0x20, 0x01,
+	0x28, 0x05, 0x52, 0x0a, 0x71, 0x75, 0x65, 0x73, 0x74, 0x43, 0x66, 0x67, 0x49, 0x64, 0x22, 0x30,
+	0x0a, 0x0e, 0x46, 0x69, 0x6e, 0x69, 0x73, 0x68, 0x51, 0x75, 0x65, 0x73, 0x74, 0x52, 0x65, 0x73,
+	0x12, 0x1e, 0x0a, 0x0a, 0x71, 0x75, 0x65, 0x73, 0x74, 0x43, 0x66, 0x67, 0x49, 0x64, 0x18, 0x01,
+	0x20, 0x01, 0x28, 0x05, 0x52, 0x0a, 0x71, 0x75, 0x65, 0x73, 0x74, 0x43, 0x66, 0x67, 0x49, 0x64,
+	0x42, 0x06, 0x5a, 0x04, 0x2e, 0x2f, 0x70, 0x62, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -142,17 +271,24 @@ func file_quest_proto_rawDescGZIP() []byte {
 	return file_quest_proto_rawDescData
 }
 
-var file_quest_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_quest_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_quest_proto_goTypes = []interface{}{
-	(*FinishQuestReq)(nil), // 0: gserver.FinishQuestReq
-	(*FinishQuestRes)(nil), // 1: gserver.FinishQuestRes
+	(*QuestSync)(nil),      // 0: gserver.QuestSync
+	(*QuestUpdate)(nil),    // 1: gserver.QuestUpdate
+	(*FinishQuestReq)(nil), // 2: gserver.FinishQuestReq
+	(*FinishQuestRes)(nil), // 3: gserver.FinishQuestRes
+	nil,                    // 4: gserver.QuestSync.QuestsEntry
+	(*QuestData)(nil),      // 5: gserver.QuestData
 }
 var file_quest_proto_depIdxs = []int32{
-	0, // [0:0] is the sub-list for method output_type
-	0, // [0:0] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	4, // 0: gserver.QuestSync.quests:type_name -> gserver.QuestSync.QuestsEntry
+	5, // 1: gserver.QuestUpdate.data:type_name -> gserver.QuestData
+	5, // 2: gserver.QuestSync.QuestsEntry.value:type_name -> gserver.QuestData
+	3, // [3:3] is the sub-list for method output_type
+	3, // [3:3] is the sub-list for method input_type
+	3, // [3:3] is the sub-list for extension type_name
+	3, // [3:3] is the sub-list for extension extendee
+	0, // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_quest_proto_init() }
@@ -160,9 +296,10 @@ func file_quest_proto_init() {
 	if File_quest_proto != nil {
 		return
 	}
+	file_player_proto_init()
 	if !protoimpl.UnsafeEnabled {
 		file_quest_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*FinishQuestReq); i {
+			switch v := v.(*QuestSync); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -174,6 +311,30 @@ func file_quest_proto_init() {
 			}
 		}
 		file_quest_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*QuestUpdate); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_quest_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*FinishQuestReq); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_quest_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*FinishQuestRes); i {
 			case 0:
 				return &v.state
@@ -192,7 +353,7 @@ func file_quest_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_quest_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

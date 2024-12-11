@@ -37,107 +37,122 @@ type ActivityDefault struct {
 	Base *pb.ActivityDefaultBaseData `db:"Base"`
 }
 
-func (this *ActivityDefault) getProgress(cfgId int32) *pb.ActivityProgressData {
-	if this.Base.Progresses == nil {
+func (a *ActivityDefault) GetQuest(cfgId int32) *pb.ActivityQuestData {
+	if a.Base.Quests == nil {
 		return nil
 	}
-	return this.Base.Progresses[cfgId]
+	return a.Base.Quests[cfgId]
 }
 
-// 添加一个活动进度
-func (this *ActivityDefault) addProgress(questCfg *pb.QuestCfg) *pb.ActivityProgressData {
-	if !cfg.GetActivityCfgMgr().GetConditionMgr().CheckConditions(this, questCfg.Conditions) {
+// 添加一个活动任务
+func (a *ActivityDefault) AddQuest(questCfg *pb.QuestCfg) *pb.ActivityQuestData {
+	if !cfg.GetActivityCfgMgr().GetConditionMgr().CheckConditions(a, questCfg.Conditions) {
 		return nil
 	}
 	if questCfg.Progress == nil {
 		return nil
 	}
-	if this.Base.Progresses == nil {
-		this.Base.Progresses = make(map[int32]*pb.ActivityProgressData)
+	if a.Base.Quests == nil {
+		a.Base.Quests = make(map[int32]*pb.ActivityQuestData)
 	}
-	progress := &pb.ActivityProgressData{
+	progress := &pb.ActivityQuestData{
 		CfgId: questCfg.CfgId,
 	}
 	if questCfg.Progress.NeedInit {
-		cfg.GetActivityCfgMgr().GetProgressMgr().InitProgress(this, questCfg.Progress, progress)
+		cfg.GetActivityCfgMgr().GetProgressMgr().InitProgress(a, questCfg.Progress, progress)
 	}
-	this.Base.Progresses[progress.CfgId] = progress
-	this.SetDirty()
-	this.Activities.GetPlayer().progressEventMapping.addProgress(questCfg.Progress, &ActivityProgressDataWrapper{
-		ActivityProgressData: progress,
-		ActivityId:           this.GetId(),
+	a.Base.Quests[progress.CfgId] = progress
+	a.SetDirty()
+	a.Activities.GetPlayer().progressEventMapping.addProgress(questCfg.Progress, &ActivityQuestDataWrapper{
+		ActivityQuestData: progress,
+		ActivityId:        a.GetId(),
 	})
 	return progress
 }
 
-func (this *ActivityDefault) OnEvent(event interface{}) {
-	activityCfg := this.GetActivityCfg()
+func (a *ActivityDefault) OnDataLoad() {
+	// 把已有任务加入到进度更新映射表中
+	for _, questData := range a.Base.Quests {
+		questCfg := cfg.GetQuestCfgMgr().GetQuestCfg(questData.GetCfgId())
+		if questCfg == nil {
+			logger.Error("questCfg nil %v", questData.GetCfgId())
+			continue
+		}
+		a.Activities.GetPlayer().progressEventMapping.addProgress(questCfg.Progress, &ActivityQuestDataWrapper{
+			ActivityQuestData: questData,
+			ActivityId:        a.GetId(),
+		})
+	}
+}
+
+func (a *ActivityDefault) OnEvent(event interface{}) {
+	activityCfg := a.GetActivityCfg()
 	if activityCfg == nil {
 		return
 	}
 	switch e := event.(type) {
 	case *EventDateChange:
-		this.OnDateChange(e.OldDate, e.CurDate)
+		a.OnDateChange(e.OldDate, e.CurDate)
 		return
 	}
 }
 
-func (this *ActivityDefault) OnDateChange(oldDate time.Time, curDate time.Time) {
-	activityCfg := this.GetActivityCfg()
+func (a *ActivityDefault) OnDateChange(oldDate time.Time, curDate time.Time) {
+	activityCfg := a.GetActivityCfg()
 	if activityCfg == nil {
-		logger.Debug("%v OnDateChange activityCfg nil %v", this.Activities.GetPlayer().GetId(), this.GetId())
+		logger.Debug("%v OnDateChange activityCfg nil %v", a.Activities.GetPlayer().GetId(), a.GetId())
 		return
 	}
 	// 每日刷新
 	if activityCfg.RefreshType == int32(pb.RefreshType_RefreshType_Day) {
-		this.Reset()
+		a.Reset()
 	}
 }
 
 // 重置数据
-func (this *ActivityDefault) Reset() {
-	for _, progress := range this.Base.Progresses {
+func (a *ActivityDefault) Reset() {
+	for _, progress := range a.Base.Quests {
 		questCfg := cfg.GetQuestCfgMgr().GetQuestCfg(progress.GetCfgId())
 		if questCfg == nil {
 			continue
 		}
-		this.Activities.GetPlayer().progressEventMapping.removeProgress(questCfg.Progress, progress.GetCfgId())
+		a.Activities.GetPlayer().progressEventMapping.removeProgress(questCfg.Progress, progress.GetCfgId())
 	}
-	this.Base.Progresses = nil
-	activityCfg := this.GetActivityCfg()
+	a.Base.Quests = nil
+	activityCfg := a.GetActivityCfg()
 	for _, questId := range activityCfg.QuestIds {
 		questCfg := cfg.GetQuestCfgMgr().GetQuestCfg(questId)
 		if questCfg == nil {
 			continue
 		}
-		this.addProgress(questCfg)
+		a.AddQuest(questCfg)
 	}
-	this.Base.ExchangeRecord = nil
-	this.SetDirty()
-	slog.Debug("Reset", "playerId", this.Activities.GetPlayer().GetId(), "activityId", this.GetId())
+	a.Base.ExchangeRecord = nil
+	a.SetDirty()
+	slog.Debug("Reset", "playerId", a.Activities.GetPlayer().GetId(), "activityId", a.GetId())
 }
 
-func (this *ActivityDefault) OnEnd(t time.Time) {
-	activityCfg := this.GetActivityCfg()
+func (a *ActivityDefault) OnEnd(t time.Time) {
+	activityCfg := a.GetActivityCfg()
 	if activityCfg.RemoveDataWhenEnd {
-		this.Activities.RemoveActivity(this.GetId())
+		a.Activities.RemoveActivity(a.GetId())
 	}
 }
 
 // 领取活动任务奖励
-func (this *ActivityDefault) ReceiveReward(cfgId int32) {
-	activityCfg := this.GetActivityCfg()
+func (a *ActivityDefault) ReceiveReward(cfgId int32) {
+	activityCfg := a.GetActivityCfg()
 	if activityCfg == nil {
-		logger.Debug("%v ReceiveRewards activityCfg nil %v", this.Activities.GetPlayer().GetId(), this.GetId())
+		logger.Debug("%v ReceiveRewards activityCfg nil %v", a.Activities.GetPlayer().GetId(), a.GetId())
 		return
 	}
-	progress := this.getProgress(cfgId)
+	progress := a.GetQuest(cfgId)
 	if progress == nil {
-		logger.Debug("%v ReceiveReward progress nil %v %v", this.Activities.GetPlayer().GetId(), this.GetId(), cfgId)
+		logger.Debug("%v ReceiveReward progress nil %v %v", a.Activities.GetPlayer().GetId(), a.GetId(), cfgId)
 		return
 	}
 	if progress.IsReceiveReward {
-		logger.Debug("%v ReceiveReward repeat %v %v", this.Activities.GetPlayer().GetId(), this.GetId(), cfgId)
+		logger.Debug("%v ReceiveReward repeat %v %v", a.Activities.GetPlayer().GetId(), a.GetId(), cfgId)
 		return
 	}
 	if !slices.Contains(activityCfg.QuestIds, cfgId) {
@@ -145,35 +160,35 @@ func (this *ActivityDefault) ReceiveReward(cfgId int32) {
 	}
 	questCfg := cfg.GetQuestCfgMgr().GetQuestCfg(cfgId)
 	if questCfg == nil {
-		logger.Debug("%v ReceiveReward questCfg nil %v %v", this.Activities.GetPlayer().GetId(), this.GetId(), cfgId)
+		logger.Debug("%v ReceiveReward questCfg nil %v %v", a.Activities.GetPlayer().GetId(), a.GetId(), cfgId)
 		return
 	}
 	if progress.Progress < questCfg.Progress.GetTotal() {
-		logger.Debug("%v ReceiveReward progress err %v %v (%v < %v)", this.Activities.GetPlayer().GetId(), this.GetId(), cfgId,
+		logger.Debug("%v ReceiveReward progress err %v %v (%v < %v)", a.Activities.GetPlayer().GetId(), a.GetId(), cfgId,
 			progress.Progress, questCfg.Progress.GetTotal())
 		return
 	}
 	progress.IsReceiveReward = true
-	this.Activities.GetPlayer().GetBags().AddItems(questCfg.GetRewards())
-	this.SetDirty()
+	a.Activities.GetPlayer().GetBags().AddItems(questCfg.GetRewards())
+	a.SetDirty()
 	// 自动接后续任务
 	for _, nextQuestId := range questCfg.GetNextQuests() {
 		nextQuestCfg := cfg.GetQuestCfgMgr().GetQuestCfg(nextQuestId)
 		if nextQuestCfg == nil {
 			continue
 		}
-		this.addProgress(nextQuestCfg)
+		a.AddQuest(nextQuestCfg)
 	}
-	logger.Debug("%v ReceiveReward %v %v", this.Activities.GetPlayer().GetId(), this.GetId(), cfgId)
+	logger.Debug("%v ReceiveReward %v %v", a.Activities.GetPlayer().GetId(), a.GetId(), cfgId)
 }
 
 // 兑换物品
 //
 //	商店也是一种兑换功能
-func (this *ActivityDefault) Exchange(exchangeCfgId int32) {
-	activityCfg := this.GetActivityCfg()
+func (a *ActivityDefault) Exchange(exchangeCfgId int32) {
+	activityCfg := a.GetActivityCfg()
 	if activityCfg == nil {
-		logger.Debug("%v Exchange activityCfg nil %v", this.Activities.GetPlayer().GetId(), this.GetId())
+		logger.Debug("%v Exchange activityCfg nil %v", a.Activities.GetPlayer().GetId(), a.GetId())
 		return
 	}
 	if !slices.Contains(activityCfg.ExchangeIds, exchangeCfgId) {
@@ -181,47 +196,50 @@ func (this *ActivityDefault) Exchange(exchangeCfgId int32) {
 	}
 	exchangeCfg := cfg.GetTemplateCfgMgr().GetExchangeCfg(exchangeCfgId)
 	if exchangeCfg == nil {
-		logger.Debug("%v Exchange exchangeCfg nil %v %v", this.Activities.GetPlayer().GetId(), this.GetId(), exchangeCfgId)
+		logger.Debug("%v Exchange exchangeCfg nil %v %v", a.Activities.GetPlayer().GetId(), a.GetId(), exchangeCfgId)
 		return
 	}
-	exchangeCount := this.getExchangeCount(exchangeCfgId)
+	exchangeCount := a.GetExchangeCount(exchangeCfgId)
 	if exchangeCount >= exchangeCfg.CountLimit {
-		logger.Debug("%v Exchange CountLimit %v %v %v", this.Activities.GetPlayer().GetId(), this.GetId(), exchangeCfgId, exchangeCount)
+		logger.Debug("%v Exchange CountLimit %v %v %v", a.Activities.GetPlayer().GetId(), a.GetId(), exchangeCfgId, exchangeCount)
 		return
 	}
 	// TODO: 检查兑换条件
-	if !this.Activities.GetPlayer().GetBags().IsEnough(exchangeCfg.Consumes) {
-		logger.Debug("%v Exchange ConsumeItems notEnough %v %v", this.Activities.GetPlayer().GetId(), this.GetId(), exchangeCfgId)
+	if !a.Activities.GetPlayer().GetBags().IsEnough(exchangeCfg.Consumes) {
+		logger.Debug("%v Exchange ConsumeItems notEnough %v %v", a.Activities.GetPlayer().GetId(), a.GetId(), exchangeCfgId)
 		return
 	}
-	this.addExchangeCount(exchangeCfgId, 1)
-	this.Activities.GetPlayer().GetBags().DelItems(exchangeCfg.Consumes)
-	this.Activities.GetPlayer().GetBags().AddItems(exchangeCfg.Rewards)
+	a.AddExchangeCount(exchangeCfgId, 1)
+	a.Activities.GetPlayer().GetBags().DelItems(exchangeCfg.Consumes)
+	a.Activities.GetPlayer().GetBags().AddItems(exchangeCfg.Rewards)
 }
 
-func (this *ActivityDefault) getExchangeCount(exchangeCfgId int32) int32 {
-	if this.Base.ExchangeRecord == nil {
+func (a *ActivityDefault) GetExchangeCount(exchangeCfgId int32) int32 {
+	if a.Base.ExchangeRecord == nil {
 		return 0
 	}
-	return this.Base.ExchangeRecord[exchangeCfgId]
+	return a.Base.ExchangeRecord[exchangeCfgId]
 }
 
-func (this *ActivityDefault) addExchangeCount(exchangeCfgId, exchangeCount int32) {
-	if this.Base.ExchangeRecord == nil {
-		this.Base.ExchangeRecord = make(map[int32]int32)
+func (a *ActivityDefault) AddExchangeCount(exchangeCfgId, exchangeCount int32) {
+	if a.Base.ExchangeRecord == nil {
+		a.Base.ExchangeRecord = make(map[int32]int32)
 	}
-	this.Base.ExchangeRecord[exchangeCfgId] += exchangeCount
-	this.SetDirty()
+	a.Base.ExchangeRecord[exchangeCfgId] += exchangeCount
+	a.SetDirty()
 }
 
-func (this *ActivityDefault) GetPropertyInt32(propertyName string) int32 {
+func (a *ActivityDefault) GetPropertyInt32(propertyName string) int32 {
+	if property, ok := a.Base.PropertiesInt32[propertyName]; ok {
+		return property
+	}
 	switch propertyName {
 	case "DayCount":
 		// 当前是参加这个活动的第几天,从1开始
-		days := util.DayCount(this.Activities.GetPlayer().GetTimerEntries().Now(), time.Unix(int64(this.Base.JoinTime), 0))
+		days := util.DayCount(a.Activities.GetPlayer().GetTimerEntries().Now(), time.Unix(int64(a.Base.JoinTime), 0))
 		return int32(days) + 1
 	default:
-		logger.Error("Not support property %v %v", this.GetId(), propertyName)
+		logger.Error("Not support property %v %v", a.GetId(), propertyName)
 	}
 	return 0
 }

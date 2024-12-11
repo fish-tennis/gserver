@@ -67,16 +67,18 @@ message PlayerData {
 // 默认活动模板的基础数据
 message ActivityDefaultBaseData {
   int32 LastUpdateTime = 1; // 刷新时间戳
-  map<int32,ActivityProgressData> Progresses = 2; // 进度数据
+  map<int32,ActivityQuestData> Quests = 2; // 活动任务数据
   map<int32,int32> ExchangeRecord = 3; // 兑换记录
   int32 JoinTime = 4; // 参加活动的时间(时间戳)
+  map<string,int32> PropertiesInt32 = 5; // 动态属性(int32)
+  //map<string,int64> PropertiesInt64 = 6; // 动态属性(int64)
 }
 
 // 活动任务进度数据
-message ActivityProgressData {
+message ActivityQuestData {
   int32 cfgId = 1; // 配置id
   int32 progress = 2; // 进度
-  bool isReceiveReward = 3; // 是否领取了奖励
+  bool isReceiveReward = 3; // 是否已经领取了奖励
 }
 
 // 待处理消息

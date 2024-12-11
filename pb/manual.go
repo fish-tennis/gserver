@@ -10,7 +10,7 @@ func (x *QuestData) SetProgress(progress int32) {
 }
 
 // 实现ProgressHolder接口
-func (x *ActivityProgressData) SetProgress(progress int32) {
+func (x *ActivityQuestData) SetProgress(progress int32) {
 	if x != nil {
 		x.Progress = progress
 	}

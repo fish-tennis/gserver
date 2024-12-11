@@ -25,3 +25,8 @@ type PlayerMgr interface {
 	AddPlayer(player IPlayer)
 	RemovePlayer(player IPlayer)
 }
+
+// 加载完数据后的回调接口
+type DataLoader interface {
+	OnDataLoad()
+}

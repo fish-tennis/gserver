@@ -38,8 +38,8 @@ type PendingMessages struct {
 	Messages map[int64]*pb.PendingMessage `db:""`
 }
 
-func (this *Player) GetPendingMessages() *PendingMessages {
-	return this.GetComponentByName(ComponentNamePendingMessages).(*PendingMessages)
+func (p *Player) GetPendingMessages() *PendingMessages {
+	return p.GetComponentByName(ComponentNamePendingMessages).(*PendingMessages)
 }
 
 // 事件接口

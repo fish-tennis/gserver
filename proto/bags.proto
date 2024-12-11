@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+option go_package = "./pb";
+
+package gserver;
+
+import "item.proto";
+
+message BagsSync {
+  map<int32,int32> CountItem = 1;
+  map<int64,UniqueCountItem> UniqueItem = 2;
+  map<int64,Equip> Equip = 3;
+}
+
+message BagUpdate {
+
+}
