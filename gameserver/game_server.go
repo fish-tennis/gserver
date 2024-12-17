@@ -160,6 +160,7 @@ func (this *GameServer) initNetwork() {
 		panic("listen client failed")
 	}
 
+	// 网关比较特殊,单独处理
 	this.gateListener = network.ListenGate(this.config.Gate.Addr, this.registerGatePacket)
 	if this.gateListener == nil {
 		panic("listen gateserver failed")
@@ -179,6 +180,7 @@ func (this *GameServer) initNetwork() {
 		}
 	}
 	this.GetServerList().SetFetchAndConnectServerTypes(ServerType_Game)
+	// 通用的服务器间的监听
 	if this.GetServerList().StartListen(this.GetContext(), this.config.Server.Addr) == nil {
 		panic("listen server failed")
 	}
@@ -228,7 +230,7 @@ func (this *GameServer) registerClientPacket(handler *DefaultConnectionHandler) 
 		}
 		player := this.GetPlayer(playerId)
 		if player == nil {
-			slog.Debug("playerNil", "playerId", playerId, "command", packet.Command())
+			slog.Debug("playerNil", "playerId", playerId, "packet", packet)
 			// 告诉网关,这个玩家不在本服务器上
 			network.SendPacketAdapt(connection, packet, &pb.GateRouteClientPacketError{
 				PlayerId:  playerId,
@@ -252,6 +254,7 @@ func (this *GameServer) registerClientPacket(handler *DefaultConnectionHandler) 
 func (this *GameServer) registerGatePacket(handler *DefaultConnectionHandler) {
 	this.registerClientPacket(handler)
 	handler.Register(PacketCommand(pb.CmdServer_Cmd_ClientDisconnect), onClientDisconnect, new(pb.ClientDisconnect))
+	handler.Register(PacketCommand(pb.CmdServer_Cmd_ServerHello), onGateHello, new(pb.ServerHello))
 	// 网关服务器掉线,等待网关服务器重连上
 	//// 网关服务器掉线,该网关上的所有玩家都掉线
 	//handler.SetOnDisconnectedFunc(func(connection Connection) {

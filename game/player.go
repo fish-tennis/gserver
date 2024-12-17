@@ -114,9 +114,9 @@ func (p *Player) SendWithCommand(cmd PacketCommand, message proto.Message, opts 
 	if p.connection != nil {
 		if p.useGate {
 			// 网关模式,自动附加上playerId
-			return p.connection.SendPacket(network.NewGatePacket(p.GetId(), PacketCommand(cmd), message), opts...)
+			return p.connection.SendPacket(network.NewGatePacket(p.GetId(), cmd, message), opts...)
 		} else {
-			return p.connection.Send(PacketCommand(cmd), message, opts...)
+			return p.connection.Send(cmd, message, opts...)
 		}
 	}
 	return false

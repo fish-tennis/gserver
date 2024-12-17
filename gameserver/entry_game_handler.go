@@ -204,3 +204,9 @@ func onClientDisconnect(connection Connection, packet Packet) {
 		player.OnDisconnect(connection)
 	}
 }
+
+// gate特殊处理,暂时没有放在serverList里
+func onGateHello(connection Connection, packet Packet) {
+	hello := packet.Message().(*pb.ServerHello)
+	slog.Info("onGateHello", "hello", hello, "connId", connection.GetConnectionId())
+}

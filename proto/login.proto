@@ -52,8 +52,6 @@ message PlayerEntryGameRes {
   int64 playerId = 2;
   int32 regionId = 3; // 区服id
   string playerName = 4;
-  PlayerGuildData guildData = 5; // 公会数据
-  Money money = 6;
 }
 
 // 创建角色
