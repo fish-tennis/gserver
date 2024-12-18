@@ -66,6 +66,7 @@ func (b *Bags) GetBagByArg(arg *pb.AddItemArg) internal.Bag {
 	}
 	switch itemCfg.GetItemType() {
 	case int32(pb.ItemType_ItemType_None):
+		// 限时道具
 		if itemCfg.GetTimeType() > 0 || arg.GetTimeType() > 0 {
 			// 有限时属性的普通物品,变成不可叠加的
 			return b.BagUniqueItem
@@ -88,30 +89,34 @@ func (b *Bags) GetItemCount(itemCfgId int32) int32 {
 
 // 背包模块提供对外的添加物品接口
 // 业务层应该尽量使用该接口
-func (b *Bags) AddItem(arg *pb.AddItemArg) int32 {
+func (b *Bags) AddItem(arg *pb.AddItemArg, bagUpdate *pb.BagUpdate) int32 {
 	bag := b.GetBagByArg(arg)
 	if bag == nil {
 		return 0
 	}
-	return bag.AddItem(arg)
+	return bag.AddItem(arg, bagUpdate)
 }
 
 func (b *Bags) AddItems(addItemArgs []*pb.AddItemArg) int32 {
+	bagUpdate := &pb.BagUpdate{}
 	total := int32(0)
 	for _, addItemArg := range addItemArgs {
-		total += b.AddItem(addItemArg)
+		total += b.AddItem(addItemArg, bagUpdate)
 	}
+	b.GetPlayer().Send(bagUpdate) // 同步背包变化给客户端
 	return total
 }
 
 func (b *Bags) AddItemById(cfgId, num int32) int32 {
+	bagUpdate := &pb.BagUpdate{}
 	return b.AddItem(&pb.AddItemArg{
 		CfgId: cfgId,
 		Num:   num,
-	})
+	}, bagUpdate)
 }
 
 func (b *Bags) DelItems(delItems []*pb.DelItemArg) int32 {
+	bagUpdate := &pb.BagUpdate{}
 	total := int32(0)
 	for _, delItem := range delItems {
 		bag := b.GetBag(delItem.CfgId)
@@ -119,8 +124,9 @@ func (b *Bags) DelItems(delItems []*pb.DelItemArg) int32 {
 			slog.Debug("bag is nil", "cfgId", delItem.CfgId)
 			continue
 		}
-		total += bag.DelItem(delItem)
+		total += bag.DelItem(delItem, bagUpdate)
 	}
+	b.GetPlayer().Send(bagUpdate) // 同步背包变化给客户端
 	return total
 }
 

@@ -12,7 +12,7 @@ type BagEquip struct {
 
 func NewBagEquip() *BagEquip {
 	bag := &BagEquip{
-		BagUnique: NewBagUnique[*pb.Equip](func(arg *pb.AddItemArg) *pb.Equip {
+		BagUnique: NewBagUnique[*pb.Equip](pb.BagType_BagType_Equip, func(arg *pb.AddItemArg) *pb.Equip {
 			return &pb.Equip{
 				CfgId:    arg.GetCfgId(),
 				UniqueId: util.GenUniqueId(),

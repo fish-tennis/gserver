@@ -12,7 +12,7 @@ type BagUniqueItem struct {
 
 func NewBagUniqueItem() *BagUniqueItem {
 	bag := &BagUniqueItem{
-		BagUnique: NewBagUnique[*pb.UniqueCountItem](func(arg *pb.AddItemArg) *pb.UniqueCountItem {
+		BagUnique: NewBagUnique[*pb.UniqueCountItem](pb.BagType_BagType_UniqueItem, func(arg *pb.AddItemArg) *pb.UniqueCountItem {
 			return &pb.UniqueCountItem{
 				CfgId:    arg.GetCfgId(),
 				UniqueId: util.GenUniqueId(),

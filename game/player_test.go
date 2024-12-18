@@ -184,7 +184,7 @@ func TestActivity(t *testing.T) {
 
 	for _, activityId := range activityIds {
 		activity := activities.GetActivity(activityId).(*ActivityDefault)
-		t.Log(fmt.Sprintf("%v Progresses:%v", activityId, activity.Base.Progresses))
+		t.Log(fmt.Sprintf("%v Progresses:%v", activityId, activity.Base.Quests))
 		t.Log(fmt.Sprintf("%v ExchangeRecord:%v", activityId, activity.Base.ExchangeRecord))
 	}
 
@@ -233,7 +233,7 @@ func TestActivity(t *testing.T) {
 			// 参加活动的时间回退到i天前
 			activityDefault.Base.JoinTime = int32(oldDate.Unix())
 			activity.OnDateChange(oldDate, now)
-			t.Log(fmt.Sprintf("%v %v", activityId, activityDefault.Base.Progresses))
+			t.Log(fmt.Sprintf("%v %v", activityId, activityDefault.Base.Quests))
 		}
 	}
 }
@@ -270,12 +270,13 @@ func TestBags(t *testing.T) {
 
 	bags.AddItemById(1, 1)
 	bags.AddItemById(2, 10)
+	bagUpdate := new(pb.BagUpdate)
 	bags.AddItem(&pb.AddItemArg{
 		CfgId:    1,
 		Num:      1,
 		TimeType: int32(pb.TimeType_TimeType_Timestamp),
 		Timeout:  int32(time.Now().Unix()) + 1, // 1秒后过期
-	})
+	}, bagUpdate)
 
 	bags.AddItemById(3, 1)
 	bags.AddItem(&pb.AddItemArg{
@@ -283,7 +284,7 @@ func TestBags(t *testing.T) {
 		Num:      1,
 		TimeType: int32(pb.TimeType_TimeType_Timestamp),
 		Timeout:  int32(time.Now().Unix()) + 2, // 2秒后过期
-	})
+	}, bagUpdate)
 
 	player.RunRoutine()
 	// 转到玩家协程中去处理
