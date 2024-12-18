@@ -103,7 +103,10 @@ func (b *Bags) AddItems(addItemArgs []*pb.AddItemArg) int32 {
 	for _, addItemArg := range addItemArgs {
 		total += b.AddItem(addItemArg, bagUpdate)
 	}
-	b.GetPlayer().Send(bagUpdate) // 同步背包变化给客户端
+	if len(bagUpdate.ItemOps) > 0 {
+		b.GetPlayer().Send(bagUpdate) // 同步背包变化给客户端
+		//slog.Info("AddItems", "bagUpdate", bagUpdate)
+	}
 	return total
 }
 
@@ -126,7 +129,10 @@ func (b *Bags) DelItems(delItems []*pb.DelItemArg) int32 {
 		}
 		total += bag.DelItem(delItem, bagUpdate)
 	}
-	b.GetPlayer().Send(bagUpdate) // 同步背包变化给客户端
+	if len(bagUpdate.ItemOps) > 0 {
+		b.GetPlayer().Send(bagUpdate) // 同步背包变化给客户端
+		//slog.Info("DelItems", "bagUpdate", bagUpdate)
+	}
 	return total
 }
 
@@ -164,9 +170,14 @@ func (b *Bags) TriggerPlayerEntryGame(event *internal.EventPlayerEntryGame) {
 	b.BagEquip.initTimeoutList()
 	// 超时检查回调
 	b.GetPlayer().GetTimerEntries().After(time.Second, func() time.Duration {
+		bagUpdate := &pb.BagUpdate{}
 		now := int32(b.GetPlayer().GetTimerEntries().Now().Unix())
-		b.BagUniqueItem.checkTimeout(now)
-		b.BagEquip.checkTimeout(now)
+		b.BagUniqueItem.checkTimeout(now, bagUpdate)
+		b.BagEquip.checkTimeout(now, bagUpdate)
+		if len(bagUpdate.ItemOps) > 0 {
+			b.GetPlayer().Send(bagUpdate) // 同步背包变化给客户端
+			//slog.Info("checkTimeout", "bagUpdate", bagUpdate)
+		}
 		return time.Second
 	})
 }

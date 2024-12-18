@@ -268,23 +268,33 @@ func TestBags(t *testing.T) {
 	player := CreatePlayer(playerData.XId, playerData.Name, playerData.AccountId, playerData.RegionId)
 	bags := player.GetBags()
 
-	bags.AddItemById(1, 1)
-	bags.AddItemById(2, 10)
-	bagUpdate := new(pb.BagUpdate)
-	bags.AddItem(&pb.AddItemArg{
-		CfgId:    1,
-		Num:      1,
-		TimeType: int32(pb.TimeType_TimeType_Timestamp),
-		Timeout:  int32(time.Now().Unix()) + 1, // 1秒后过期
-	}, bagUpdate)
-
-	bags.AddItemById(3, 1)
-	bags.AddItem(&pb.AddItemArg{
-		CfgId:    4,
-		Num:      1,
-		TimeType: int32(pb.TimeType_TimeType_Timestamp),
-		Timeout:  int32(time.Now().Unix()) + 2, // 2秒后过期
-	}, bagUpdate)
+	addItemArgs := []*pb.AddItemArg{
+		{
+			CfgId: 1,
+			Num:   1,
+		},
+		{
+			CfgId: 2,
+			Num:   10,
+		},
+		{
+			CfgId: 3,
+			Num:   2,
+		},
+		{
+			CfgId:    1,
+			Num:      1,
+			TimeType: int32(pb.TimeType_TimeType_Timestamp),
+			Timeout:  int32(time.Now().Unix()) + 1, // 1秒后过期
+		},
+		{
+			CfgId:    4,
+			Num:      1,
+			TimeType: int32(pb.TimeType_TimeType_Timestamp),
+			Timeout:  int32(time.Now().Unix()) + 2, // 2秒后过期
+		},
+	}
+	bags.AddItems(addItemArgs)
 
 	player.RunRoutine()
 	// 转到玩家协程中去处理

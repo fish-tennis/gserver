@@ -62,7 +62,7 @@ func (b *BagUnique[E]) AddUniqueItem(e E) int64 {
 	return 0
 }
 
-func (b *BagUnique[E]) DelUniqueItem(uniqueId int64) int32 {
+func (b *BagUnique[E]) DelUniqueItem(uniqueId int64, bagUpdate *pb.BagUpdate) int32 {
 	if e, ok := b.Data[uniqueId]; ok {
 		b.Delete(uniqueId)
 		// 移除超时检测列表
@@ -70,6 +70,16 @@ func (b *BagUnique[E]) DelUniqueItem(uniqueId int64) int32 {
 			b.removeFromTimeoutList(e.GetUniqueId())
 		}
 		slog.Debug("DelUniqueItem", "uniqueId", uniqueId)
+		if bagUpdate != nil {
+			itemOp := &pb.BagItemOp{
+				BagType: b.bagType,
+				OpType:  pb.BagItemOpType_BagItemOpType_Delete,
+				BagItem: &pb.BagItemOp_UniqueId{
+					UniqueId: e.GetUniqueId(),
+				},
+			}
+			bagUpdate.ItemOps = append(bagUpdate.ItemOps, itemOp)
+		}
 		return 1
 	}
 	return 0
@@ -133,7 +143,7 @@ func (b *BagUnique[E]) DelItem(arg *pb.DelItemArg, bagUpdate *pb.BagUpdate) int3
 	realDelCount := int32(0)
 	// 删除指定物品
 	if arg.GetUniqueId() > 0 {
-		return b.DelUniqueItem(arg.GetUniqueId())
+		return b.DelUniqueItem(arg.GetUniqueId(), bagUpdate)
 	}
 	if arg.GetNum() <= 0 {
 		return 0
@@ -208,7 +218,7 @@ func (b *BagUnique[E]) removeFromTimeoutList(uniqueId int64) {
 }
 
 // 检查限时物品超时
-func (b *BagUnique[E]) checkTimeout(now int32) {
+func (b *BagUnique[E]) checkTimeout(now int32, bagUpdate *pb.BagUpdate) {
 	for i := len(b.timeoutCheckList) - 1; i >= 0; i-- {
 		if b.timeoutCheckList[i].timeout > now {
 			// 最后一个还没过期,直接返回,因为排过序了
@@ -216,9 +226,10 @@ func (b *BagUnique[E]) checkTimeout(now int32) {
 		}
 		uniqueId := b.timeoutCheckList[i].uniqueId
 		slog.Debug("checkTimeout", "uniqueId", uniqueId, "i", i, "v", b.timeoutCheckList[i])
-		if b.DelUniqueItem(uniqueId) == 0 {
+		if b.DelUniqueItem(uniqueId, bagUpdate) == 0 {
 			b.timeoutCheckList = append(b.timeoutCheckList[:i], b.timeoutCheckList[i+1:]...)
 			slog.Error("timeoutErr", "uniqueId", uniqueId, "len", len(b.timeoutCheckList))
+			continue
 		}
 		slog.Debug("timeout", "uniqueId", uniqueId, "len", len(b.timeoutCheckList))
 	}
