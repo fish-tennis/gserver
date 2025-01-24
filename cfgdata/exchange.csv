@@ -1,4 +1,4 @@
 CfgId,CountLimit,ConditionTemplates,Consumes,Rewards,Comment
-10001,1,,,CfgId_1#Num_2,»î¶¯1µÄ¶Ò»»ÅäÖÃ1
-50001,1,,CfgId_1#Num_1;CfgId_2#Num_2,CfgId_3#Num_1,»î¶¯5µÄ¶Ò»»ÅäÖÃ1
-50002,2,,CfgId_3#Num_1;CfgId_4#Num_2,CfgId_1#Num_10,»î¶¯5µÄ¶Ò»»ÅäÖÃ2
+10001,1,,,CfgId_1#Num_2,æ´»åŠ¨1çš„å…‘æ¢é…ç½®1
+50001,1,,CfgId_1#Num_1;CfgId_2#Num_2,CfgId_3#Num_1,æ´»åŠ¨5çš„å…‘æ¢é…ç½®1
+50002,2,,CfgId_3#Num_1;CfgId_4#Num_2,CfgId_1#Num_10,æ´»åŠ¨5çš„å…‘æ¢é…ç½®2
