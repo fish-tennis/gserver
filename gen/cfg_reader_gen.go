@@ -80,79 +80,107 @@ func (r *ItemCfgR) GetTimeout() int32 {
 }
 
 
-type AddItemArgR struct {
-	v *pb.AddItemArg
+type AddElemArgR struct {
+	v *pb.AddElemArg
 }
 
-func NewAddItemArgR(src *pb.AddItemArg) *AddItemArgR {
-	return &AddItemArgR{v:src}
+func NewAddElemArgR(src *pb.AddElemArg) *AddElemArgR {
+	return &AddElemArgR{v:src}
 }
 
-func (r *AddItemArgR) IsNil() bool {
+func (r *AddElemArgR) IsNil() bool {
 	return r == nil || r.v == nil
 }
 
-func (r *AddItemArgR) Raw() *pb.AddItemArg {
+func (r *AddElemArgR) Raw() *pb.AddElemArg {
     if r == nil {
         return nil
     }
 	return r.v
 }
 
-func (r *AddItemArgR) GetCfgId() int32 {
+func (r *AddElemArgR) GetCfgId() int32 {
 	return r.v.GetCfgId()
 }
 
-func (r *AddItemArgR) GetNum() int32 {
+func (r *AddElemArgR) GetNum() int32 {
 	return r.v.GetNum()
 }
 
-func (r *AddItemArgR) GetTimeType() int32 {
+func (r *AddElemArgR) GetTimeType() int32 {
 	return r.v.GetTimeType()
 }
 
-func (r *AddItemArgR) GetTimeout() int32 {
+func (r *AddElemArgR) GetTimeout() int32 {
 	return r.v.GetTimeout()
 }
 
-func (r *AddItemArgR) GetSource() int32 {
+func (r *AddElemArgR) GetSource() int32 {
 	return r.v.GetSource()
 }
 
-
-type DelItemArgR struct {
-	v *pb.DelItemArg
+func (r *AddElemArgR) LenOfProperties() int {
+    return len(r.v.GetProperties())
+}
+func (r *AddElemArgR) ElemOfProperties(key string) string {
+    return r.v.GetProperties()[key]
+}
+func (r *AddElemArgR) RangeProperties(f func(k string,v string) bool) {
+    for k,v := range r.v.GetProperties() {
+        if !f(k,v) {
+            return
+        }
+    }
 }
 
-func NewDelItemArgR(src *pb.DelItemArg) *DelItemArgR {
-	return &DelItemArgR{v:src}
+
+type DelElemArgR struct {
+	v *pb.DelElemArg
 }
 
-func (r *DelItemArgR) IsNil() bool {
+func NewDelElemArgR(src *pb.DelElemArg) *DelElemArgR {
+	return &DelElemArgR{v:src}
+}
+
+func (r *DelElemArgR) IsNil() bool {
 	return r == nil || r.v == nil
 }
 
-func (r *DelItemArgR) Raw() *pb.DelItemArg {
+func (r *DelElemArgR) Raw() *pb.DelElemArg {
     if r == nil {
         return nil
     }
 	return r.v
 }
 
-func (r *DelItemArgR) GetUniqueId() int64 {
+func (r *DelElemArgR) GetUniqueId() int64 {
 	return r.v.GetUniqueId()
 }
 
-func (r *DelItemArgR) GetCfgId() int32 {
+func (r *DelElemArgR) GetCfgId() int32 {
 	return r.v.GetCfgId()
 }
 
-func (r *DelItemArgR) GetNum() int32 {
+func (r *DelElemArgR) GetNum() int32 {
 	return r.v.GetNum()
 }
 
-func (r *DelItemArgR) GetSource() int32 {
+func (r *DelElemArgR) GetSource() int32 {
 	return r.v.GetSource()
+}
+
+func (r *DelElemArgR) LenOfProperties() int {
+    return len(r.v.GetProperties())
+}
+func (r *DelElemArgR) ElemOfProperties(key string) string {
+    return r.v.GetProperties()[key]
+}
+func (r *DelElemArgR) RangeProperties(f func(k string,v string) bool) {
+    for k,v := range r.v.GetProperties() {
+        if !f(k,v) {
+            return
+        }
+    }
 }
 
 
@@ -218,8 +246,8 @@ func (r *QuestCfgR) GetQuestType() int32 {
 func (r *QuestCfgR) LenOfRewards() int {
     return len(r.v.GetRewards())
 }
-func (r *QuestCfgR) ElemOfRewards(index int) *AddItemArgR {
-    return NewAddItemArgR(r.v.GetRewards()[index])
+func (r *QuestCfgR) ElemOfRewards(index int) *AddElemArgR {
+    return NewAddElemArgR(r.v.GetRewards()[index])
 }
 
 func (r *QuestCfgR) GetPreQuest() int32 {
@@ -525,15 +553,15 @@ func (r *ExchangeCfgR) ElemOfConditions(index int) *ConditionCfgR {
 func (r *ExchangeCfgR) LenOfConsumes() int {
     return len(r.v.GetConsumes())
 }
-func (r *ExchangeCfgR) ElemOfConsumes(index int) *DelItemArgR {
-    return NewDelItemArgR(r.v.GetConsumes()[index])
+func (r *ExchangeCfgR) ElemOfConsumes(index int) *DelElemArgR {
+    return NewDelElemArgR(r.v.GetConsumes()[index])
 }
 
 func (r *ExchangeCfgR) LenOfRewards() int {
     return len(r.v.GetRewards())
 }
-func (r *ExchangeCfgR) ElemOfRewards(index int) *AddItemArgR {
-    return NewAddItemArgR(r.v.GetRewards()[index])
+func (r *ExchangeCfgR) ElemOfRewards(index int) *AddElemArgR {
+    return NewAddElemArgR(r.v.GetRewards()[index])
 }
 
 func (r *ExchangeCfgR) GetCountLimit() int32 {

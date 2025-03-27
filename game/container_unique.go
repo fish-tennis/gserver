@@ -6,6 +6,8 @@ import (
 	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/anypb"
 	"log/slog"
 	"reflect"
 	"slices"
@@ -16,26 +18,27 @@ type timeoutCheckData struct {
 	timeout  int32 // 超时时间戳(秒)
 }
 
-type BagUnique[E internal.Uniquely] struct {
+// 通用的不可叠加的物品容器(如装备背包或限时道具背包)
+type UniqueContainer[E internal.Uniquely] struct {
 	*gentity.MapData[int64, E] `db:""`
-	bagType                    pb.BagType
-	ItemCtor                   func(arg *pb.AddItemArg) E // 物品的构造接口
+	containerType              pb.ContainerType
+	ElemCtor                   func(arg *pb.AddElemArg) E // 元素的构造接口
 	timeoutCheckList           []*timeoutCheckData        // 限时类物品超时检查列表(排序的)
 }
 
-func NewBagUnique[E internal.Uniquely](bagType pb.BagType, itemCtor func(arg *pb.AddItemArg) E) *BagUnique[E] {
-	return &BagUnique[E]{
-		MapData:  gentity.NewMapData[int64, E](),
-		bagType:  bagType,
-		ItemCtor: itemCtor,
+func NewBagUnique[E internal.Uniquely](bagType pb.ContainerType, elemCtor func(arg *pb.AddElemArg) E) *UniqueContainer[E] {
+	return &UniqueContainer[E]{
+		MapData:       gentity.NewMapData[int64, E](),
+		containerType: bagType,
+		ElemCtor:      elemCtor,
 	}
 }
 
-func (b *BagUnique[E]) GetCapacity() int32 {
+func (b *UniqueContainer[E]) GetCapacity() int32 {
 	return 100
 }
 
-func (b *BagUnique[E]) GetItemCount(itemCfgId int32) int32 {
+func (b *UniqueContainer[E]) GetElemCount(itemCfgId int32) int32 {
 	itemCount := int32(0)
 	for _, item := range b.Data {
 		if item.GetCfgId() == itemCfgId {
@@ -45,7 +48,7 @@ func (b *BagUnique[E]) GetItemCount(itemCfgId int32) int32 {
 	return itemCount
 }
 
-func (b *BagUnique[E]) AddUniqueItem(e E) int64 {
+func (b *UniqueContainer[E]) AddUniqueItem(e E) int64 {
 	if len(b.Data) >= int(b.GetCapacity()) {
 		slog.Debug("BagFull", "cfgId", e.GetCfgId(), "uniqueId", e.GetUniqueId())
 		return 0
@@ -62,7 +65,7 @@ func (b *BagUnique[E]) AddUniqueItem(e E) int64 {
 	return 0
 }
 
-func (b *BagUnique[E]) DelUniqueItem(uniqueId int64, bagUpdate *pb.BagUpdate) int32 {
+func (b *UniqueContainer[E]) DelUniqueItem(uniqueId int64, bagUpdate *pb.ElemContainerUpdate) int32 {
 	if e, ok := b.Data[uniqueId]; ok {
 		b.Delete(uniqueId)
 		// 移除超时检测列表
@@ -71,21 +74,21 @@ func (b *BagUnique[E]) DelUniqueItem(uniqueId int64, bagUpdate *pb.BagUpdate) in
 		}
 		slog.Debug("DelUniqueItem", "uniqueId", uniqueId)
 		if bagUpdate != nil {
-			itemOp := &pb.BagItemOp{
-				BagType: b.bagType,
-				OpType:  pb.BagItemOpType_BagItemOpType_Delete,
-				BagItem: &pb.BagItemOp_UniqueId{
-					UniqueId: e.GetUniqueId(),
-				},
+			itemOp := &pb.ElemOp{
+				ContainerType: b.containerType,
+				OpType:        pb.ElemOpType_ElemOpType_Delete,
 			}
-			bagUpdate.ItemOps = append(bagUpdate.ItemOps, itemOp)
+			itemOp.ElemData, _ = anypb.New(&pb.UniqueId{
+				Id: e.GetUniqueId(),
+			})
+			bagUpdate.ElemOps = append(bagUpdate.ElemOps, itemOp)
 		}
 		return 1
 	}
 	return 0
 }
 
-func (b *BagUnique[E]) AddItem(arg *pb.AddItemArg, bagUpdate *pb.BagUpdate) int32 {
+func (b *UniqueContainer[E]) AddElem(arg *pb.AddElemArg, bagUpdate *pb.ElemContainerUpdate) int32 {
 	addCount := arg.GetNum()
 	if addCount <= 0 {
 		return 0
@@ -99,7 +102,7 @@ func (b *BagUnique[E]) AddItem(arg *pb.AddItemArg, bagUpdate *pb.BagUpdate) int3
 			slog.Debug("BagFull", "cfgId", arg.GetCfgId(), "addCount", addCount, "realAddCount", i)
 			return int32(i)
 		}
-		uniqueItem := b.ItemCtor(arg)
+		uniqueItem := b.ElemCtor(arg)
 		// 限时道具
 		timeout := int32(0)
 		if arg.GetTimeType() > 0 {
@@ -115,31 +118,26 @@ func (b *BagUnique[E]) AddItem(arg *pb.AddItemArg, bagUpdate *pb.BagUpdate) int3
 		}
 		newUniqueId := b.AddUniqueItem(uniqueItem)
 		if bagUpdate != nil && newUniqueId > 0 {
-			itemOp := &pb.BagItemOp{
-				BagType: b.bagType,
-				OpType:  pb.BagItemOpType_BagItemOpType_Add,
+			itemOp := &pb.ElemOp{
+				ContainerType: b.containerType,
+				OpType:        pb.ElemOpType_ElemOpType_Add,
 			}
 			switch realItem := any(uniqueItem).(type) {
-			case *pb.UniqueCountItem:
-				itemOp.BagItem = &pb.BagItemOp_UniqueItem{
-					UniqueItem: realItem,
-				}
-			case *pb.Equip:
-				itemOp.BagItem = &pb.BagItemOp_Equip{
-					Equip: realItem,
-				}
+			case proto.Message:
+				itemOp.ElemData, _ = anypb.New(realItem)
 			default:
-				slog.Error("AddItemErr", "bagType", b.bagType, "itemType", reflect.TypeOf(uniqueItem))
+				// TODO: 使用类似ItemCtor的方式,传一个自定义的序列化接口进来
+				slog.Error("AddItemErr", "containerType", b.containerType, "itemType", reflect.TypeOf(uniqueItem))
 			}
-			if itemOp.BagItem != nil {
-				bagUpdate.ItemOps = append(bagUpdate.ItemOps, itemOp)
+			if itemOp.ElemData != nil {
+				bagUpdate.ElemOps = append(bagUpdate.ElemOps, itemOp)
 			}
 		}
 	}
 	return addCount
 }
 
-func (b *BagUnique[E]) DelItem(arg *pb.DelItemArg, bagUpdate *pb.BagUpdate) int32 {
+func (b *UniqueContainer[E]) DelElem(arg *pb.DelElemArg, bagUpdate *pb.ElemContainerUpdate) int32 {
 	realDelCount := int32(0)
 	// 删除指定物品
 	if arg.GetUniqueId() > 0 {
@@ -157,16 +155,16 @@ func (b *BagUnique[E]) DelItem(arg *pb.DelItemArg, bagUpdate *pb.BagUpdate) int3
 				b.removeFromTimeoutList(e.GetUniqueId())
 			}
 			if bagUpdate != nil {
-				itemOp := &pb.BagItemOp{
-					BagType: b.bagType,
-					OpType:  pb.BagItemOpType_BagItemOpType_Delete,
-					BagItem: &pb.BagItemOp_UniqueId{
-						UniqueId: e.GetUniqueId(),
-					},
+				itemOp := &pb.ElemOp{
+					ContainerType: b.containerType,
+					OpType:        pb.ElemOpType_ElemOpType_Delete,
 				}
-				bagUpdate.ItemOps = append(bagUpdate.ItemOps, itemOp)
+				itemOp.ElemData, _ = anypb.New(&pb.UniqueId{
+					Id: e.GetUniqueId(),
+				})
+				bagUpdate.ElemOps = append(bagUpdate.ElemOps, itemOp)
 			}
-			slog.Debug("DelItem", "cfgId", arg.GetCfgId(), "uniqueId", e.GetUniqueId())
+			slog.Debug("DelElem", "cfgId", arg.GetCfgId(), "uniqueId", e.GetUniqueId())
 			if realDelCount >= arg.GetNum() {
 				break
 			}
@@ -176,7 +174,7 @@ func (b *BagUnique[E]) DelItem(arg *pb.DelItemArg, bagUpdate *pb.BagUpdate) int3
 }
 
 // 加载数据后,把限时类物品加入超时检查列表
-func (b *BagUnique[E]) initTimeoutList() {
+func (b *UniqueContainer[E]) initTimeoutList() {
 	b.timeoutCheckList = nil
 	b.Range(func(uniqueId int64, e E) bool {
 		if timeoutItem, ok := any(e).(internal.TimeLimited); ok && timeoutItem.GetTimeout() > 0 {
@@ -187,7 +185,7 @@ func (b *BagUnique[E]) initTimeoutList() {
 }
 
 // 加到限时检测列表
-func (b *BagUnique[E]) addToTimeoutList(uniqueId int64, timeout int32) {
+func (b *UniqueContainer[E]) addToTimeoutList(uniqueId int64, timeout int32) {
 	b.timeoutCheckList = append(b.timeoutCheckList, &timeoutCheckData{
 		uniqueId: uniqueId,
 		timeout:  timeout,
@@ -206,7 +204,7 @@ func (b *BagUnique[E]) addToTimeoutList(uniqueId int64, timeout int32) {
 }
 
 // 移出限时检测列表
-func (b *BagUnique[E]) removeFromTimeoutList(uniqueId int64) {
+func (b *UniqueContainer[E]) removeFromTimeoutList(uniqueId int64) {
 	for i, v := range b.timeoutCheckList {
 		if v.uniqueId == uniqueId {
 			removed := b.timeoutCheckList[i]
@@ -218,7 +216,7 @@ func (b *BagUnique[E]) removeFromTimeoutList(uniqueId int64) {
 }
 
 // 检查限时物品超时
-func (b *BagUnique[E]) checkTimeout(now int32, bagUpdate *pb.BagUpdate) {
+func (b *UniqueContainer[E]) checkTimeout(now int32, bagUpdate *pb.ElemContainerUpdate) {
 	for i := len(b.timeoutCheckList) - 1; i >= 0; i-- {
 		if b.timeoutCheckList[i].timeout > now {
 			// 最后一个还没过期,直接返回,因为排过序了

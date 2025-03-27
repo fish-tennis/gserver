@@ -28,7 +28,7 @@ enum CmdClient {
 
 	// Bags
 	Cmd_BagsSync  = 1121; // 同步数据给客户端
-	Cmd_BagUpdate = 1122; // 背包数据更新(增加,删除,更新)
+	Cmd_ElemContainerUpdate = 1122; // 背包数据更新(增加,删除,更新)
 	
 	// Money
 	Cmd_MoneySync  = 1151; // 同步数据给客户端

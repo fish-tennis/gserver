@@ -2,19 +2,19 @@ package internal
 
 import "github.com/fish-tennis/gserver/pb"
 
-// 背包通用操作接口
-type Bag interface {
-	// 背包容量
+// 容器通用操作接口(例如背包就是一种容器)
+type ElemContainer interface {
+	// 容量
 	GetCapacity() int32
 
-	// 获取物品数量
-	GetItemCount(itemCfgId int32) int32
+	// 获取元素数量
+	GetElemCount(elemCfgId int32) int32
 
-	// 添加物品,返回实际添加数量
-	AddItem(arg *pb.AddItemArg, bagUpdate *pb.BagUpdate) int32
+	// 添加元素,返回实际添加数量
+	AddElem(arg *pb.AddElemArg, bagUpdate *pb.ElemContainerUpdate) int32
 
-	// 删除指定数量物品,返回实际删除数量
-	DelItem(arg *pb.DelItemArg, bagUpdate *pb.BagUpdate) int32
+	// 删除指定数量元素,返回实际删除数量
+	DelElem(arg *pb.DelElemArg, bagUpdate *pb.ElemContainerUpdate) int32
 }
 
 // 有唯一id的对象

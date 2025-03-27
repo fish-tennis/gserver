@@ -48,22 +48,24 @@ message ItemCfg {
   int32 Timeout = 6; // 结束时间
 }
 
-// 添加物品参数
-message AddItemArg {
-	int32 CfgId = 1; // 物品配置id
-	int32 Num = 2; // 物品数量
+// 添加元素参数
+message AddElemArg {
+	int32 CfgId = 1; // 配置id
+	int32 Num = 2; // 数量
 	int32 TimeType = 3; // 时间类型(enum TimeType)
 	int32 Timeout = 4; // 结束时间
 	int32 Source = 5; // 来源(一般用于数据分析)
-	// NOTE: 有些项目有物品绑定属性,可以在这里加
+	map<string,string> Properties = 6; // 扩展属性
+	// NOTE: 有些项目有绑定属性,可以在这里加
 }
 
-// 删除物品参数
-message DelItemArg {
-	int64 UniqueId = 1; // 唯一id(删除指定的不可叠加的物品才需要)
-	int32 CfgId = 2; // 物品配置id
-	int32 Num = 3; // 物品数量
+// 删除元素参数
+message DelElemArg {
+	int64 UniqueId = 1; // 唯一id(删除指定的不可叠加的元素才需要)
+	int32 CfgId = 2; // 配置id
+	int32 Num = 3; // 数量
 	int32 Source = 4; // 来源(一般用于数据分析)
+	map<string,string> Properties = 5; // 扩展属性
 }
 
 // CfgId + Arg
@@ -83,7 +85,7 @@ message QuestCfg {
   int32 CfgId = 1;
   string Name = 2;
   int32 QuestType = 3; // 任务类型(enum QuestType)
-  repeated AddItemArg Rewards = 4; // 任务奖励
+  repeated AddElemArg Rewards = 4; // 任务奖励
   int32 PreQuest = 5; // 前置任务
   repeated int32 NextQuests = 6; // 完成该任务后,自动接后续的任务(任务链)
   repeated ConditionCfg Conditions = 7; // 任务条件
@@ -139,8 +141,8 @@ message ProgressTemplateCfg {
 message ExchangeCfg {
   int32 CfgId = 1;
   repeated ConditionCfg Conditions = 2; // 任务条件
-  repeated DelItemArg Consumes = 3; // 需要消耗的物品
-  repeated AddItemArg Rewards = 4; // 获得物品
+  repeated DelElemArg Consumes = 3; // 需要消耗的物品
+  repeated AddElemArg Rewards = 4; // 获得物品
   int32 CountLimit = 5; // 兑换次数限制
   map<string,string> Properties = 6; // 扩展属性
   repeated CfgArg ConditionTemplates = 11; // 关联的配置模板id和参数,简化配置表用,业务代码不要调用

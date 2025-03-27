@@ -4,16 +4,49 @@ option go_package = "./pb";
 
 package gserver;
 
+import "google/protobuf/any.proto";
 import "cfg.proto";
 import "item.proto";
 
-// 背包类型
-enum BagType {
-  BagType_None = 0;
-  BagType_CountItem = 1; // 可叠加的普通物品
-  BagType_UniqueItem = 2; // 不可叠加的普通物品(如带限时属性的普通物品)
-  BagType_Equip = 3; // 装备
-  // 业务根据需要在这里增加更多的背包类型
+// 容器类型
+enum ContainerType {
+  ContainerType_None = 0;
+  ContainerType_CountItem = 1; // 可叠加的普通物品
+  ContainerType_UniqueItem = 2; // 不可叠加的普通物品(如带限时属性的普通物品)
+  ContainerType_Equip = 3; // 装备
+  // 业务根据需要在这里增加更多的容器类型
+}
+
+// 容器更新
+// 整合不同的容器,不同的操作类型(增加,更新,删除),都统一在一个消息里面
+message ElemContainerUpdate {
+  repeated ElemOp ElemOps = 1; // 容器数据变化,增加,更新,删除
+}
+
+// 容器内元素数据变化类型
+enum ElemOpType {
+  ElemOpType_None   = 0;
+  ElemOpType_Add    = 1; // 新加
+  ElemOpType_Update = 2; // 更新属性(不可叠加的元素,如装备)
+  ElemOpType_Delete = 3; // 删除
+}
+
+// 容器内元素数据变化
+message ElemOp {
+  ContainerType ContainerType = 1;
+  ElemOpType OpType = 2;
+  google.protobuf.Any elemData = 3; // 元素数据
+}
+
+// int64封装成message,用于序列化成google.protobuf.Any
+message UniqueId {
+  int64 Id = 1;
+}
+
+// 元素数量
+message ElemNum {
+  int32 CfgId = 1; // 配置id
+  int32 Num = 2;   // 数量
 }
 
 // 背包数据同步给客户端
@@ -21,31 +54,4 @@ message BagsSync {
   map<int32,int32> CountItem = 1; // 可叠加的普通物品
   map<int64,UniqueCountItem> UniqueItem = 2; // 不可叠加的普通物品
   map<int64,Equip> Equip = 3; // 装备
-}
-
-// 背包更新
-// 整合不同的背包,不同的操作类型(增加,更新,删除),都统一在一个消息里面
-message BagUpdate {
-  repeated BagItemOp ItemOps = 1; // 背包物品数据变化,增加,更新,删除
-}
-
-// 背包物品数据变化类型
-enum BagItemOpType {
-  BagItemOpType_None = 0;
-  BagItemOpType_Add = 1; // 新加物品
-  BagItemOpType_Update = 2; // 更新属性(不可叠加的物品)
-  BagItemOpType_Delete = 3; // 删除物品
-}
-
-// 背包物品数据变化
-message BagItemOp {
-  BagType BagType = 1;
-  BagItemOpType OpType = 2;
-  // 利用oneof统一不同的物品数据
-  oneof BagItem {
-    ItemNum CountItem = 3; // 可叠加的普通物品(增加,删除)
-	UniqueCountItem UniqueItem = 4; // 不可叠加的普通物品(增加,更新)
-	Equip Equip = 5; // 装备(增加,更新)
-	int64 UniqueId = 6; // 不可叠加的物品的唯一id(删除)
-  }
 }

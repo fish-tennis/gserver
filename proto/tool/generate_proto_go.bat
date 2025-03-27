@@ -1,5 +1,5 @@
-protoc.exe --go_out=.\..\..\ --proto_path=.\..\ .\..\*.proto
-proto_code_gen -input=.\..\..\pb\*.pb.go -config=.\code_templates.json
+.\protoc.exe --go_out=.\..\..\ --proto_path=.\..\ .\..\*.proto
+.\proto_code_gen.exe -input=.\..\..\pb\*.pb.go -config=.\code_templates.json
 
 if exist .\..\..\..\gtestclient (
 REM /XD . 表示不复制子目录

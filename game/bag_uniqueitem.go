@@ -5,23 +5,20 @@ import (
 	"github.com/fish-tennis/gserver/pb"
 )
 
-// 不可叠加的普通物品背包
-type BagUniqueItem struct {
-	*BagUnique[*pb.UniqueCountItem] `db:""`
+// 不可叠加的普通物品背包(如限时道具)
+type UniqueItemBag struct {
+	*UniqueContainer[*pb.UniqueCountItem] `db:""`
 }
 
-func NewBagUniqueItem() *BagUniqueItem {
-	bag := &BagUniqueItem{
-		BagUnique: NewBagUnique[*pb.UniqueCountItem](pb.BagType_BagType_UniqueItem, func(arg *pb.AddItemArg) *pb.UniqueCountItem {
+func NewUniqueItemBag() *UniqueItemBag {
+	bag := &UniqueItemBag{
+		UniqueContainer: NewBagUnique[*pb.UniqueCountItem](pb.ContainerType_ContainerType_UniqueItem, func(arg *pb.AddElemArg) *pb.UniqueCountItem {
 			return &pb.UniqueCountItem{
 				CfgId:    arg.GetCfgId(),
 				UniqueId: util.GenUniqueId(),
+				Timeout:  arg.GetTimeout(),
 			}
 		}),
 	}
 	return bag
-}
-
-func (b *BagUniqueItem) GetCapacity() int32 {
-	return 100
 }

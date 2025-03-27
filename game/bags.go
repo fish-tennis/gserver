@@ -24,7 +24,7 @@ func init() {
 				name:   ComponentNameBag,
 			},
 			BagCountItem:  NewBagCountItem(),
-			BagUniqueItem: NewBagUniqueItem(),
+			BagUniqueItem: NewUniqueItemBag(),
 			BagEquip:      NewBagEquip(),
 		}
 	})
@@ -34,9 +34,9 @@ func init() {
 // 演示通过组合模式,整合多个不同的子背包模块,提供更高一级的背包接口
 type Bags struct {
 	BasePlayerComponent
-	BagCountItem  *BagCountItem  `child:"CountItem"`  // 普通物品
-	BagUniqueItem *BagUniqueItem `child:"UniqueItem"` // 不可叠加的普通物品(如限时类的普通物品)
-	BagEquip      *BagEquip      `child:"Equip"`      // 装备
+	BagCountItem  *CountContainer `child:"CountItem"`  // 普通物品
+	BagUniqueItem *UniqueItemBag  `child:"UniqueItem"` // 不可叠加的普通物品(如限时类的普通物品)
+	BagEquip      *EquipBag       `child:"Equip"`      // 装备
 }
 
 func (p *Player) GetBags() *Bags {
@@ -52,13 +52,13 @@ func (b *Bags) SyncDataToClient() {
 }
 
 // 根据物品配置获取对应的子背包
-func (b *Bags) GetBag(itemCfgId int32) internal.Bag {
-	return b.GetBagByArg(&pb.AddItemArg{
+func (b *Bags) GetBag(itemCfgId int32) internal.ElemContainer {
+	return b.GetBagByArg(&pb.AddElemArg{
 		CfgId: itemCfgId,
 	})
 }
 
-func (b *Bags) GetBagByArg(arg *pb.AddItemArg) internal.Bag {
+func (b *Bags) GetBagByArg(arg *pb.AddElemArg) internal.ElemContainer {
 	itemCfg := cfg.GetItemCfgMgr().GetItemCfg(arg.GetCfgId())
 	if itemCfg == nil {
 		slog.Error("ErrItemCfgId", "itemCfgId", arg.GetCfgId())
@@ -84,26 +84,26 @@ func (b *Bags) GetItemCount(itemCfgId int32) int32 {
 	if bag == nil {
 		return 0
 	}
-	return bag.GetItemCount(itemCfgId)
+	return bag.GetElemCount(itemCfgId)
 }
 
 // 背包模块提供对外的添加物品接口
 // 业务层应该尽量使用该接口
-func (b *Bags) AddItem(arg *pb.AddItemArg, bagUpdate *pb.BagUpdate) int32 {
+func (b *Bags) AddItem(arg *pb.AddElemArg, bagUpdate *pb.ElemContainerUpdate) int32 {
 	bag := b.GetBagByArg(arg)
 	if bag == nil {
 		return 0
 	}
-	return bag.AddItem(arg, bagUpdate)
+	return bag.AddElem(arg, bagUpdate)
 }
 
-func (b *Bags) AddItems(addItemArgs []*pb.AddItemArg) int32 {
-	bagUpdate := &pb.BagUpdate{}
+func (b *Bags) AddItems(addItemArgs []*pb.AddElemArg) int32 {
+	bagUpdate := &pb.ElemContainerUpdate{}
 	total := int32(0)
 	for _, addItemArg := range addItemArgs {
 		total += b.AddItem(addItemArg, bagUpdate)
 	}
-	if len(bagUpdate.ItemOps) > 0 {
+	if len(bagUpdate.ElemOps) > 0 {
 		b.GetPlayer().Send(bagUpdate) // 同步背包变化给客户端
 		//slog.Info("AddItems", "bagUpdate", bagUpdate)
 	}
@@ -111,15 +111,15 @@ func (b *Bags) AddItems(addItemArgs []*pb.AddItemArg) int32 {
 }
 
 func (b *Bags) AddItemById(cfgId, num int32) int32 {
-	bagUpdate := &pb.BagUpdate{}
-	return b.AddItem(&pb.AddItemArg{
+	bagUpdate := &pb.ElemContainerUpdate{}
+	return b.AddItem(&pb.AddElemArg{
 		CfgId: cfgId,
 		Num:   num,
 	}, bagUpdate)
 }
 
-func (b *Bags) DelItems(delItems []*pb.DelItemArg) int32 {
-	bagUpdate := &pb.BagUpdate{}
+func (b *Bags) DelItems(delItems []*pb.DelElemArg) int32 {
+	bagUpdate := &pb.ElemContainerUpdate{}
 	total := int32(0)
 	for _, delItem := range delItems {
 		bag := b.GetBag(delItem.CfgId)
@@ -127,16 +127,16 @@ func (b *Bags) DelItems(delItems []*pb.DelItemArg) int32 {
 			slog.Debug("bag is nil", "cfgId", delItem.CfgId)
 			continue
 		}
-		total += bag.DelItem(delItem, bagUpdate)
+		total += bag.DelElem(delItem, bagUpdate)
 	}
-	if len(bagUpdate.ItemOps) > 0 {
+	if len(bagUpdate.ElemOps) > 0 {
 		b.GetPlayer().Send(bagUpdate) // 同步背包变化给客户端
 		//slog.Info("DelItems", "bagUpdate", bagUpdate)
 	}
 	return total
 }
 
-func (b *Bags) IsEnough(items []*pb.DelItemArg) bool {
+func (b *Bags) IsEnough(items []*pb.DelElemArg) bool {
 	// items可能有重复的物品,所以转换成map来统计总数量
 	itemNumMap := make(map[int32]int64)
 	for _, itemNum := range items {
@@ -157,7 +157,7 @@ func (b *Bags) IsEnough(items []*pb.DelItemArg) bool {
 			slog.Debug("bag is nil", "cfgId", cfgId)
 			return false
 		}
-		if bag.GetItemCount(cfgId) < int32(num) {
+		if bag.GetElemCount(cfgId) < int32(num) {
 			return false
 		}
 	}
@@ -170,11 +170,11 @@ func (b *Bags) TriggerPlayerEntryGame(event *internal.EventPlayerEntryGame) {
 	b.BagEquip.initTimeoutList()
 	// 超时检查回调
 	b.GetPlayer().GetTimerEntries().After(time.Second, func() time.Duration {
-		bagUpdate := &pb.BagUpdate{}
+		bagUpdate := &pb.ElemContainerUpdate{}
 		now := int32(b.GetPlayer().GetTimerEntries().Now().Unix())
 		b.BagUniqueItem.checkTimeout(now, bagUpdate)
 		b.BagEquip.checkTimeout(now, bagUpdate)
-		if len(bagUpdate.ItemOps) > 0 {
+		if len(bagUpdate.ElemOps) > 0 {
 			b.GetPlayer().Send(bagUpdate) // 同步背包变化给客户端
 			//slog.Info("checkTimeout", "bagUpdate", bagUpdate)
 		}
