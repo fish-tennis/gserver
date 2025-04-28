@@ -12,30 +12,11 @@ message ActivitySync {
   ActivityDefaultBaseData baseData = 2; // 活动数据
 }
 
-// 活动任务数据更新
-message ActivityQuestUpdate {
-  int32 activityId = 1; // 活动id
-  int32 questCfgId = 2; // 任务id
-  ActivityQuestData data = 3; // 活动任务数据
-}
-
 // 活动兑换数据更新
 message ActivityExchangeUpdate {
   int32 activityId = 1; // 活动id
   int32 exchangeCfgId = 2; // 兑换配置id
   int32 exchangeCount = 3; // 已兑换次数
-}
-
-// 活动任务完成req
-message ActivityQuestFinishReq {
-  int32 activityId = 1; // 活动ids
-  int32 questCfgId = 2; // 任务id
-}
-
-// 活动任务完成res
-message ActivityQuestFinishRes {
-  int32 activityId = 1; // 活动ids
-  int32 questCfgId = 2; // 任务id
 }
 
 // 活动兑换请求req

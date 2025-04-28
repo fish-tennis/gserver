@@ -74,7 +74,8 @@ func (a *Activities) AddNewActivity(activityCfg *pb.ActivityCfg, t time.Time) in
 		return nil
 	}
 	a.Data.Set(activity.GetId(), activity)
-	slog.Debug("AddNewActivity", "playerId", a.GetPlayer().GetId(), "activityId", activityCfg.CfgId)
+	slog.Debug("AddNewActivity", "playerId", a.GetPlayer().GetId(),
+		"activityId", activityCfg.CfgId, "activityName", activityCfg.Name)
 	return activity
 }
 

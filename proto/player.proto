@@ -33,7 +33,7 @@ message BagSaveData {
 
 // 任务模块数据
 message QuestSaveData {
-  repeated int32 finished = 1; // 已完成的任务
+  map<int32,bytes> finished = 1; // 已完成的任务
   map<int32,bytes> quests = 2; // 进行中的任务
 }
 
@@ -41,6 +41,12 @@ message QuestSaveData {
 message QuestData {
   int32 cfgId = 1; // 配置id
   int32 progress = 2; // 进度
+  int32 activityId = 3; // 活动id,只有活动子任务才会有值
+}
+
+// 已完成的任务
+message FinishedQuestData {
+  int32 timestamp = 1; // 完成时间戳(秒)
 }
 
 // 玩家身上的公会数据
@@ -67,18 +73,10 @@ message PlayerData {
 // 默认活动模板的基础数据
 message ActivityDefaultBaseData {
   int32 LastUpdateTime = 1; // 刷新时间戳
-  map<int32,ActivityQuestData> Quests = 2; // 活动任务数据
   map<int32,int32> ExchangeRecord = 3; // 兑换记录
   int32 JoinTime = 4; // 参加活动的时间(时间戳)
   map<string,int32> PropertiesInt32 = 5; // 动态属性(int32)
   //map<string,int64> PropertiesInt64 = 6; // 动态属性(int64)
-}
-
-// 活动任务进度数据
-message ActivityQuestData {
-  int32 cfgId = 1; // 配置id
-  int32 progress = 2; // 进度
-  bool isReceiveReward = 3; // 是否已经领取了奖励
 }
 
 // 待处理消息

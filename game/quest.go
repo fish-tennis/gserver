@@ -7,6 +7,7 @@ import (
 	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
+	"log/slog"
 )
 
 const (
@@ -22,7 +23,7 @@ func init() {
 				player: player,
 				name:   ComponentNameQuest,
 			},
-			Finished: new(gentity.SliceData[int32]),
+			Finished: gentity.NewMapData[int32, *pb.FinishedQuestData](),
 			Quests:   gentity.NewMapData[int32, *pb.QuestData](),
 		}
 	})
@@ -33,8 +34,7 @@ func init() {
 type Quest struct {
 	BasePlayerComponent
 	// 保存数据的子模块:已完成的任务
-	// 保存数据的子模块必须是导出字段(字段名大写开头)
-	Finished *gentity.SliceData[int32] `child:"plain"` // 明文保存
+	Finished *gentity.MapData[int32, *pb.FinishedQuestData] `child:""`
 	// 保存数据的子模块:当前任务列表
 	Quests *gentity.MapData[int32, *pb.QuestData] `child:""`
 }
@@ -51,7 +51,7 @@ func (q *Quest) OnDataLoad() {
 			logger.Error("questCfg nil %v", questData.GetCfgId())
 			return true
 		}
-		q.GetPlayer().progressEventMapping.addProgress(questCfg.Progress, questData)
+		q.GetPlayer().progressEventMapping.AddProgress(questCfg.Progress, questData)
 		return true
 	})
 }
@@ -66,7 +66,7 @@ func (q *Quest) SyncDataToClient() {
 func (q *Quest) AddQuest(questData *pb.QuestData) {
 	questCfg := cfg.GetQuestCfgMgr().GetQuestCfg(questData.GetCfgId())
 	if questCfg == nil {
-		logger.Error("questCfg nil %v", questData.GetCfgId())
+		slog.Error("AddQuestErr", "questData", questData)
 		return
 	}
 	q.Quests.Set(questData.CfgId, questData)
@@ -75,13 +75,27 @@ func (q *Quest) AddQuest(questData *pb.QuestData) {
 		if questCfg.Progress.NeedInit {
 			cfg.GetQuestCfgMgr().GetProgressMgr().InitProgress(q.GetPlayer(), questCfg.Progress, questData)
 		}
-		q.GetPlayer().progressEventMapping.addProgress(questCfg.Progress, questData)
+		q.GetPlayer().progressEventMapping.AddProgress(questCfg.Progress, questData)
 	}
 	q.GetPlayer().Send(&pb.QuestUpdate{
 		QuestCfgId: questData.GetCfgId(),
 		Data:       questData,
 	})
-	logger.Debug("AddQuest:%v", questData)
+	slog.Debug("AddQuest", "questData", questData)
+}
+
+func (q *Quest) RemoveQuest(questCfgId int32) {
+	q.Quests.Delete(questCfgId)
+}
+
+// 遍历某个活动关联的当前任务
+func (q *Quest) RangeByActivityId(activityId int32, f func(questData *pb.QuestData) bool) {
+	q.Quests.Range(func(k int32, questData *pb.QuestData) bool {
+		if questData.GetActivityId() == activityId {
+			return f(questData)
+		}
+		return true
+	})
 }
 
 // 事件接口
@@ -111,8 +125,10 @@ func (q *Quest) OnFinishQuestReq(req *pb.FinishQuestReq) (*pb.FinishQuestRes, er
 		questCfg := cfg.GetQuestCfgMgr().GetQuestCfg(questData.GetCfgId())
 		if questData.GetProgress() >= questCfg.Progress.GetTotal() {
 			q.Quests.Delete(questData.GetCfgId())
-			q.Finished.Add(questData.GetCfgId())
-			q.GetPlayer().progressEventMapping.removeProgress(questCfg.Progress, questData.GetCfgId())
+			q.Finished.Set(questData.GetCfgId(), &pb.FinishedQuestData{
+				Timestamp: int32(q.GetPlayer().GetTimerEntries().Now().Unix()),
+			})
+			q.GetPlayer().progressEventMapping.RemoveProgress(questCfg.Progress, questData.GetCfgId())
 			// 任务奖励
 			q.GetPlayer().GetBags().AddItems(questCfg.GetRewards())
 			return &pb.FinishQuestRes{

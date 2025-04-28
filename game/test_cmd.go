@@ -139,21 +139,6 @@ func (p *Player) OnTestCmd(req *pb.TestCmd) {
 			p.GetActivities().AddNewActivity(activityCfg, p.GetTimerEntries().Now())
 		}
 
-	case strings.ToLower("ActivityReceiveReward"):
-		if len(cmdArgs) < 2 {
-			p.SendErrorRes(cmd, "ActivityReceiveReward cmdArgs error")
-			return
-		}
-		activityId := int32(util.Atoi(cmdArgs[0]))
-		cfgId := int32(util.Atoi(cmdArgs[1]))
-		activity := p.GetActivities().GetActivity(activityId)
-		if activity == nil {
-			return
-		}
-		if activityDefault, ok := activity.(*ActivityDefault); ok {
-			activityDefault.ReceiveReward(cfgId)
-		}
-
 	case strings.ToLower("ActivityExchange"):
 		if len(cmdArgs) < 2 {
 			p.SendErrorRes(cmd, "ActivityExchange cmdArgs error")

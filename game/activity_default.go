@@ -37,52 +37,16 @@ type ActivityDefault struct {
 	Base *pb.ActivityDefaultBaseData `db:"Base"`
 }
 
-func (a *ActivityDefault) GetQuest(cfgId int32) *pb.ActivityQuestData {
-	if a.Base.Quests == nil {
-		return nil
-	}
-	return a.Base.Quests[cfgId]
-}
-
 // 添加一个活动任务
-func (a *ActivityDefault) AddQuest(questCfg *pb.QuestCfg) *pb.ActivityQuestData {
+func (a *ActivityDefault) AddQuest(questCfg *pb.QuestCfg) {
 	if !cfg.GetActivityCfgMgr().GetConditionMgr().CheckConditions(a, questCfg.Conditions) {
-		return nil
+		return
 	}
-	if questCfg.Progress == nil {
-		return nil
+	questData := &pb.QuestData{
+		CfgId:      questCfg.CfgId,
+		ActivityId: a.GetId(), // 关联该任务属于哪个活动
 	}
-	if a.Base.Quests == nil {
-		a.Base.Quests = make(map[int32]*pb.ActivityQuestData)
-	}
-	progress := &pb.ActivityQuestData{
-		CfgId: questCfg.CfgId,
-	}
-	if questCfg.Progress.NeedInit {
-		cfg.GetActivityCfgMgr().GetProgressMgr().InitProgress(a, questCfg.Progress, progress)
-	}
-	a.Base.Quests[progress.CfgId] = progress
-	a.SetDirty()
-	a.Activities.GetPlayer().progressEventMapping.addProgress(questCfg.Progress, &ActivityQuestDataWrapper{
-		ActivityQuestData: progress,
-		ActivityId:        a.GetId(),
-	})
-	return progress
-}
-
-func (a *ActivityDefault) OnDataLoad() {
-	// 把已有任务加入到进度更新映射表中
-	for _, questData := range a.Base.Quests {
-		questCfg := cfg.GetQuestCfgMgr().GetQuestCfg(questData.GetCfgId())
-		if questCfg == nil {
-			logger.Error("questCfg nil %v", questData.GetCfgId())
-			continue
-		}
-		a.Activities.GetPlayer().progressEventMapping.addProgress(questCfg.Progress, &ActivityQuestDataWrapper{
-			ActivityQuestData: questData,
-			ActivityId:        a.GetId(),
-		})
-	}
+	a.Activities.GetPlayer().GetQuest().AddQuest(questData)
 }
 
 func (a *ActivityDefault) OnEvent(event interface{}) {
@@ -111,14 +75,11 @@ func (a *ActivityDefault) OnDateChange(oldDate time.Time, curDate time.Time) {
 
 // 重置数据
 func (a *ActivityDefault) Reset() {
-	for _, progress := range a.Base.Quests {
-		questCfg := cfg.GetQuestCfgMgr().GetQuestCfg(progress.GetCfgId())
-		if questCfg == nil {
-			continue
-		}
-		a.Activities.GetPlayer().progressEventMapping.removeProgress(questCfg.Progress, progress.GetCfgId())
-	}
-	a.Base.Quests = nil
+	// 活动有可能重开,先删除跟该活动关联的旧任务数据
+	a.Activities.GetPlayer().GetQuest().RangeByActivityId(a.GetId(), func(v *pb.QuestData) bool {
+		a.Activities.GetPlayer().GetQuest().RemoveQuest(v.GetCfgId())
+		return true
+	})
 	activityCfg := a.GetActivityCfg()
 	for _, questId := range activityCfg.QuestIds {
 		questCfg := cfg.GetQuestCfgMgr().GetQuestCfg(questId)
@@ -129,57 +90,20 @@ func (a *ActivityDefault) Reset() {
 	}
 	a.Base.ExchangeRecord = nil
 	a.SetDirty()
-	slog.Debug("Reset", "playerId", a.Activities.GetPlayer().GetId(), "activityId", a.GetId())
+	slog.Debug("Reset", "playerId", a.Activities.GetPlayer().GetId(),
+		"activityId", a.GetId(), "activityName", activityCfg.Name)
 }
 
 func (a *ActivityDefault) OnEnd(t time.Time) {
 	activityCfg := a.GetActivityCfg()
 	if activityCfg.RemoveDataWhenEnd {
 		a.Activities.RemoveActivity(a.GetId())
+		// 删除任务关联的任务
+		a.Activities.GetPlayer().GetQuest().RangeByActivityId(a.GetId(), func(questData *pb.QuestData) bool {
+			a.Activities.GetPlayer().GetQuest().RemoveQuest(questData.GetCfgId())
+			return true
+		})
 	}
-}
-
-// 领取活动任务奖励
-func (a *ActivityDefault) ReceiveReward(cfgId int32) {
-	activityCfg := a.GetActivityCfg()
-	if activityCfg == nil {
-		logger.Debug("%v ReceiveRewards activityCfg nil %v", a.Activities.GetPlayer().GetId(), a.GetId())
-		return
-	}
-	progress := a.GetQuest(cfgId)
-	if progress == nil {
-		logger.Debug("%v ReceiveReward progress nil %v %v", a.Activities.GetPlayer().GetId(), a.GetId(), cfgId)
-		return
-	}
-	if progress.IsReceiveReward {
-		logger.Debug("%v ReceiveReward repeat %v %v", a.Activities.GetPlayer().GetId(), a.GetId(), cfgId)
-		return
-	}
-	if !slices.Contains(activityCfg.QuestIds, cfgId) {
-		return
-	}
-	questCfg := cfg.GetQuestCfgMgr().GetQuestCfg(cfgId)
-	if questCfg == nil {
-		logger.Debug("%v ReceiveReward questCfg nil %v %v", a.Activities.GetPlayer().GetId(), a.GetId(), cfgId)
-		return
-	}
-	if progress.Progress < questCfg.Progress.GetTotal() {
-		logger.Debug("%v ReceiveReward progress err %v %v (%v < %v)", a.Activities.GetPlayer().GetId(), a.GetId(), cfgId,
-			progress.Progress, questCfg.Progress.GetTotal())
-		return
-	}
-	progress.IsReceiveReward = true
-	a.Activities.GetPlayer().GetBags().AddItems(questCfg.GetRewards())
-	a.SetDirty()
-	// 自动接后续任务
-	for _, nextQuestId := range questCfg.GetNextQuests() {
-		nextQuestCfg := cfg.GetQuestCfgMgr().GetQuestCfg(nextQuestId)
-		if nextQuestCfg == nil {
-			continue
-		}
-		a.AddQuest(nextQuestCfg)
-	}
-	logger.Debug("%v ReceiveReward %v %v", a.Activities.GetPlayer().GetId(), a.GetId(), cfgId)
 }
 
 // 兑换物品

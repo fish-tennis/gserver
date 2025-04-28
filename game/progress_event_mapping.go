@@ -5,15 +5,10 @@ import (
 	"github.com/fish-tennis/gserver/cfg"
 	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/pb"
+	"github.com/fish-tennis/gserver/util"
 	"log/slog"
 	"reflect"
 )
-
-// 增加活动id,以便于更新进度后,调用Activity.SetDirty
-type ActivityQuestDataWrapper struct {
-	*pb.ActivityQuestData
-	ActivityId int32
-}
 
 // 进度事件映射
 type ProgressEventMapping struct {
@@ -40,7 +35,7 @@ func (p *ProgressEventMapping) getKey(progressCfg *pb.ProgressCfg) string {
 	}
 }
 
-func (p *ProgressEventMapping) addProgress(progressCfg *pb.ProgressCfg, progress internal.CfgData) {
+func (p *ProgressEventMapping) AddProgress(progressCfg *pb.ProgressCfg, progress internal.CfgData) {
 	key := p.getKey(progressCfg)
 	if key == "" {
 		slog.Error("addProgressErr", "progressCfg", progressCfg, "progress", progress)
@@ -52,17 +47,17 @@ func (p *ProgressEventMapping) addProgress(progressCfg *pb.ProgressCfg, progress
 	progressSlice, _ := p.mapping[key]
 	progressSlice = append(progressSlice, progress)
 	p.mapping[key] = progressSlice
-	slog.Debug("AddQuest", "key", key, "questId", progress.GetCfgId())
+	slog.Debug("AddProgress", "key", key, "cfgId", progress.GetCfgId())
 }
 
-func (p *ProgressEventMapping) removeProgress(progressCfg *pb.ProgressCfg, questId int32) {
+func (p *ProgressEventMapping) RemoveProgress(progressCfg *pb.ProgressCfg, cfgId int32) {
 	key := p.getKey(progressCfg)
 	progressSlice, _ := p.mapping[key]
 	for i := 0; i < len(progressSlice); i++ {
-		if progressSlice[i].GetCfgId() == questId {
+		if progressSlice[i].GetCfgId() == cfgId {
 			progressSlice = append(progressSlice[:i], progressSlice[i+1:]...)
 			p.mapping[key] = progressSlice
-			slog.Debug("removeProgress", "event", key, "questId", questId)
+			slog.Debug("RemoveProgress", "event", key, "cfgId", cfgId)
 			break
 		}
 	}
@@ -76,27 +71,9 @@ func (p *ProgressEventMapping) CheckProgress(event any, progress internal.CfgDat
 			p.player.GetQuest().Quests.SetDirty(v.GetCfgId(), true)
 			p.player.Send(&pb.QuestUpdate{
 				QuestCfgId: v.GetCfgId(),
-				Data:       v,
+				Data:       util.CloneMessage(v),
 			})
 			slog.Debug("QuestProgressUpdate", "questId", v.GetCfgId(), "progress", v.GetProgress())
-		}
-	case *ActivityQuestDataWrapper:
-		activity := p.player.GetActivities().GetActivity(v.ActivityId)
-		if activity == nil {
-			return
-		}
-		if activityDefault, ok := activity.(*ActivityDefault); ok {
-			questCfg := cfg.GetQuestCfgMgr().GetQuestCfg(v.GetCfgId())
-			if cfg.GetQuestCfgMgr().GetProgressMgr().CheckProgress(event, questCfg.Progress, v) {
-				activityDefault.SetDirty()
-				p.player.Send(&pb.ActivityQuestUpdate{
-					ActivityId: v.ActivityId,
-					QuestCfgId: v.GetCfgId(),
-					Data:       v.ActivityQuestData,
-				})
-				slog.Debug("ActivityProgressUpdate", "activityId", v.ActivityId,
-					"questId", v.GetCfgId(), "progress", v.GetProgress())
-			}
 		}
 	default:
 		slog.Error("CheckProgressErr", "progress", progress)

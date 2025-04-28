@@ -11,6 +11,7 @@ import (
 	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
+	"google.golang.org/protobuf/proto"
 	"gopkg.in/natefinch/lumberjack.v2"
 	"log/slog"
 	"os"
@@ -125,8 +126,12 @@ func TestSaveable(t *testing.T) {
 		Progress: 1,
 	}
 	quest.Quests.Set(questData2.CfgId, questData2)
-	quest.Finished.Add(3)
-	quest.Finished.Add(4)
+	quest.Finished.Set(3, &pb.FinishedQuestData{
+		Timestamp: int32(player.GetTimerEntries().Now().Unix()),
+	})
+	quest.Finished.Set(4, &pb.FinishedQuestData{
+		Timestamp: int32(player.GetTimerEntries().Now().Unix()),
+	})
 	saveData, err = gentity.GetComponentSaveData(quest)
 	if err != nil {
 		t.Error(err)
@@ -184,7 +189,16 @@ func TestActivity(t *testing.T) {
 
 	for _, activityId := range activityIds {
 		activity := activities.GetActivity(activityId).(*ActivityDefault)
-		t.Log(fmt.Sprintf("%v Progresses:%v", activityId, activity.Base.Quests))
+		player.GetQuest().Quests.Range(func(k int32, v *pb.QuestData) bool {
+			if v.GetActivityId() == activityId {
+				t.Log(fmt.Sprintf("%v Progresses:%v", activityId, v))
+			}
+			return true
+		})
+		player.GetQuest().RangeByActivityId(activity.GetId(), func(v *pb.QuestData) bool {
+			t.Log(fmt.Sprintf("%v Progresses:%v", activityId, v))
+			return true
+		})
 		t.Log(fmt.Sprintf("%v ExchangeRecord:%v", activityId, activity.Base.ExchangeRecord))
 	}
 
@@ -233,7 +247,10 @@ func TestActivity(t *testing.T) {
 			// 参加活动的时间回退到i天前
 			activityDefault.Base.JoinTime = int32(oldDate.Unix())
 			activity.OnDateChange(oldDate, now)
-			t.Log(fmt.Sprintf("%v %v", activityId, activityDefault.Base.Quests))
+			player.GetQuest().RangeByActivityId(activity.GetId(), func(v *pb.QuestData) bool {
+				t.Log(fmt.Sprintf("%v Progresses:%v", activityId, v))
+				return true
+			})
 		}
 	}
 }
@@ -268,7 +285,7 @@ func TestBags(t *testing.T) {
 	player := CreatePlayer(playerData.XId, playerData.Name, playerData.AccountId, playerData.RegionId)
 	bags := player.GetBags()
 
-	addItemArgs := []*pb.AddItemArg{
+	addItemArgs := []*pb.AddElemArg{
 		{
 			CfgId: 1,
 			Num:   1,
@@ -303,4 +320,75 @@ func TestBags(t *testing.T) {
 	}))
 	time.Sleep(time.Second * 5)
 	cancel()
+}
+
+func TestProtoDataSize(t *testing.T) {
+	save := &pb.QuestSaveData{
+		Finished: make(map[int32][]byte),
+		Quests:   make(map[int32][]byte),
+	}
+	var questDatas []*pb.QuestData
+	for i := 0; i < 100; i++ {
+		questDatas = append(questDatas, &pb.QuestData{
+			CfgId: int32(i + 1),
+		})
+		bytes, err := proto.Marshal(questDatas[i])
+		if err != nil {
+			t.Fatalf("proto marshal err:%v", err)
+		}
+		save.Quests[questDatas[i].GetCfgId()] = bytes
+	}
+	saveBytes, err := proto.Marshal(save)
+	if err != nil {
+		t.Fatalf("proto marshal err:%v", err)
+	}
+	t.Logf("saveBytes size=%v", len(saveBytes)) // size=800
+
+	for i := 0; i < 100; i++ {
+		questDatas[i].Progress = int32(i + 1)
+		bytes, err := proto.Marshal(questDatas[i])
+		if err != nil {
+			t.Fatalf("proto marshal err:%v", err)
+		}
+		save.Quests[questDatas[i].GetCfgId()] = bytes
+	}
+	saveBytes, err = proto.Marshal(save)
+	if err != nil {
+		t.Fatalf("proto marshal err:%v", err)
+	}
+	t.Logf("saveBytes size=%v", len(saveBytes)) // size=1000
+
+	for i := 0; i < 100; i++ {
+		questDatas[i].ActivityId = 0
+		bytes, err := proto.Marshal(questDatas[i])
+		if err != nil {
+			t.Fatalf("proto marshal err:%v", err)
+		}
+		save.Quests[questDatas[i].GetCfgId()] = bytes
+	}
+	saveBytes, err = proto.Marshal(save)
+	if err != nil {
+		t.Fatalf("proto marshal err:%v", err)
+	}
+	t.Logf("saveBytes size=%v", len(saveBytes)) // size=1000
+
+	for i := 0; i < 100; i++ {
+		questDatas[i].ActivityId = int32(i + 1)
+		bytes, err := proto.Marshal(questDatas[i])
+		if err != nil {
+			t.Fatalf("proto marshal err:%v", err)
+		}
+		save.Quests[questDatas[i].GetCfgId()] = bytes
+	}
+	saveBytes, err = proto.Marshal(save)
+	if err != nil {
+		t.Fatalf("proto marshal err:%v", err)
+	}
+	t.Logf("saveBytes size=%v", len(saveBytes)) // size=1200
+
+	// 结论: proto的字段不赋值的时候,序列化的时候不会占用空间
+	// 所以,有时候不需要为了一些字段的小差异,就定义多个proto结构
+	// 比如该项目演示的QuestData,在活动模块中,activityId才会被赋值,玩家的普通任务,该字段不会被赋值
+	// 之前的版本,分别定义了QuestData和ActivityQuestData,导致代码复杂度增加
+	// 当前版本,只需要在QuestData用作玩家的普通任务时,不对activityId赋值就行,不会占用额外的数据库空间
 }
