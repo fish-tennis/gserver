@@ -1,12 +1,15 @@
 package game
 
 import (
+	"fmt"
 	"github.com/fish-tennis/gentity/util"
 	"github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cfg"
 	"github.com/fish-tennis/gserver/network"
 	"github.com/fish-tennis/gserver/pb"
 	"log/slog"
+	"reflect"
+	"strconv"
 	"strings"
 )
 
@@ -152,7 +155,43 @@ func (p *Player) OnTestCmd(req *pb.TestCmd) {
 		slog.Debug("GuildRouteError reply", "reply", reply)
 
 	default:
-		// TODO:通用的客户端请求消息
-		p.SendErrorRes(cmd, "unsupported test cmd")
+		// 通用的客户端请求消息 proto消息名 字段名1 字段值1 字段名2 字段值2
+		// 如 ActivityExchangeReq ActivityId 1 ExchangeCfgId 10001 ExchangeCount 1
+		messageName := cmdStrs[0]
+		newMsg := network.NewMessageByName(messageName)
+		if newMsg != nil {
+			msgVal := reflect.ValueOf(newMsg).Elem()
+			for i := 0; i < len(cmdArgs)/2; i++ {
+				fieldName := cmdArgs[i*2]
+				fieldValue := cmdArgs[i*2+1]
+				fieldVal := msgVal.FieldByName(fieldName)
+				if !fieldVal.IsValid() {
+					slog.Error("OnTestCmd fieldNameError", "messageName", messageName, "fieldName", fieldName)
+					continue
+				}
+				switch fieldVal.Kind() {
+				case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+					fieldVal.SetInt(int64(util.Atoi(fieldValue)))
+				case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+					fieldVal.SetUint(util.Atou(fieldValue))
+				case reflect.Float32:
+					f, _ := strconv.ParseFloat(fieldValue, 32)
+					fieldVal.SetFloat(f)
+				case reflect.Float64:
+					f, _ := strconv.ParseFloat(fieldValue, 64)
+					fieldVal.SetFloat(f)
+				case reflect.Bool:
+					fieldVal.SetBool(strings.ToLower(fieldValue) == "true" || fieldValue == "1")
+				case reflect.String:
+					fieldVal.SetString(fieldValue)
+				default:
+					slog.Error("OnTestCmd fieldTypeError", "messageName", messageName, "fieldName", fieldName, "fieldType", fieldVal.Kind())
+				}
+			}
+			slog.Info("mockMessage", "messageName", messageName, "newMsg", newMsg)
+			p.PushMessage(network.NewPacket(newMsg))
+			return
+		}
+		p.SendErrorRes(cmd, fmt.Sprintf("unsupported test cmd:%v", cmdKey))
 	}
 }

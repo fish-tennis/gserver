@@ -42,6 +42,29 @@ func (p *Player) GetActivities() *Activities {
 	return p.GetComponentByName(ComponentNameActivities).(*Activities)
 }
 
+// Activities.Data的类型是map[int32,internal.Activity],gentity不支持value类型不是proto.Message的map字段
+// 所以需要使用LoadFromBytesMap接口自己实现Activities.Data的反序列化
+// Activities.Data在mongodb里是以map[int32][]byte的格式保存的
+func (a *Activities) LoadFromBytesMap(bytesMap any) error {
+	sourceData := bytesMap.(map[int32][]byte)
+	for activityId, bytes := range sourceData {
+		// 动态构建活动对象
+		activity := CreateNewActivity(activityId, a, a.GetPlayer().GetTimerEntries().Now())
+		if activity == nil {
+			slog.Error("activity nil", "activityId", activityId)
+			continue
+		}
+		// 反序列化活动数据
+		err := gentity.LoadObjData(activity, bytes)
+		if err != nil {
+			slog.Error("activity load err", "activityId", activityId, "err", err.Error())
+			return err
+		}
+		a.Data.Data[activityId] = activity // 加载数据,不设置dirty
+	}
+	return nil
+}
+
 // 根据模板创建活动对象
 func CreateNewActivity(activityCfgId int32, activities internal.ActivityMgr, t time.Time) internal.Activity {
 	activityCfg := cfg.GetActivityCfgMgr().GetActivityCfg(activityCfgId)
@@ -96,29 +119,7 @@ func (a *Activities) AddAllActivitiesCanJoin(t time.Time) {
 	})
 }
 
-// Activities.Data的类型是map[int32,internal.Activity],gentity不支持value类型不是proto.Message的map字段
-// 所以需要使用LoadFromBytesMap接口自己实现Activities.Data的反序列化
-// Activities.Data在mongodb里是以map[int32][]byte的格式保存的
-func (a *Activities) LoadFromBytesMap(bytesMap any) error {
-	sourceData := bytesMap.(map[int32][]byte)
-	for activityId, bytes := range sourceData {
-		// 动态构建活动对象
-		activity := CreateNewActivity(activityId, a, a.GetPlayer().GetTimerEntries().Now())
-		if activity == nil {
-			slog.Error("activity nil", "activityId", activityId)
-			continue
-		}
-		// 反序列化活动数据
-		err := gentity.LoadObjData(activity, bytes)
-		if err != nil {
-			slog.Error("activity load err", "activityId", activityId, "err", err.Error())
-			return err
-		}
-		a.Data.Data[activityId] = activity // 加载数据,不设置dirty
-	}
-	return nil
-}
-
+// 玩家数据加载完成后的回调接口
 func (a *Activities) OnDataLoad() {
 	a.Data.Range(func(k int32, activity internal.Activity) bool {
 		if dataLoader, ok := activity.(internal.DataLoader); ok {
@@ -126,6 +127,11 @@ func (a *Activities) OnDataLoad() {
 			slog.Debug("OnDataLoad", "activityId", activity.GetId())
 		}
 		return true
+	})
+	// 活动模块定时刷新
+	a.GetPlayer().GetTimerEntries().After(time.Second, func() time.Duration {
+		a.GetPlayer().GetActivities().OnUpdate(a.GetPlayer().GetTimerEntries().Now())
+		return time.Second
 	})
 }
 
@@ -138,6 +144,12 @@ func (a *Activities) SyncDataToClient() {
 		}
 		return true
 	})
+}
+
+// 活动模块刷新接口,检查哪些活动可以参加了,哪些活动该结束了
+func (a *Activities) OnUpdate(t time.Time) {
+	a.AddAllActivitiesCanJoin(t)
+	a.CheckEnd(t)
 }
 
 // 事件分发
@@ -226,7 +238,7 @@ func (a *Activities) OnActivityExchangeReq(req *pb.ActivityExchangeReq) (*pb.Act
 	if activity == nil {
 		return nil, fmt.Errorf("activity nil id:%v", req.ActivityId)
 	}
-	err := activity.Exchange(req.ExchangeCount, req.ExchangeCount)
+	err := activity.Exchange(req.ExchangeCfgId, req.ExchangeCount)
 	if err != nil {
 		return nil, err
 	}

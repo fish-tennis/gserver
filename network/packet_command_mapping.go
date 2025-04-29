@@ -76,3 +76,17 @@ func initCommandMapping() {
 		}
 	}
 }
+
+func NewMessageByName(messageName string) proto.Message {
+	fullMessageName := fmt.Sprintf("%v.%v", ProtoPackageName, messageName)
+	messageType, err := protoregistry.GlobalTypes.FindMessageByName(protoreflect.FullName(fullMessageName))
+	if err != nil {
+		slog.Error("newMessageByNameErr", "messageName", messageName, "err", err)
+		return nil
+	}
+	if messageInfo, ok := messageType.(*protoimpl.MessageInfo); ok {
+		typ := messageInfo.GoReflectType.Elem()
+		return reflect.New(typ).Interface().(proto.Message)
+	}
+	return nil
+}
