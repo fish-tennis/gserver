@@ -206,7 +206,7 @@ func TestActivity(t *testing.T) {
 	if exchangeActivity != nil {
 		activity := exchangeActivity.(*ActivityDefault)
 		for _, exchangeId := range activity.GetActivityCfg().GetExchangeIds() {
-			activity.Exchange(exchangeId)
+			activity.Exchange(exchangeId, 1)
 		}
 		t.Log(fmt.Sprintf("%v ExchangeRecord:%v", 1, exchangeActivity.(*ActivityDefault).Base.ExchangeRecord))
 	}
@@ -221,7 +221,7 @@ func TestActivity(t *testing.T) {
 			t.Log(fmt.Sprintf("item4 count:%v", player.GetBags().GetItemCount(4)))
 			for i := 0; i < 3; i++ {
 				for _, exchangeId := range activity.GetActivityCfg().GetExchangeIds() {
-					activity.Exchange(exchangeId)
+					activity.Exchange(exchangeId, 1)
 				}
 			}
 			t.Log(fmt.Sprintf("item1 count:%v", player.GetBags().GetItemCount(1)))

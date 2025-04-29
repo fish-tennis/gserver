@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-// 直接写在实体上的消息回调
+// 客户端输入的测试命令
 func (p *Player) OnTestCmd(req *pb.TestCmd) {
 	slog.Info("OnTestCmd", "cmd", req.Cmd)
 	// NOTE: 实际项目中,这里要检查一下是否是测试环境
@@ -99,25 +99,12 @@ func (p *Player) OnTestCmd(req *pb.TestCmd) {
 		}
 		p.FireConditionEvent(evt)
 
-	case strings.ToLower("Pay"):
-		if len(cmdArgs) < 1 {
-			p.SendErrorRes(cmd, "Pay cmdArgs error")
-			return
-		}
-		payValue := int32(util.Atoi(cmdArgs[0]))
-		p.GetBaseInfo().Data.TotalPay += payValue
-		evt := &pb.EventPlayerProperty{
-			PlayerId:      p.GetId(),
-			PropertyName:  "TotalPay",
-			PropertyValue: payValue,
-		}
-		p.FireEvent(evt)
-
 	case strings.ToLower("PlayerProperty"):
 		if len(cmdArgs) < 2 {
 			p.SendErrorRes(cmd, "PlayerProperty cmdArgs error")
 			return
 		}
+		// 模拟玩家属性更新事件
 		evt := &pb.EventPlayerProperty{
 			PlayerId:      p.GetId(),
 			PropertyName:  cmdArgs[0],
@@ -136,6 +123,7 @@ func (p *Player) OnTestCmd(req *pb.TestCmd) {
 		} else {
 			activityId := int32(util.Atoi(arg))
 			activityCfg := cfg.GetActivityCfgMgr().GetActivityCfg(activityId)
+			// 如果已有该活动,则重置
 			p.GetActivities().AddNewActivity(activityCfg, p.GetTimerEntries().Now())
 		}
 
@@ -146,13 +134,11 @@ func (p *Player) OnTestCmd(req *pb.TestCmd) {
 		}
 		activityId := int32(util.Atoi(cmdArgs[0]))
 		cfgId := int32(util.Atoi(cmdArgs[1]))
-		activity := p.GetActivities().GetActivity(activityId)
-		if activity == nil {
-			return
-		}
-		if activityDefault, ok := activity.(*ActivityDefault); ok {
-			activityDefault.Exchange(cfgId)
-		}
+		p.GetActivities().OnActivityExchangeReq(&pb.ActivityExchangeReq{
+			ActivityId:    activityId,
+			ExchangeCfgId: cfgId,
+			ExchangeCount: 1,
+		})
 
 	case strings.ToLower("GuildRouteError"):
 		// 模拟一个rpc错误,向一个不存在的公会发送rpc消息
@@ -166,6 +152,7 @@ func (p *Player) OnTestCmd(req *pb.TestCmd) {
 		slog.Debug("GuildRouteError reply", "reply", reply)
 
 	default:
+		// TODO:通用的客户端请求消息
 		p.SendErrorRes(cmd, "unsupported test cmd")
 	}
 }

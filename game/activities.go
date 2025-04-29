@@ -35,8 +35,7 @@ func init() {
 // 活动模块
 type Activities struct {
 	*PlayerMapDataComponent
-	Data *gentity.MapData[int32, internal.Activity] `db:""`
-	// eventMapping map[string][]ProgressHolder // key:eventName
+	Data *gentity.MapData[int32, internal.Activity] `db:""` // 活动集合
 }
 
 func (p *Player) GetActivities() *Activities {
@@ -123,8 +122,8 @@ func (a *Activities) OnDataLoad() {
 	})
 }
 
+// 同步各活动的数据给客户端
 func (a *Activities) SyncDataToClient() {
-	// 同步各活动的数据给客户端
 	a.Data.Range(func(k int32, activity internal.Activity) bool {
 		if dataSyncer, ok := activity.(DataSyncer); ok {
 			dataSyncer.SyncDataToClient()
@@ -214,18 +213,30 @@ func (a *Activities) CheckEnd(t time.Time) {
 	}
 }
 
+// 响应客户端的活动兑换请求(购买活动物品,兑换活动礼包,领取奖励等)
+func (a *Activities) OnActivityExchangeReq(req *pb.ActivityExchangeReq) (*pb.ActivityExchangeRes, error) {
+	activity := a.GetActivityDefault(req.ActivityId)
+	if activity == nil {
+		return nil, fmt.Errorf("activity nil id:%v", req.ActivityId)
+	}
+	err := activity.Exchange(req.ExchangeCount, req.ExchangeCount)
+	if err != nil {
+		return nil, err
+	}
+	return &pb.ActivityExchangeRes{
+		ActivityId:    req.ActivityId,
+		ExchangeCfgId: req.ExchangeCfgId,
+		ExchangeCount: req.ExchangeCount,
+		CurrentCount:  activity.GetExchangeCount(req.ExchangeCfgId),
+	}, nil
+}
+
 // 子活动,目前限制子活动只能是单保存字段(SingleField)
 type ChildActivity struct {
 	internal.BaseActivity
 	gentity.MapValueDirtyMark[int32]
-	Activities *Activities
+	Activities *Activities // 关联玩家的活动Component
 }
-
-//// 子活动有数据变化时,玩家活动模块设置脏标记
-//func (this *ChildActivity) SetDirty() {
-//	//this.BaseDirtyMark.SetDirty()
-//	this.Activities.SetDirty(this.GetId(), true)
-//}
 
 // 活动配置数据
 func (this *ChildActivity) GetActivityCfg() *pb.ActivityCfg {
