@@ -4,10 +4,16 @@ import "time"
 
 type Activity interface {
 	GetId() int32
+
+	// 新活动初始化
+	OnInit(t time.Time)
+
 	// 响应事件
 	OnEvent(event interface{})
+
 	// 日期更新
 	OnDateChange(oldDate time.Time, curDate time.Time)
+
 	// 活动结束时的处理
 	OnEnd(t time.Time)
 

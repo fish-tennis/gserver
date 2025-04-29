@@ -243,6 +243,10 @@ func (r *QuestCfgR) GetQuestType() int32 {
 	return r.v.GetQuestType()
 }
 
+func (r *QuestCfgR) GetRefreshType() int32 {
+	return r.v.GetRefreshType()
+}
+
 func (r *QuestCfgR) LenOfRewards() int {
     return len(r.v.GetRewards())
 }
@@ -566,6 +570,10 @@ func (r *ExchangeCfgR) ElemOfRewards(index int) *AddElemArgR {
 
 func (r *ExchangeCfgR) GetCountLimit() int32 {
 	return r.v.GetCountLimit()
+}
+
+func (r *ExchangeCfgR) GetRefreshType() int32 {
+	return r.v.GetRefreshType()
 }
 
 func (r *ExchangeCfgR) LenOfProperties() int {

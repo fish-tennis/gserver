@@ -3,11 +3,10 @@ package game
 import (
 	"errors"
 	"github.com/fish-tennis/gentity"
-	"github.com/fish-tennis/gentity/util"
 	"github.com/fish-tennis/gserver/cfg"
 	. "github.com/fish-tennis/gserver/internal"
-	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
+	"github.com/fish-tennis/gserver/util"
 	"log/slog"
 	"slices"
 	"time"
@@ -27,20 +26,8 @@ func init() {
 	// 方案2:
 	//     注册一个PlanB的活动构造函数,返回Activity的新实现类ActivityPlanB,有自己的结构和接口(工厂模式)
 	//     这个是从代码的角度,来满足未知的扩展需求
-	_activityTemplateCtorMap["default"] = func(activities ActivityMgr, activityCfg *pb.ActivityCfg, args interface{}) Activity {
-		t := args.(time.Time)
-		newActivity := &ActivityDefault{
-			Base: &pb.ActivityDefaultBaseData{
-				JoinTime: int32(t.Unix()),
-			},
-		}
-		newActivity.Parent = activities.(gentity.MapDirtyMark)
-		newActivity.MapKey = activityCfg.CfgId
-		newActivity.Id = activityCfg.CfgId
-		newActivity.Activities = activities.(*Activities)
-		newActivity.Reset()
-		// TODO:这里可以扩展自定义的初始化过程
-		return newActivity
+	_activityTemplateCtorMap["default"] = func(activities ActivityMgr, activityCfg *pb.ActivityCfg, _ any) Activity {
+		return newActivityDefault(activities, activityCfg)
 	}
 }
 
@@ -49,6 +36,20 @@ type ActivityDefault struct {
 	ChildActivity
 	// 子活动的保存数据必须是一个整体,无法再细分,因为gentity目前只支持2层结构(Activities是第1层,子活动是第2层)
 	Base *pb.ActivityDefaultBaseData `db:"Base"`
+
+	customInitFn    func(a *ActivityDefault, t time.Time)                    // 自定义初始化函数
+	customRefreshFn func(a *ActivityDefault, t time.Time, refreshType int32) // 自定义刷新函数
+}
+
+func newActivityDefault(activities ActivityMgr, activityCfg *pb.ActivityCfg) *ActivityDefault {
+	newActivity := &ActivityDefault{
+		Base: &pb.ActivityDefaultBaseData{},
+	}
+	newActivity.Parent = activities.(gentity.MapDirtyMark)
+	newActivity.MapKey = activityCfg.CfgId
+	newActivity.Id = activityCfg.CfgId
+	newActivity.Activities = activities.(*Activities)
+	return newActivity
 }
 
 // 添加一个活动任务
@@ -60,12 +61,12 @@ func (a *ActivityDefault) AddQuest(questCfg *pb.QuestCfg) {
 		CfgId:      questCfg.CfgId,
 		ActivityId: a.GetId(), // 关联该任务属于哪个活动
 	}
-	// 活动的子任务跟玩家的普通任务是同一个模块
+	// 活动的子任务跟玩家的普通任务是同一个模块,这就要求不同活动的子任务id不能重复
 	a.Activities.GetPlayer().GetQuest().AddQuest(questData)
 }
 
 // 响应事件
-func (a *ActivityDefault) OnEvent(event interface{}) {
+func (a *ActivityDefault) OnEvent(event any) {
 	activityCfg := a.GetActivityCfg()
 	if activityCfg == nil {
 		return
@@ -81,37 +82,81 @@ func (a *ActivityDefault) OnEvent(event interface{}) {
 func (a *ActivityDefault) OnDateChange(oldDate time.Time, curDate time.Time) {
 	activityCfg := a.GetActivityCfg()
 	if activityCfg == nil {
-		logger.Debug("%v OnDateChange activityCfg nil %v", a.Activities.GetPlayer().GetId(), a.GetId())
+		slog.Debug("OnDateChangeErr", "pid", a.Activities.GetPlayer().GetId(),
+			"activityId", a.GetId())
 		return
 	}
-	// 每日刷新
-	if activityCfg.RefreshType == int32(pb.RefreshType_RefreshType_Day) {
-		a.Reset()
+	// 活动数据刷新,如活动的子任务可能是每日刷新的
+	if activityCfg.RefreshType != 0 {
+		a.Refresh(curDate, activityCfg.RefreshType)
 	}
-	// TODO:其他刷新方式
 }
 
-// 重置数据
-func (a *ActivityDefault) Reset() {
-	// 活动有可能重开,先删除跟该活动关联的旧任务数据
-	a.Activities.GetPlayer().GetQuest().RangeByActivityId(a.GetId(), func(v *pb.QuestData) bool {
-		// TODO:判断刷新类型,如每日任务
-		a.Activities.GetPlayer().GetQuest().RemoveQuest(v.GetCfgId())
-		return true
-	})
+// 新活动初始化
+func (a *ActivityDefault) OnInit(t time.Time) {
+	a.Base.JoinTime = int32(t.Unix())
+	if a.customInitFn != nil {
+		a.customInitFn(a, t)
+	} else {
+		a.defaultInit(t)
+	}
+}
+
+func (a *ActivityDefault) defaultInit(t time.Time) {
 	activityCfg := a.GetActivityCfg()
 	for _, questId := range activityCfg.QuestIds {
 		questCfg := cfg.GetQuestCfgMgr().GetQuestCfg(questId)
 		if questCfg == nil {
 			continue
 		}
-		// TODO:判断刷新类型,如每日任务
 		a.AddQuest(questCfg)
 	}
 	a.Base.ExchangeRecord = nil
 	a.SetDirty()
-	slog.Debug("Reset", "playerId", a.Activities.GetPlayer().GetId(),
+	slog.Debug("defaultInit", "pid", a.Activities.GetPlayer().GetId(),
 		"activityId", a.GetId(), "activityName", activityCfg.Name)
+}
+
+// 活动数据刷新
+func (a *ActivityDefault) Refresh(t time.Time, refreshType int32) {
+	if a.customRefreshFn != nil {
+		a.customRefreshFn(a, t, refreshType)
+	} else {
+		a.defaultRefreshQuest(t, refreshType)
+		a.defaultRefreshExchange(t, refreshType)
+	}
+	slog.Debug("Refresh", "pid", a.Activities.GetPlayer().GetId(),
+		"activityId", a.GetId(), "refreshType", refreshType)
+}
+
+func (a *ActivityDefault) defaultRefreshQuest(t time.Time, refreshType int32) {
+	activityCfg := a.GetActivityCfg()
+	for _, questId := range activityCfg.QuestIds {
+		questCfg := cfg.GetQuestCfgMgr().GetQuestCfg(questId)
+		if questCfg == nil {
+			continue
+		}
+		// 判断刷新类型,如每日刷新
+		if questCfg.GetRefreshType() != refreshType {
+			continue
+		}
+		a.Activities.GetPlayer().GetQuest().RemoveQuest(questCfg.GetCfgId())
+		a.AddQuest(questCfg)
+		slog.Debug("defaultRefreshQuest", "pid", a.Activities.GetPlayer().GetId(),
+			"activityId", a.GetId(), "activityName", activityCfg.Name, "questId", questCfg.GetCfgId())
+	}
+}
+
+func (a *ActivityDefault) defaultRefreshExchange(t time.Time, refreshType int32) {
+	for exchangeCfgId, exchangeCount := range a.Base.ExchangeRecord {
+		exchangeCfg := cfg.GetTemplateCfgMgr().GetExchangeCfg(exchangeCfgId)
+		if exchangeCfg == nil || exchangeCfg.GetRefreshType() == refreshType {
+			delete(a.Base.ExchangeRecord, exchangeCfgId)
+			a.SetDirty()
+			slog.Debug("defaultRefreshExchange", "pid", a.Activities.GetPlayer().GetId(),
+				"activityId", a.GetId(), "exchangeCfgId", exchangeCfgId, "exchangeCount", exchangeCount)
+		}
+	}
 }
 
 // 活动结束,进行一些清理工作
@@ -136,26 +181,45 @@ func (a *ActivityDefault) Exchange(exchangeCfgId, exchangeCount int32) error {
 	}
 	activityCfg := a.GetActivityCfg()
 	if activityCfg == nil {
-		logger.Debug("%v Exchange activityCfg nil %v", a.Activities.GetPlayer().GetId(), a.GetId())
+		slog.Debug("Exchange activityCfg nil", "pid", a.Activities.GetPlayer().GetId(), "activityId", a.GetId())
 		return errors.New("activityCfg nil")
 	}
 	if !slices.Contains(activityCfg.ExchangeIds, exchangeCfgId) {
+		slog.Debug("exchangeCfgId err", "pid", a.Activities.GetPlayer().GetId(),
+			"activityId", a.GetId(), "exchangeCfgId", exchangeCfgId)
 		return errors.New("exchangeCfgId err")
 	}
 	exchangeCfg := cfg.GetTemplateCfgMgr().GetExchangeCfg(exchangeCfgId)
 	if exchangeCfg == nil {
-		logger.Debug("%v Exchange exchangeCfg nil %v %v", a.Activities.GetPlayer().GetId(), a.GetId(), exchangeCfgId)
+		slog.Debug("Exchange exchangeCfg nil", "pid", a.Activities.GetPlayer().GetId(),
+			"activityId", a.GetId(), "exchangeCfgId", exchangeCfgId)
 		return errors.New("exchangeCfg nil")
 	}
 	curExchangeCount := a.GetExchangeCount(exchangeCfgId)
 	if exchangeCfg.CountLimit > 0 && curExchangeCount+exchangeCount > exchangeCfg.CountLimit {
-		logger.Debug("%v Exchange CountLimit %v %v %v", a.Activities.GetPlayer().GetId(), a.GetId(), exchangeCfgId, exchangeCount)
+		slog.Debug("Exchange CountLimit", "pid", a.Activities.GetPlayer().GetId(),
+			"activityId", a.GetId(), "exchangeCfgId", exchangeCfgId, "exchangeCount", exchangeCount)
 		return errors.New("exchangeCountLimit")
 	}
-	// TODO: 检查兑换条件
+	// 检查兑换条件
+	if !cfg.GetActivityCfgMgr().GetConditionMgr().CheckConditions(a, exchangeCfg.Conditions) {
+		slog.Debug("conditions err", "pid", a.Activities.GetPlayer().GetId(),
+			"activityId", a.GetId(), "exchangeCfgId", exchangeCfgId)
+		return errors.New("conditions err")
+	}
 	// 如果配置了兑换消耗物品,就是购买礼包类的活动,如果不配置,就是免费礼包类的活动
-	if !a.Activities.GetPlayer().GetBags().IsEnough(exchangeCfg.Consumes) {
-		logger.Debug("%v Exchange ConsumeItems notEnough %v %v", a.Activities.GetPlayer().GetId(), a.GetId(), exchangeCfgId)
+	totalConsumes := slices.Clone(exchangeCfg.Consumes)
+	for _, consume := range totalConsumes {
+		if util.IsMultiOverflow(consume.Num, exchangeCount) {
+			slog.Debug("Exchange ConsumeItems overflow", "pid", a.Activities.GetPlayer().GetId(),
+				"activityId", a.GetId(), "exchangeCfgId", exchangeCfgId, "exchangeCount", exchangeCount)
+			return errors.New("ConsumeItemsOverflow")
+		}
+		consume.Num *= exchangeCount
+	}
+	if !a.Activities.GetPlayer().GetBags().IsEnough(totalConsumes) {
+		slog.Debug("Exchange ConsumeItems notEnough", "pid", a.Activities.GetPlayer().GetId(),
+			"activityId", a.GetId(), "exchangeCfgId", exchangeCfgId)
 		return errors.New("ConsumeItemsNotEnough")
 	}
 	a.addExchangeCount(exchangeCfgId, exchangeCount)                  // 记录兑换次数
@@ -190,9 +254,29 @@ func (a *ActivityDefault) GetPropertyInt32(propertyName string) int32 {
 		days := util.DayCount(a.Activities.GetPlayer().GetTimerEntries().Now(), time.Unix(int64(a.Base.JoinTime), 0))
 		return int32(days) + 1
 	default:
-		logger.Error("Not support property %v %v", a.GetId(), propertyName)
+		slog.Error("Not support property", "activityId", a.GetId(), "propertyName", propertyName)
 	}
 	return 0
+}
+
+func (a *ActivityDefault) SetPropertyInt32(propertyName string, value int32) {
+	if a.Base.PropertiesInt32 == nil {
+		a.Base.PropertiesInt32 = make(map[string]int32)
+	}
+	a.Base.PropertiesInt32[propertyName] = value
+	a.SetDirty()
+	slog.Debug("SetPropertyInt32", "pid", a.Activities.GetPlayer().GetId(),
+		"activityId", a.GetId(), "propertyName", propertyName, "value", value)
+}
+
+func (a *ActivityDefault) IncPropertyInt32(propertyName string, incValue int32) {
+	if a.Base.PropertiesInt32 == nil {
+		a.Base.PropertiesInt32 = make(map[string]int32)
+	}
+	a.Base.PropertiesInt32[propertyName] += incValue
+	a.SetDirty()
+	slog.Debug("IncPropertyInt32", "pid", a.Activities.GetPlayer().GetId(),
+		"activityId", a.GetId(), "propertyName", propertyName, "incValue", incValue)
 }
 
 // 同步数据给客户端

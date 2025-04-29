@@ -150,7 +150,11 @@ func TestActivity(t *testing.T) {
 	}
 	player := CreatePlayer(playerData.XId, playerData.Name, playerData.AccountId, playerData.RegionId)
 	activities := player.GetActivities()
-	activityIds := []int32{1, 2, 3, 4, 5}
+	var activityIds []int32
+	cfg.GetActivityCfgMgr().Range(func(activityCfg *pb.ActivityCfg) bool {
+		activityIds = append(activityIds, activityCfg.CfgId)
+		return true
+	})
 	for _, activityId := range activityIds {
 		activityCfg := cfg.GetActivityCfgMgr().GetActivityCfg(activityId)
 		if activityCfg == nil {

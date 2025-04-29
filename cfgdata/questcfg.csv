@@ -10,3 +10,6 @@ CfgId,Name,QuestType,ConditionTemplates,ProgressTemplate,Rewards,NextQuests,Deta
 40001,在线1分钟,1,,CfgId_7#Arg_1,CfgId_1#Num_1,40002,活动4子任务:在线1分钟
 40002,在线5分钟,1,,CfgId_7#Arg_5,CfgId_1#Num_5,40003,活动4子任务:在线5分钟
 40003,在线10分钟,1,,CfgId_7#Arg_7,CfgId_1#Num_10,,活动4子任务:在线10分钟
+60001,随机任务1,1,,CfgId_7#Arg_1,CfgId_1#Num_1,,随机任务1
+60002,随机任务2,1,,CfgId_7#Arg_5,CfgId_1#Num_5,,随机任务2
+60003,随机任务3,1,,CfgId_7#Arg_7,CfgId_1#Num_10,,随机任务3

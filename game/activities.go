@@ -6,7 +6,6 @@ import (
 	"github.com/fish-tennis/gentity/util"
 	"github.com/fish-tennis/gserver/cfg"
 	"github.com/fish-tennis/gserver/internal"
-	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 	"log/slog"
 	"time"
@@ -35,6 +34,7 @@ func init() {
 // 活动模块
 type Activities struct {
 	*PlayerMapDataComponent
+	// gentity不支持value类型不是proto.Message的map字段,使用需要使用LoadFromBytesMap接口来自己实现活动对象的解析
 	Data *gentity.MapData[int32, internal.Activity] `db:""` // 活动集合
 }
 
@@ -46,13 +46,13 @@ func (p *Player) GetActivities() *Activities {
 func CreateNewActivity(activityCfgId int32, activities internal.ActivityMgr, t time.Time) internal.Activity {
 	activityCfg := cfg.GetActivityCfgMgr().GetActivityCfg(activityCfgId)
 	if activityCfg == nil {
-		logger.Error("activityCfg nil %v", activityCfgId)
+		slog.Error("activityCfg nil", "activityId", activityCfgId)
 		return nil
 	}
 	if activityCtor, ok := _activityTemplateCtorMap[activityCfg.GetTemplate()]; ok {
 		return activityCtor(activities, activityCfg, t)
 	}
-	logger.Error("activityCfg nil %v", activityCfgId)
+	slog.Error("activityCtor nil", "activityId", activityCfgId)
 	return nil
 }
 
@@ -66,15 +66,17 @@ func (a *Activities) GetActivityDefault(activityId int32) *ActivityDefault {
 	return activityDefault
 }
 
+// 添加一个新活动
 func (a *Activities) AddNewActivity(activityCfg *pb.ActivityCfg, t time.Time) internal.Activity {
 	activity := CreateNewActivity(activityCfg.CfgId, a, t)
 	if activity == nil {
 		slog.Error("AddNewActivityErr", "activityId", activityCfg.CfgId)
 		return nil
 	}
+	activity.OnInit(t)
 	a.Data.Set(activity.GetId(), activity)
-	slog.Debug("AddNewActivity", "playerId", a.GetPlayer().GetId(),
-		"activityId", activityCfg.CfgId, "activityName", activityCfg.Name)
+	slog.Debug("AddNewActivity", "pid", a.GetPlayer().GetId(),
+		"activityId", activityCfg.CfgId, "activityName", activityCfg.Name, "Template", activityCfg.Template)
 	return activity
 }
 
@@ -82,7 +84,8 @@ func (a *Activities) RemoveActivity(activityId int32) {
 	a.Data.Delete(activityId)
 }
 
-func (a *Activities) AddAllActivities(t time.Time) {
+// 检查所有还没参加的活动,如果满足参加条件,则参加
+func (a *Activities) AddAllActivitiesCanJoin(t time.Time) {
 	cfg.GetActivityCfgMgr().Range(func(activityCfg *pb.ActivityCfg) bool {
 		if a.GetActivity(activityCfg.CfgId) == nil {
 			if a.CanJoin(activityCfg, t) {
@@ -93,18 +96,22 @@ func (a *Activities) AddAllActivities(t time.Time) {
 	})
 }
 
+// Activities.Data的类型是map[int32,internal.Activity],gentity不支持value类型不是proto.Message的map字段
+// 所以需要使用LoadFromBytesMap接口自己实现Activities.Data的反序列化
+// Activities.Data在mongodb里是以map[int32][]byte的格式保存的
 func (a *Activities) LoadFromBytesMap(bytesMap any) error {
 	sourceData := bytesMap.(map[int32][]byte)
 	for activityId, bytes := range sourceData {
 		// 动态构建活动对象
 		activity := CreateNewActivity(activityId, a, a.GetPlayer().GetTimerEntries().Now())
 		if activity == nil {
-			logger.Error(fmt.Sprintf("activity nil id:%v", activityId))
+			slog.Error("activity nil", "activityId", activityId)
 			continue
 		}
+		// 反序列化活动数据
 		err := gentity.LoadObjData(activity, bytes)
 		if err != nil {
-			logger.Error(fmt.Sprintf("activity load %v err:%v", activityId, err.Error()))
+			slog.Error("activity load err", "activityId", activityId, "err", err.Error())
 			return err
 		}
 		a.Data.Data[activityId] = activity // 加载数据,不设置dirty
@@ -116,7 +123,7 @@ func (a *Activities) OnDataLoad() {
 	a.Data.Range(func(k int32, activity internal.Activity) bool {
 		if dataLoader, ok := activity.(internal.DataLoader); ok {
 			dataLoader.OnDataLoad()
-			slog.Debug("OnDataLoad", "id", activity.GetId())
+			slog.Debug("OnDataLoad", "activityId", activity.GetId())
 		}
 		return true
 	})
@@ -127,7 +134,7 @@ func (a *Activities) SyncDataToClient() {
 	a.Data.Range(func(k int32, activity internal.Activity) bool {
 		if dataSyncer, ok := activity.(DataSyncer); ok {
 			dataSyncer.SyncDataToClient()
-			slog.Debug("SyncDataToClient", "id", activity.GetId())
+			slog.Debug("SyncDataToClient", "activityId", activity.GetId())
 		}
 		return true
 	})

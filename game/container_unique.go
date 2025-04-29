@@ -6,6 +6,7 @@ import (
 	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
+	"github.com/fish-tennis/gserver/util"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"log/slog"
@@ -107,10 +108,10 @@ func (b *UniqueContainer[E]) AddElem(arg *pb.AddElemArg, bagUpdate *pb.ElemConta
 		timeout := int32(0)
 		if arg.GetTimeType() > 0 {
 			// 可以在添加物品的时候,附加限时属性
-			timeout = internal.GetTimeoutTimestamp(arg.GetTimeType(), arg.GetTimeout())
+			timeout = util.GetTimeoutTimestamp(arg.GetTimeType(), arg.GetTimeout())
 		} else if itemCfg.GetItemType() > 0 {
 			// 也可以在物品配置表里配置限时属性
-			timeout = internal.GetTimeoutTimestamp(itemCfg.GetTimeType(), itemCfg.GetTimeout())
+			timeout = util.GetTimeoutTimestamp(itemCfg.GetTimeType(), itemCfg.GetTimeout())
 		}
 		if timeout > 0 {
 			// NOTE:假设固定字段是Timeout

@@ -85,16 +85,18 @@ message QuestCfg {
   int32 CfgId = 1;
   string Name = 2;
   int32 QuestType = 3; // 任务类型(enum QuestType)
-  repeated AddElemArg Rewards = 4; // 任务奖励
-  int32 PreQuest = 5; // 前置任务
-  repeated int32 NextQuests = 6; // 完成该任务后,自动接后续的任务(任务链)
-  repeated ConditionCfg Conditions = 7; // 任务条件
-  ProgressCfg Progress = 8; // 任务进度
-  map<string,string> Properties = 9; // 扩展属性
-  string Detail = 10; // 任务描述
+  int32 RefreshType = 4; // 刷新机制(enum RefreshType)
+  repeated AddElemArg Rewards = 5; // 任务奖励
+  int32 PreQuest = 6; // 前置任务
+  repeated int32 NextQuests = 7; // 完成该任务后,自动接后续的任务(任务链)
+  repeated ConditionCfg Conditions = 8; // 任务条件
+  ProgressCfg Progress = 9; // 任务进度
+  map<string,string> Properties = 10; // 扩展属性
+  int32 Category = 11; // 任务分类(可用于客户端分类显示 如主线任务 支线任务 成就等)
+  string Detail = 12; // 任务描述
 
-  repeated CfgArg ConditionTemplates = 11; // 关联的配置模板id和参数,简化配置表用,业务代码不要调用
-  CfgArg ProgressTemplate = 12; // 关联的配置模板id和参数,简化配置表用,业务代码不要调用
+  repeated CfgArg ConditionTemplates = 12; // 关联的配置模板id和参数,简化配置表用,业务代码不要调用
+  CfgArg ProgressTemplate = 13; // 关联的配置模板id和参数,简化配置表用,业务代码不要调用
 }
 
 // 条件配置
@@ -143,8 +145,9 @@ message ExchangeCfg {
   repeated ConditionCfg Conditions = 2; // 任务条件
   repeated DelElemArg Consumes = 3; // 需要消耗的物品
   repeated AddElemArg Rewards = 4; // 获得物品
-  int32 CountLimit = 5; // 兑换次数限制
-  map<string,string> Properties = 6; // 扩展属性
+  int32 CountLimit = 5; // 兑换次数限制(0表示无次数限制)
+  int32 RefreshType = 6; // 刷新机制(enum RefreshType)
+  map<string,string> Properties = 7; // 扩展属性
   repeated CfgArg ConditionTemplates = 11; // 关联的配置模板id和参数,简化配置表用,业务代码不要调用
 }
 
@@ -153,18 +156,18 @@ message ActivityCfg {
   int32 CfgId = 1;
   string Name = 2;
   string Detail = 3;
-  string Template = 4; // 活动模板
-  int32 RefreshType = 5; // 刷新机制
+  string Template = 4; // 活动模板名
+  int32 RefreshType = 5; // 刷新机制(enum RefreshType)
   int32 CycleType = 6; // 活动周期
-  int32 TimeType = 7; // 时间类型
-  int32 BeginTime = 8; // 开始时间
-  int32 EndTime = 9; // 结束时间
+  int32 TimeType = 7; // 时间类型(enum TimeType)
+  int32 BeginTime = 8; // 开始时间(TimeType为TimeType_Timestamp时,格式是时间戳 TimeType为TimeType_Date时,格式是20240219)
+  int32 EndTime = 9; // 结束时间(TimeType为TimeType_Timestamp时,格式是时间戳 TimeType为TimeType_Date时,格式是20240219)
   repeated int32 ExchangeIds = 10; // 兑换配置
   bool IsOff = 11; // 是否关闭
   bool RemoveDataWhenEnd = 12; // 活动结束时,是否删除活动数据
-  int32 MinPlayerLevel = 14; // 参与活动的最低玩家等级要求
-  int32 MaxPlayerLevel = 15; // 参与活动的最大玩家等级上限
-  repeated int32 QuestIds = 16; // 活动子任务
+  int32 MinPlayerLevel = 14; // 参与活动的最低玩家等级要求(0表示不限制)
+  int32 MaxPlayerLevel = 15; // 参与活动的最大玩家等级上限(0表示不限制)
+  repeated int32 QuestIds = 16; // 活动子任务id
   map<string,string> Properties = 17; // 扩展属性
 }
 

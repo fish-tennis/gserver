@@ -119,7 +119,7 @@ func (p *Player) OnTestCmd(req *pb.TestCmd) {
 		}
 		arg := cmdArgs[0]
 		if arg == "all" {
-			p.GetActivities().AddAllActivities(p.GetTimerEntries().Now())
+			p.GetActivities().AddAllActivitiesCanJoin(p.GetTimerEntries().Now())
 		} else {
 			activityId := int32(util.Atoi(arg))
 			activityCfg := cfg.GetActivityCfgMgr().GetActivityCfg(activityId)
