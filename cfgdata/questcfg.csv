@@ -3,7 +3,7 @@ CfgId,Name,QuestType,ConditionTemplates,ProgressTemplate,Rewards,NextQuests,Deta
 2,5场战斗,0,,CfgId_2#Arg_5,CfgId_2#Num_3,,5场战斗示例
 3,5场PVP,0,,CfgId_3#Arg_5,CfgId_1#Num_5;CfgId_3#Num_1,,5场PVP示例.演示同一个进度类型使用动态属性而编辑出新的任务
 4,赢5场PVP,0,CfgId_1#Arg_1,CfgId_4#Arg_5,CfgId_1#Num_5;CfgId_4#Num_2,,赢5场PVP示例.演示同一个进度类型使用动态属性而编辑出新的任务
-20001,累充礼包,0,,CfgId_6#Arg_100,CfgId_1#Num_2,,活动2子任务:累计充值达到100
+20001,累充礼包,1,,CfgId_6#Arg_100,CfgId_1#Num_2,,活动2子任务:累计充值达到100
 30001,3日目标第1天,1,CfgId_2#Arg_1,CfgId_3#Arg_5,CfgId_1#Num_1,,"活动3子任务:3日目标第1天,5场PVP"
 30002,3日目标第2天,1,CfgId_2#Arg_1,CfgId_1#Arg_10,CfgId_1#Num_2,,"活动3子任务:3日目标第2天,等级升到10级"
 30003,3日目标第3天,1,CfgId_2#Arg_1,CfgId_4#Arg_20,CfgId_1#Num_3,,"活动3子任务:3日目标第3天,赢20场PVP"

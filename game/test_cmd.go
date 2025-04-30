@@ -109,9 +109,10 @@ func (p *Player) OnTestCmd(req *pb.TestCmd) {
 		}
 		// 模拟玩家属性更新事件
 		evt := &pb.EventPlayerProperty{
-			PlayerId:      p.GetId(),
-			PropertyName:  cmdArgs[0],
-			PropertyValue: int32(util.Atoi(cmdArgs[1])),
+			PlayerId: p.GetId(),
+			Property: cmdArgs[0],
+			Delta:    int32(util.Atoi(cmdArgs[1])),
+			Current:  p.GetPropertyInt32(cmdArgs[0]),
 		}
 		p.FireEvent(evt)
 

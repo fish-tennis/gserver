@@ -1,7 +1,6 @@
 package game
 
 import (
-	"fmt"
 	"github.com/fish-tennis/gserver/cfg"
 	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/pb"
@@ -13,26 +12,12 @@ import (
 // 进度事件映射
 type ProgressEventMapping struct {
 	player *Player
-	// 关联事件名的进度slice
-	// 如果是通用事件名匹配,则key就是事件名
-	// 如果是属性值事件,则key就是property:propertyName
-	mapping map[string][]internal.CfgData // key:eventName or property:propertyName
+	// 关联事件名的进度对象列表
+	mapping map[string][]internal.CfgData // key:eventName
 }
 
 func (p *ProgressEventMapping) getKey(progressCfg *pb.ProgressCfg) string {
-	if progressCfg.GetType() == int32(pb.ProgressType_ProgressType_PlayerProperty) ||
-		progressCfg.GetType() == int32(pb.ProgressType_ProgressType_ActivityProperty) {
-		// 属性映射
-		property := progressCfg.GetProperties()[PropertyKey]
-		if property == "" {
-			slog.Error("getKeyErr", "progressCfg", progressCfg)
-			return ""
-		}
-		return fmt.Sprintf("property:%v", property)
-	} else {
-		// 事件映射
-		return fmt.Sprintf("Event%v", progressCfg.GetEvent())
-	}
+	return progressCfg.GetEvent()
 }
 
 func (p *ProgressEventMapping) AddProgress(progressCfg *pb.ProgressCfg, progress internal.CfgData) {
@@ -67,7 +52,7 @@ func (p *ProgressEventMapping) CheckProgress(event any, progress internal.CfgDat
 	switch v := progress.(type) {
 	case *pb.QuestData:
 		questCfg := cfg.GetQuestCfgMgr().GetQuestCfg(v.GetCfgId())
-		if cfg.GetQuestCfgMgr().GetProgressMgr().CheckProgress(event, questCfg.Progress, v) {
+		if cfg.GetQuestCfgMgr().GetProgressMgr().UpdateProgress(v, event, questCfg.Progress) {
 			p.player.GetQuest().Quests.SetDirty(v.GetCfgId(), true)
 			p.player.Send(&pb.QuestUpdate{
 				QuestCfgId: v.GetCfgId(),
@@ -82,17 +67,8 @@ func (p *ProgressEventMapping) CheckProgress(event any, progress internal.CfgDat
 
 // 事件分发后,检查进度更新
 func (p *ProgressEventMapping) OnTriggerEvent(event any) {
-	var key string
-	switch evt := event.(type) {
-	case *pb.EventPlayerProperty:
-		key = fmt.Sprintf("property:%v", evt.GetPropertyName())
-	case *pb.EventActivityProperty:
-		key = fmt.Sprintf("property:%v", evt.GetPropertyName())
-	default:
-		// 通用事件
-		key = reflect.TypeOf(event).Elem().Name()
-	}
 	// 属性值更新
+	key := reflect.TypeOf(event).Elem().Name()
 	if progressSlice, ok := p.mapping[key]; ok {
 		for _, progress := range progressSlice {
 			p.CheckProgress(event, progress)

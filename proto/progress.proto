@@ -7,31 +7,15 @@ package gserver;
 // 进度类型
 enum ProgressType {
   ProgressType_None    = 0; // 解决"The first enum value must be zero in proto3."的报错
-  ProgressType_Event = 1; // 通用事件
+  
+  // 通用事件匹配,如果ProgressCfg配置了EventField,则使用触发事件的该字段值作为进度值,如果没配置EventField,则默认进度值为1
+  ProgressType_Event = 1;
+  
+  // 玩家的属性变化值作为进度值,关联指定事件EventPlayerProperty,并以该事件的Delta字段值作为进度值
   ProgressType_PlayerProperty = 2; // 玩家属性值(int32)
+  
+  // 活动的属性变化值作为进度值,关联指定事件EventActivityProperty,并以该事件的Delta字段值作为进度值
   ProgressType_ActivityProperty = 3; // 活动属性值(int32)
-}
-
-// 进度计数类型
-enum CountType {
-  CountType_None    = 0; // 解决"The first enum value must be zero in proto3."的报错
-  // 简单计数,每触发一次事件,进度+1
-  // example:
-  //   进度: 进行10场战斗
-  //   每触发一次战斗事件,进度就+1(或者事件字段的值)
-  CountType_Counter = 1;
-
-  // 每次事件触发时,重置进度
-  // example:
-  //   进度: 升到10级
-  //   每触发一次升级事件,进度重置为当前等级
-  CountType_Reset = 2;
-
-  // 事件的某个字段作为进度增加值
-  // example:
-  //   进度: 在商店购买10个药水
-  //   单次批量购买4个药水,触发购买事件,假设事件的其中一个字段是购买数量(这里就是4),则进度+4
-  CountType_EventField = 3;
 }
 
 // 战斗事件
@@ -41,16 +25,18 @@ message EventFight {
   bool IsWin = 3;
 }
 
-// 玩家属性值(int32)
+// 玩家属性值更新(int32)
 message EventPlayerProperty {
   int64 PlayerId = 1;
-  string PropertyName = 2;
-  int32 PropertyValue = 3;
+  string Property = 2; // 属性名
+  int32 Delta = 3; // 变化量
+  int32 Current = 4; // 当前值
 }
 
-// 活动属性值(int32)
+// 活动属性值更新(int32)
 message EventActivityProperty {
   int32 ActivityId = 1;
-  string PropertyName = 2;
-  int32 PropertyValue = 3;
+  string Property = 2; // 属性名
+  int32 Delta = 3; // 变化量
+  int32 Current = 4; // 当前值
 }

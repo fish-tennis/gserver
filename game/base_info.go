@@ -65,9 +65,10 @@ func (b *BaseInfo) IncExp(incExp int32) {
 	logger.Debug("%v exp:%v lvl:%v", b.GetPlayerId(), b.Data.Exp, b.Data.Level)
 	if oldLevel != b.Data.Level {
 		b.GetPlayer().FireConditionEvent(&pb.EventPlayerProperty{
-			PlayerId:      b.GetPlayerId(),
-			PropertyName:  "Level",
-			PropertyValue: b.Data.Level - oldLevel,
+			PlayerId: b.GetPlayerId(),
+			Property: "Level",
+			Delta:    b.Data.Level - oldLevel,
+			Current:  b.Data.Level,
 		})
 	}
 	// 修改了需要保存的数据后,必须设置标记

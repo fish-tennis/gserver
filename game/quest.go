@@ -73,7 +73,7 @@ func (q *Quest) AddQuest(questData *pb.QuestData) {
 	// 初始化进度
 	if questCfg.Progress != nil {
 		if questCfg.Progress.NeedInit {
-			cfg.GetQuestCfgMgr().GetProgressMgr().InitProgress(q.GetPlayer(), questCfg.Progress, questData)
+			cfg.GetQuestCfgMgr().GetProgressMgr().InitProgress(questData, q.GetPlayer(), questCfg.Progress)
 		}
 		q.GetPlayer().progressEventMapping.AddProgress(questCfg.Progress, questData)
 	}

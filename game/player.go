@@ -185,6 +185,11 @@ func (p *Player) FireConditionEvent(event interface{}) {
 	p.progressEventMapping.OnTriggerEvent(event)
 }
 
+// 分发事件,但是延后执行
+func (p *Player) PostEvent(event any) {
+	// TODO: 先保存起来,再延后执行
+}
+
 func (p *Player) GetLevel() int32 {
 	return p.GetBaseInfo().Data.Level
 }
@@ -213,9 +218,10 @@ func (p *Player) RunRoutine() bool {
 		// 每分钟执行一次,刷新在线时间
 		p.GetTimerEntries().After(time.Minute, func() time.Duration {
 			evt := &pb.EventPlayerProperty{
-				PlayerId:      p.GetId(),
-				PropertyName:  "OnlineMinute",
-				PropertyValue: 1,
+				PlayerId: p.GetId(),
+				Property: "OnlineMinute",
+				Delta:    1,
+				Current:  p.GetPropertyInt32("OnlineMinute"),
 			}
 			p.FireEvent(evt)
 			return time.Minute

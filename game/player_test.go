@@ -139,6 +139,55 @@ func TestSaveable(t *testing.T) {
 	t.Log(fmt.Sprintf("%v", saveData))
 }
 
+func TestQuest(t *testing.T) {
+	initTestEnv(t)
+
+	playerData := &pb.PlayerData{
+		XId:       1,
+		Name:      "test",
+		AccountId: 1,
+		RegionId:  1,
+	}
+	player := CreatePlayer(playerData.XId, playerData.Name, playerData.AccountId, playerData.RegionId)
+	player.GetBaseInfo().Data.Level = 2
+
+	q := player.GetQuest()
+	cfg.GetQuestCfgMgr().Range(func(questCfg *pb.QuestCfg) bool {
+		// 排除其他模块的子任务
+		if questCfg.GetQuestType() != 0 {
+			return true
+		}
+		questData := &pb.QuestData{CfgId: questCfg.CfgId}
+		q.AddQuest(questData)
+		return true
+	})
+
+	var eventPlayerProperty *pb.EventPlayerProperty
+
+	eventPlayerProperty = &pb.EventPlayerProperty{
+		PlayerId: player.GetId(),
+		Property: "Level",
+		Delta:    1,
+		Current:  player.GetPropertyInt32("Level"),
+	}
+	player.FireEvent(eventPlayerProperty)
+
+	eventPlayerProperty = &pb.EventPlayerProperty{
+		PlayerId: player.GetId(),
+		Property: "TotalPay", //累充
+		Delta:    10,
+		Current:  player.GetPropertyInt32("TotalPay"),
+	}
+	player.FireEvent(eventPlayerProperty)
+
+	eventFight := &pb.EventFight{
+		PlayerId: player.GetId(),
+		IsPvp:    true,
+		IsWin:    false,
+	}
+	player.FireEvent(eventFight)
+}
+
 func TestActivity(t *testing.T) {
 	initTestEnv(t)
 
@@ -164,16 +213,18 @@ func TestActivity(t *testing.T) {
 	}
 
 	eventTotalPay := &pb.EventPlayerProperty{
-		PlayerId:      player.GetId(),
-		PropertyName:  "TotalPay", //累充
-		PropertyValue: 10,
+		PlayerId: player.GetId(),
+		Property: "TotalPay", //累充
+		Delta:    10,
+		Current:  player.GetPropertyInt32("TotalPay"),
 	}
 	player.FireEvent(eventTotalPay)
 
 	eventOnlineTime := &pb.EventPlayerProperty{
-		PlayerId:      player.GetId(),
-		PropertyName:  "OnlineMinute", //在线时长
-		PropertyValue: 2,
+		PlayerId: player.GetId(),
+		Property: "OnlineMinute", //在线时长
+		Delta:    2,
+		Current:  player.GetPropertyInt32("OnlineMinute"),
 	}
 	player.FireEvent(eventOnlineTime)
 
