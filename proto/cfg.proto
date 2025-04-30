@@ -95,8 +95,8 @@ message QuestCfg {
   int32 Category = 11; // 任务分类(可用于客户端分类显示 如主线任务 支线任务 成就等)
   string Detail = 12; // 任务描述
 
-  repeated CfgArg ConditionTemplates = 12; // 关联的配置模板id和参数,简化配置表用,业务代码不要调用
-  CfgArg ProgressTemplate = 13; // 关联的配置模板id和参数,简化配置表用,业务代码不要调用
+  repeated CfgArg ConditionTemplates = 13; // 关联的配置模板id和参数,简化配置表用,业务代码不要调用
+  CfgArg ProgressTemplate = 14; // 关联的配置模板id和参数,简化配置表用,业务代码不要调用
 }
 
 // 条件配置

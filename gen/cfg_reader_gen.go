@@ -291,6 +291,10 @@ func (r *QuestCfgR) RangeProperties(f func(k string,v string) bool) {
     }
 }
 
+func (r *QuestCfgR) GetCategory() int32 {
+	return r.v.GetCategory()
+}
+
 func (r *QuestCfgR) GetDetail() string {
 	return r.v.GetDetail()
 }
