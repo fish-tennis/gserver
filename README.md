@@ -21,12 +21,12 @@
 - 业务层和数据层分离,业务代码无需操作数据库和缓存
 - 通过公会功能演示如何开发分布式的功能
 - 通过公会功能演示服务器动态扩缩容的处理方式
-- 服务器之间的rpc调用
-- 活动模块,演示了如何保存动态的数据,以及利用json,proto,gentity设计一个可灵活扩展的活动模块
+- 服务器之间的rpc调用(类似grpc)
+- 活动模块,演示了如何设计一个通用且支持扩展的活动模块
 - 配置数据管理模块,同时支持csv和json,支持热更新
 
 ## 数据方案
-玩家数据落地使用mongodb(支持扩展为mysql),玩家上线时,从mongodb拉取玩家数据,玩家下线时,把玩家数据保存到mongodb
+玩家数据落地使用mongodb,玩家上线时,从mongodb拉取玩家数据,玩家下线时,把玩家数据保存到mongodb
 
 缓存使用redis,玩家在线期间修改的数据,即时保存到redis,防止服务器crash导致数据丢失
 
@@ -53,7 +53,7 @@ type Money struct {
 // 玩家基础信息组件
 type BaseInfo struct {
   PlayerDataComponent
-  // plain表示明文存储,在保存到mongo时,不会进行proto序列化
+  // plain表示明文存储,在保存到mongo时,不会进行proto序列化,以便于mongo语句直接操作
   Data *pb.BaseInfo `db:"plain"`
 }
 ```
