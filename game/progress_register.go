@@ -10,13 +10,10 @@ const (
 	PropertyKey = "Property"
 )
 
-// TODO: progressMgr设置成singleton
-
-// 注册进度接口
-func RegisterProgressCheckers() *internal.ProgressMgr {
-	progressMgr := internal.NewProgressMgr()
-	progressMgr.ProgressInitFn = DefaultInitProgress
-	return progressMgr
+// 注册进度更新和初始化接口
+func init() {
+	internal.ProgressUpdateFn = internal.DefaultProgressUpdater
+	internal.ProgressInitFn = DefaultInitProgress
 }
 
 func parsePlayer(arg any) *Player {

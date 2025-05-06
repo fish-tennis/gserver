@@ -114,13 +114,7 @@ func (this *GameServer) readConfig() {
 
 // 加载配置数据
 func (this *GameServer) loadCfgs() {
-	progressMgr := game.RegisterProgressCheckers()
-	conditionMgr := game.RegisterConditionCheckers()
 	cfg.LoadAllCfgs("cfgdata", cfg.LoadCfgFilter)
-	cfg.GetQuestCfgMgr().SetProgressMgr(progressMgr)
-	cfg.GetQuestCfgMgr().SetConditionMgr(conditionMgr)
-	cfg.GetActivityCfgMgr().SetProgressMgr(progressMgr)
-	cfg.GetActivityCfgMgr().SetConditionMgr(conditionMgr)
 }
 
 // 初始化数据库

@@ -6,23 +6,13 @@ import (
 	"log/slog"
 )
 
-// 条件检查参数
-type ConditionCheckerArg struct {
-	Player   *Player
-	Activity internal.Activity
-}
-
-// 注册条件接口
-func RegisterConditionCheckers() *internal.ConditionMgr {
-	conditionMgr := internal.NewConditionMgr()
-
-	conditionMgr.Register(int32(pb.ConditionType_ConditionType_PlayerPropertyCompare),
+// 注册条件检查接口
+func init() {
+	internal.RegisterConditionChecker(int32(pb.ConditionType_ConditionType_PlayerPropertyCompare),
 		checkPlayerPropertyCompare)
 
-	conditionMgr.Register(int32(pb.ConditionType_ConditionType_ActivityPropertyCompare),
+	internal.RegisterConditionChecker(int32(pb.ConditionType_ConditionType_ActivityPropertyCompare),
 		checkActivityPropertyCompare)
-
-	return conditionMgr
 }
 
 // 条件参数数值比较

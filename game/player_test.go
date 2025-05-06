@@ -71,13 +71,7 @@ func initTestEnv(t *testing.T) {
 	util.InitIdGenerator(1)
 	InitPlayerStructAndHandler()
 	AutoRegisterPlayerPacketHandler(nil)
-	progressMgr := RegisterProgressCheckers()
-	conditionMgr := RegisterConditionCheckers()
 	cfg.LoadAllCfgs("./../cfgdata", cfg.LoadCfgFilter)
-	cfg.GetQuestCfgMgr().SetProgressMgr(progressMgr)
-	cfg.GetQuestCfgMgr().SetConditionMgr(conditionMgr)
-	cfg.GetActivityCfgMgr().SetProgressMgr(progressMgr)
-	cfg.GetActivityCfgMgr().SetConditionMgr(conditionMgr)
 }
 
 func TestSaveable(t *testing.T) {

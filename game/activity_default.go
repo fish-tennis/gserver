@@ -54,7 +54,7 @@ func newActivityDefault(activities ActivityMgr, activityCfg *pb.ActivityCfg) *Ac
 
 // 添加一个活动任务
 func (a *ActivityDefault) AddQuest(questCfg *pb.QuestCfg) {
-	if !cfg.GetActivityCfgMgr().GetConditionMgr().CheckConditions(a, questCfg.Conditions) {
+	if !CheckConditions(a, questCfg.Conditions) {
 		return
 	}
 	questData := &pb.QuestData{
@@ -202,7 +202,7 @@ func (a *ActivityDefault) Exchange(exchangeCfgId, exchangeCount int32) error {
 		return errors.New("exchangeCountLimit")
 	}
 	// 检查兑换条件
-	if !cfg.GetActivityCfgMgr().GetConditionMgr().CheckConditions(a, exchangeCfg.Conditions) {
+	if !CheckConditions(a, exchangeCfg.Conditions) {
 		slog.Debug("conditions err", "pid", a.Activities.GetPlayer().GetId(),
 			"activityId", a.GetId(), "exchangeCfgId", exchangeCfgId)
 		return errors.New("conditions err")

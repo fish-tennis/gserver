@@ -8,22 +8,15 @@ import (
 	"reflect"
 )
 
+var (
+	ProgressUpdateFn ProgressUpdateFunc = DefaultProgressUpdater // 进度更新接口
+	ProgressInitFn   ProgressUpdateFunc                          // 进度初始化接口
+)
+
 // 进度读取接口
 type ProgressHolder interface {
 	GetProgress() int32
 	SetProgress(progress int32)
-}
-
-// 进度相关接口管理
-type ProgressMgr struct {
-	ProgressUpdateFn ProgressUpdateFunc
-	ProgressInitFn   ProgressUpdateFunc
-}
-
-func NewProgressMgr() *ProgressMgr {
-	return &ProgressMgr{
-		ProgressUpdateFn: DefaultProgressUpdater,
-	}
 }
 
 // 进度更新接口
@@ -36,20 +29,21 @@ func NewProgressMgr() *ProgressMgr {
 type ProgressUpdateFunc func(progressHolder ProgressHolder, event any, progressCfg *pb.ProgressCfg) int32
 
 // 初始化进度,更新初始进度
+// 返回值: true表示有进度更新
 //
 //	examples:
 //	任务举例:玩家升级到10级,当5级玩家接任务时,初始进度就是5/10
-func (m *ProgressMgr) InitProgress(progressHolder ProgressHolder, arg any, progressCfg *pb.ProgressCfg) bool {
-	if m.ProgressInitFn != nil {
-		return m.ProgressInitFn(progressHolder, arg, progressCfg) > 0
+func InitProgress(progressHolder ProgressHolder, arg any, progressCfg *pb.ProgressCfg) bool {
+	if ProgressInitFn != nil {
+		return ProgressInitFn(progressHolder, arg, progressCfg) > 0
 	}
 	return false
 }
 
 // 检查事件是否触发进度的更新,并更新进度
-func (m *ProgressMgr) UpdateProgress(progressHolder ProgressHolder, event any, progressCfg *pb.ProgressCfg) bool {
-	if m.ProgressUpdateFn != nil {
-		return m.ProgressUpdateFn(progressHolder, event, progressCfg) > 0
+func UpdateProgress(progressHolder ProgressHolder, event any, progressCfg *pb.ProgressCfg) bool {
+	if ProgressUpdateFn != nil {
+		return ProgressUpdateFn(progressHolder, event, progressCfg) > 0
 	}
 	return false
 }

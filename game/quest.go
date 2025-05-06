@@ -73,7 +73,7 @@ func (q *Quest) AddQuest(questData *pb.QuestData) {
 	// 初始化进度
 	if questCfg.Progress != nil {
 		if questCfg.Progress.NeedInit {
-			cfg.GetQuestCfgMgr().GetProgressMgr().InitProgress(questData, q.GetPlayer(), questCfg.Progress)
+			internal.InitProgress(questData, q.GetPlayer(), questCfg.Progress)
 		}
 		q.GetPlayer().progressEventMapping.AddProgress(questCfg.Progress, questData)
 	}
@@ -107,7 +107,7 @@ func (q *Quest) TriggerPlayerEntryGame(event *internal.EventPlayerEntryGame) {
 			if questCfg.GetQuestType() != 0 {
 				return true
 			}
-			if !cfg.GetQuestCfgMgr().GetConditionMgr().CheckConditions(q.GetPlayer(), questCfg.Conditions) {
+			if !internal.CheckConditions(q.GetPlayer(), questCfg.Conditions) {
 				return true
 			}
 			questData := &pb.QuestData{CfgId: questCfg.CfgId}
