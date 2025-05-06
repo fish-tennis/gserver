@@ -435,10 +435,6 @@ func (r *ProgressCfgR) GetType() int32 {
 	return r.v.GetType()
 }
 
-func (r *ProgressCfgR) GetCountType() int32 {
-	return r.v.GetCountType()
-}
-
 func (r *ProgressCfgR) GetTotal() int32 {
 	return r.v.GetTotal()
 }

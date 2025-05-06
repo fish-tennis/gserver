@@ -48,7 +48,7 @@ func (p *ProgressEventMapping) RemoveProgress(progressCfg *pb.ProgressCfg, cfgId
 	}
 }
 
-func (p *ProgressEventMapping) CheckProgress(event any, progress internal.CfgData) {
+func (p *ProgressEventMapping) UpdateProgress(event any, progress internal.CfgData) {
 	switch v := progress.(type) {
 	case *pb.QuestData:
 		questCfg := cfg.GetQuestCfgMgr().GetQuestCfg(v.GetCfgId())
@@ -71,7 +71,7 @@ func (p *ProgressEventMapping) OnTriggerEvent(event any) {
 	key := reflect.TypeOf(event).Elem().Name()
 	if progressSlice, ok := p.mapping[key]; ok {
 		for _, progress := range progressSlice {
-			p.CheckProgress(event, progress)
+			p.UpdateProgress(event, progress)
 		}
 	}
 }

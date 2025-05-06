@@ -128,16 +128,18 @@ func DefaultProgressUpdater(progressHolder ProgressHolder, event any, progressCf
 	return CheckAndSetProgress(progressHolder, progressCfg, progress)
 }
 
-func CheckAndSetProgress(progressHolder ProgressHolder, progressCfg *pb.ProgressCfg, progress int32) int32 {
-	if progressHolder.GetProgress()+progress > progressCfg.GetTotal() {
-		progress = progressCfg.GetTotal() - progressHolder.GetProgress()
+// 设置进度值,返回实际增加的进度值,不会超出ProgressCfg.Total
+// 比如某个任务当前进度是8/10,progressIncValue是5,CheckAndSetProgress后进度变成10/10,返回值是2
+func CheckAndSetProgress(progressHolder ProgressHolder, progressCfg *pb.ProgressCfg, progressIncValue int32) int32 {
+	if progressHolder.GetProgress()+progressIncValue > progressCfg.GetTotal() {
+		progressIncValue = progressCfg.GetTotal() - progressHolder.GetProgress()
 	}
-	if progress < 0 {
-		progress = 0
+	if progressIncValue < 0 {
+		progressIncValue = 0
 	}
 	// Q:有进度值减少的需求吗?
-	if progress > 0 {
-		progressHolder.SetProgress(progressHolder.GetProgress() + progress)
+	if progressIncValue > 0 {
+		progressHolder.SetProgress(progressHolder.GetProgress() + progressIncValue)
 	}
-	return progress
+	return progressIncValue
 }

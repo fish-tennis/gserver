@@ -10,12 +10,6 @@ enum ProgressType {
   
   // 通用事件匹配,如果ProgressCfg配置了EventField,则使用触发事件的该字段值作为进度值,如果没配置EventField,则默认进度值为1
   ProgressType_Event = 1;
-  
-  // 玩家的属性变化值作为进度值,关联指定事件EventPlayerProperty,并以该事件的Delta字段值作为进度值
-  ProgressType_PlayerProperty = 2; // 玩家属性值(int32)
-  
-  // 活动的属性变化值作为进度值,关联指定事件EventActivityProperty,并以该事件的Delta字段值作为进度值
-  ProgressType_ActivityProperty = 3; // 活动属性值(int32)
 }
 
 // 战斗事件

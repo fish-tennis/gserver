@@ -69,7 +69,6 @@ func (m *TemplateCfgMgr) convertProgressCfg(cfgArg *pb.CfgArg) *pb.ProgressCfg {
 	}
 	return &pb.ProgressCfg{
 		Type:       progressTemplate.Type,
-		CountType:  progressTemplate.CountType,
 		NeedInit:   progressTemplate.NeedInit,
 		Event:      progressTemplate.Event,
 		EventField: progressTemplate.EventField,
