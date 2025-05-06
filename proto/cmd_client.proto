@@ -41,10 +41,7 @@ enum CmdClient {
 
 	// Activity
 	Cmd_ActivitySync            = 1301; // 同步数据给客户端
-	Cmd_ActivityQuestUpdate     = 1302; // 活动任务数据更新
 	Cmd_ActivityExchangeUpdate  = 1303; // 活动兑换数据更新
-	Cmd_ActivityQuestFinishReq  = 1305; // 活动任务完成req
-	Cmd_ActivityQuestFinishRes  = 1306; // 活动任务完成res
 	Cmd_ActivityExchangeReq     = 1307; // 活动兑换请求req
     Cmd_ActivityExchangeRes     = 1308; // 活动兑换请求res
 	
