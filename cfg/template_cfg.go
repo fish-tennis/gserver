@@ -2,11 +2,17 @@ package cfg
 
 import (
 	"github.com/fish-tennis/gserver/pb"
-	"google.golang.org/protobuf/proto"
+	"github.com/fish-tennis/gserver/util"
 	"log/slog"
 	"maps"
 	"slices"
 )
+
+// 模板配置的需求场景:
+// 在一个分工比较细的团队里,往往由专门的策划人员来配置数据(各种excel表)
+// 但是ConditionCfg和ProgressCfg的配置较复杂且动态配置项多,因此把复杂的部分分解成模板配置
+// 如condition_template.csv和progress_template.csv里配置除了参数值之外的配置项,这2个表可以由程序来配置
+// 其他表要配置条件和进度,只需要配置对应的模板id和参数即可,就可以由策划人员轻松配置了
 
 var (
 	_templateCfgLoader = Register(func() any {
@@ -71,7 +77,7 @@ func (m *TemplateCfgMgr) convertProgressCfg(cfgArg *pb.CfgArg) *pb.ProgressCfg {
 	if progressTemplate == nil {
 		return nil
 	}
-	progressTemplate = proto.Clone(progressTemplate).(*pb.ProgressTemplateCfg)
+	progressTemplate = util.CloneMessage(progressTemplate)
 	return &pb.ProgressCfg{
 		Type:              progressTemplate.Type,
 		Total:             cfgArg.Arg,

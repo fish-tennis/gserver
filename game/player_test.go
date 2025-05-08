@@ -147,46 +147,46 @@ func TestCondition(t *testing.T) {
 
 	conditionCfgs := []*pb.ConditionCfg{
 		{
-			Type: int32(pb.ConditionType_ConditionType_PlayerPropertyCompare),
-			Key:  "Level",
-			Op:   ">=",
-			Args: []int32{1},
+			Type:   int32(pb.ConditionType_ConditionType_PlayerPropertyCompare),
+			Key:    "Level",
+			Op:     ">=",
+			Values: []int32{1},
 		},
 		{
-			Type: int32(pb.ConditionType_ConditionType_PlayerPropertyCompare),
-			Key:  "Level",
-			Op:   "=",
-			Args: []int32{1},
+			Type:   int32(pb.ConditionType_ConditionType_PlayerPropertyCompare),
+			Key:    "Level",
+			Op:     "=",
+			Values: []int32{1},
 		},
 		{
-			Type: int32(pb.ConditionType_ConditionType_PlayerPropertyCompare),
-			Key:  "Level",
-			Op:   "!=",
-			Args: []int32{1},
+			Type:   int32(pb.ConditionType_ConditionType_PlayerPropertyCompare),
+			Key:    "Level",
+			Op:     "!=",
+			Values: []int32{1},
 		},
 		{
-			Type: int32(pb.ConditionType_ConditionType_PlayerPropertyCompare),
-			Key:  "Level",
-			Op:   "in",
-			Args: []int32{1, 3, 5},
+			Type:   int32(pb.ConditionType_ConditionType_PlayerPropertyCompare),
+			Key:    "Level",
+			Op:     "=",
+			Values: []int32{1, 3, 5},
 		},
 		{
-			Type: int32(pb.ConditionType_ConditionType_PlayerPropertyCompare),
-			Key:  "Level",
-			Op:   "nin",
-			Args: []int32{1, 3, 5},
+			Type:   int32(pb.ConditionType_ConditionType_PlayerPropertyCompare),
+			Key:    "Level",
+			Op:     "!=",
+			Values: []int32{1, 3, 5},
 		},
 		{
-			Type: int32(pb.ConditionType_ConditionType_PlayerPropertyCompare),
-			Key:  "Level",
-			Op:   "[]",
-			Args: []int32{1, 10, 50, 60}, // 区间: [1,10] [50,60]
+			Type:   int32(pb.ConditionType_ConditionType_PlayerPropertyCompare),
+			Key:    "Level",
+			Op:     "[]",
+			Values: []int32{1, 10, 50, 60}, // 区间: [1,10] [50,60]
 		},
 		{
-			Type: int32(pb.ConditionType_ConditionType_PlayerPropertyCompare),
-			Key:  "Level",
-			Op:   "![]",
-			Args: []int32{1, 10, 50, 60},
+			Type:   int32(pb.ConditionType_ConditionType_PlayerPropertyCompare),
+			Key:    "Level",
+			Op:     "![]",
+			Values: []int32{1, 10, 50, 60},
 		},
 	}
 	for _, conditionCfg := range conditionCfgs {
@@ -237,11 +237,24 @@ func TestQuest(t *testing.T) {
 	player.FireEvent(eventPlayerProperty)
 
 	eventFight := &pb.EventFight{
-		PlayerId: player.GetId(),
-		IsPvp:    true,
-		IsWin:    false,
+		PlayerId:  player.GetId(),
+		IsPvp:     true,
+		IsWin:     false,
+		RoomType:  1,
+		RoomLevel: 2,
+		Score:     123,
 	}
-	player.FireEvent(eventFight)
+	player.FireEvent(eventFight) // 任务2,3 进度+1
+
+	eventFight = &pb.EventFight{
+		PlayerId:  player.GetId(),
+		IsPvp:     true,
+		IsWin:     true,
+		RoomType:  2,
+		RoomLevel: 4,
+		Score:     123,
+	}
+	player.FireEvent(eventFight) // 任务2,3,4,5 进度+1
 }
 
 func TestActivity(t *testing.T) {

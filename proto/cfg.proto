@@ -107,7 +107,7 @@ message QuestCfg {
 
 // 数值比较配置
 message ValueCompareCfg {
-  string Op = 1;   // 操作符 = > >= < <= != in nin [] ![]
+  string Op = 1;   // 操作符 = > >= < <= != [] ![]
   repeated int32 Values = 2; // 比较的值(可配多个)
 }
 
@@ -115,7 +115,7 @@ message ValueCompareCfg {
 message ConditionCfg {
   int32 Type = 1; // 条件类型(enum ConditionType)
   string Key = 2; // 关键字,如ConditionType_PlayerPropertyCompare对应的属性名
-  string Op = 3; // 操作符 = > >= < <= != in nin [] ![]
+  string Op = 3; // 操作符 = > >= < <= != [] ![]
   repeated int32 Values = 4; // 比较的值(可配多个)
   map<string,string> Properties = 5; // 扩展属性
 }
@@ -125,7 +125,7 @@ message ConditionTemplateCfg {
   int32 CfgId = 4; // 配置id
   int32 Type = 1; // 条件类型(enum ConditionType)
   string Key = 2; // 关键字,如ConditionType_PlayerPropertyCompare对应的属性名
-  string Op = 3; // 操作符 = > >= < <=
+  string Op = 3; // 操作符 = > >= < <= != [] ![]
   map<string,string> Properties = 5; // 扩展属性
 }
 

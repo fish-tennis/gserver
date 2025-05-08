@@ -851,7 +851,7 @@ type ValueCompareCfg struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Op     string  `protobuf:"bytes,1,opt,name=Op,proto3" json:"Op,omitempty"`                 // 操作符 = > >= < <= != in nin [] ![]
+	Op     string  `protobuf:"bytes,1,opt,name=Op,proto3" json:"Op,omitempty"`                 // 操作符 = > >= < <= != [] ![]
 	Values []int32 `protobuf:"varint,2,rep,packed,name=Values,proto3" json:"Values,omitempty"` // 比较的值(可配多个)
 }
 
@@ -909,7 +909,7 @@ type ConditionCfg struct {
 
 	Type       int32             `protobuf:"varint,1,opt,name=Type,proto3" json:"Type,omitempty"`                                                                                                    // 条件类型(enum ConditionType)
 	Key        string            `protobuf:"bytes,2,opt,name=Key,proto3" json:"Key,omitempty"`                                                                                                       // 关键字,如ConditionType_PlayerPropertyCompare对应的属性名
-	Op         string            `protobuf:"bytes,3,opt,name=Op,proto3" json:"Op,omitempty"`                                                                                                         // 操作符 = > >= < <= != in nin [] ![]
+	Op         string            `protobuf:"bytes,3,opt,name=Op,proto3" json:"Op,omitempty"`                                                                                                         // 操作符 = > >= < <= != [] ![]
 	Values     []int32           `protobuf:"varint,4,rep,packed,name=Values,proto3" json:"Values,omitempty"`                                                                                         // 比较的值(可配多个)
 	Properties map[string]string `protobuf:"bytes,5,rep,name=Properties,proto3" json:"Properties,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"` // 扩展属性
 }
@@ -990,7 +990,7 @@ type ConditionTemplateCfg struct {
 	CfgId      int32             `protobuf:"varint,4,opt,name=CfgId,proto3" json:"CfgId,omitempty"`                                                                                                  // 配置id
 	Type       int32             `protobuf:"varint,1,opt,name=Type,proto3" json:"Type,omitempty"`                                                                                                    // 条件类型(enum ConditionType)
 	Key        string            `protobuf:"bytes,2,opt,name=Key,proto3" json:"Key,omitempty"`                                                                                                       // 关键字,如ConditionType_PlayerPropertyCompare对应的属性名
-	Op         string            `protobuf:"bytes,3,opt,name=Op,proto3" json:"Op,omitempty"`                                                                                                         // 操作符 = > >= < <=
+	Op         string            `protobuf:"bytes,3,opt,name=Op,proto3" json:"Op,omitempty"`                                                                                                         // 操作符 = > >= < <= != [] ![]
 	Properties map[string]string `protobuf:"bytes,5,rep,name=Properties,proto3" json:"Properties,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"` // 扩展属性
 }
 

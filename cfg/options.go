@@ -20,16 +20,10 @@ var (
 
 func init() {
 	// ValueCompareCfg较复杂,且大部分情况都只使用默认的操作符=,所以特殊处理ValueCompareCfg的解析,降低配置难度
-	// 如:IsWin_true#RoomType_2;3#RoomLevel_>3#Score_[]100;200
+	// 如: IsWin_1#RoomType_2;3#RoomLevel_>3#Score_[]100;200
 	DefaultCsvOption.RegisterConverterByType(reflect.TypeOf(&pb.ValueCompareCfg{}), func(obj any, columnName, fieldStr string) any {
 		return convertValueCompareCfg(fieldStr)
 	})
-
-	//// IsWin=true#RoomType=2;3#RoomLevel>3#Score[]100;200
-	//m := make(map[string]*pb.ValueCompareCfg)
-	//DefaultCsvOption.RegisterConverterByType(reflect.TypeOf(m), func(obj any, columnName, fieldStr string) any {
-	//	return &pb.ValueCompareCfg{}
-	//})
 }
 
 func convertValueCompareCfg(fieldStr string) *pb.ValueCompareCfg {
