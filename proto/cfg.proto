@@ -105,12 +105,18 @@ message QuestCfg {
   CfgArg ProgressTemplate = 14; // 关联的配置模板id和参数,简化配置表用,业务代码不要调用
 }
 
-// 条件配置
+// 数值比较配置
+message ValueCompareCfg {
+  string Op = 1;   // 操作符 = > >= < <= != in nin [] ![]
+  repeated int32 Values = 2; // 比较的值(可配多个)
+}
+
+// 条件配置(ConditionTemplateCfg + Values)
 message ConditionCfg {
   int32 Type = 1; // 条件类型(enum ConditionType)
   string Key = 2; // 关键字,如ConditionType_PlayerPropertyCompare对应的属性名
   string Op = 3; // 操作符 = > >= < <= != in nin [] ![]
-  repeated int32 Args = 4; // 数组参数
+  repeated int32 Values = 4; // 比较的值(可配多个)
   map<string,string> Properties = 5; // 扩展属性
 }
 
@@ -123,24 +129,28 @@ message ConditionTemplateCfg {
   map<string,string> Properties = 5; // 扩展属性
 }
 
-// 进度配置
+// 进度配置(ProgressTemplateCfg + Total)
 message ProgressCfg {
   int32 Type = 1; // 进度类型(enum ProgressType)
-  int32 Total = 3; // 总进度要求
-  bool NeedInit = 4; // 接任务时,是否初始化一下当前进度
-  string Event = 5; // 关联的特定事件
-  string EventField = 6; // 以事件字段值作为进度
-  map<string,string> Properties = 7; // 扩展属性
+  int32 Total = 2; // 总进度要求
+  bool NeedInit = 3; // 接任务时,是否初始化一下当前进度
+  string Event = 4; // 关联的事件名
+  string ProgressField = 5; // 以事件字段值作为进度值,为空表示进度值是1
+  map<string,ValueCompareCfg> IntEventFields = 6; // 数值类型的事件字段值(支持复杂的比较操作符)
+  map<string,string> StringEventFields = 7; // 事件字段值(字符串形式)
+  map<string,string> Properties = 8; // 扩展属性
 }
 
 // 进度模板配置
 message ProgressTemplateCfg {
-  int32 CfgId = 3; // 配置id
-  int32 Type = 1; // 进度类型(enum ProgressType)
-  bool NeedInit = 4; // 接任务时,是否初始化一下当前进度
-  string Event = 5;
-  string EventField = 6;
-  map<string,string> Properties = 7; // 扩展属性
+  int32 CfgId = 1; // 配置id
+  int32 Type = 2; // 进度类型(enum ProgressType)
+  bool NeedInit = 3; // 接任务时,是否初始化一下当前进度
+  string Event = 4; // 关联的事件名
+  string ProgressField = 5; // 以事件字段值作为进度值,为空表示进度值是1
+  map<string,ValueCompareCfg> IntEventFields = 6; // 数值类型的事件字段值(支持复杂的比较操作符)
+  map<string,string> StringEventFields = 7; // 事件字段值(字符串形式)
+  map<string,string> Properties = 8; // 扩展属性
 }
 
 // 兑换配置

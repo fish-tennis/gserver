@@ -343,6 +343,37 @@ func (r *QuestCfgR) GetProgressTemplate() *CfgArgR {
 }
 
 
+type ValueCompareCfgR struct {
+	v *pb.ValueCompareCfg
+}
+
+func NewValueCompareCfgR(src *pb.ValueCompareCfg) *ValueCompareCfgR {
+	return &ValueCompareCfgR{v:src}
+}
+
+func (r *ValueCompareCfgR) IsNil() bool {
+	return r == nil || r.v == nil
+}
+
+func (r *ValueCompareCfgR) Raw() *pb.ValueCompareCfg {
+    if r == nil {
+        return nil
+    }
+	return r.v
+}
+
+func (r *ValueCompareCfgR) GetOp() string {
+	return r.v.GetOp()
+}
+
+func (r *ValueCompareCfgR) LenOfValues() int {
+    return len(r.v.GetValues())
+}
+func (r *ValueCompareCfgR) ElemOfValues(index int) int32 {
+    return r.v.GetValues()[index]
+}
+
+
 type ConditionCfgR struct {
 	v *pb.ConditionCfg
 }
@@ -374,11 +405,11 @@ func (r *ConditionCfgR) GetOp() string {
 	return r.v.GetOp()
 }
 
-func (r *ConditionCfgR) LenOfArgs() int {
-    return len(r.v.GetArgs())
+func (r *ConditionCfgR) LenOfValues() int {
+    return len(r.v.GetValues())
 }
-func (r *ConditionCfgR) ElemOfArgs(index int) int32 {
-    return r.v.GetArgs()[index]
+func (r *ConditionCfgR) ElemOfValues(index int) int32 {
+    return r.v.GetValues()[index]
 }
 
 func (r *ConditionCfgR) LenOfProperties() int {
@@ -481,8 +512,39 @@ func (r *ProgressCfgR) GetEvent() string {
 	return r.v.GetEvent()
 }
 
-func (r *ProgressCfgR) GetEventField() string {
-	return r.v.GetEventField()
+func (r *ProgressCfgR) GetProgressField() string {
+	return r.v.GetProgressField()
+}
+
+func (r *ProgressCfgR) LenOfIntEventFields() int {
+    return len(r.v.GetIntEventFields())
+}
+func (r *ProgressCfgR) ElemOfIntEventFields(key string) *ValueCompareCfgR {
+    if v,ok := r.v.GetIntEventFields()[key]; ok {
+        return NewValueCompareCfgR(v)
+    }
+    return nil
+}
+func (r *ProgressCfgR) RangeIntEventFields(f func(k string,v *ValueCompareCfgR) bool) {
+    for k,v := range r.v.GetIntEventFields() {
+        if !f(k,NewValueCompareCfgR(v)) {
+            return
+        }
+    }
+}
+
+func (r *ProgressCfgR) LenOfStringEventFields() int {
+    return len(r.v.GetStringEventFields())
+}
+func (r *ProgressCfgR) ElemOfStringEventFields(key string) string {
+    return r.v.GetStringEventFields()[key]
+}
+func (r *ProgressCfgR) RangeStringEventFields(f func(k string,v string) bool) {
+    for k,v := range r.v.GetStringEventFields() {
+        if !f(k,v) {
+            return
+        }
+    }
 }
 
 func (r *ProgressCfgR) LenOfProperties() int {
@@ -535,8 +597,39 @@ func (r *ProgressTemplateCfgR) GetEvent() string {
 	return r.v.GetEvent()
 }
 
-func (r *ProgressTemplateCfgR) GetEventField() string {
-	return r.v.GetEventField()
+func (r *ProgressTemplateCfgR) GetProgressField() string {
+	return r.v.GetProgressField()
+}
+
+func (r *ProgressTemplateCfgR) LenOfIntEventFields() int {
+    return len(r.v.GetIntEventFields())
+}
+func (r *ProgressTemplateCfgR) ElemOfIntEventFields(key string) *ValueCompareCfgR {
+    if v,ok := r.v.GetIntEventFields()[key]; ok {
+        return NewValueCompareCfgR(v)
+    }
+    return nil
+}
+func (r *ProgressTemplateCfgR) RangeIntEventFields(f func(k string,v *ValueCompareCfgR) bool) {
+    for k,v := range r.v.GetIntEventFields() {
+        if !f(k,NewValueCompareCfgR(v)) {
+            return
+        }
+    }
+}
+
+func (r *ProgressTemplateCfgR) LenOfStringEventFields() int {
+    return len(r.v.GetStringEventFields())
+}
+func (r *ProgressTemplateCfgR) ElemOfStringEventFields(key string) string {
+    return r.v.GetStringEventFields()[key]
+}
+func (r *ProgressTemplateCfgR) RangeStringEventFields(f func(k string,v string) bool) {
+    for k,v := range r.v.GetStringEventFields() {
+        if !f(k,v) {
+            return
+        }
+    }
 }
 
 func (r *ProgressTemplateCfgR) LenOfProperties() int {

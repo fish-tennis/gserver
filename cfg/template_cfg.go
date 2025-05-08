@@ -2,6 +2,7 @@ package cfg
 
 import (
 	"github.com/fish-tennis/gserver/pb"
+	"google.golang.org/protobuf/proto"
 	"log/slog"
 	"maps"
 	"slices"
@@ -36,6 +37,7 @@ func (m *TemplateCfgMgr) AfterLoad() {
 	})
 }
 
+// 条件模板id+values,转换成ConditionCfg对象
 func (m *TemplateCfgMgr) convertConditionCfg(cfgArg *pb.CfgArgs) *pb.ConditionCfg {
 	conditionTemplate := m.ConditionTemplates.GetCfg(cfgArg.CfgId)
 	if conditionTemplate == nil {
@@ -45,7 +47,7 @@ func (m *TemplateCfgMgr) convertConditionCfg(cfgArg *pb.CfgArgs) *pb.ConditionCf
 		Type:       conditionTemplate.Type,
 		Key:        conditionTemplate.Key,
 		Op:         conditionTemplate.Op,
-		Args:       slices.Clone(cfgArg.Args),
+		Values:     slices.Clone(cfgArg.Args),
 		Properties: maps.Clone(conditionTemplate.Properties),
 	}
 }
@@ -63,18 +65,22 @@ func (m *TemplateCfgMgr) convertConditionCfgs(cfgArgs []*pb.CfgArgs) []*pb.Condi
 	return conditions
 }
 
+// 进度模板配置id+进度值,转换成ProgressCfg对象
 func (m *TemplateCfgMgr) convertProgressCfg(cfgArg *pb.CfgArg) *pb.ProgressCfg {
 	progressTemplate := m.ProgressTemplates.GetCfg(cfgArg.CfgId)
 	if progressTemplate == nil {
 		return nil
 	}
+	progressTemplate = proto.Clone(progressTemplate).(*pb.ProgressTemplateCfg)
 	return &pb.ProgressCfg{
-		Type:       progressTemplate.Type,
-		NeedInit:   progressTemplate.NeedInit,
-		Event:      progressTemplate.Event,
-		EventField: progressTemplate.EventField,
-		Total:      cfgArg.Arg,
-		Properties: maps.Clone(progressTemplate.Properties),
+		Type:              progressTemplate.Type,
+		Total:             cfgArg.Arg,
+		NeedInit:          progressTemplate.NeedInit,
+		Event:             progressTemplate.Event,
+		ProgressField:     progressTemplate.ProgressField,
+		IntEventFields:    progressTemplate.IntEventFields,
+		StringEventFields: progressTemplate.StringEventFields,
+		Properties:        progressTemplate.Properties,
 	}
 }
 

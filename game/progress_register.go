@@ -39,7 +39,7 @@ func parseActivity(arg any) internal.Activity {
 
 func DefaultInitProgress(progressHolder internal.ProgressHolder, arg any, progressCfg *pb.ProgressCfg) int32 {
 	if progressCfg.GetEvent() == "EventPlayerProperty" {
-		propertyName := progressCfg.Properties[PropertyKey]
+		propertyName := progressCfg.StringEventFields[PropertyKey]
 		player := parsePlayer(arg)
 		if player == nil {
 			return 0
@@ -47,7 +47,7 @@ func DefaultInitProgress(progressHolder internal.ProgressHolder, arg any, progre
 		slog.Debug("DefaultInitProgress", "name", propertyName, "value", player.GetPropertyInt32(propertyName))
 		return internal.CheckAndSetProgress(progressHolder, progressCfg, player.GetPropertyInt32(propertyName))
 	} else if progressCfg.GetEvent() == "EventActivityProperty" {
-		propertyName := progressCfg.Properties[PropertyKey]
+		propertyName := progressCfg.StringEventFields[PropertyKey]
 		player := parseActivity(arg)
 		if player == nil {
 			return 0

@@ -61,8 +61,8 @@ func DefaultProgressUpdater(progressHolder ProgressHolder, event any, progressCf
 		}
 	}
 	eventVal := reflect.ValueOf(event).Elem()
-	// 匹配事件参数
-	for fieldName, fieldValue := range progressCfg.Properties {
+	// 事件字段值(字符串形式),这里也包含了对比较操作符为=的数值字段值的支持
+	for fieldName, fieldValue := range progressCfg.GetStringEventFields() {
 		eventFieldVal := eventVal.FieldByName(fieldName)
 		if !eventFieldVal.IsValid() {
 			return 0
@@ -103,11 +103,42 @@ func DefaultProgressUpdater(progressHolder ProgressHolder, event any, progressCf
 			return 0
 		}
 	}
+	// 数值类型的事件字段值(只支持整数和bool 数值字段支持更丰富的Op操作符)
+	for fieldName, fieldValueCompareCfg := range progressCfg.GetIntEventFields() {
+		eventFieldVal := eventVal.FieldByName(fieldName)
+		if !eventFieldVal.IsValid() {
+			return 0
+		}
+		switch eventFieldVal.Kind() {
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+			eventFieldInt := eventFieldVal.Int()
+			if !CompareOpValue(int32(eventFieldInt), fieldValueCompareCfg.Op, fieldValueCompareCfg.Values) {
+				return 0
+			}
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+			eventFieldInt := eventFieldVal.Uint()
+			if !CompareOpValue(int32(eventFieldInt), fieldValueCompareCfg.Op, fieldValueCompareCfg.Values) {
+				return 0
+			}
+		case reflect.Bool:
+			eventFieldBool := eventFieldVal.Bool()
+			eventFieldInt := 0
+			if eventFieldBool {
+				eventFieldInt = 1
+			}
+			if !CompareOpValue(int32(eventFieldInt), fieldValueCompareCfg.Op, fieldValueCompareCfg.Values) {
+				return 0
+			}
+		default:
+			slog.Error("unsupported field", "progressCfg", progressCfg, "fieldName", fieldName, "event", event)
+			return 0
+		}
+	}
 	// 检查progressCfg.EventField
 	progress := int32(1)
 	// 如果配置了事件属性字段,则读取该字段的值作为进度值,没配置就默认进度值是1
-	if progressCfg.GetEventField() != "" {
-		eventFieldVal := eventVal.FieldByName(progressCfg.GetEventField())
+	if progressCfg.GetProgressField() != "" {
+		eventFieldVal := eventVal.FieldByName(progressCfg.GetProgressField())
 		if !eventFieldVal.IsValid() {
 			// event没有这个属性
 			slog.Error("unsupported EventField", "progressCfg", progressCfg, "event", event)

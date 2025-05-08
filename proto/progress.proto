@@ -17,6 +17,9 @@ message EventFight {
   int64 PlayerId = 1;
   bool IsPvp = 2;
   bool IsWin = 3;
+  int32 RoomType = 4; // 房间类型(1:新手模式(PVE) 2:普通匹配 3:天梯匹配 4:机器人对抗(PVE) 5:自定义房间)
+  int32 RoomLevel = 5; // 房间等级
+  int32 Score = 6; // 战斗得分
 }
 
 // 玩家属性值更新(int32)
