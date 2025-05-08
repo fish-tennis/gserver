@@ -1,8 +1,8 @@
 CfgId,Type,Event,IntEventFields,StringEventFields,ProgressField,NeedInit,Properties,Comment
-1,1,EventPlayerProperty,,Property_Level,Delta,1,,Íæ¼ÒµÈ¼¶´ïµ½X
-2,1,EventFight,,,,,,Õ½¶·´ÎÊý´ïµ½X
-3,1,EventFight,IsPvp_1,,,,,PVP´ÎÊý´ïµ½X
-4,1,EventFight,IsPvp_1#IsWin_1,,,,,PVPÊ¤³¡´ïµ½X
-5,1,EventFight,IsWin_1#RoomType_2;3#RoomLevel_>3#Score_[]100;200,,,,,Æ¥ÅäÄ£Ê½ ·¿¼äµÈ¼¶>3 µÃ·ÖÔÚ100-200Ö®¼ä Ê¤³¡´ïµ½X
-6,1,EventPlayerProperty,,Property_TotalPay,Delta,,,ÀÛ³ä´ïµ½X
-7,1,EventPlayerProperty,,Property_OnlineMinute,Delta,,,ÔÚÏß·ÖÖÓ´ïµ½X
+1,1,EventPlayerProperty,,Property_Level,Delta,1,,çŽ©å®¶ç­‰çº§è¾¾åˆ°X
+2,1,EventFight,,,,,,æˆ˜æ–—æ¬¡æ•°è¾¾åˆ°X
+3,1,EventFight,IsPvp_1,,,,,PVPæ¬¡æ•°è¾¾åˆ°X
+4,1,EventFight,IsPvp_1#IsWin_1,,,,,PVPèƒœåœºè¾¾åˆ°X
+5,1,EventFight,IsWin_1#RoomType_2;3#RoomLevel_>3#Score_[]100;200,,,,,åŒ¹é…æ¨¡å¼ æˆ¿é—´ç­‰çº§>3 å¾—åˆ†åœ¨100-200ä¹‹é—´ èƒœåœºè¾¾åˆ°X
+6,1,EventPlayerProperty,,Property_TotalPay,Delta,,,ç´¯å……è¾¾åˆ°X
+7,1,EventPlayerProperty,,Property_OnlineMinute,Delta,,,åœ¨çº¿åˆ†é’Ÿè¾¾åˆ°X
