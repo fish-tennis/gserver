@@ -21,6 +21,14 @@ func RegisterConditionChecker(conditionType int32, checker ConditionCheckFunc) {
 	_conditionCheckers[conditionType] = checker
 }
 
+func CheckCondition(arg any, conditionCfg *pb.ConditionCfg) bool {
+	checker, ok := _conditionCheckers[conditionCfg.Type]
+	if !ok {
+		return false
+	}
+	return checker(arg, conditionCfg)
+}
+
 func CheckConditions(arg any, conditions []*pb.ConditionCfg) bool {
 	for _, conditionCfg := range conditions {
 		checker, ok := _conditionCheckers[conditionCfg.Type]

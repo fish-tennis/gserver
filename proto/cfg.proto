@@ -71,7 +71,13 @@ message DelElemArg {
 // CfgId + Arg
 message CfgArg {
   int32 CfgId = 1; // 配置id
-  int32 Arg = 2; // 参数
+  int32 Arg = 2; // 单个参数
+}
+
+// CfgId + Args
+message CfgArgs {
+  int32 CfgId = 1; // 配置id
+  repeated int32 Args = 2; // 参数数组
 }
 
 // 时间类型
@@ -95,7 +101,7 @@ message QuestCfg {
   int32 Category = 11; // 任务分类(可用于客户端分类显示 如主线任务 支线任务 成就等)
   string Detail = 12; // 任务描述
 
-  repeated CfgArg ConditionTemplates = 13; // 关联的配置模板id和参数,简化配置表用,业务代码不要调用
+  repeated CfgArgs ConditionTemplates = 13; // 关联的配置模板id和参数,简化配置表用,业务代码不要调用
   CfgArg ProgressTemplate = 14; // 关联的配置模板id和参数,简化配置表用,业务代码不要调用
 }
 
@@ -103,8 +109,8 @@ message QuestCfg {
 message ConditionCfg {
   int32 Type = 1; // 条件类型(enum ConditionType)
   string Key = 2; // 关键字,如ConditionType_PlayerPropertyCompare对应的属性名
-  string Op = 3; // 操作符 = > >= < <=
-  int32 Arg = 4; // 参数
+  string Op = 3; // 操作符 = > >= < <= != in nin [] ![]
+  repeated int32 Args = 4; // 数组参数
   map<string,string> Properties = 5; // 扩展属性
 }
 
@@ -131,7 +137,6 @@ message ProgressCfg {
 message ProgressTemplateCfg {
   int32 CfgId = 3; // 配置id
   int32 Type = 1; // 进度类型(enum ProgressType)
-  int32 CountType = 2; // 计数类型
   bool NeedInit = 4; // 接任务时,是否初始化一下当前进度
   string Event = 5;
   string EventField = 6;
@@ -147,7 +152,7 @@ message ExchangeCfg {
   int32 CountLimit = 5; // 兑换次数限制(0表示无次数限制)
   int32 RefreshType = 6; // 刷新机制(enum RefreshType)
   map<string,string> Properties = 7; // 扩展属性
-  repeated CfgArg ConditionTemplates = 11; // 关联的配置模板id和参数,简化配置表用,业务代码不要调用
+  repeated CfgArgs ConditionTemplates = 11; // 关联的配置模板id和参数,简化配置表用,业务代码不要调用
 }
 
 // 活动基础配置

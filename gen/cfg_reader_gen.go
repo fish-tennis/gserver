@@ -212,6 +212,37 @@ func (r *CfgArgR) GetArg() int32 {
 }
 
 
+type CfgArgsR struct {
+	v *pb.CfgArgs
+}
+
+func NewCfgArgsR(src *pb.CfgArgs) *CfgArgsR {
+	return &CfgArgsR{v:src}
+}
+
+func (r *CfgArgsR) IsNil() bool {
+	return r == nil || r.v == nil
+}
+
+func (r *CfgArgsR) Raw() *pb.CfgArgs {
+    if r == nil {
+        return nil
+    }
+	return r.v
+}
+
+func (r *CfgArgsR) GetCfgId() int32 {
+	return r.v.GetCfgId()
+}
+
+func (r *CfgArgsR) LenOfArgs() int {
+    return len(r.v.GetArgs())
+}
+func (r *CfgArgsR) ElemOfArgs(index int) int32 {
+    return r.v.GetArgs()[index]
+}
+
+
 type QuestCfgR struct {
 	v *pb.QuestCfg
 }
@@ -302,8 +333,8 @@ func (r *QuestCfgR) GetDetail() string {
 func (r *QuestCfgR) LenOfConditionTemplates() int {
     return len(r.v.GetConditionTemplates())
 }
-func (r *QuestCfgR) ElemOfConditionTemplates(index int) *CfgArgR {
-    return NewCfgArgR(r.v.GetConditionTemplates()[index])
+func (r *QuestCfgR) ElemOfConditionTemplates(index int) *CfgArgsR {
+    return NewCfgArgsR(r.v.GetConditionTemplates()[index])
 }
 
 
@@ -343,8 +374,11 @@ func (r *ConditionCfgR) GetOp() string {
 	return r.v.GetOp()
 }
 
-func (r *ConditionCfgR) GetArg() int32 {
-	return r.v.GetArg()
+func (r *ConditionCfgR) LenOfArgs() int {
+    return len(r.v.GetArgs())
+}
+func (r *ConditionCfgR) ElemOfArgs(index int) int32 {
+    return r.v.GetArgs()[index]
 }
 
 func (r *ConditionCfgR) LenOfProperties() int {
@@ -493,10 +527,6 @@ func (r *ProgressTemplateCfgR) GetType() int32 {
 	return r.v.GetType()
 }
 
-func (r *ProgressTemplateCfgR) GetCountType() int32 {
-	return r.v.GetCountType()
-}
-
 func (r *ProgressTemplateCfgR) GetNeedInit() bool {
 	return r.v.GetNeedInit()
 }
@@ -593,8 +623,8 @@ func (r *ExchangeCfgR) RangeProperties(f func(k string,v string) bool) {
 func (r *ExchangeCfgR) LenOfConditionTemplates() int {
     return len(r.v.GetConditionTemplates())
 }
-func (r *ExchangeCfgR) ElemOfConditionTemplates(index int) *CfgArgR {
-    return NewCfgArgR(r.v.GetConditionTemplates()[index])
+func (r *ExchangeCfgR) ElemOfConditionTemplates(index int) *CfgArgsR {
+    return NewCfgArgsR(r.v.GetConditionTemplates()[index])
 }
 
 

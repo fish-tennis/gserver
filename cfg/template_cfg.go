@@ -4,6 +4,7 @@ import (
 	"github.com/fish-tennis/gserver/pb"
 	"log/slog"
 	"maps"
+	"slices"
 )
 
 var (
@@ -35,7 +36,7 @@ func (m *TemplateCfgMgr) AfterLoad() {
 	})
 }
 
-func (m *TemplateCfgMgr) convertConditionCfg(cfgArg *pb.CfgArg) *pb.ConditionCfg {
+func (m *TemplateCfgMgr) convertConditionCfg(cfgArg *pb.CfgArgs) *pb.ConditionCfg {
 	conditionTemplate := m.ConditionTemplates.GetCfg(cfgArg.CfgId)
 	if conditionTemplate == nil {
 		return nil
@@ -44,12 +45,12 @@ func (m *TemplateCfgMgr) convertConditionCfg(cfgArg *pb.CfgArg) *pb.ConditionCfg
 		Type:       conditionTemplate.Type,
 		Key:        conditionTemplate.Key,
 		Op:         conditionTemplate.Op,
-		Arg:        cfgArg.Arg,
+		Args:       slices.Clone(cfgArg.Args),
 		Properties: maps.Clone(conditionTemplate.Properties),
 	}
 }
 
-func (m *TemplateCfgMgr) convertConditionCfgs(cfgArgs []*pb.CfgArg) []*pb.ConditionCfg {
+func (m *TemplateCfgMgr) convertConditionCfgs(cfgArgs []*pb.CfgArgs) []*pb.ConditionCfg {
 	var conditions []*pb.ConditionCfg
 	for _, cfgArg := range cfgArgs {
 		condition := m.convertConditionCfg(cfgArg)

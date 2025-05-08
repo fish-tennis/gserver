@@ -133,6 +133,68 @@ func TestSaveable(t *testing.T) {
 	t.Log(fmt.Sprintf("%v", saveData))
 }
 
+func TestCondition(t *testing.T) {
+	initTestEnv(t)
+
+	playerData := &pb.PlayerData{
+		XId:       1,
+		Name:      "test",
+		AccountId: 1,
+		RegionId:  1,
+	}
+	player := CreatePlayer(playerData.XId, playerData.Name, playerData.AccountId, playerData.RegionId)
+	player.GetBaseInfo().Data.Level = 2
+
+	conditionCfgs := []*pb.ConditionCfg{
+		{
+			Type: int32(pb.ConditionType_ConditionType_PlayerPropertyCompare),
+			Key:  "Level",
+			Op:   ">=",
+			Args: []int32{1},
+		},
+		{
+			Type: int32(pb.ConditionType_ConditionType_PlayerPropertyCompare),
+			Key:  "Level",
+			Op:   "=",
+			Args: []int32{1},
+		},
+		{
+			Type: int32(pb.ConditionType_ConditionType_PlayerPropertyCompare),
+			Key:  "Level",
+			Op:   "!=",
+			Args: []int32{1},
+		},
+		{
+			Type: int32(pb.ConditionType_ConditionType_PlayerPropertyCompare),
+			Key:  "Level",
+			Op:   "in",
+			Args: []int32{1, 3, 5},
+		},
+		{
+			Type: int32(pb.ConditionType_ConditionType_PlayerPropertyCompare),
+			Key:  "Level",
+			Op:   "nin",
+			Args: []int32{1, 3, 5},
+		},
+		{
+			Type: int32(pb.ConditionType_ConditionType_PlayerPropertyCompare),
+			Key:  "Level",
+			Op:   "[]",
+			Args: []int32{1, 10, 50, 60}, // 区间: [1,10] [50,60]
+		},
+		{
+			Type: int32(pb.ConditionType_ConditionType_PlayerPropertyCompare),
+			Key:  "Level",
+			Op:   "![]",
+			Args: []int32{1, 10, 50, 60},
+		},
+	}
+	for _, conditionCfg := range conditionCfgs {
+		b := internal.CheckCondition(player, conditionCfg)
+		t.Logf("b:%v conditionCfg:%v", b, conditionCfg)
+	}
+}
+
 func TestQuest(t *testing.T) {
 	initTestEnv(t)
 

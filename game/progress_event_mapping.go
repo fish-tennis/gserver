@@ -69,7 +69,7 @@ func (p *ProgressEventMapping) UpdateProgress(event any, progress internal.CfgDa
 func (p *ProgressEventMapping) OnTriggerEvent(event any) {
 	// 属性值更新
 	key := reflect.TypeOf(event).Elem().Name()
-	if progressSlice, ok := p.mapping[key]; ok {
+	if progressSlice, ok := p.mapping[key]; ok { //快速查询该事件对应的进度对象
 		for _, progress := range progressSlice {
 			p.UpdateProgress(event, progress)
 		}
