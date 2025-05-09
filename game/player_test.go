@@ -516,3 +516,67 @@ func TestProtoDataSize(t *testing.T) {
 	// 之前的版本,分别定义了QuestData和ActivityQuestData,导致代码复杂度增加
 	// 当前版本,只需要在QuestData用作玩家的普通任务时,不对activityId赋值就行,不会占用额外的数据库空间
 }
+
+func TestEvent(t *testing.T) {
+	initTestEnv(t)
+
+	playerData := &pb.PlayerData{
+		XId:       1,
+		Name:      "test",
+		AccountId: 1,
+		RegionId:  1,
+	}
+	player := CreatePlayer(playerData.XId, playerData.Name, playerData.AccountId, playerData.RegionId)
+	player.GetBaseInfo().Data.Level = 2
+
+	q := player.GetQuest()
+	cfg.GetQuestCfgMgr().Range(func(questCfg *pb.QuestCfg) bool {
+		// 排除其他模块的子任务
+		if questCfg.GetQuestType() != 0 {
+			return true
+		}
+		questData := &pb.QuestData{CfgId: questCfg.CfgId}
+		q.AddQuest(questData)
+		return true
+	})
+
+	var eventPlayerProperty *pb.EventPlayerProperty
+
+	eventPlayerProperty = &pb.EventPlayerProperty{
+		PlayerId: player.GetId(),
+		Property: "Level",
+		Delta:    1,
+		Current:  player.GetPropertyInt32("Level"),
+	}
+	player.PostEvent(eventPlayerProperty)
+
+	eventPlayerProperty = &pb.EventPlayerProperty{
+		PlayerId: player.GetId(),
+		Property: "TotalPay", //累充
+		Delta:    10,
+		Current:  player.GetPropertyInt32("TotalPay"),
+	}
+	player.PostEvent(eventPlayerProperty)
+
+	eventFight := &pb.EventFight{
+		PlayerId:  player.GetId(),
+		IsPvp:     true,
+		IsWin:     false,
+		RoomType:  1,
+		RoomLevel: 2,
+		Score:     123,
+	}
+	player.PostEvent(eventFight)
+
+	eventFight = &pb.EventFight{
+		PlayerId:  player.GetId(),
+		IsPvp:     true,
+		IsWin:     true,
+		RoomType:  2,
+		RoomLevel: 4,
+		Score:     123,
+	}
+	player.PostEvent(eventFight)
+
+	player.firePostedEvents()
+}

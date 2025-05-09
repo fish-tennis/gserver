@@ -39,7 +39,8 @@ type Player struct {
 	connection Connection
 	// 事件分发的嵌套检测
 	fireEventLoopChecker map[reflect.Type]int32
-	// 进度更新
+	postEvents           []any
+	// 进度事件映射
 	progressEventMapping *ProgressEventMapping
 }
 
@@ -187,7 +188,22 @@ func (p *Player) FireConditionEvent(event interface{}) {
 
 // 分发事件,但是延后执行
 func (p *Player) PostEvent(event any) {
-	// TODO: 先保存起来,再延后执行
+	logger.Debug("%v PostEvent:%v", p.GetId(), event)
+	// 先保存起来,再延后执行
+	p.postEvents = append(p.postEvents, event)
+}
+
+func (p *Player) firePostedEvents() {
+	for i := 0; i < int(internal.SameEventLoopLimit); i++ {
+		if len(p.postEvents) == 0 {
+			break
+		}
+		postEvents := p.postEvents
+		p.postEvents = p.postEvents[:0]
+		for _, event := range postEvents {
+			p.FireEvent(event) // 执行过程中有可能又触发了p.PostEvent
+		}
+	}
 }
 
 func (p *Player) GetLevel() int32 {
@@ -203,6 +219,7 @@ func (p *Player) RunRoutine() bool {
 		EndFunc: func(routineEntity gentity.RoutineEntity) {
 			// 分发事件:玩家退出游戏
 			p.FireEvent(&internal.EventPlayerExit{})
+			p.firePostedEvents()
 			// 协程结束的时候,移除玩家
 			GetPlayerMgr().RemovePlayer(p)
 		},
@@ -210,6 +227,7 @@ func (p *Player) RunRoutine() bool {
 			p.processMessage(message.(*ProtoPacket))
 		},
 		AfterTimerExecuteFunc: func(routineEntity gentity.RoutineEntity, t time.Time) {
+			p.firePostedEvents()
 			// 如果有需要保存的数据修改了,即时保存数据库
 			p.SaveCache(cache.Get())
 		},
@@ -256,6 +274,7 @@ func (p *Player) processMessage(message *ProtoPacket) {
 			p.Send(resProto)
 		}
 	}) {
+		p.firePostedEvents()
 		// 如果有需要保存的数据修改了,即时保存缓存
 		p.SaveCache(cache.Get())
 		return
