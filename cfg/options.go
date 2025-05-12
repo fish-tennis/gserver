@@ -11,35 +11,33 @@ import (
 // 默认csv设置
 var (
 	DefaultCsvOption = csv.DefaultOption
-
-	// 配置支持的数值比较符
-	_valueOps = []string{
-		"=", ">", ">=", "<", "<=", "!=", "[]", "![]",
-	}
 )
 
 func init() {
 	// ValueCompareCfg较复杂,且大部分情况都只使用默认的操作符=,所以特殊处理ValueCompareCfg的解析,降低配置难度
-	// 如: IsWin_1#RoomType_2;3#RoomLevel_>3#Score_[]100;200
+	// 如: IsWin_1#RoomType_2;3#RoomLevel_>_3#Score_[]_100;200
 	DefaultCsvOption.RegisterConverterByType(reflect.TypeOf(&pb.ValueCompareCfg{}), func(obj any, columnName, fieldStr string) any {
 		return convertValueCompareCfg(fieldStr)
 	})
 }
 
+// ValueCompareCfg较复杂,且大部分情况都只使用默认的操作符=,所以特殊处理ValueCompareCfg的解析,降低配置难度
+// 如: IsWin_1#RoomType_2;3#RoomLevel_>_3#Score_[]_100;200
 func convertValueCompareCfg(fieldStr string) *pb.ValueCompareCfg {
-	v := &pb.ValueCompareCfg{
-		Op: "=", // 简化配置,不填就默认是=
+	opValues := strings.Split(fieldStr, DefaultCsvOption.KvSeparator)
+	if len(opValues) == 0 {
+		return nil
 	}
-	valueIdx := 0
-	for _, op := range _valueOps {
-		idx := strings.Index(fieldStr, op)
-		if idx == 0 {
-			v.Op = op
-			valueIdx = len(op)
-			break
-		}
+	v := &pb.ValueCompareCfg{}
+	var valueStr string
+	if len(opValues) == 1 {
+		v.Op = "=" // len(opValues)==0表示使用默认的比较操作符=,可以不配置,如RoomType_2
+		valueStr = opValues[0]
+	} else {
+		// op_values,如RoomLevel_>_3
+		v.Op = opValues[0]
+		valueStr = opValues[1]
 	}
-	valueStr := fieldStr[valueIdx:]
 	values := strings.Split(valueStr, DefaultCsvOption.SliceSeparator)
 	for _, value := range values {
 		valueInt := util.ToInt(value)

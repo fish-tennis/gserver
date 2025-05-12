@@ -8,12 +8,16 @@ import (
 	"reflect"
 )
 
-var (
-	ProgressUpdateFn ProgressUpdateFunc = DefaultProgressUpdater // 进度更新接口
-	ProgressInitFn   ProgressUpdateFunc                          // 进度初始化接口
+const (
+	PropertyKey = "Property"
 )
 
-// 进度读取接口
+var (
+	ProgressUpdateFn ProgressUpdateFunc = DefaultProgressUpdater           // 进度更新接口
+	ProgressInitFn   ProgressInitFunc   = DefaultPropertyInt32InitProgress // 进度初始化接口
+)
+
+// 进度值读写接口
 type ProgressHolder interface {
 	GetProgress() int32
 	SetProgress(progress int32)
@@ -26,30 +30,33 @@ type ProgressHolder interface {
 //	进度: 抽卡100次
 //	事件: 抽卡(5连抽)
 //	进度+5
-type ProgressUpdateFunc func(progressHolder ProgressHolder, event any, progressCfg *pb.ProgressCfg) int32
+type ProgressUpdateFunc func(obj any, progressHolder ProgressHolder, event any, progressCfg *pb.ProgressCfg) int32
+
+// 进度初始化接口
+type ProgressInitFunc func(obj any, progressHolder ProgressHolder, progressCfg *pb.ProgressCfg) int32
 
 // 初始化进度,更新初始进度
 // 返回值: true表示有进度更新
 //
 //	examples:
 //	任务举例:玩家升级到10级,当5级玩家接任务时,初始进度就是5/10
-func InitProgress(progressHolder ProgressHolder, arg any, progressCfg *pb.ProgressCfg) bool {
+func InitProgress(obj any, progressHolder ProgressHolder, progressCfg *pb.ProgressCfg) bool {
 	if ProgressInitFn != nil {
-		return ProgressInitFn(progressHolder, arg, progressCfg) > 0
+		return ProgressInitFn(obj, progressHolder, progressCfg) > 0
 	}
 	return false
 }
 
 // 检查事件是否触发进度的更新,并更新进度
-func UpdateProgress(progressHolder ProgressHolder, event any, progressCfg *pb.ProgressCfg) bool {
+func UpdateProgress(obj any, progressHolder ProgressHolder, event any, progressCfg *pb.ProgressCfg) bool {
 	if ProgressUpdateFn != nil {
-		return ProgressUpdateFn(progressHolder, event, progressCfg) > 0
+		return ProgressUpdateFn(obj, progressHolder, event, progressCfg) > 0
 	}
 	return false
 }
 
 // 默认的进度更新接口
-func DefaultProgressUpdater(progressHolder ProgressHolder, event any, progressCfg *pb.ProgressCfg) int32 {
+func DefaultProgressUpdater(obj any, progressHolder ProgressHolder, event any, progressCfg *pb.ProgressCfg) int32 {
 	// 通用事件匹配,先检查事件名是否匹配
 	if progressCfg.GetType() == int32(pb.ProgressType_ProgressType_Event) {
 		eventTyp := reflect.TypeOf(event)
@@ -112,12 +119,12 @@ func DefaultProgressUpdater(progressHolder ProgressHolder, event any, progressCf
 		switch eventFieldVal.Kind() {
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 			eventFieldInt := eventFieldVal.Int()
-			if !CompareOpValue(int32(eventFieldInt), fieldValueCompareCfg.Op, fieldValueCompareCfg.Values) {
+			if !CompareOpValue(obj, int32(eventFieldInt), fieldValueCompareCfg) {
 				return 0
 			}
 		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 			eventFieldInt := eventFieldVal.Uint()
-			if !CompareOpValue(int32(eventFieldInt), fieldValueCompareCfg.Op, fieldValueCompareCfg.Values) {
+			if !CompareOpValue(obj, int32(eventFieldInt), fieldValueCompareCfg) {
 				return 0
 			}
 		case reflect.Bool:
@@ -126,7 +133,7 @@ func DefaultProgressUpdater(progressHolder ProgressHolder, event any, progressCf
 			if eventFieldBool {
 				eventFieldInt = 1
 			}
-			if !CompareOpValue(int32(eventFieldInt), fieldValueCompareCfg.Op, fieldValueCompareCfg.Values) {
+			if !CompareOpValue(obj, int32(eventFieldInt), fieldValueCompareCfg) {
 				return 0
 			}
 		default:
@@ -157,6 +164,17 @@ func DefaultProgressUpdater(progressHolder ProgressHolder, event any, progressCf
 		}
 	}
 	return CheckAndSetProgress(progressHolder, progressCfg, progress)
+}
+
+// PropertyInt32的实现类的进度值初始化接口
+func DefaultPropertyInt32InitProgress(obj any, progressHolder ProgressHolder, progressCfg *pb.ProgressCfg) int32 {
+	if propertyGetter, ok := obj.(PropertyInt32); ok {
+		if propertyName, ok2 := progressCfg.StringEventFields[PropertyKey]; ok2 {
+			slog.Debug("DefaultPropertyInt32InitProgress", "name", propertyName, "value", propertyGetter.GetPropertyInt32(propertyName))
+			return CheckAndSetProgress(progressHolder, progressCfg, propertyGetter.GetPropertyInt32(propertyName))
+		}
+	}
+	return 0
 }
 
 // 设置进度值,返回实际增加的进度值,不会超出ProgressCfg.Total
