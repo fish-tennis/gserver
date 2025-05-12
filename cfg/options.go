@@ -14,6 +14,8 @@ var (
 )
 
 func init() {
+	DefaultCsvOption.IgnoreColumn("Comment")
+
 	// ValueCompareCfg较复杂,且大部分情况都只使用默认的操作符=,所以特殊处理ValueCompareCfg的解析,降低配置难度
 	// 如: IsWin_1#RoomType_2;3#RoomLevel_>_3#Score_[]_100;200
 	DefaultCsvOption.RegisterConverterByType(reflect.TypeOf(&pb.ValueCompareCfg{}), func(obj any, columnName, fieldStr string) any {
