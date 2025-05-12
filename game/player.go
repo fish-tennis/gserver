@@ -199,7 +199,7 @@ func (p *Player) firePostedEvents() {
 			break
 		}
 		postEvents := p.postEvents
-		p.postEvents = p.postEvents[:0]
+		p.postEvents = nil
 		for _, event := range postEvents {
 			p.FireEvent(event) // 执行过程中有可能又触发了p.PostEvent
 		}
