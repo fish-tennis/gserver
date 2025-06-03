@@ -142,6 +142,9 @@ func (g *GuildBaseInfo) HandleGuildDataViewReq(m *GuildMessage, req *pb.GuildDat
 ## 客户端网络库
 C#: [gnet_csharp](https://github.com/fish-tennis/gnet_csharp)
 
+## Excel表导出工具
+[excelexporter](https://github.com/fish-tennis/excelexporter)
+
 ## 讨论
 QQ群: 764912827
 
