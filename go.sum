@@ -8,8 +8,8 @@ github.com/fish-tennis/csv v1.0.5 h1:bwGI0/b6ZQV4/MNMUIHdU3nn3f9lwgn0Srp0B/dGDlE
 github.com/fish-tennis/csv v1.0.5/go.mod h1:vcwOeWm4eoFJET6KOkAppnxu9g6MeDBdmxbAgvr/h5I=
 github.com/fish-tennis/gentity v1.4.2 h1:SWlymQHQbnA31VJUCdJabE6NJpuMDuvF9sBBJM1cQAo=
 github.com/fish-tennis/gentity v1.4.2/go.mod h1:tDM/uCSTZO6XyTd7MrL2EoQ1dLT8N6iKyHHWEOIggvc=
-github.com/fish-tennis/gnet v1.2.1 h1:/Sj/7y871udUCT9JP1KIv7uo8L3YE5WNBBESFjR5pJU=
-github.com/fish-tennis/gnet v1.2.1/go.mod h1:f33rsGHToKEmKhtyicpRcJX9uKVBrBof1aJcuaNUjcg=
+github.com/fish-tennis/gnet v1.2.2 h1:to8Kn4XLOAVkgcAekT5VlJMivfsH7DMp3sX9pKSbxuw=
+github.com/fish-tennis/gnet v1.2.2/go.mod h1:f33rsGHToKEmKhtyicpRcJX9uKVBrBof1aJcuaNUjcg=
 github.com/fish-tennis/snowflake v1.0.1 h1:IfutFtA3ZET6g4fXT+4CQs9znQ0utQcOUs/2N4D93xs=
 github.com/fish-tennis/snowflake v1.0.1/go.mod h1:qmrmzE3fPRKx5S4IUnoqHb131MaiJUw0To4XJWkRDJg=
 github.com/fsnotify/fsnotify v1.4.9 h1:hsms1Qyu0jgnwNXIxa+/V/PDsU6CfLf6CNO8H7IWoS4=
