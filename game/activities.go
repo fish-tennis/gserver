@@ -1,7 +1,6 @@
 package game
 
 import (
-	"fmt"
 	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gentity/util"
 	"github.com/fish-tennis/gserver/cfg"
@@ -109,7 +108,7 @@ func (a *Activities) RemoveActivity(activityId int32) {
 
 // 检查所有还没参加的活动,如果满足参加条件,则参加
 func (a *Activities) AddAllActivitiesCanJoin(t time.Time) {
-	cfg.GetActivityCfgMgr().Range(func(activityCfg *pb.ActivityCfg) bool {
+	cfg.GetActivityCfgMgr().Activities.Range(func(activityCfg *pb.ActivityCfg) bool {
 		if a.GetActivity(activityCfg.CfgId) == nil {
 			if a.CanJoin(activityCfg, t) {
 				a.AddNewActivity(activityCfg, t)
@@ -230,24 +229,6 @@ func (a *Activities) CheckEnd(t time.Time) {
 			activity.OnEnd(t)
 		}
 	}
-}
-
-// 响应客户端的活动兑换请求(购买活动物品,兑换活动礼包,领取奖励等)
-func (a *Activities) OnActivityExchangeReq(req *pb.ActivityExchangeReq) (*pb.ActivityExchangeRes, error) {
-	activity := a.GetActivityDefault(req.ActivityId)
-	if activity == nil {
-		return nil, fmt.Errorf("activity nil id:%v", req.ActivityId)
-	}
-	err := activity.Exchange(req.ExchangeCfgId, req.ExchangeCount)
-	if err != nil {
-		return nil, err
-	}
-	return &pb.ActivityExchangeRes{
-		ActivityId:    req.ActivityId,
-		ExchangeCfgId: req.ExchangeCfgId,
-		ExchangeCount: req.ExchangeCount,
-		CurrentCount:  activity.GetExchangeCount(req.ExchangeCfgId),
-	}, nil
 }
 
 // 子活动,目前限制子活动只能是单保存字段(SingleField)

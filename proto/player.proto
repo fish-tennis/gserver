@@ -58,22 +58,22 @@ message PlayerGuildData {
 // 用于一次性把玩家数据加载进来
 message PlayerData {
   int64 _id = 1; // 玩家id
-  string name = 2; // 玩家名
-  int64 accountId = 3; // 账号id
-  int32 regionId = 4; // 区服id
-  BaseInfo baseInfo = 5;
-  bytes money = 6;
-  BagSaveData bags = 7;
-  QuestSaveData quest = 8;
-  PlayerGuildData guild = 9;
-  map<int64,bytes> pendingMessages = 10;
-  map<int32,bytes> activities = 11;
+  string Name = 2; // 玩家名
+  int64 AccountId = 3; // 账号id
+  int32 RegionId = 4; // 区服id
+  BaseInfo BaseInfo = 5;
+  bytes Money = 6;
+  BagSaveData Bags = 7;
+  QuestSaveData Quest = 8;
+  PlayerGuildData Guild = 9;
+  map<int64,bytes> PendingMessages = 10; // map<int64,*PendingMessage>
+  map<int32,bytes> Activities = 11; // map<int32,*ActivityDefaultBaseData>
+  map<int32,bytes> Exchange = 12; // map<int32,*ExchangeRecord>
 }
 
 // 默认活动模板的基础数据
 message ActivityDefaultBaseData {
   int32 LastUpdateTime = 1; // 刷新时间戳
-  map<int32,int32> ExchangeRecord = 3; // 兑换记录
   int32 JoinTime = 4; // 参加活动的时间(时间戳)
   map<string,int32> PropertiesInt32 = 5; // 动态属性(int32)
   //map<string,int64> PropertiesInt64 = 6; // 动态属性(int64)
@@ -84,5 +84,12 @@ message PendingMessage {
   int64 messageId = 1; // 唯一id
   int32 packetCommand = 2; // 消息号
   google.protobuf.Any packetData = 3; // 消息内容
-  int64 timestamp = 4; // 时间戳
+  int32 timestamp = 4; // 时间戳
+}
+
+// 兑换记录
+message ExchangeRecord {
+  int32 CfgId = 1;
+  int32 Count = 2;
+  int32 Timestamp = 3; // 最近一次兑换的时间戳(秒)
 }

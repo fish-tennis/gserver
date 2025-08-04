@@ -41,9 +41,13 @@ enum CmdClient {
 
 	// Activity
 	Cmd_ActivitySync            = 1301; // 同步数据给客户端
-	Cmd_ActivityExchangeUpdate  = 1303; // 活动兑换数据更新
-	Cmd_ActivityExchangeReq     = 1307; // 活动兑换请求req
-    Cmd_ActivityExchangeRes     = 1308; // 活动兑换请求res
+	
+	// Exchange
+	Cmd_ExchangeSync       		= 1401; // 同步数据给客户端
+	Cmd_ExchangeUpdate     		= 1402; // 兑换数据更新
+	Cmd_ExchangeRemove     		= 1403; // 兑换数据删除
+	Cmd_ExchangeReq  			= 1404; // 兑换请求req
+	Cmd_ExchangeRes  			= 1405; // 兑换请求res
 	
 	// Guild
 	Cmd_GuildSync               = 2001; // 同步数据给客户端
@@ -59,5 +63,4 @@ enum CmdClient {
 	Cmd_GuildDataViewRes        = 2012;
 	Cmd_GuildJoinReqTip         = 2013; // 公会入户申请的提示
 	Cmd_GuildJoinReqOpResult    = 2014; // 自己的入会申请的操作结果
-
 }

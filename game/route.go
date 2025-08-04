@@ -116,7 +116,7 @@ func RoutePlayerPacket(playerId int64, packet Packet, opts ...RouteOption) bool 
 			MessageId:     pendingMessageId, // 消息号生成唯一id
 			PacketCommand: int32(packet.Command()),
 			PacketData:    anyMessage,
-			Timestamp:     time.Now().Unix(),
+			Timestamp:     int32(time.Now().Unix()),
 		}
 		pendingMessageBytes, err := proto.Marshal(pendingMessage)
 		if err != nil {

@@ -131,19 +131,6 @@ func (p *Player) OnTestCmd(req *pb.TestCmd) {
 			p.GetActivities().AddNewActivity(activityCfg, p.GetTimerEntries().Now())
 		}
 
-	case strings.ToLower("ActivityExchange"):
-		if len(cmdArgs) < 2 {
-			p.SendErrorRes(cmd, "ActivityExchange cmdArgs error")
-			return
-		}
-		activityId := int32(util.Atoi(cmdArgs[0]))
-		cfgId := int32(util.Atoi(cmdArgs[1]))
-		p.GetActivities().OnActivityExchangeReq(&pb.ActivityExchangeReq{
-			ActivityId:    activityId,
-			ExchangeCfgId: cfgId,
-			ExchangeCount: 1,
-		})
-
 	case strings.ToLower("GuildRouteError"):
 		// 模拟一个rpc错误,向一个不存在的公会发送rpc消息
 		reply := new(pb.GuildJoinRes)

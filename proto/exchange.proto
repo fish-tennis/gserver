@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+option go_package = "./pb";
+
+package gserver;
+
+import "player.proto";
+
+// 同步兑换数据给客户端
+message ExchangeSync {
+  map<int32,ExchangeRecord> Records = 1;
+}
+
+// 兑换数据更新
+message ExchangeUpdate {
+  repeated ExchangeRecord Records = 1; // 兑换数据
+}
+
+// 兑换数据删除
+message ExchangeRemove {
+  repeated int32 CfgIds = 1; // 兑换配置id
+}
+
+// 兑换请求req
+message ExchangeReq {
+  int32 CfgId = 1; // 兑换配置id
+  int32 Count = 2; // 兑换数量(批量兑换)
+}
+
+// 兑换请求res
+message ExchangeRes {
+  int32 CfgId = 1; // 兑换配置id
+  int32 Count = 2; // 本次兑换数量(批量兑换)
+  int32 CurrentCount = 3; // 当前已兑换数量
+}

@@ -1,14 +1,12 @@
 package game
 
 import (
-	"errors"
 	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gserver/cfg"
 	. "github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/pb"
 	"github.com/fish-tennis/gserver/util"
 	"log/slog"
-	"slices"
 	"time"
 )
 
@@ -111,7 +109,10 @@ func (a *ActivityDefault) defaultInit(t time.Time) {
 		}
 		a.AddQuest(questCfg)
 	}
-	a.Base.ExchangeRecord = nil
+	exchange := a.Activities.GetPlayer().GetExchange()
+	for _, exchangeId := range activityCfg.ExchangeIds {
+		exchange.RemoveRecord(exchangeId)
+	}
 	a.SetDirty()
 	slog.Debug("defaultInit", "pid", a.Activities.GetPlayer().GetId(),
 		"activityId", a.GetId(), "activityName", activityCfg.Name)
@@ -148,13 +149,16 @@ func (a *ActivityDefault) defaultRefreshQuest(t time.Time, refreshType int32) {
 }
 
 func (a *ActivityDefault) defaultRefreshExchange(t time.Time, refreshType int32) {
-	for exchangeCfgId, exchangeCount := range a.Base.ExchangeRecord {
+	activityCfg := a.GetActivityCfg()
+	exchange := a.Activities.GetPlayer().GetExchange()
+	for _, exchangeCfgId := range activityCfg.ExchangeIds {
 		exchangeCfg := cfg.GetTemplateCfgMgr().GetExchangeCfg(exchangeCfgId)
 		if exchangeCfg == nil || exchangeCfg.GetRefreshType() == refreshType {
-			delete(a.Base.ExchangeRecord, exchangeCfgId)
-			a.SetDirty()
-			slog.Debug("defaultRefreshExchange", "pid", a.Activities.GetPlayer().GetId(),
-				"activityId", a.GetId(), "exchangeCfgId", exchangeCfgId, "exchangeCount", exchangeCount)
+			removedRecord := exchange.RemoveRecord(exchangeCfgId)
+			if removedRecord != nil {
+				slog.Debug("defaultRefreshExchange", "pid", a.Activities.GetPlayer().GetId(),
+					"activityId", a.GetId(), "exchangeCfgId", exchangeCfgId, "exchangeCount", removedRecord.Count)
+			}
 		}
 	}
 }
@@ -170,78 +174,6 @@ func (a *ActivityDefault) OnEnd(t time.Time) {
 			return true
 		})
 	}
-}
-
-// 兑换物品
-//
-//	商店也是一种兑换功能
-func (a *ActivityDefault) Exchange(exchangeCfgId, exchangeCount int32) error {
-	if exchangeCount <= 0 {
-		return errors.New("exchangeCount <= 0")
-	}
-	activityCfg := a.GetActivityCfg()
-	if activityCfg == nil {
-		slog.Debug("Exchange activityCfg nil", "pid", a.Activities.GetPlayer().GetId(), "activityId", a.GetId())
-		return errors.New("activityCfg nil")
-	}
-	if !slices.Contains(activityCfg.ExchangeIds, exchangeCfgId) {
-		slog.Debug("exchangeCfgId err", "pid", a.Activities.GetPlayer().GetId(),
-			"activityId", a.GetId(), "exchangeCfgId", exchangeCfgId)
-		return errors.New("exchangeCfgId err")
-	}
-	exchangeCfg := cfg.GetTemplateCfgMgr().GetExchangeCfg(exchangeCfgId)
-	if exchangeCfg == nil {
-		slog.Debug("Exchange exchangeCfg nil", "pid", a.Activities.GetPlayer().GetId(),
-			"activityId", a.GetId(), "exchangeCfgId", exchangeCfgId)
-		return errors.New("exchangeCfg nil")
-	}
-	curExchangeCount := a.GetExchangeCount(exchangeCfgId)
-	if exchangeCfg.CountLimit > 0 && curExchangeCount+exchangeCount > exchangeCfg.CountLimit {
-		slog.Debug("Exchange CountLimit", "pid", a.Activities.GetPlayer().GetId(),
-			"activityId", a.GetId(), "exchangeCfgId", exchangeCfgId, "exchangeCount", exchangeCount)
-		return errors.New("exchangeCountLimit")
-	}
-	// 检查兑换条件
-	if !CheckConditions(a, exchangeCfg.Conditions) {
-		slog.Debug("conditions err", "pid", a.Activities.GetPlayer().GetId(),
-			"activityId", a.GetId(), "exchangeCfgId", exchangeCfgId)
-		return errors.New("conditions err")
-	}
-	// 如果配置了兑换消耗物品,就是购买礼包类的活动,如果不配置,就是免费礼包类的活动
-	totalConsumes := slices.Clone(exchangeCfg.Consumes)
-	for _, consume := range totalConsumes {
-		if util.IsMultiOverflow(consume.Num, exchangeCount) {
-			slog.Debug("Exchange ConsumeItems overflow", "pid", a.Activities.GetPlayer().GetId(),
-				"activityId", a.GetId(), "exchangeCfgId", exchangeCfgId, "exchangeCount", exchangeCount)
-			return errors.New("ConsumeItemsOverflow")
-		}
-		consume.Num *= exchangeCount
-	}
-	if !a.Activities.GetPlayer().GetBags().IsEnough(totalConsumes) {
-		slog.Debug("Exchange ConsumeItems notEnough", "pid", a.Activities.GetPlayer().GetId(),
-			"activityId", a.GetId(), "exchangeCfgId", exchangeCfgId)
-		return errors.New("ConsumeItemsNotEnough")
-	}
-	a.addExchangeCount(exchangeCfgId, exchangeCount)                  // 记录兑换次数
-	a.Activities.GetPlayer().GetBags().DelItems(exchangeCfg.Consumes) // 消耗
-	a.Activities.GetPlayer().GetBags().AddItems(exchangeCfg.Rewards)  // 购买
-	return nil
-}
-
-// 获取某个礼包的已兑换次数
-func (a *ActivityDefault) GetExchangeCount(exchangeCfgId int32) int32 {
-	if a.Base.ExchangeRecord == nil {
-		return 0
-	}
-	return a.Base.ExchangeRecord[exchangeCfgId]
-}
-
-func (a *ActivityDefault) addExchangeCount(exchangeCfgId, exchangeCount int32) {
-	if a.Base.ExchangeRecord == nil {
-		a.Base.ExchangeRecord = make(map[int32]int32)
-	}
-	a.Base.ExchangeRecord[exchangeCfgId] += exchangeCount
-	a.SetDirty()
 }
 
 func (a *ActivityDefault) GetPropertyInt32(propertyName string) int32 {

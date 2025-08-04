@@ -11,25 +11,3 @@ message ActivitySync {
   int32 activityId = 1; // 活动id
   ActivityDefaultBaseData baseData = 2; // 活动数据
 }
-
-// 活动兑换数据更新
-message ActivityExchangeUpdate {
-  int32 activityId = 1; // 活动id
-  int32 exchangeCfgId = 2; // 兑换配置id
-  int32 exchangeCount = 3; // 已兑换次数
-}
-
-// 活动兑换请求req
-message ActivityExchangeReq {
-  int32 activityId = 1; // 活动id
-  int32 exchangeCfgId = 2; // 兑换配置id
-  int32 exchangeCount = 3; // 兑换数量(批量兑换)
-}
-
-// 活动兑换请求res
-message ActivityExchangeRes {
-  int32 activityId = 1; // 活动id
-  int32 exchangeCfgId = 2; // 兑换配置id
-  int32 exchangeCount = 3; // 兑换数量(批量兑换)
-  int32 currentCount = 4; // 当前已兑换数量
-}

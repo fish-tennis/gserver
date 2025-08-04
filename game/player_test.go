@@ -268,8 +268,9 @@ func TestActivity(t *testing.T) {
 	}
 	player := CreatePlayer(playerData.XId, playerData.Name, playerData.AccountId, playerData.RegionId)
 	activities := player.GetActivities()
+	exchange := player.GetExchange()
 	var activityIds []int32
-	cfg.GetActivityCfgMgr().Range(func(activityCfg *pb.ActivityCfg) bool {
+	cfg.GetActivityCfgMgr().Activities.Range(func(activityCfg *pb.ActivityCfg) bool {
 		activityIds = append(activityIds, activityCfg.CfgId)
 		return true
 	})
@@ -323,16 +324,16 @@ func TestActivity(t *testing.T) {
 			t.Log(fmt.Sprintf("%v Progresses:%v", activityId, v))
 			return true
 		})
-		t.Log(fmt.Sprintf("%v ExchangeRecord:%v", activityId, activity.Base.ExchangeRecord))
+		t.Log(fmt.Sprintf("%v ExchangeRecord:%v", activityId, exchange.GetRecordsByIds(activity.GetActivityCfg().GetExchangeIds()...)))
 	}
 
 	exchangeActivity := activities.GetActivity(1) // 每日签到
 	if exchangeActivity != nil {
 		activity := exchangeActivity.(*ActivityDefault)
 		for _, exchangeId := range activity.GetActivityCfg().GetExchangeIds() {
-			activity.Exchange(exchangeId, 1)
+			exchange.Exchange(exchangeId, 1)
 		}
-		t.Log(fmt.Sprintf("%v ExchangeRecord:%v", 1, exchangeActivity.(*ActivityDefault).Base.ExchangeRecord))
+		t.Log(fmt.Sprintf("%v ExchangeRecord:%v", 1, exchange.GetRecordsByIds(activity.GetActivityCfg().GetExchangeIds()...)))
 	}
 	exchangeActivity = activities.GetActivity(5) // 活动商店
 	if exchangeActivity != nil {
@@ -345,7 +346,7 @@ func TestActivity(t *testing.T) {
 			t.Log(fmt.Sprintf("item4 count:%v", player.GetBags().GetItemCount(4)))
 			for i := 0; i < 3; i++ {
 				for _, exchangeId := range activity.GetActivityCfg().GetExchangeIds() {
-					activity.Exchange(exchangeId, 1)
+					exchange.Exchange(exchangeId, 1)
 				}
 			}
 			t.Log(fmt.Sprintf("item1 count:%v", player.GetBags().GetItemCount(1)))

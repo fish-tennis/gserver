@@ -156,7 +156,7 @@ message ProgressTemplateCfg {
 // 兑换配置
 message ExchangeCfg {
   int32 CfgId = 1;
-  repeated ConditionCfg Conditions = 2; // 任务条件
+  repeated ConditionCfg Conditions = 2; // 兑换条件
   repeated DelElemArg Consumes = 3; // 需要消耗的物品
   repeated AddElemArg Rewards = 4; // 获得物品
   int32 CountLimit = 5; // 兑换次数限制(0表示无次数限制)

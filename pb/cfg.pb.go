@@ -1276,7 +1276,7 @@ type ExchangeCfg struct {
 	unknownFields protoimpl.UnknownFields
 
 	CfgId              int32             `protobuf:"varint,1,opt,name=CfgId,proto3" json:"CfgId,omitempty"`
-	Conditions         []*ConditionCfg   `protobuf:"bytes,2,rep,name=Conditions,proto3" json:"Conditions,omitempty"`                                                                                         // 任务条件
+	Conditions         []*ConditionCfg   `protobuf:"bytes,2,rep,name=Conditions,proto3" json:"Conditions,omitempty"`                                                                                         // 兑换条件
 	Consumes           []*DelElemArg     `protobuf:"bytes,3,rep,name=Consumes,proto3" json:"Consumes,omitempty"`                                                                                             // 需要消耗的物品
 	Rewards            []*AddElemArg     `protobuf:"bytes,4,rep,name=Rewards,proto3" json:"Rewards,omitempty"`                                                                                               // 获得物品
 	CountLimit         int32             `protobuf:"varint,5,opt,name=CountLimit,proto3" json:"CountLimit,omitempty"`                                                                                        // 兑换次数限制(0表示无次数限制)
