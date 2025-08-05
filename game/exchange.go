@@ -33,7 +33,7 @@ func init() {
 type Exchange struct {
 	BasePlayerComponent
 	// 兑换记录
-	Records *gentity.MapData[int32, *pb.ExchangeRecord] `child:""`
+	Records *gentity.MapData[int32, *pb.ExchangeRecord] `db:""`
 }
 
 func (p *Player) GetExchange() *Exchange {
