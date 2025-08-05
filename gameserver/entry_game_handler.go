@@ -28,7 +28,8 @@ func onPlayerEntryGameReq(connection Connection, packet Packet) {
 		network.SendPacketAdaptWithError(connection, packet, res, int32(errorCode))
 		if errorCode == 0 && entryPlayer != nil {
 			// 转到玩家协程中去处理
-			entryPlayer.OnRecvPacket(NewProtoPacket(PacketCommand(pb.CmdServer_Cmd_PlayerEntryGameOk), &pb.PlayerEntryGameOk{
+			cmd := network.GetCommandByProto(new(pb.PlayerEntryGameOk))
+			entryPlayer.OnRecvPacket(NewProtoPacket(PacketCommand(cmd), &pb.PlayerEntryGameOk{
 				IsReconnect: isReconnect,
 			}))
 		}
@@ -74,7 +75,8 @@ func onPlayerEntryGameReq(connection Connection, packet Packet) {
 			if gameServerId > 0 {
 				// 通知目标游戏服踢掉玩家
 				kickReply := new(pb.KickPlayerRes)
-				rpcErr := internal.GetServerList().Rpc(gameServerId, NewProtoPacketEx(pb.CmdServer_Cmd_KickPlayerReq, &pb.KickPlayerReq{
+				cmd := network.GetCommandByProto(new(pb.KickPlayerReq))
+				rpcErr := internal.GetServerList().Rpc(gameServerId, NewProtoPacketEx(PacketCommand(cmd), &pb.KickPlayerReq{
 					AccountId: accountId,
 					PlayerId:  playerId,
 				}), kickReply)

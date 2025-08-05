@@ -83,7 +83,8 @@ func (this *GameServer) Exit() {
 		player.Stop()
 		return true
 	})
-	game.GetGlobalEntity().PushMessage(NewProtoPacket(PacketCommand(pb.CmdServer_Cmd_ShutdownReq), &pb.ShutdownReq{
+	cmd := network.GetCommandByProto(new(pb.ShutdownReq))
+	game.GetGlobalEntity().PushMessage(NewProtoPacket(PacketCommand(cmd), &pb.ShutdownReq{
 		Timestamp: game.GetGlobalEntity().GetTimerEntries().Now().Unix(),
 	}))
 	this.BaseServer.Exit()
@@ -202,8 +203,8 @@ func (this *GameServer) repairPlayerCache(playerId, accountId int64) error {
 // 注册客户端消息回调
 func (this *GameServer) registerClientPacket(handler *DefaultConnectionHandler) {
 	// 手动注册特殊的消息回调
-	handler.Register(PacketCommand(pb.CmdClient_Cmd_PlayerEntryGameReq), onPlayerEntryGameReq, new(pb.PlayerEntryGameReq))
-	handler.Register(PacketCommand(pb.CmdClient_Cmd_CreatePlayerReq), onCreatePlayerReq, new(pb.CreatePlayerReq))
+	network.RegisterPacketHandler(handler, new(pb.PlayerEntryGameReq), onPlayerEntryGameReq)
+	network.RegisterPacketHandler(handler, new(pb.CreatePlayerReq), onCreatePlayerReq)
 	handler.SetUnRegisterHandler(func(connection Connection, packet Packet) {
 		var playerId int64
 		var playerPacket *ProtoPacket
@@ -247,27 +248,14 @@ func (this *GameServer) registerClientPacket(handler *DefaultConnectionHandler) 
 // 注册网关消息回调
 func (this *GameServer) registerGatePacket(handler *DefaultConnectionHandler) {
 	this.registerClientPacket(handler)
-	handler.Register(PacketCommand(pb.CmdServer_Cmd_ClientDisconnect), onClientDisconnect, new(pb.ClientDisconnect))
-	handler.Register(PacketCommand(pb.CmdServer_Cmd_ServerHello), onGateHello, new(pb.ServerHello))
-	// 网关服务器掉线,等待网关服务器重连上
-	//// 网关服务器掉线,该网关上的所有玩家都掉线
-	//handler.SetOnDisconnectedFunc(func(connection Connection) {
-	//	slog.Info("onGateDisconnect", "connId", connection.GetConnectionId(), "tag", connection.GetTag())
-	//	this.playerMap.Range(func(key, value any) bool {
-	//		if player, ok := value.(*game.Player); ok {
-	//			if player.GetConnection() == connection {
-	//				player.OnDisconnect(connection)
-	//			}
-	//		}
-	//		return true
-	//	})
-	//})
+	network.RegisterPacketHandler(handler, new(pb.ClientDisconnect), onClientDisconnect)
+	network.RegisterPacketHandler(handler, new(pb.ServerHello), onGateHello)
 }
 
 // 注册服务器消息回调
 func (this *GameServer) registerServerPacket(handler *DefaultConnectionHandler) {
-	handler.Register(PacketCommand(pb.CmdServer_Cmd_KickPlayerReq), this.onKickPlayer, new(pb.KickPlayerReq))
-	handler.Register(PacketCommand(pb.CmdServer_Cmd_RoutePlayerMessage), this.onRoutePlayerMessage, new(pb.RoutePlayerMessage))
+	network.RegisterPacketHandler(handler, new(pb.KickPlayerReq), this.onKickPlayer)
+	network.RegisterPacketHandler(handler, new(pb.RoutePlayerMessage), this.onRoutePlayerMessage)
 }
 
 // 添加一个在线玩家

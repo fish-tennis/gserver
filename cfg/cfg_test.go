@@ -14,7 +14,7 @@ func TestCfgLoad(t *testing.T) {
 		slog.Info("QuestCfg", "CfgId", e.CfgId, "Conditions", e.Conditions, "Progress", e.Progress, "Properties", e.Properties)
 		return true
 	})
-	GetActivityCfgMgr().Range(func(e *pb.ActivityCfg) bool {
+	GetActivityCfgMgr().Activities.Range(func(e *pb.ActivityCfg) bool {
 		slog.Info("ActivityCfg", "CfgId", e.CfgId, "QuestIds", e.QuestIds, "ExchangeIds", e.ExchangeIds)
 		return true
 	})

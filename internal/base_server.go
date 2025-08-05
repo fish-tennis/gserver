@@ -106,6 +106,7 @@ func (this *BaseServer) Init(ctx context.Context, configFile string) bool {
 	slog.Info("BaseServer.Init")
 	// 初始化id生成器
 	util.InitIdGenerator(uint16(this.serverInfo.ServerId))
+	network.InitCommandMappingFromFile("gen/message_command_mapping.json")
 	this.serverList = NewServerList(this.serverInfo)
 	this.updateInterval = time.Second
 	return true

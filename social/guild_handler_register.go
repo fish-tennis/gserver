@@ -106,7 +106,7 @@ func scanGuildMethods(obj any, methodNamePrefix, protoPackageName string) {
 func GuildServerHandlerRegister(handler PacketHandlerRegister) {
 	slog.Info("GuildServerHandlerRegister")
 	// 其他服务器转发过来的公会消息
-	handler.Register(PacketCommand(pb.CmdServer_Cmd_GuildRoutePlayerMessageReq), func(connection Connection, packet Packet) {
+	network.RegisterPacketHandler(handler, new(pb.GuildRoutePlayerMessageReq), func(connection Connection, packet Packet) {
 		req := packet.Message().(*pb.GuildRoutePlayerMessageReq)
 		slog.Debug("GuildRoutePlayerMessageReq", "packet", req)
 		err := ParseRoutePacket(_guildMgr, connection, packet, req.FromGuildId)
@@ -116,7 +116,8 @@ func GuildServerHandlerRegister(handler PacketHandlerRegister) {
 			routePacket.SetRpcCallId(packet.RpcCallId())
 			game.RoutePlayerPacket(req.FromPlayerId, routePacket, game.WithConnection(connection), game.WithError(err))
 		}
-	}, new(pb.GuildRoutePlayerMessageReq))
+	})
+
 }
 
 func ParseRoutePacket(mgr *gentity.DistributedEntityMgr, connection Connection, packet Packet, toEntityId int64) error {

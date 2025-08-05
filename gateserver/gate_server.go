@@ -112,10 +112,11 @@ func (s *GateServer) initNetwork() {
 // 注册客户端消息回调
 func (s *GateServer) registerClientPacket(clientHandler *DefaultConnectionHandler) {
 	// 手动注册消息回调
-	clientHandler.Register(PacketCommand(pb.CmdClient_Cmd_AccountReg), s.routeToLoginServer, new(pb.AccountReg))
-	clientHandler.Register(PacketCommand(pb.CmdClient_Cmd_LoginReq), s.routeToLoginServer, new(pb.LoginReq))
-	clientHandler.Register(PacketCommand(pb.CmdClient_Cmd_PlayerEntryGameReq), s.routeToGameServerWithConnId, new(pb.PlayerEntryGameReq))
-	clientHandler.Register(PacketCommand(pb.CmdClient_Cmd_CreatePlayerReq), s.routeToGameServerWithConnId, new(pb.CreatePlayerReq))
+	network.RegisterPacketHandler(clientHandler, new(pb.AccountReg), s.routeToLoginServer)
+	network.RegisterPacketHandler(clientHandler, new(pb.LoginReq), s.routeToLoginServer)
+	network.RegisterPacketHandler(clientHandler, new(pb.PlayerEntryGameReq), s.routeToGameServerWithConnId)
+	network.RegisterPacketHandler(clientHandler, new(pb.CreatePlayerReq), s.routeToGameServerWithConnId)
+
 	clientHandler.SetUnRegisterHandler(s.routeToGameServer)
 }
 
@@ -185,7 +186,8 @@ func (s *GateServer) routeToGameServer(connection Connection, packet Packet) {
 		// 附加上playerId
 		gatePacket.SetPlayerId(clientData.PlayerId)
 		if !s.GetServerList().SendPacket(clientData.GameServerId, gatePacket) {
-			connection.Send(PacketCommand(pb.CmdClient_Cmd_ErrorRes), &pb.ErrorRes{
+			cmd := network.GetCommandByProto(new(pb.ErrorRes))
+			connection.Send(PacketCommand(cmd), &pb.ErrorRes{
 				Command:   int32(packet.Command()),
 				ResultStr: "GameServerNotReached",
 			})
@@ -198,10 +200,11 @@ func (s *GateServer) routeToGameServer(connection Connection, packet Packet) {
 
 // 注册服务器消息回调
 func (s *GateServer) registerServerPacket(serverHandler *DefaultConnectionHandler) {
-	serverHandler.Register(PacketCommand(pb.CmdClient_Cmd_AccountRes), s.routeToClientWithConnId, new(pb.AccountRes))
-	serverHandler.Register(PacketCommand(pb.CmdClient_Cmd_LoginRes), s.onLoginRes, new(pb.LoginRes))
-	serverHandler.Register(PacketCommand(pb.CmdClient_Cmd_CreatePlayerRes), s.routeToClientWithConnId, new(pb.CreatePlayerRes))
-	serverHandler.Register(PacketCommand(pb.CmdClient_Cmd_PlayerEntryGameRes), s.onPlayerEntryGameRes, new(pb.PlayerEntryGameRes))
+	network.RegisterPacketHandler(serverHandler, new(pb.AccountRes), s.routeToClientWithConnId)
+	network.RegisterPacketHandler(serverHandler, new(pb.LoginRes), s.onLoginRes)
+	network.RegisterPacketHandler(serverHandler, new(pb.CreatePlayerRes), s.routeToClientWithConnId)
+	network.RegisterPacketHandler(serverHandler, new(pb.PlayerEntryGameRes), s.onPlayerEntryGameRes)
+
 	serverHandler.SetUnRegisterHandler(s.routeToClient)
 }
 

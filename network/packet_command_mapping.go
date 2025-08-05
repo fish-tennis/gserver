@@ -1,12 +1,14 @@
 package network
 
 import (
-	"fmt"
+	"encoding/json"
+	"github.com/fish-tennis/gnet"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/reflect/protoregistry"
 	"google.golang.org/protobuf/runtime/protoimpl"
 	"log/slog"
+	"os"
 	"reflect"
 	"strings"
 )
@@ -14,24 +16,36 @@ import (
 const (
 	// 对应proto文件里的package导出名
 	ProtoPackageName = "gserver"
-	// 客户端和服务器之间的消息号定义
-	CmdClientEnumName = "CmdClient" // 对应proto/cmd_client.proto里的enum CmdClient
-	// 服务器之间的消息号定义
-	CmdServerEnumName = "CmdServer" // 对应proto/cmd_server.proto里的enum CmdServer
 )
 
 var (
 	// reflect.TypeOf(*pb.Xxx).Elem() -> packetCommand
-	messageTypeCmdMapping = make(map[reflect.Type]int32)
+	_messageTypeCmdMapping = make(map[reflect.Type]int32)
+	_cmdMessageNameMapping = make(map[int32]string)
 )
 
-func init() {
-	initCommandMapping()
-}
-
-// 本项目的request和response的消息号规范: resCmd = reqCmd + 1
+// 本项目的request和response的消息号规范: XxxReq XxxRes
 func GetResCommand(reqCommand int32) int32 {
-	return reqCommand + 1
+	reqMessageName, ok := _cmdMessageNameMapping[reqCommand]
+	if !ok {
+		slog.Warn("GetResCommandErr", "reqCommand", reqCommand)
+		return 0
+	}
+	if !strings.HasSuffix(reqMessageName, "Req") {
+		return 0
+	}
+	resMessageName := strings.TrimSuffix(reqMessageName, "Req") + "Res"
+	fullMessageName := GetFullMessageName(ProtoPackageName, resMessageName)
+	messageType, err := protoregistry.GlobalTypes.FindMessageByName(protoreflect.FullName(fullMessageName))
+	if err != nil {
+		slog.Warn("GetResCommandErr", "resMessageName", resMessageName, "reqCommand", reqCommand, "err", err)
+		return 0
+	}
+	if messageInfo, ok := messageType.(*protoimpl.MessageInfo); ok {
+		typ := messageInfo.GoReflectType.Elem()
+		return _messageTypeCmdMapping[typ]
+	}
+	return 0
 }
 
 func GetCommandByProto(protoMessage proto.Message) int32 {
@@ -39,46 +53,48 @@ func GetCommandByProto(protoMessage proto.Message) int32 {
 	if typ.Kind() == reflect.Pointer {
 		typ = typ.Elem()
 	}
-	if cmd, ok := messageTypeCmdMapping[typ]; ok {
+	if cmd, ok := _messageTypeCmdMapping[typ]; ok {
 		return cmd
 	}
 	slog.Warn("GetCommandByProtoErr", "messageName", proto.MessageName(protoMessage))
 	return 0
 }
 
-// 注册消息和消息号的映射关系
-func initCommandMapping() {
-	for _, cmdEnumName := range []string{CmdClientEnumName, CmdServerEnumName} {
-		cmdEnumName = fmt.Sprintf("%v.%v", ProtoPackageName, cmdEnumName)
-		enumType, err := protoregistry.GlobalTypes.FindEnumByName(protoreflect.FullName(cmdEnumName))
+func InitCommandMappingFromFile(file string) {
+	mapping := loadCommandMapping(file)
+	for messageName, messageId := range mapping {
+		fullMessageName := GetFullMessageName(ProtoPackageName, messageName)
+		messageType, err := protoregistry.GlobalTypes.FindMessageByName(protoreflect.FullName(fullMessageName))
 		if err != nil {
-			panic(fmt.Sprintf("%v not found", cmdEnumName))
+			slog.Warn("FindMessageByNameErr", "messageName", messageName, "id", messageId, "err", err)
+			continue
 		}
-		enumDescs := enumType.Descriptor().Values()
-		for i := 0; i < enumDescs.Len(); i++ {
-			enumValueDesc := enumDescs.Get(i)
-			messageId := enumValueDesc.Number()
-			if messageId == 0 {
-				continue // CmdClient_None
-			}
-			messageName := strings.TrimPrefix(string(enumValueDesc.Name()), "Cmd_")
-			fullMessageName := fmt.Sprintf("%v.%v", ProtoPackageName, messageName)
-			messageType, err := protoregistry.GlobalTypes.FindMessageByName(protoreflect.FullName(fullMessageName))
-			if err != nil {
-				slog.Warn("FindMessageByNameErr", "messageName", messageName, "id", messageId, "err", err)
-				continue
-			}
-			if messageInfo, ok := messageType.(*protoimpl.MessageInfo); ok {
-				typ := messageInfo.GoReflectType.Elem()
-				messageTypeCmdMapping[typ] = int32(messageId)
-				slog.Info("CommandMapping", "messageName", messageName, "id", messageId)
-			}
+		if messageInfo, ok := messageType.(*protoimpl.MessageInfo); ok {
+			typ := messageInfo.GoReflectType.Elem()
+			_messageTypeCmdMapping[typ] = int32(messageId)
+			_cmdMessageNameMapping[int32(messageId)] = messageName
+			slog.Info("CommandMapping", "messageName", messageName, "id", messageId)
 		}
 	}
 }
 
+func loadCommandMapping(fileName string) map[string]int {
+	mapping := make(map[string]int)
+	fileData, err := os.ReadFile(fileName)
+	if err != nil {
+		slog.Error("loadCommandMappingErr", "fileName", fileName, "err", err)
+		return mapping
+	}
+	err = json.Unmarshal(fileData, &mapping)
+	if err != nil {
+		slog.Error("loadCommandMappingErr", "fileName", fileName, "err", err)
+		return mapping
+	}
+	return mapping
+}
+
 func NewMessageByName(messageName string) proto.Message {
-	fullMessageName := fmt.Sprintf("%v.%v", ProtoPackageName, messageName)
+	fullMessageName := GetFullMessageName(ProtoPackageName, messageName)
 	messageType, err := protoregistry.GlobalTypes.FindMessageByName(protoreflect.FullName(fullMessageName))
 	if err != nil {
 		slog.Error("newMessageByNameErr", "messageName", messageName, "err", err)
@@ -89,4 +105,20 @@ func NewMessageByName(messageName string) proto.Message {
 		return reflect.New(typ).Interface().(proto.Message)
 	}
 	return nil
+}
+
+func GetFullMessageName(packageName, messageName string) string {
+	if ProtoPackageName == "" {
+		return messageName
+	}
+	return ProtoPackageName + "." + messageName
+}
+
+func RegisterPacketHandler(register gnet.PacketHandlerRegister, protoMessage proto.Message, handler gnet.PacketHandler) {
+	cmd := GetCommandByProto(protoMessage)
+	if cmd == 0 {
+		slog.Warn("RegisterPacketHandlerErr", "protoMessage", protoMessage)
+		return
+	}
+	register.Register(gnet.PacketCommand(uint16(cmd)), handler, protoMessage)
 }

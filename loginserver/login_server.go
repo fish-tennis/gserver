@@ -168,8 +168,9 @@ func (this *LoginServer) getAccountData(accountName string, accountData *pb.Acco
 
 // 注册客户端消息回调
 func (this *LoginServer) registerClientPacket(clientHandler *DefaultConnectionHandler) {
-	clientHandler.Register(PacketCommand(pb.CmdClient_Cmd_LoginReq), onLoginReq, new(pb.LoginReq))
-	clientHandler.Register(PacketCommand(pb.CmdClient_Cmd_AccountReg), onAccountReg, new(pb.AccountReg))
+	network.RegisterPacketHandler(clientHandler, new(pb.LoginReq), onLoginReq)
+	network.RegisterPacketHandler(clientHandler, new(pb.AccountReg), onAccountReg)
+
 }
 
 // 注册服务器消息回调

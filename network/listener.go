@@ -48,7 +48,8 @@ var (
 func ListenClient(listenAddr string, listenerHandler gnet.ListenerHandler, packetRegister func(handler *gnet.DefaultConnectionHandler)) gnet.Listener {
 	codec := gnet.NewProtoCodec(nil)
 	handler := gnet.NewDefaultConnectionHandler(codec)
-	handler.Register(gnet.PacketCommand(pb.CmdClient_Cmd_HeartBeatReq), onHeartBeatReq, new(pb.HeartBeatReq))
+	RegisterPacketHandler(handler, new(pb.HeartBeatReq), onHeartBeatReq)
+
 	packetRegister(handler)
 	listenerConfig := &gnet.ListenerConfig{
 		AcceptConfig: ClientConnectionConfig,
@@ -63,7 +64,8 @@ func ListenClient(listenAddr string, listenerHandler gnet.ListenerHandler, packe
 func ListenGateClient(listenAddr string, listenerHandler gnet.ListenerHandler, packetRegister func(handler *gnet.DefaultConnectionHandler)) gnet.Listener {
 	codec := NewClientCodec()
 	handler := gnet.NewDefaultConnectionHandler(codec)
-	handler.Register(gnet.PacketCommand(pb.CmdClient_Cmd_HeartBeatReq), onHeartBeatReq, new(pb.HeartBeatReq))
+	RegisterPacketHandler(handler, new(pb.HeartBeatReq), onHeartBeatReq)
+
 	packetRegister(handler)
 	listenerConfig := &gnet.ListenerConfig{
 		AcceptConfig: ClientConnectionConfig,
@@ -78,7 +80,8 @@ func ListenGateClient(listenAddr string, listenerHandler gnet.ListenerHandler, p
 func ListenWebSocketClient(listenAddr string, listenerHandler gnet.ListenerHandler, packetRegister func(handler *gnet.DefaultConnectionHandler)) gnet.Listener {
 	codec := NewWsClientCodec()
 	handler := gnet.NewDefaultConnectionHandler(codec)
-	handler.Register(gnet.PacketCommand(pb.CmdClient_Cmd_HeartBeatReq), onHeartBeatReq, new(pb.HeartBeatReq))
+	RegisterPacketHandler(handler, new(pb.HeartBeatReq), onHeartBeatReq)
+
 	packetRegister(handler)
 	listenerConfig := &gnet.ListenerConfig{
 		AcceptConfig: WebSocketClientConnectionConfig,
@@ -94,7 +97,8 @@ func ListenWebSocketClient(listenAddr string, listenerHandler gnet.ListenerHandl
 func ListenGate(listenAddr string, packetRegister func(handler *gnet.DefaultConnectionHandler)) gnet.Listener {
 	codec := NewGateCodec(nil)
 	handler := gnet.NewDefaultConnectionHandler(codec)
-	handler.Register(gnet.PacketCommand(pb.CmdClient_Cmd_HeartBeatReq), onHeartBeatReq, new(pb.HeartBeatReq))
+	RegisterPacketHandler(handler, new(pb.HeartBeatReq), onHeartBeatReq)
+
 	packetRegister(handler)
 	listenerConfig := &gnet.ListenerConfig{
 		AcceptConfig: GateConnectionConfig,

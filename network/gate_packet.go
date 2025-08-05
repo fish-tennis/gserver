@@ -16,6 +16,9 @@ type GatePacket struct {
 }
 
 func NewGatePacket(playerId int64, command PacketCommand, message proto.Message) *GatePacket {
+	if command == 0 {
+		command = PacketCommand(GetCommandByProto(message))
+	}
 	return &GatePacket{
 		command:  command,
 		playerId: playerId,

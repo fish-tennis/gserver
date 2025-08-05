@@ -38,10 +38,10 @@ func initLog(logFileName string, useStdOutput bool) {
 	gnet.SetLogger(logger.GetLogger(), gnet.DebugLevel)
 	gentity.SetLogger(logger.GetLogger(), gnet.DebugLevel)
 
-	os.Mkdir("log", 0750)
+	os.Mkdir("./../log", 0750)
 	// 日志轮转与切割
 	fileLogger := &lumberjack.Logger{
-		Filename:   fmt.Sprintf("log/%v.log", logFileName),
+		Filename:   fmt.Sprintf("./../log/%v.log", logFileName),
 		MaxSize:    10,
 		MaxBackups: 100,
 		MaxAge:     7,

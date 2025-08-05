@@ -138,7 +138,8 @@ func (p *Player) SendPacket(packet Packet, opts ...SendOption) bool {
 
 // 通用的错误返回消息
 func (p *Player) SendErrorRes(errorReqCmd PacketCommand, errorMsg string) bool {
-	return p.SendWithCommand(PacketCommand(pb.CmdClient_Cmd_ErrorRes), &pb.ErrorRes{
+	cmd := network.GetCommandByProto(new(pb.ErrorRes))
+	return p.SendWithCommand(PacketCommand(cmd), &pb.ErrorRes{
 		Command:   int32(errorReqCmd),
 		ResultStr: errorMsg,
 	})

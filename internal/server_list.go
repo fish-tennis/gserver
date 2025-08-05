@@ -102,7 +102,7 @@ func (this *ServerList) initDefaultServerConnectorConfig() {
 			return
 		}
 		// 连接成功后,告诉对方自己的服务器id和type
-		connection.SendPacket(this.NewAdaptPacket(gnet.PacketCommand(pb.CmdServer_Cmd_ServerHello), &pb.ServerHello{
+		connection.SendPacket(this.NewAdaptPacket(&pb.ServerHello{
 			ServerId:   this.GetLocalServerInfo().GetServerId(),
 			ServerType: this.GetLocalServerInfo().GetServerType(),
 		}))
@@ -117,21 +117,22 @@ func (this *ServerList) initDefaultServerConnectorConfig() {
 	if this.localServerInfo.ServerType == ServerType_Gate {
 		// gateserver -> otherServer
 		handler.RegisterHeartBeat(func() gnet.Packet {
-			return network.NewGatePacket(0, gnet.PacketCommand(pb.CmdClient_Cmd_HeartBeatReq), &pb.HeartBeatReq{
+			return network.NewGatePacket(0, 0, &pb.HeartBeatReq{
 				Timestamp: util.GetCurrentMS(),
 			})
 		})
 	} else {
 		handler.RegisterHeartBeat(func() gnet.Packet {
-			return this.NewAdaptPacket(gnet.PacketCommand(pb.CmdClient_Cmd_HeartBeatReq), &pb.HeartBeatReq{
+			return this.NewAdaptPacket(&pb.HeartBeatReq{
 				Timestamp: util.GetCurrentMS(),
 			})
 		})
 	}
-	handler.Register(gnet.PacketCommand(pb.CmdClient_Cmd_HeartBeatRes), func(connection gnet.Connection, packet gnet.Packet) {
+	network.RegisterPacketHandler(handler, new(pb.HeartBeatRes), func(connection gnet.Connection, packet gnet.Packet) {
 		res := packet.Message().(*pb.HeartBeatRes)
 		this.localServerInfo.Ping = int32(util.GetCurrentMS() - res.RequestTimestamp)
-	}, new(pb.HeartBeatRes))
+	})
+
 	this.serverConnectorConfig = network.ServerConnectionConfig
 	this.serverConnectorConfig.Codec = codec
 	this.serverConnectorConfig.Handler = handler
@@ -144,18 +145,20 @@ func (this *ServerList) initDefaultServerListenerConfig() {
 	this.serverListenerConfig.AcceptConfig = network.ServerConnectionConfig
 	this.serverListenerConfig.AcceptConfig.Codec = listenerCodec
 	this.serverListenerConfig.AcceptConfig.Handler = acceptServerHandler
-	acceptServerHandler.Register(gnet.PacketCommand(pb.CmdClient_Cmd_HeartBeatReq), func(connection gnet.Connection, packet gnet.Packet) {
+	network.RegisterPacketHandler(acceptServerHandler, new(pb.HeartBeatReq), func(connection gnet.Connection, packet gnet.Packet) {
 		req := packet.Message().(*pb.HeartBeatReq)
 		network.SendPacketAdapt(connection, packet, &pb.HeartBeatRes{
 			RequestTimestamp:  req.GetTimestamp(),
 			ResponseTimestamp: util.GetCurrentMS(),
 		})
-	}, new(pb.HeartBeatReq))
-	acceptServerHandler.Register(gnet.PacketCommand(pb.CmdServer_Cmd_ServerHello), func(connection gnet.Connection, packet gnet.Packet) {
+	})
+
+	network.RegisterPacketHandler(acceptServerHandler, new(pb.ServerHello), func(connection gnet.Connection, packet gnet.Packet) {
 		serverHello := packet.Message().(*pb.ServerHello)
 		this.OnServerConnected(serverHello.ServerId, connection)
 		slog.Info("AcceptServer", "serverHello", serverHello, "connId", connection.GetConnectionId())
-	}, new(pb.ServerHello))
+	})
+
 }
 
 func (this *ServerList) GetServerConnectionHandler() *gnet.DefaultConnectionHandler {
@@ -166,7 +169,8 @@ func (this *ServerList) GetServerListenerHandler() *gnet.DefaultConnectionHandle
 	return this.serverListenerConfig.AcceptConfig.Handler.(*gnet.DefaultConnectionHandler)
 }
 
-func (this *ServerList) NewAdaptPacket(cmd gnet.PacketCommand, message proto.Message) gnet.Packet {
+func (this *ServerList) NewAdaptPacket(message proto.Message) gnet.Packet {
+	cmd := gnet.PacketCommand(network.GetCommandByProto(message))
 	if this.localServerInfo.ServerType == ServerType_Gate {
 		return network.NewGatePacket(0, cmd, message)
 	} else {

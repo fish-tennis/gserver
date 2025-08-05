@@ -2,6 +2,7 @@ package game
 
 import (
 	. "github.com/fish-tennis/gnet"
+	"github.com/fish-tennis/gserver/network"
 	"github.com/fish-tennis/gserver/pb"
 )
 
@@ -24,7 +25,8 @@ func (h *Hook) OnApplicationInit(initArg interface{}) {
 	InitGlobalEntityStructAndHandler()
 	_globalEntity = CreateGlobalEntityFromDb()
 	_globalEntity.RunRoutine()
-	_globalEntity.PushMessage(NewProtoPacket(PacketCommand(pb.CmdServer_Cmd_StartupReq), &pb.StartupReq{
+	cmd := network.GetCommandByProto(new(pb.StartupReq))
+	_globalEntity.PushMessage(NewProtoPacket(PacketCommand(cmd), &pb.StartupReq{
 		Timestamp: GetGlobalEntity().GetTimerEntries().Now().Unix(),
 	}))
 }

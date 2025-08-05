@@ -27,7 +27,7 @@ func (this *ClientListerHandler) OnConnectionDisconnect(listener Listener, conne
 			_gateServer.clientsMutex.Unlock()
 			// 通知GameServer,玩家掉线了
 			_gateServer.GetServerList().SendPacket(clientData.GameServerId, network.NewGatePacket(
-				clientData.PlayerId, PacketCommand(pb.CmdServer_Cmd_ClientDisconnect), &pb.ClientDisconnect{
+				clientData.PlayerId, 0, &pb.ClientDisconnect{
 					ClientConnId: connection.GetConnectionId(),
 				}))
 		}
