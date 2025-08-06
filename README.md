@@ -151,6 +151,10 @@ C#: [gnet_csharp](https://github.com/fish-tennis/gnet_csharp)
 
 在gserver项目中负责生成配置数据的只读接口,自动生成网络协议号
 
+proto文件修改后,运行proto\tool\generate_proto_go.bat (linux下运行generate_proto_go.sh)
+
+generate_proto_go集成了protoc和proto_code_gen
+
 ## 讨论
 QQ群: 764912827
 
