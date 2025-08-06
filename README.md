@@ -25,6 +25,7 @@
 - 任务模块,演示了如何实现一个通用且扩展性强的[任务系统](https://github.com/fish-tennis/gserver/blob/main/Design_Quest.md)
 - 活动模块,演示了如何设计一个通用且支持扩展的活动模块
 - 配置数据管理模块,同时支持csv和json,支持热更新
+- 网络协议的消息号自动生成
 
 ## 数据方案
 玩家数据落地使用mongodb,玩家上线时,从mongodb拉取玩家数据,玩家下线时,把玩家数据保存到mongodb
@@ -144,6 +145,11 @@ C#: [gnet_csharp](https://github.com/fish-tennis/gnet_csharp)
 
 ## Excel表导出工具
 [excelexporter](https://github.com/fish-tennis/excelexporter)
+
+## proto预处理工具
+[proto_code_gen](https://github.com/fish-tennis/proto_code_gen)
+
+在gserver项目中负责生成配置数据的只读接口,自动生成网络协议号
 
 ## 讨论
 QQ群: 764912827
