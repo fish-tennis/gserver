@@ -14,38 +14,9 @@ import (
 // 如condition_template.csv和progress_template.csv里配置除了参数值之外的配置项,这2个表可以由程序来配置
 // 其他表要配置条件和进度,只需要配置对应的模板id和参数即可,就可以由策划人员轻松配置了
 
-var (
-	_templateCfgLoader = Register(func() any {
-		return new(TemplateCfgMgr)
-	}, First+1)
-)
-
-// 模板配置数据管理
-type TemplateCfgMgr struct {
-	ConditionTemplates *DataMap[*pb.ConditionTemplateCfg] `cfg:"condition_template.csv"`
-	ProgressTemplates  *DataMap[*pb.ProgressTemplateCfg]  `cfg:"progress_template.csv"`
-	Exchanges          *DataMap[*pb.ExchangeCfg]          `cfg:"exchange.csv"`
-}
-
-// singleton
-func GetTemplateCfgMgr() *TemplateCfgMgr {
-	return _templateCfgLoader.Load().(*TemplateCfgMgr)
-}
-
-func (m *TemplateCfgMgr) GetExchangeCfg(cfgId int32) *pb.ExchangeCfg {
-	return m.Exchanges.GetCfg(cfgId)
-}
-
-func (m *TemplateCfgMgr) AfterLoad() {
-	m.Exchanges.Range(func(e *pb.ExchangeCfg) bool {
-		e.Conditions = m.convertConditionCfgs(e.ConditionTemplates)
-		return true
-	})
-}
-
 // 条件模板id+values,转换成ConditionCfg对象
-func (m *TemplateCfgMgr) convertConditionCfg(cfgArg *pb.CfgArgs) *pb.ConditionCfg {
-	conditionTemplate := m.ConditionTemplates.GetCfg(cfgArg.CfgId)
+func convertConditionCfg(cfgArg *pb.CfgArgs) *pb.ConditionCfg {
+	conditionTemplate := ConditionTemplateCfgs.GetCfg(cfgArg.CfgId)
 	if conditionTemplate == nil {
 		return nil
 	}
@@ -58,10 +29,10 @@ func (m *TemplateCfgMgr) convertConditionCfg(cfgArg *pb.CfgArgs) *pb.ConditionCf
 	}
 }
 
-func (m *TemplateCfgMgr) convertConditionCfgs(cfgArgs []*pb.CfgArgs) []*pb.ConditionCfg {
+func convertConditionCfgs(cfgArgs []*pb.CfgArgs) []*pb.ConditionCfg {
 	var conditions []*pb.ConditionCfg
 	for _, cfgArg := range cfgArgs {
-		condition := m.convertConditionCfg(cfgArg)
+		condition := convertConditionCfg(cfgArg)
 		if condition == nil {
 			slog.Error("condition nil", "cfgArg", cfgArg)
 			continue
@@ -72,8 +43,8 @@ func (m *TemplateCfgMgr) convertConditionCfgs(cfgArgs []*pb.CfgArgs) []*pb.Condi
 }
 
 // 进度模板配置id+进度值,转换成ProgressCfg对象
-func (m *TemplateCfgMgr) convertProgressCfg(cfgArg *pb.CfgArg) *pb.ProgressCfg {
-	progressTemplate := m.ProgressTemplates.GetCfg(cfgArg.CfgId)
+func convertProgressCfg(cfgArg *pb.CfgArg) *pb.ProgressCfg {
+	progressTemplate := ProgressTemplateCfgs.GetCfg(cfgArg.CfgId)
 	if progressTemplate == nil {
 		return nil
 	}
@@ -90,10 +61,10 @@ func (m *TemplateCfgMgr) convertProgressCfg(cfgArg *pb.CfgArg) *pb.ProgressCfg {
 	}
 }
 
-func (m *TemplateCfgMgr) convertProgressCfgs(cfgArgs []*pb.CfgArg) []*pb.ProgressCfg {
+func convertProgressCfgs(cfgArgs []*pb.CfgArg) []*pb.ProgressCfg {
 	var progressCfgs []*pb.ProgressCfg
 	for _, cfgArg := range cfgArgs {
-		progress := m.convertProgressCfg(cfgArg)
+		progress := convertProgressCfg(cfgArg)
 		if progress == nil {
 			slog.Error("progress nil", "cfgArg", cfgArg)
 			continue

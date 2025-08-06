@@ -1,0 +1,14 @@
+{
+  "1": {
+    "CfgId": 1,
+    "Key": "Level",
+    "Op": "\u003e=",
+    "Type": 1
+  },
+  "2": {
+    "CfgId": 2,
+    "Key": "DayCount",
+    "Op": "\u003e=",
+    "Type": 2
+  }
+}

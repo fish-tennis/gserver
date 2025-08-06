@@ -3,7 +3,6 @@ package cfg
 import (
 	"encoding/json"
 	"errors"
-	"github.com/fish-tennis/csv"
 	"github.com/fish-tennis/gserver/internal"
 	"log/slog"
 	"os"
@@ -13,6 +12,13 @@ import (
 // map类型的配置数据管理
 type DataMap[E internal.CfgData] struct {
 	cfgs map[int32]E
+	// TODO: 加一个tag any字段
+}
+
+func NewDataMap[E internal.CfgData]() *DataMap[E] {
+	return &DataMap[E]{
+		cfgs: make(map[int32]E),
+	}
 }
 
 func (this *DataMap[E]) GetCfg(cfgId int32) E {
@@ -28,14 +34,12 @@ func (this *DataMap[E]) Range(f func(e E) bool) {
 }
 
 // 加载配置数据,支持json和csv
-func (this *DataMap[E]) Load(fileName string, loaderOption *LoaderOption) error {
+func (this *DataMap[E]) Load(fileName string) error {
 	if this.cfgs == nil {
 		this.cfgs = make(map[int32]E)
 	}
 	if strings.HasSuffix(fileName, ".json") {
 		return this.LoadJson(fileName)
-	} else if strings.HasSuffix(fileName, ".csv") {
-		return this.LoadCsv(fileName, loaderOption.CsvOption)
 	}
 	return errors.New("unsupported file type")
 }
@@ -47,34 +51,14 @@ func (this *DataMap[E]) LoadJson(fileName string) error {
 		slog.Error("LoadJsonErr", "fileName", fileName, "err", err)
 		return err
 	}
-	var cfgList []E
-	err = json.Unmarshal(fileData, &cfgList)
+	cfgMap := make(map[int32]E)
+	err = json.Unmarshal(fileData, &cfgMap)
 	if err != nil {
 		slog.Error("LoadJsonErr", "fileName", fileName, "err", err)
 		return err
 	}
-	cfgMap := make(map[int32]E, len(cfgList))
-	for _, cfg := range cfgList {
-		if _, exists := cfgMap[cfg.GetCfgId()]; exists {
-			slog.Error("duplicate id", "fileName", fileName, "id", cfg.GetCfgId())
-		}
-		cfgMap[cfg.GetCfgId()] = cfg
-	}
 	this.cfgs = cfgMap
 	slog.Info("LoadJson", "fileName", fileName, "count", len(this.cfgs))
-	return nil
-}
-
-// 从csv文件加载数据
-func (this *DataMap[E]) LoadCsv(fileName string, option *csv.CsvOption) error {
-	cfgMap := make(map[int32]E)
-	err := csv.ReadCsvFileMap(fileName, cfgMap, option)
-	if err != nil {
-		slog.Error("LoadCsvErr", "fileName", fileName, "err", err)
-		return err
-	}
-	this.cfgs = cfgMap
-	slog.Info("LoadCsv", "fileName", fileName, "count", len(this.cfgs))
 	return nil
 }
 
@@ -100,11 +84,9 @@ func (this *DataSlice[E]) Range(f func(e E) bool) {
 }
 
 // 加载配置数据,支持json和csv
-func (this *DataSlice[E]) Load(fileName string, loaderOption *LoaderOption) error {
+func (this *DataSlice[E]) Load(fileName string) error {
 	if strings.HasSuffix(fileName, ".json") {
 		return this.LoadJson(fileName)
-	} else if strings.HasSuffix(fileName, ".csv") {
-		return this.LoadCsv(fileName, loaderOption.CsvOption)
 	}
 	return errors.New("unsupported file type")
 }
@@ -124,19 +106,6 @@ func (this *DataSlice[E]) LoadJson(fileName string) error {
 	}
 	this.cfgs = cfgList
 	slog.Info("LoadJson", "fileName", fileName, "count", len(this.cfgs))
-	this.checkDuplicateCfgId(fileName)
-	return nil
-}
-
-func (this *DataSlice[E]) LoadCsv(fileName string, option *csv.CsvOption) error {
-	s := make([]E, 0)
-	var err error
-	this.cfgs, err = csv.ReadCsvFileSlice(fileName, s, option)
-	if err != nil {
-		slog.Error("LoadCsvErr", "fileName", fileName, "err", err)
-		return err
-	}
-	slog.Info("LoadCsv", "fileName", fileName, "count", len(this.cfgs))
 	this.checkDuplicateCfgId(fileName)
 	return nil
 }

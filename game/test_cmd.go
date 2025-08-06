@@ -46,7 +46,7 @@ func (p *Player) OnTestCmd(req *pb.TestCmd) {
 			return
 		}
 		itemCfgId := int32(util.Atoi(cmdArgs[0]))
-		itemCfg := cfg.GetItemCfgMgr().GetItemCfg(itemCfgId)
+		itemCfg := cfg.ItemCfgs.GetCfg(itemCfgId)
 		if itemCfg == nil {
 			p.SendErrorRes(cmd, "AddItem itemCfgId error")
 			return
@@ -126,7 +126,7 @@ func (p *Player) OnTestCmd(req *pb.TestCmd) {
 			p.GetActivities().AddAllActivitiesCanJoin(p.GetTimerEntries().Now())
 		} else {
 			activityId := int32(util.Atoi(arg))
-			activityCfg := cfg.GetActivityCfgMgr().GetActivityCfg(activityId)
+			activityCfg := cfg.ActivityCfgs.GetCfg(activityId)
 			// 如果已有该活动,则重置
 			p.GetActivities().AddNewActivity(activityCfg, p.GetTimerEntries().Now())
 		}

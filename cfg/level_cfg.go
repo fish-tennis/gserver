@@ -5,28 +5,15 @@ import (
 )
 
 var (
-	_levelCfgLoader = Register(func() any {
-		return new(LevelCfgMgr)
-	}, First)
+	MaxLevel int32
 )
 
-// 等级配置数据管理
-type LevelCfgMgr struct {
-	// 每一级升级所需要的经验
-	*DataSlice[*pb.LevelExp] `cfg:"levelcfg.csv"`
-}
-
-// singleton
-func GetLevelCfgMgr() *LevelCfgMgr {
-	return _levelCfgLoader.Load().(*LevelCfgMgr)
-}
-
-// 最大等级
-func (m *LevelCfgMgr) GetMaxLevel() int32 {
-	return int32(m.Len())
+func LevelAfterLoad(mgr any, mgrName, messageName, fileName string) {
+	levels := mgr.(*DataSlice[*pb.LevelExp])
+	MaxLevel = int32(levels.Len())
 }
 
 // 下一级所需要经验值
-func (m *LevelCfgMgr) GetNeedExp(nextLevel int32) int32 {
-	return m.cfgs[nextLevel-1].NeedExp
+func GetNeedExp(nextLevel int32) int32 {
+	return LevelExps.GetCfg(int(nextLevel - 1)).GetNeedExp()
 }

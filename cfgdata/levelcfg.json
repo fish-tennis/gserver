@@ -1,0 +1,42 @@
+[
+  {
+    "Level": 1,
+    "NeedExp": 0
+  },
+  {
+    "Level": 2,
+    "NeedExp": 100
+  },
+  {
+    "Level": 3,
+    "NeedExp": 300
+  },
+  {
+    "Level": 4,
+    "NeedExp": 600
+  },
+  {
+    "Level": 5,
+    "NeedExp": 1000
+  },
+  {
+    "Level": 6,
+    "NeedExp": 1500
+  },
+  {
+    "Level": 7,
+    "NeedExp": 2100
+  },
+  {
+    "Level": 8,
+    "NeedExp": 2800
+  },
+  {
+    "Level": 9,
+    "NeedExp": 3700
+  },
+  {
+    "Level": 10,
+    "NeedExp": 5000
+  }
+]

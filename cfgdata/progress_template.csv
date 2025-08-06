@@ -1,8 +1,0 @@
-CfgId,Type,Event,IntEventFields,StringEventFields,ProgressField,NeedInit,Properties,Comment
-1,1,EventPlayerProperty,,Property_Level,Delta,1,,玩家等级达到X
-2,1,EventFight,,,,,,战斗次数达到X
-3,1,EventFight,IsPvp_1,,,,,PVP次数达到X
-4,1,EventFight,IsPvp_1#IsWin_1,,,,,PVP胜场达到X
-5,1,EventFight,IsWin_1#RoomType_2;3#RoomLevel_>_3#Score_[]_100;200,,,,,匹配模式 房间等级>3 得分在100-200之间 胜场达到X
-6,1,EventPlayerProperty,,Property_TotalPay,Delta,,,累充达到X
-7,1,EventPlayerProperty,,Property_OnlineMinute,Delta,,,在线分钟达到X

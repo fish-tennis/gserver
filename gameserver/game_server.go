@@ -2,6 +2,7 @@ package gameserver
 
 import (
 	"context"
+	"fmt"
 	"github.com/fish-tennis/gentity"
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
@@ -115,7 +116,11 @@ func (this *GameServer) readConfig() {
 
 // 加载配置数据
 func (this *GameServer) loadCfgs() {
-	cfg.LoadAllCfgs("cfgdata", cfg.LoadCfgFilter)
+	//cfg.LoadAllCfgs("cfgdata", cfg.LoadCfgFilter)
+	err := cfg.Load("cfgdata", cfg.Process, nil)
+	if err != nil {
+		panic(fmt.Sprintf("loadCfgs:%v", err))
+	}
 }
 
 // 初始化数据库

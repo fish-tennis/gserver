@@ -66,7 +66,7 @@ func (a *Activities) LoadFromBytesMap(bytesMap any) error {
 
 // 根据模板创建活动对象
 func CreateNewActivity(activityCfgId int32, activities internal.ActivityMgr, t time.Time) internal.Activity {
-	activityCfg := cfg.GetActivityCfgMgr().GetActivityCfg(activityCfgId)
+	activityCfg := cfg.ActivityCfgs.GetCfg(activityCfgId)
 	if activityCfg == nil {
 		slog.Error("activityCfg nil", "activityId", activityCfgId)
 		return nil
@@ -108,7 +108,7 @@ func (a *Activities) RemoveActivity(activityId int32) {
 
 // 检查所有还没参加的活动,如果满足参加条件,则参加
 func (a *Activities) AddAllActivitiesCanJoin(t time.Time) {
-	cfg.GetActivityCfgMgr().Activities.Range(func(activityCfg *pb.ActivityCfg) bool {
+	cfg.ActivityCfgs.Range(func(activityCfg *pb.ActivityCfg) bool {
 		if a.GetActivity(activityCfg.CfgId) == nil {
 			if a.CanJoin(activityCfg, t) {
 				a.AddNewActivity(activityCfg, t)
@@ -221,7 +221,7 @@ func (a *Activities) CheckEndTime(activityCfg *pb.ActivityCfg, t time.Time) bool
 // 检查已经结束的活动
 func (a *Activities) CheckEnd(t time.Time) {
 	for activityId, activity := range a.Data.Data {
-		activityCfg := cfg.GetActivityCfgMgr().GetActivityCfg(activityId)
+		activityCfg := cfg.ActivityCfgs.GetCfg(activityId)
 		if activityCfg == nil {
 			continue
 		}
@@ -240,5 +240,5 @@ type ChildActivity struct {
 
 // 活动配置数据
 func (this *ChildActivity) GetActivityCfg() *pb.ActivityCfg {
-	return cfg.GetActivityCfgMgr().GetActivityCfg(this.GetId())
+	return cfg.ActivityCfgs.GetCfg(this.GetId())
 }

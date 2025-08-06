@@ -10,6 +10,7 @@ import (
 	"github.com/fish-tennis/gserver/cfg"
 	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
+	"github.com/fish-tennis/gserver/network"
 	"github.com/fish-tennis/gserver/pb"
 	"google.golang.org/protobuf/proto"
 	"gopkg.in/natefinch/lumberjack.v2"
@@ -71,7 +72,8 @@ func initTestEnv(t *testing.T) {
 	util.InitIdGenerator(1)
 	InitPlayerStructAndHandler()
 	AutoRegisterPlayerPacketHandler(nil)
-	cfg.LoadAllCfgs("./../cfgdata", cfg.LoadCfgFilter)
+	//cfg.LoadAllCfgs("./../cfgdata", cfg.LoadCfgFilter)
+	cfg.Load("./../cfgdata", cfg.Process, nil)
 }
 
 func TestSaveable(t *testing.T) {
@@ -208,7 +210,7 @@ func TestQuest(t *testing.T) {
 	player.GetBaseInfo().Data.Level = 2
 
 	q := player.GetQuest()
-	cfg.GetQuestCfgMgr().Range(func(questCfg *pb.QuestCfg) bool {
+	cfg.Quests.Range(func(questCfg *pb.QuestCfg) bool {
 		// 排除其他模块的子任务
 		if questCfg.GetQuestType() != 0 {
 			return true
@@ -270,12 +272,12 @@ func TestActivity(t *testing.T) {
 	activities := player.GetActivities()
 	exchange := player.GetExchange()
 	var activityIds []int32
-	cfg.GetActivityCfgMgr().Activities.Range(func(activityCfg *pb.ActivityCfg) bool {
+	cfg.ActivityCfgs.Range(func(activityCfg *pb.ActivityCfg) bool {
 		activityIds = append(activityIds, activityCfg.CfgId)
 		return true
 	})
 	for _, activityId := range activityIds {
-		activityCfg := cfg.GetActivityCfgMgr().GetActivityCfg(activityId)
+		activityCfg := cfg.ActivityCfgs.GetCfg(activityId)
 		if activityCfg == nil {
 			continue
 		}
@@ -440,7 +442,8 @@ func TestBags(t *testing.T) {
 
 	player.RunRoutine()
 	// 转到玩家协程中去处理
-	player.OnRecvPacket(gnet.NewProtoPacket(gnet.PacketCommand(pb.CmdServer_Cmd_PlayerEntryGameOk), &pb.PlayerEntryGameOk{
+	cmd := network.GetCommandByProto(new(pb.PlayerEntryGameOk))
+	player.OnRecvPacket(gnet.NewProtoPacket(gnet.PacketCommand(cmd), &pb.PlayerEntryGameOk{
 		IsReconnect: false,
 	}))
 	time.Sleep(time.Second * 5)
@@ -531,7 +534,7 @@ func TestEvent(t *testing.T) {
 	player.GetBaseInfo().Data.Level = 2
 
 	q := player.GetQuest()
-	cfg.GetQuestCfgMgr().Range(func(questCfg *pb.QuestCfg) bool {
+	cfg.Quests.Range(func(questCfg *pb.QuestCfg) bool {
 		// 排除其他模块的子任务
 		if questCfg.GetQuestType() != 0 {
 			return true

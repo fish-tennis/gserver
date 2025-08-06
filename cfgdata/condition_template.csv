@@ -1,3 +1,0 @@
-CfgId,Type,Key,Op,Comment
-1,1,Level,>=,玩家等级>=X
-2,2,DayCount,>=,活动天数>=X

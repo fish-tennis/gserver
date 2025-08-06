@@ -59,7 +59,7 @@ func (b *Bags) GetBag(itemCfgId int32) internal.ElemContainer {
 }
 
 func (b *Bags) GetBagByArg(arg *pb.AddElemArg) internal.ElemContainer {
-	itemCfg := cfg.GetItemCfgMgr().GetItemCfg(arg.GetCfgId())
+	itemCfg := cfg.ItemCfgs.GetCfg(arg.GetCfgId())
 	if itemCfg == nil {
 		slog.Error("ErrItemCfgId", "itemCfgId", arg.GetCfgId())
 		return nil

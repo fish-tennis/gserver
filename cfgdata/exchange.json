@@ -1,0 +1,14 @@
+{
+  "10001": {
+    "CfgId": 10001,
+    "CountLimit": 1
+  },
+  "50001": {
+    "CfgId": 50001,
+    "CountLimit": 1
+  },
+  "50002": {
+    "CfgId": 50002,
+    "CountLimit": 2
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "1": {
+    "CfgId": 1,
+    "Event": "EventPlayerProperty",
+    "NeedInit": true,
+    "ProgressField": "Delta",
+    "StringEventFields": {
+      "Property": "Level"
+    },
+    "Type": 1
+  },
+  "2": {
+    "CfgId": 2,
+    "Event": "EventFight",
+    "Type": 1
+  },
+  "3": {
+    "CfgId": 3,
+    "Event": "EventFight",
+    "IntEventFields": {
+      "IsPvp": null
+    },
+    "Type": 1
+  },
+  "4": {
+    "CfgId": 4,
+    "Event": "EventFight",
+    "IntEventFields": {
+      "IsPvp": null
+    },
+    "Type": 1
+  },
+  "5": {
+    "CfgId": 5,
+    "Event": "EventFight",
+    "IntEventFields": {
+      "3#RoomLevel": null,
+      "IsWin": null
+    },
+    "Type": 1
+  },
+  "6": {
+    "CfgId": 6,
+    "Event": "EventPlayerProperty",
+    "ProgressField": "Delta",
+    "StringEventFields": {
+      "Property": "TotalPay"
+    },
+    "Type": 1
+  },
+  "7": {
+    "CfgId": 7,
+    "Event": "EventPlayerProperty",
+    "ProgressField": "Delta",
+    "StringEventFields": {
+      "Property": "OnlineMinute"
+    },
+    "Type": 1
+  }
+}

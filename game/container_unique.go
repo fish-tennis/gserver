@@ -94,7 +94,7 @@ func (b *UniqueContainer[E]) AddElem(arg *pb.AddElemArg, bagUpdate *pb.ElemConta
 	if addCount <= 0 {
 		return 0
 	}
-	itemCfg := cfg.GetItemCfgMgr().GetItemCfg(arg.GetCfgId())
+	itemCfg := cfg.ItemCfgs.GetCfg(arg.GetCfgId())
 	if itemCfg == nil {
 		return 0
 	}

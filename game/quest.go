@@ -46,7 +46,7 @@ func (p *Player) GetQuest() *Quest {
 func (q *Quest) OnDataLoad() {
 	// 把已有任务加入到进度更新映射表中
 	q.Quests.Range(func(k int32, questData *pb.QuestData) bool {
-		questCfg := cfg.GetQuestCfgMgr().GetQuestCfg(questData.GetCfgId())
+		questCfg := cfg.Quests.GetCfg(questData.GetCfgId())
 		if questCfg == nil {
 			logger.Error("questCfg nil %v", questData.GetCfgId())
 			return true
@@ -64,7 +64,7 @@ func (q *Quest) SyncDataToClient() {
 }
 
 func (q *Quest) AddQuest(questData *pb.QuestData) {
-	questCfg := cfg.GetQuestCfgMgr().GetQuestCfg(questData.GetCfgId())
+	questCfg := cfg.Quests.GetCfg(questData.GetCfgId())
 	if questCfg == nil {
 		slog.Error("AddQuestErr", "questData", questData)
 		return
@@ -102,7 +102,7 @@ func (q *Quest) RangeByActivityId(activityId int32, f func(questData *pb.QuestDa
 func (q *Quest) TriggerPlayerEntryGame(event *internal.EventPlayerEntryGame) {
 	// 测试代码:给新玩家添加初始任务
 	if len(q.Quests.Data) == 0 && len(q.Finished.Data) == 0 {
-		cfg.GetQuestCfgMgr().Range(func(questCfg *pb.QuestCfg) bool {
+		cfg.Quests.Range(func(questCfg *pb.QuestCfg) bool {
 			// 排除其他模块的子任务
 			if questCfg.GetQuestType() != 0 {
 				return true
@@ -122,7 +122,7 @@ func (q *Quest) TriggerPlayerEntryGame(event *internal.EventPlayerEntryGame) {
 func (q *Quest) OnFinishQuestReq(req *pb.FinishQuestReq) (*pb.FinishQuestRes, error) {
 	logger.Debug("OnFinishQuestReq:%v", req)
 	if questData, ok := q.Quests.Data[req.QuestCfgId]; ok {
-		questCfg := cfg.GetQuestCfgMgr().GetQuestCfg(questData.GetCfgId())
+		questCfg := cfg.Quests.GetCfg(questData.GetCfgId())
 		if questData.GetProgress() >= questCfg.Progress.GetTotal() {
 			q.Quests.Delete(questData.GetCfgId())
 			q.Finished.Set(questData.GetCfgId(), &pb.FinishedQuestData{

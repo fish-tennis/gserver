@@ -1,0 +1,289 @@
+{
+  "1": {
+    "CfgId": 1,
+    "Name": "升到5级",
+    "ProgressTemplate": {
+      "Arg": 5,
+      "CfgId": 1
+    },
+    "QuestType": 0,
+    "Rewards": [
+      {
+        "CfgId": 1,
+        "Num": 2
+      }
+    ]
+  },
+  "2": {
+    "CfgId": 2,
+    "Name": "5场战斗",
+    "ProgressTemplate": {
+      "Arg": 5,
+      "CfgId": 2
+    },
+    "QuestType": 0,
+    "Rewards": [
+      {
+        "CfgId": 2,
+        "Num": 3
+      }
+    ]
+  },
+  "20001": {
+    "CfgId": 20001,
+    "Name": "累充礼包",
+    "ProgressTemplate": {
+      "Arg": 100,
+      "CfgId": 6
+    },
+    "QuestType": 1,
+    "Rewards": [
+      {
+        "CfgId": 1,
+        "Num": 2
+      }
+    ]
+  },
+  "3": {
+    "CfgId": 3,
+    "Name": "5场PVP",
+    "ProgressTemplate": {
+      "Arg": 5,
+      "CfgId": 3
+    },
+    "QuestType": 0,
+    "Rewards": [
+      {
+        "CfgId": 1,
+        "Num": 5
+      },
+      {
+        "CfgId": 3,
+        "Num": 1
+      }
+    ]
+  },
+  "30001": {
+    "CfgId": 30001,
+    "ConditionTemplates": [
+      {
+        "Args": [
+          1
+        ],
+        "CfgId": 2
+      }
+    ],
+    "Name": "3日目标第1天",
+    "ProgressTemplate": {
+      "Arg": 5,
+      "CfgId": 3
+    },
+    "QuestType": 1,
+    "Rewards": [
+      {
+        "CfgId": 1,
+        "Num": 1
+      }
+    ]
+  },
+  "30002": {
+    "CfgId": 30002,
+    "ConditionTemplates": [
+      {
+        "Args": [
+          1
+        ],
+        "CfgId": 2
+      }
+    ],
+    "Name": "3日目标第2天",
+    "ProgressTemplate": {
+      "Arg": 10,
+      "CfgId": 1
+    },
+    "QuestType": 1,
+    "Rewards": [
+      {
+        "CfgId": 1,
+        "Num": 2
+      }
+    ]
+  },
+  "30003": {
+    "CfgId": 30003,
+    "ConditionTemplates": [
+      {
+        "Args": [
+          1
+        ],
+        "CfgId": 2
+      }
+    ],
+    "Name": "3日目标第3天",
+    "ProgressTemplate": {
+      "Arg": 20,
+      "CfgId": 4
+    },
+    "QuestType": 1,
+    "Rewards": [
+      {
+        "CfgId": 1,
+        "Num": 3
+      }
+    ]
+  },
+  "4": {
+    "CfgId": 4,
+    "ConditionTemplates": [
+      {
+        "Args": [
+          1
+        ],
+        "CfgId": 1
+      }
+    ],
+    "Name": "赢5场PVP",
+    "ProgressTemplate": {
+      "Arg": 5,
+      "CfgId": 4
+    },
+    "QuestType": 0,
+    "Rewards": [
+      {
+        "CfgId": 1,
+        "Num": 5
+      },
+      {
+        "CfgId": 4,
+        "Num": 2
+      }
+    ]
+  },
+  "40001": {
+    "CfgId": 40001,
+    "Name": "在线1分钟",
+    "NextQuests": [
+      40002
+    ],
+    "ProgressTemplate": {
+      "Arg": 1,
+      "CfgId": 7
+    },
+    "QuestType": 1,
+    "Rewards": [
+      {
+        "CfgId": 1,
+        "Num": 1
+      }
+    ]
+  },
+  "40002": {
+    "CfgId": 40002,
+    "Name": "在线5分钟",
+    "NextQuests": [
+      40003
+    ],
+    "ProgressTemplate": {
+      "Arg": 5,
+      "CfgId": 7
+    },
+    "QuestType": 1,
+    "Rewards": [
+      {
+        "CfgId": 1,
+        "Num": 5
+      }
+    ]
+  },
+  "40003": {
+    "CfgId": 40003,
+    "Name": "在线10分钟",
+    "ProgressTemplate": {
+      "Arg": 7,
+      "CfgId": 7
+    },
+    "QuestType": 1,
+    "Rewards": [
+      {
+        "CfgId": 1,
+        "Num": 10
+      }
+    ]
+  },
+  "5": {
+    "CfgId": 5,
+    "ConditionTemplates": [
+      {
+        "Args": [
+          1
+        ],
+        "CfgId": 1
+      }
+    ],
+    "Name": "赢5场指定条件的PVP",
+    "ProgressTemplate": {
+      "Arg": 5,
+      "CfgId": 5
+    },
+    "QuestType": 0,
+    "Rewards": [
+      {
+        "CfgId": 1,
+        "Num": 5
+      },
+      {
+        "CfgId": 2,
+        "Num": 1
+      },
+      {
+        "CfgId": 4,
+        "Num": 3
+      }
+    ]
+  },
+  "60001": {
+    "CfgId": 60001,
+    "Name": "随机任务1",
+    "ProgressTemplate": {
+      "Arg": 1,
+      "CfgId": 7
+    },
+    "QuestType": 1,
+    "Rewards": [
+      {
+        "CfgId": 1,
+        "Num": 1
+      }
+    ]
+  },
+  "60002": {
+    "CfgId": 60002,
+    "Name": "随机任务2",
+    "ProgressTemplate": {
+      "Arg": 5,
+      "CfgId": 7
+    },
+    "QuestType": 1,
+    "Rewards": [
+      {
+        "CfgId": 1,
+        "Num": 5
+      }
+    ]
+  },
+  "60003": {
+    "CfgId": 60003,
+    "Name": "随机任务3",
+    "ProgressTemplate": {
+      "Arg": 7,
+      "CfgId": 7
+    },
+    "QuestType": 1,
+    "Rewards": [
+      {
+        "CfgId": 4,
+        "Num": 10
+      }
+    ]
+  }
+}

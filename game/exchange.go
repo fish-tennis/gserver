@@ -96,7 +96,7 @@ func (e *Exchange) Exchange(exchangeCfgId, exchangeCount int32) error {
 	if exchangeCount <= 0 {
 		return errors.New("exchangeCount <= 0")
 	}
-	exchangeCfg := cfg.GetTemplateCfgMgr().GetExchangeCfg(exchangeCfgId)
+	exchangeCfg := cfg.ExchangeCfgs.GetCfg(exchangeCfgId)
 	if exchangeCfg == nil {
 		slog.Debug("Exchange exchangeCfg nil", "pid", e.GetPlayer().GetId(), "exchangeCfgId", exchangeCfgId)
 		return errors.New("exchangeCfg nil")
@@ -108,7 +108,7 @@ func (e *Exchange) Exchange(exchangeCfgId, exchangeCount int32) error {
 	}
 	// 检查兑换条件
 	var obj any
-	activityId := cfg.GetActivityCfgMgr().GetActivityIdByExchangeId(exchangeCfgId)
+	activityId := cfg.GetActivityIdByExchangeId(exchangeCfgId)
 	// NOTE:活动礼包比较特殊,需要获取到活动对象,这样CheckConditions才能正确检查活动条件
 	if activityId > 0 {
 		obj = e.GetPlayer().GetActivities().GetActivity(activityId)

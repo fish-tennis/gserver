@@ -103,7 +103,7 @@ func (a *ActivityDefault) OnInit(t time.Time) {
 func (a *ActivityDefault) defaultInit(t time.Time) {
 	activityCfg := a.GetActivityCfg()
 	for _, questId := range activityCfg.QuestIds {
-		questCfg := cfg.GetQuestCfgMgr().GetQuestCfg(questId)
+		questCfg := cfg.Quests.GetCfg(questId)
 		if questCfg == nil {
 			continue
 		}
@@ -133,7 +133,7 @@ func (a *ActivityDefault) Refresh(t time.Time, refreshType int32) {
 func (a *ActivityDefault) defaultRefreshQuest(t time.Time, refreshType int32) {
 	activityCfg := a.GetActivityCfg()
 	for _, questId := range activityCfg.QuestIds {
-		questCfg := cfg.GetQuestCfgMgr().GetQuestCfg(questId)
+		questCfg := cfg.Quests.GetCfg(questId)
 		if questCfg == nil {
 			continue
 		}
@@ -152,7 +152,7 @@ func (a *ActivityDefault) defaultRefreshExchange(t time.Time, refreshType int32)
 	activityCfg := a.GetActivityCfg()
 	exchange := a.Activities.GetPlayer().GetExchange()
 	for _, exchangeCfgId := range activityCfg.ExchangeIds {
-		exchangeCfg := cfg.GetTemplateCfgMgr().GetExchangeCfg(exchangeCfgId)
+		exchangeCfg := cfg.ExchangeCfgs.GetCfg(exchangeCfgId)
 		if exchangeCfg == nil || exchangeCfg.GetRefreshType() == refreshType {
 			removedRecord := exchange.RemoveRecord(exchangeCfgId)
 			if removedRecord != nil {

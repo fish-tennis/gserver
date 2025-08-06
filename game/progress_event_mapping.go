@@ -51,7 +51,7 @@ func (p *ProgressEventMapping) RemoveProgress(progressCfg *pb.ProgressCfg, cfgId
 func (p *ProgressEventMapping) UpdateProgress(event any, progress internal.CfgData) {
 	switch v := progress.(type) {
 	case *pb.QuestData:
-		questCfg := cfg.GetQuestCfgMgr().GetQuestCfg(v.GetCfgId())
+		questCfg := cfg.Quests.GetCfg(v.GetCfgId())
 		if internal.UpdateProgress(p.player, v, event, questCfg.Progress) {
 			p.player.GetQuest().Quests.SetDirty(v.GetCfgId(), true)
 			p.player.Send(&pb.QuestUpdate{

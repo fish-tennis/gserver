@@ -1,0 +1,38 @@
+#Excel导入目录(excel所在目录)
+DataImportPath: "./../../excel"
+
+#数据导出目录
+DataExportPath: "./../../cfgdata"
+
+#proto所在目录
+ProtoPath: "./../../proto"
+
+#需要解析的proto文件
+ProtoFiles:
+  - "export.proto"
+  - "cfg.proto"
+
+#可选项:导出md5文件完整路径
+Md5ExportPath: "./../../cfgdata/md5.json"
+
+#代码模板目录
+CodeTemplatePath: "./"
+
+#代码导出目录
+CodeExportPath: "./../../cfg"
+
+#代码模板
+CodeTemplateFiles:
+  - "data_mgr.go.template"
+
+#导出分组标记 c s cs
+ExportGroup: "s"
+
+#默认的分组标记
+DefaultGroup: "cs"
+
+#导出总表的文件名
+ExportAllExcelFile: "all.xlsx"
+
+#导出总表的sheet名
+ExportAllSheet: "ExportCfg"

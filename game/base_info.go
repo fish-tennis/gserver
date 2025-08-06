@@ -52,8 +52,8 @@ func (b *BaseInfo) IncExp(incExp int32) {
 	oldLevel := b.Data.Level
 	b.Data.Exp += incExp
 	for {
-		if b.Data.Level < cfg.GetLevelCfgMgr().GetMaxLevel() {
-			needExp := cfg.GetLevelCfgMgr().GetNeedExp(b.Data.Level + 1)
+		if b.Data.Level < cfg.MaxLevel {
+			needExp := cfg.GetNeedExp(b.Data.Level + 1)
 			if needExp > 0 && b.Data.Exp >= needExp {
 				b.Data.Level++
 				b.Data.Exp -= needExp

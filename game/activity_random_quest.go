@@ -27,7 +27,7 @@ func randomQuestInit(a *ActivityDefault, t time.Time) {
 		return
 	}
 	questId := activityCfg.QuestIds[rand.Intn(len(activityCfg.QuestIds))]
-	questCfg := cfg.GetQuestCfgMgr().GetQuestCfg(questId)
+	questCfg := cfg.Quests.GetCfg(questId)
 	if questCfg == nil {
 		slog.Error("randomQuestInitErr")
 		return
