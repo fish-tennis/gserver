@@ -146,6 +146,8 @@ C#: [gnet_csharp](https://github.com/fish-tennis/gnet_csharp)
 ## Excel表导出工具
 [excelexporter](https://github.com/fish-tennis/excelexporter)
 
+gserver的excel/tool目录下有编译好的执行程序
+
 ## proto预处理工具
 [proto_code_gen](https://github.com/fish-tennis/proto_code_gen)
 

@@ -9,7 +9,6 @@ ProtoPath: "./../../proto"
 
 #需要解析的proto文件
 ProtoFiles:
-  - "export.proto"
   - "cfg.proto"
 
 #可选项:导出md5文件完整路径
