@@ -117,7 +117,7 @@ func (this *GameServer) readConfig() {
 // 加载配置数据
 func (this *GameServer) loadCfgs() {
 	//cfg.LoadAllCfgs("cfgdata", cfg.LoadCfgFilter)
-	err := cfg.Load("cfgdata", cfg.Process, nil)
+	err := cfg.Load("cfgdata", nil)
 	if err != nil {
 		panic(fmt.Sprintf("loadCfgs:%v", err))
 	}

@@ -4,25 +4,39 @@ package cfg
 import (
     "errors"
     "github.com/fish-tennis/gserver/pb"
+    "path/filepath"
+    "strings"
     "sync/atomic"
 )
 
 var (
     ErrLoadingConcurrency = errors.New("loading concurrency")
     isLoading   = int32(0)
+    register = &processRegister{}
+
     {{range.Mgrs}}//{{.CodeComment}}
     {{if eq .MgrType "map"}}{{.MgrName}} *DataMap[*pb.{{.MessageName}}]{{end}}
     {{if eq .MgrType "slice"}}{{.MgrName}} *DataSlice[*pb.{{.MessageName}}]{{end}}
     {{if eq .MgrType "object"}}{{.MgrName}} *pb.{{.MessageName}}{{end}}{{end}}
 )
 
-// processFn:预处理接口
+// 预处理接口注册
+type processRegister struct {
+    {{range.Mgrs}}{{if eq .MgrType "map"}}{{.MgrName}}Process func(mgr *DataMap[*pb.{{.MessageName}}]) error{{end}}
+    {{if eq .MgrType "slice"}}{{.MgrName}}Process func(mgr *DataSlice[*pb.{{.MessageName}}]) error{{end}}
+    {{if eq .MgrType "object"}}{{.MgrName}}Process func(obj *pb.{{.MessageName}}) error{{end}}{{end}}
+}
+
 // filter:过滤接口,返回false则不加载该文件
-func Load(dataDir string, processFn func(mgr any, mgrName,messageName,fileName string) error, filter func(fileName string) bool) error {
+func Load(dataDir string, filter func(fileName string) bool) error {
     if !atomic.CompareAndSwapInt32(&isLoading, 0, 1) {
         return ErrLoadingConcurrency
     }
     defer atomic.StoreInt32(&isLoading, 0)
+    dataDir = filepath.ToSlash(dataDir)
+    if strings.LastIndexByte(dataDir, filepath.Separator) != len(dataDir)-1 {
+        dataDir += string(filepath.Separator)
+    }
     var err error
     {{range.Mgrs}}
     if filter == nil || filter("{{.FileName}}") {
@@ -34,16 +48,18 @@ func Load(dataDir string, processFn func(mgr any, mgrName,messageName,fileName s
         {{end}}if err != nil {
             return err
         }
-        if processFn != nil {
-            // 预处理数据
-            err = processFn(tmp{{.MgrName}}, "{{.MgrName}}", "{{.MessageName}}", "{{.FileName}}")
-            if err != nil {
-                return err
-            }
-        }
         // 最后再赋值给全局变量(引用赋值是原子操作)
         {{.MgrName}} = tmp{{.MgrName}}
     }{{end}}
+
+    {{range.Mgrs}}
+    if register.{{.MgrName}}Process != nil {
+        // 预处理数据
+        err = register.{{.MgrName}}Process({{.MgrName}})
+        if err != nil {
+            return err
+        }
+    }
+    {{end}}
     return err
 }
-

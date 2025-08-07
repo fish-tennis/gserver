@@ -8,9 +8,13 @@ var (
 	MaxLevel int32
 )
 
-func LevelAfterLoad(mgr any, mgrName, messageName, fileName string) {
-	levels := mgr.(*DataSlice[*pb.LevelExp])
-	MaxLevel = int32(levels.Len())
+func init() {
+	register.LevelExpsProcess = LevelAfterLoad
+}
+
+func LevelAfterLoad(mgr *DataSlice[*pb.LevelExp]) error {
+	MaxLevel = int32(mgr.Len())
+	return nil
 }
 
 // 下一级所需要经验值

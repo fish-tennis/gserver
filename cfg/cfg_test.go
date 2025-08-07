@@ -9,8 +9,7 @@ import (
 
 func TestCfgLoad(t *testing.T) {
 	dir := "./../cfgdata/"
-	//LoadAllCfgs(dir, LoadCfgFilter)
-	err := Load(dir, Process, nil)
+	err := Load(dir, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

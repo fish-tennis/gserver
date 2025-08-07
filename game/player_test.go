@@ -73,7 +73,7 @@ func initTestEnv(t *testing.T) {
 	InitPlayerStructAndHandler()
 	AutoRegisterPlayerPacketHandler(nil)
 	//cfg.LoadAllCfgs("./../cfgdata", cfg.LoadCfgFilter)
-	cfg.Load("./../cfgdata", cfg.Process, nil)
+	cfg.Load("./../cfgdata", nil)
 }
 
 func TestSaveable(t *testing.T) {
