@@ -15,6 +15,12 @@ var (
     register = &processRegister{}
 
     //
+    ExchangeCfgs *DataMap[*pb.ExchangeCfg]
+    
+    //任务数据
+    Quests *DataMap[*pb.QuestCfg]
+    
+    //
     ActivityCfgs *DataMap[*pb.ActivityCfg]
     
     //物品数据
@@ -29,17 +35,15 @@ var (
     //
     
     LevelExps *DataSlice[*pb.LevelExp]
-    //
-    ExchangeCfgs *DataMap[*pb.ExchangeCfg]
-    
-    //任务数据
-    Quests *DataMap[*pb.QuestCfg]
-    
     
 )
 
 // 预处理接口注册
 type processRegister struct {
+    ExchangeCfgsProcess func(mgr *DataMap[*pb.ExchangeCfg]) error
+    
+    QuestsProcess func(mgr *DataMap[*pb.QuestCfg]) error
+    
     ActivityCfgsProcess func(mgr *DataMap[*pb.ActivityCfg]) error
     
     ItemCfgsProcess func(mgr *DataMap[*pb.ItemCfg]) error
@@ -50,10 +54,6 @@ type processRegister struct {
     
     
     LevelExpsProcess func(mgr *DataSlice[*pb.LevelExp]) error
-    ExchangeCfgsProcess func(mgr *DataMap[*pb.ExchangeCfg]) error
-    
-    QuestsProcess func(mgr *DataMap[*pb.QuestCfg]) error
-    
     
 }
 
@@ -69,6 +69,26 @@ func Load(dataDir string, filter func(fileName string) bool) error {
     }
     var err error
     
+    if filter == nil || filter("exchange.json") {
+        // 考虑到并发安全,这里先加载到临时变量
+        tmpExchangeCfgs := NewDataMap[*pb.ExchangeCfg]()
+        err = tmpExchangeCfgs.LoadJson(dataDir+"exchange.json")
+        if err != nil {
+            return err
+        }
+        // 最后再赋值给全局变量(引用赋值是原子操作)
+        ExchangeCfgs = tmpExchangeCfgs
+    }
+    if filter == nil || filter("Quests.json") {
+        // 考虑到并发安全,这里先加载到临时变量
+        tmpQuests := NewDataMap[*pb.QuestCfg]()
+        err = tmpQuests.LoadJson(dataDir+"Quests.json")
+        if err != nil {
+            return err
+        }
+        // 最后再赋值给全局变量(引用赋值是原子操作)
+        Quests = tmpQuests
+    }
     if filter == nil || filter("activitycfg.json") {
         // 考虑到并发安全,这里先加载到临时变量
         tmpActivityCfgs := NewDataMap[*pb.ActivityCfg]()
@@ -119,27 +139,23 @@ func Load(dataDir string, filter func(fileName string) bool) error {
         // 最后再赋值给全局变量(引用赋值是原子操作)
         LevelExps = tmpLevelExps
     }
-    if filter == nil || filter("exchange.json") {
-        // 考虑到并发安全,这里先加载到临时变量
-        tmpExchangeCfgs := NewDataMap[*pb.ExchangeCfg]()
-        err = tmpExchangeCfgs.LoadJson(dataDir+"exchange.json")
-        if err != nil {
-            return err
-        }
-        // 最后再赋值给全局变量(引用赋值是原子操作)
-        ExchangeCfgs = tmpExchangeCfgs
-    }
-    if filter == nil || filter("Quests.json") {
-        // 考虑到并发安全,这里先加载到临时变量
-        tmpQuests := NewDataMap[*pb.QuestCfg]()
-        err = tmpQuests.LoadJson(dataDir+"Quests.json")
-        if err != nil {
-            return err
-        }
-        // 最后再赋值给全局变量(引用赋值是原子操作)
-        Quests = tmpQuests
-    }
 
+    
+    if register.ExchangeCfgsProcess != nil {
+        // 预处理数据
+        err = register.ExchangeCfgsProcess(ExchangeCfgs)
+        if err != nil {
+            return err
+        }
+    }
+    
+    if register.QuestsProcess != nil {
+        // 预处理数据
+        err = register.QuestsProcess(Quests)
+        if err != nil {
+            return err
+        }
+    }
     
     if register.ActivityCfgsProcess != nil {
         // 预处理数据
@@ -176,22 +192,6 @@ func Load(dataDir string, filter func(fileName string) bool) error {
     if register.LevelExpsProcess != nil {
         // 预处理数据
         err = register.LevelExpsProcess(LevelExps)
-        if err != nil {
-            return err
-        }
-    }
-    
-    if register.ExchangeCfgsProcess != nil {
-        // 预处理数据
-        err = register.ExchangeCfgsProcess(ExchangeCfgs)
-        if err != nil {
-            return err
-        }
-    }
-    
-    if register.QuestsProcess != nil {
-        // 预处理数据
-        err = register.QuestsProcess(Quests)
         if err != nil {
             return err
         }
