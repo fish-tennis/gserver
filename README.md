@@ -133,7 +133,9 @@ func (g *GuildBaseInfo) HandleGuildDataViewReq(m *GuildMessage, req *pb.GuildDat
 编译运行
 
 ## 测试
-测试客户端[gtestclient](https://github.com/fish-tennis/gtestclient)
+go测试客户端[gtestclient](https://github.com/fish-tennis/gtestclient)
+
+c#测试客户端[cshap_client](https://github.com/fish-tennis/cshap_client)
 
 ## 编码规范参考
 [https://github.com/uber-go/guide](https://github.com/uber-go/guide)
