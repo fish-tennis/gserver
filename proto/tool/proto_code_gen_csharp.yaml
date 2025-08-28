@@ -1,0 +1,11 @@
+#生成C#的接口
+ProtoCodes:
+  #代码模板
+  Template: "./csharp.cs.template"
+  #代码输出目录
+  OutDir: "./../../../cshap_client/cshap_client/pb"
+  #文件名匹配
+  FileFilter:
+    - ".*.pb.go"
+  #结构体名匹配
+  MessageFilter:

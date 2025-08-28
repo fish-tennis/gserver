@@ -9,3 +9,11 @@ REM /XF file1.pb.go file2.pb.go 表示排除指定的文件
 ) else (
     echo not find gtestclient
 )
+
+if exist .\..\..\..\cshap_client (
+    .\protoc.exe --csharp_out=.\..\..\..\cshap_client\cshap_client\pb\ --proto_path=.\..\ .\..\*.proto
+	copy .\..\..\gen\message_command_mapping.json .\..\..\..\cshap_client\cshap_client\gen\message_command_mapping.json
+	.\proto_code_gen.exe -input=.\..\..\pb\*.pb.go -config=.\proto_code_gen_csharp.yaml
+) else (
+    echo not find cshap_client
+)

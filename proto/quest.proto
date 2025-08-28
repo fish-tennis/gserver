@@ -18,6 +18,11 @@ message QuestUpdate {
   QuestData data = 2;
 }
 
+// 删除一个任务
+message QuestRemoveRes {
+  int32 questCfgId = 1; // 任务id
+}
+
 // 完成任务
 message FinishQuestReq {
   int32 questCfgId = 1; // 任务id
@@ -26,4 +31,5 @@ message FinishQuestReq {
 // 完成任务的返回结果
 message FinishQuestRes {
   int32 questCfgId = 1; // 任务id
+  FinishedQuestData finishedQuestData = 2; // 完成任务的数据
 }

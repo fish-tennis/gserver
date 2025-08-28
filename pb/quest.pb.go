@@ -132,6 +132,54 @@ func (x *QuestUpdate) GetData() *QuestData {
 	return nil
 }
 
+// 删除一个任务
+type QuestRemoveRes struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	QuestCfgId int32 `protobuf:"varint,1,opt,name=questCfgId,proto3" json:"questCfgId,omitempty"` // 任务id
+}
+
+func (x *QuestRemoveRes) Reset() {
+	*x = QuestRemoveRes{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_quest_proto_msgTypes[2]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *QuestRemoveRes) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QuestRemoveRes) ProtoMessage() {}
+
+func (x *QuestRemoveRes) ProtoReflect() protoreflect.Message {
+	mi := &file_quest_proto_msgTypes[2]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use QuestRemoveRes.ProtoReflect.Descriptor instead.
+func (*QuestRemoveRes) Descriptor() ([]byte, []int) {
+	return file_quest_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *QuestRemoveRes) GetQuestCfgId() int32 {
+	if x != nil {
+		return x.QuestCfgId
+	}
+	return 0
+}
+
 // 完成任务
 type FinishQuestReq struct {
 	state         protoimpl.MessageState
@@ -144,7 +192,7 @@ type FinishQuestReq struct {
 func (x *FinishQuestReq) Reset() {
 	*x = FinishQuestReq{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_quest_proto_msgTypes[2]
+		mi := &file_quest_proto_msgTypes[3]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -157,7 +205,7 @@ func (x *FinishQuestReq) String() string {
 func (*FinishQuestReq) ProtoMessage() {}
 
 func (x *FinishQuestReq) ProtoReflect() protoreflect.Message {
-	mi := &file_quest_proto_msgTypes[2]
+	mi := &file_quest_proto_msgTypes[3]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -170,7 +218,7 @@ func (x *FinishQuestReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FinishQuestReq.ProtoReflect.Descriptor instead.
 func (*FinishQuestReq) Descriptor() ([]byte, []int) {
-	return file_quest_proto_rawDescGZIP(), []int{2}
+	return file_quest_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *FinishQuestReq) GetQuestCfgId() int32 {
@@ -186,13 +234,14 @@ type FinishQuestRes struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	QuestCfgId int32 `protobuf:"varint,1,opt,name=questCfgId,proto3" json:"questCfgId,omitempty"` // 任务id
+	QuestCfgId        int32              `protobuf:"varint,1,opt,name=questCfgId,proto3" json:"questCfgId,omitempty"`              // 任务id
+	FinishedQuestData *FinishedQuestData `protobuf:"bytes,2,opt,name=finishedQuestData,proto3" json:"finishedQuestData,omitempty"` // 完成任务的数据
 }
 
 func (x *FinishQuestRes) Reset() {
 	*x = FinishQuestRes{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_quest_proto_msgTypes[3]
+		mi := &file_quest_proto_msgTypes[4]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -205,7 +254,7 @@ func (x *FinishQuestRes) String() string {
 func (*FinishQuestRes) ProtoMessage() {}
 
 func (x *FinishQuestRes) ProtoReflect() protoreflect.Message {
-	mi := &file_quest_proto_msgTypes[3]
+	mi := &file_quest_proto_msgTypes[4]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -218,7 +267,7 @@ func (x *FinishQuestRes) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FinishQuestRes.ProtoReflect.Descriptor instead.
 func (*FinishQuestRes) Descriptor() ([]byte, []int) {
-	return file_quest_proto_rawDescGZIP(), []int{3}
+	return file_quest_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *FinishQuestRes) GetQuestCfgId() int32 {
@@ -226,6 +275,13 @@ func (x *FinishQuestRes) GetQuestCfgId() int32 {
 		return x.QuestCfgId
 	}
 	return 0
+}
+
+func (x *FinishQuestRes) GetFinishedQuestData() *FinishedQuestData {
+	if x != nil {
+		return x.FinishedQuestData
+	}
+	return nil
 }
 
 var File_quest_proto protoreflect.FileDescriptor
@@ -257,14 +313,22 @@ var file_quest_proto_rawDesc = []byte{
 	0x01, 0x28, 0x05, 0x52, 0x0a, 0x71, 0x75, 0x65, 0x73, 0x74, 0x43, 0x66, 0x67, 0x49, 0x64, 0x12,
 	0x26, 0x0a, 0x04, 0x64, 0x61, 0x74, 0x61, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x12, 0x2e,
 	0x67, 0x73, 0x65, 0x72, 0x76, 0x65, 0x72, 0x2e, 0x51, 0x75, 0x65, 0x73, 0x74, 0x44, 0x61, 0x74,
-	0x61, 0x52, 0x04, 0x64, 0x61, 0x74, 0x61, 0x22, 0x30, 0x0a, 0x0e, 0x46, 0x69, 0x6e, 0x69, 0x73,
-	0x68, 0x51, 0x75, 0x65, 0x73, 0x74, 0x52, 0x65, 0x71, 0x12, 0x1e, 0x0a, 0x0a, 0x71, 0x75, 0x65,
+	0x61, 0x52, 0x04, 0x64, 0x61, 0x74, 0x61, 0x22, 0x30, 0x0a, 0x0e, 0x51, 0x75, 0x65, 0x73, 0x74,
+	0x52, 0x65, 0x6d, 0x6f, 0x76, 0x65, 0x52, 0x65, 0x73, 0x12, 0x1e, 0x0a, 0x0a, 0x71, 0x75, 0x65,
 	0x73, 0x74, 0x43, 0x66, 0x67, 0x49, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x05, 0x52, 0x0a, 0x71,
 	0x75, 0x65, 0x73, 0x74, 0x43, 0x66, 0x67, 0x49, 0x64, 0x22, 0x30, 0x0a, 0x0e, 0x46, 0x69, 0x6e,
-	0x69, 0x73, 0x68, 0x51, 0x75, 0x65, 0x73, 0x74, 0x52, 0x65, 0x73, 0x12, 0x1e, 0x0a, 0x0a, 0x71,
+	0x69, 0x73, 0x68, 0x51, 0x75, 0x65, 0x73, 0x74, 0x52, 0x65, 0x71, 0x12, 0x1e, 0x0a, 0x0a, 0x71,
 	0x75, 0x65, 0x73, 0x74, 0x43, 0x66, 0x67, 0x49, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x05, 0x52,
-	0x0a, 0x71, 0x75, 0x65, 0x73, 0x74, 0x43, 0x66, 0x67, 0x49, 0x64, 0x42, 0x06, 0x5a, 0x04, 0x2e,
-	0x2f, 0x70, 0x62, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x0a, 0x71, 0x75, 0x65, 0x73, 0x74, 0x43, 0x66, 0x67, 0x49, 0x64, 0x22, 0x7a, 0x0a, 0x0e, 0x46,
+	0x69, 0x6e, 0x69, 0x73, 0x68, 0x51, 0x75, 0x65, 0x73, 0x74, 0x52, 0x65, 0x73, 0x12, 0x1e, 0x0a,
+	0x0a, 0x71, 0x75, 0x65, 0x73, 0x74, 0x43, 0x66, 0x67, 0x49, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28,
+	0x05, 0x52, 0x0a, 0x71, 0x75, 0x65, 0x73, 0x74, 0x43, 0x66, 0x67, 0x49, 0x64, 0x12, 0x48, 0x0a,
+	0x11, 0x66, 0x69, 0x6e, 0x69, 0x73, 0x68, 0x65, 0x64, 0x51, 0x75, 0x65, 0x73, 0x74, 0x44, 0x61,
+	0x74, 0x61, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1a, 0x2e, 0x67, 0x73, 0x65, 0x72, 0x76,
+	0x65, 0x72, 0x2e, 0x46, 0x69, 0x6e, 0x69, 0x73, 0x68, 0x65, 0x64, 0x51, 0x75, 0x65, 0x73, 0x74,
+	0x44, 0x61, 0x74, 0x61, 0x52, 0x11, 0x66, 0x69, 0x6e, 0x69, 0x73, 0x68, 0x65, 0x64, 0x51, 0x75,
+	0x65, 0x73, 0x74, 0x44, 0x61, 0x74, 0x61, 0x42, 0x06, 0x5a, 0x04, 0x2e, 0x2f, 0x70, 0x62, 0x62,
+	0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -279,28 +343,30 @@ func file_quest_proto_rawDescGZIP() []byte {
 	return file_quest_proto_rawDescData
 }
 
-var file_quest_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_quest_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_quest_proto_goTypes = []interface{}{
 	(*QuestSync)(nil),         // 0: gserver.QuestSync
 	(*QuestUpdate)(nil),       // 1: gserver.QuestUpdate
-	(*FinishQuestReq)(nil),    // 2: gserver.FinishQuestReq
-	(*FinishQuestRes)(nil),    // 3: gserver.FinishQuestRes
-	nil,                       // 4: gserver.QuestSync.FinishedEntry
-	nil,                       // 5: gserver.QuestSync.QuestsEntry
-	(*QuestData)(nil),         // 6: gserver.QuestData
-	(*FinishedQuestData)(nil), // 7: gserver.FinishedQuestData
+	(*QuestRemoveRes)(nil),    // 2: gserver.QuestRemoveRes
+	(*FinishQuestReq)(nil),    // 3: gserver.FinishQuestReq
+	(*FinishQuestRes)(nil),    // 4: gserver.FinishQuestRes
+	nil,                       // 5: gserver.QuestSync.FinishedEntry
+	nil,                       // 6: gserver.QuestSync.QuestsEntry
+	(*QuestData)(nil),         // 7: gserver.QuestData
+	(*FinishedQuestData)(nil), // 8: gserver.FinishedQuestData
 }
 var file_quest_proto_depIdxs = []int32{
-	4, // 0: gserver.QuestSync.finished:type_name -> gserver.QuestSync.FinishedEntry
-	5, // 1: gserver.QuestSync.quests:type_name -> gserver.QuestSync.QuestsEntry
-	6, // 2: gserver.QuestUpdate.data:type_name -> gserver.QuestData
-	7, // 3: gserver.QuestSync.FinishedEntry.value:type_name -> gserver.FinishedQuestData
-	6, // 4: gserver.QuestSync.QuestsEntry.value:type_name -> gserver.QuestData
-	5, // [5:5] is the sub-list for method output_type
-	5, // [5:5] is the sub-list for method input_type
-	5, // [5:5] is the sub-list for extension type_name
-	5, // [5:5] is the sub-list for extension extendee
-	0, // [0:5] is the sub-list for field type_name
+	5, // 0: gserver.QuestSync.finished:type_name -> gserver.QuestSync.FinishedEntry
+	6, // 1: gserver.QuestSync.quests:type_name -> gserver.QuestSync.QuestsEntry
+	7, // 2: gserver.QuestUpdate.data:type_name -> gserver.QuestData
+	8, // 3: gserver.FinishQuestRes.finishedQuestData:type_name -> gserver.FinishedQuestData
+	8, // 4: gserver.QuestSync.FinishedEntry.value:type_name -> gserver.FinishedQuestData
+	7, // 5: gserver.QuestSync.QuestsEntry.value:type_name -> gserver.QuestData
+	6, // [6:6] is the sub-list for method output_type
+	6, // [6:6] is the sub-list for method input_type
+	6, // [6:6] is the sub-list for extension type_name
+	6, // [6:6] is the sub-list for extension extendee
+	0, // [0:6] is the sub-list for field type_name
 }
 
 func init() { file_quest_proto_init() }
@@ -335,7 +401,7 @@ func file_quest_proto_init() {
 			}
 		}
 		file_quest_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*FinishQuestReq); i {
+			switch v := v.(*QuestRemoveRes); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -347,6 +413,18 @@ func file_quest_proto_init() {
 			}
 		}
 		file_quest_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*FinishQuestReq); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_quest_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*FinishQuestRes); i {
 			case 0:
 				return &v.state
@@ -365,7 +443,7 @@ func file_quest_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_quest_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   6,
+			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

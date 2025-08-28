@@ -21,5 +21,9 @@ func TestCfgLoad(t *testing.T) {
 		slog.Info("ActivityCfg", "CfgId", e.CfgId, "QuestIds", e.QuestIds, "ExchangeIds", e.ExchangeIds)
 		return true
 	})
+	ConditionTemplateCfgs.Range(func(e *pb.ConditionTemplateCfg) bool {
+		slog.Info("ConditionTemplateCfg", "CfgId", e.CfgId, "Conditions", e)
+		return true
+	})
 	time.Sleep(time.Second)
 }

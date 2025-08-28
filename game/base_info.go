@@ -73,6 +73,7 @@ func (b *BaseInfo) IncExp(incExp int32) {
 	}
 	// 修改了需要保存的数据后,必须设置标记
 	b.SetDirty()
+	b.SyncDataToClient() // 同步数据给客户端
 }
 
 func (b *BaseInfo) TriggerPlayerExit(event *internal.EventPlayerExit) {

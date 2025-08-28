@@ -86,6 +86,9 @@ func (q *Quest) AddQuest(questData *pb.QuestData) {
 
 func (q *Quest) RemoveQuest(questCfgId int32) {
 	q.Quests.Delete(questCfgId)
+	q.GetPlayer().Send(&pb.QuestRemoveRes{
+		QuestCfgId: questCfgId,
+	})
 }
 
 // 遍历某个活动关联的当前任务
@@ -125,14 +128,16 @@ func (q *Quest) OnFinishQuestReq(req *pb.FinishQuestReq) (*pb.FinishQuestRes, er
 		questCfg := cfg.Quests.GetCfg(questData.GetCfgId())
 		if questData.GetProgress() >= questCfg.Progress.GetTotal() {
 			q.Quests.Delete(questData.GetCfgId())
-			q.Finished.Set(questData.GetCfgId(), &pb.FinishedQuestData{
+			finishedData := &pb.FinishedQuestData{
 				Timestamp: int32(q.GetPlayer().GetTimerEntries().Now().Unix()),
-			})
+			}
+			q.Finished.Set(questData.GetCfgId(), finishedData)
 			q.GetPlayer().progressEventMapping.RemoveProgress(questCfg.Progress, questData.GetCfgId())
 			// 任务奖励
 			q.GetPlayer().GetBags().AddItems(questCfg.GetRewards())
 			return &pb.FinishQuestRes{
-				QuestCfgId: questData.GetCfgId(),
+				QuestCfgId:        questData.GetCfgId(),
+				FinishedQuestData: finishedData,
 			}, nil
 		}
 		return nil, errors.New("quest not finish")
