@@ -18,7 +18,9 @@
     "CfgId": 3,
     "Event": "EventFight",
     "IntEventFields": {
-      "IsPvp": null
+      "IsPvp": {
+        "Op": "1"
+      }
     },
     "Type": 1
   },
@@ -26,7 +28,18 @@
     "CfgId": 4,
     "Event": "EventFight",
     "IntEventFields": {
-      "IsPvp": null
+      "IsPvp": {
+        "Op": "=",
+        "Values": [
+          1
+        ]
+      },
+      "IsWin": {
+        "Op": "=",
+        "Values": [
+          1
+        ]
+      }
     },
     "Type": 1
   },
@@ -34,8 +47,32 @@
     "CfgId": 5,
     "Event": "EventFight",
     "IntEventFields": {
-      "3#RoomLevel": null,
-      "IsWin": null
+      "IsWin": {
+        "Op": "=",
+        "Values": [
+          1
+        ]
+      },
+      "RoomLevel": {
+        "Op": "\u003e",
+        "Values": [
+          3
+        ]
+      },
+      "RoomType": {
+        "Op": "=",
+        "Values": [
+          2,
+          3
+        ]
+      },
+      "Score": {
+        "Op": "[]",
+        "Values": [
+          100,
+          200
+        ]
+      }
     },
     "Type": 1
   },

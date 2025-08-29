@@ -1,14 +1,59 @@
 {
   "10001": {
     "CfgId": 10001,
-    "CountLimit": 1
+    "CountLimit": 1,
+    "Rewards": [
+      {
+        "CfgId": 0,
+        "Num": 0,
+        "TimeType": 2
+      }
+    ]
   },
   "50001": {
     "CfgId": 50001,
-    "CountLimit": 1
+    "Consumes": [
+      {
+        "CfgId": 0,
+        "Num": 1,
+        "UniqueId": 0
+      },
+      {
+        "CfgId": 0,
+        "Num": 2,
+        "UniqueId": 0
+      }
+    ],
+    "CountLimit": 1,
+    "Rewards": [
+      {
+        "CfgId": 0,
+        "Num": 0,
+        "TimeType": 1
+      }
+    ]
   },
   "50002": {
     "CfgId": 50002,
-    "CountLimit": 2
+    "Consumes": [
+      {
+        "CfgId": 0,
+        "Num": 1,
+        "UniqueId": 0
+      },
+      {
+        "CfgId": 0,
+        "Num": 2,
+        "UniqueId": 0
+      }
+    ],
+    "CountLimit": 2,
+    "Rewards": [
+      {
+        "CfgId": 0,
+        "Num": 0,
+        "TimeType": 10
+      }
+    ]
   }
 }
