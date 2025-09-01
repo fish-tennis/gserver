@@ -133,7 +133,7 @@ message ConditionTemplateCfg {
   string Key = 2; // 关键字,如ConditionType_PlayerPropertyCompare对应的属性名
   string Op = 3; // 操作符 = > >= < <= != [] ![]
   map<string,string> Properties = 5; // 扩展属性
-  // TODO: 客户端是否可以直接计算
+  bool ClientCheck = 6; // 客户端是否可以直接判断条件,比如玩家的等级
 }
 
 // 进度配置(ProgressTemplateCfg + Total)
@@ -179,7 +179,7 @@ message ActivityCfg {
   string Detail = 3;
   string Template = 4; // 活动模板名
   int32 RefreshType = 5; // 刷新机制(enum RefreshType)
-  int32 CycleType = 6; // 活动周期
+  int32 CycleType = 6; // 活动周期类型
   int32 TimeType = 7; // 时间类型(enum TimeType)
   int32 BeginTime = 8; // 开始时间(TimeType为TimeType_Timestamp时,格式是时间戳 TimeType为TimeType_Date时,格式是20240219)
   int32 EndTime = 9; // 结束时间(TimeType为TimeType_Timestamp时,格式是时间戳 TimeType为TimeType_Date时,格式是20240219)

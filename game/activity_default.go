@@ -86,7 +86,7 @@ func (a *ActivityDefault) OnDateChange(oldDate time.Time, curDate time.Time) {
 	}
 	// 活动数据刷新,如活动的子任务可能是每日刷新的
 	if activityCfg.RefreshType != 0 {
-		a.Refresh(curDate, activityCfg.RefreshType)
+		a.Refresh(curDate, int32(pb.RefreshType_RefreshType_Day))
 	}
 }
 
