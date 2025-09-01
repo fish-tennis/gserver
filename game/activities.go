@@ -111,7 +111,12 @@ func (a *Activities) AddAllActivitiesCanJoin(t time.Time) {
 	cfg.ActivityCfgs.Range(func(activityCfg *pb.ActivityCfg) bool {
 		if a.GetActivity(activityCfg.CfgId) == nil {
 			if a.CanJoin(activityCfg, t) {
-				a.AddNewActivity(activityCfg, t)
+				activity := a.AddNewActivity(activityCfg, t)
+				if activity != nil {
+					if syncer, ok := activity.(DataSyncer); ok {
+						syncer.SyncDataToClient()
+					}
+				}
 			}
 		}
 		return true

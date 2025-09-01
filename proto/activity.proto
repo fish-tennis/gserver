@@ -8,6 +8,11 @@ import "player.proto";
 
 // 同步活动数据给客户端
 message ActivitySync {
-  int32 activityId = 1; // 活动id
-  ActivityDefaultBaseData baseData = 2; // 活动数据
+  int32 ActivityId = 1; // 活动id
+  ActivityDefaultBaseData BaseData = 2; // 活动数据
+}
+
+// 删除一个活动
+message ActivityRemoveRes {
+  int32 ActivityId = 1; // 活动id
 }

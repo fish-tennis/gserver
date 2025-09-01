@@ -4,6 +4,7 @@ option go_package = "./pb";
 
 package gserver;
 
+import "cfg.proto";
 import "player.proto";
 
 // 同步兑换数据给客户端
@@ -23,13 +24,11 @@ message ExchangeRemove {
 
 // 兑换请求req
 message ExchangeReq {
-  int32 CfgId = 1; // 兑换配置id
-  int32 Count = 2; // 兑换数量(批量兑换)
+  repeated IdCount IdCounts = 1; // 支持批量兑换
 }
 
 // 兑换请求res
 message ExchangeRes {
-  int32 CfgId = 1; // 兑换配置id
-  int32 Count = 2; // 本次兑换数量(批量兑换)
-  int32 CurrentCount = 3; // 当前已兑换数量
+  repeated IdCount IdCounts = 1; // 兑换请求数据
+  repeated ExchangeRecord Records = 2; // 当前兑换记录
 }

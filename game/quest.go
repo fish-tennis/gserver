@@ -1,7 +1,6 @@
 package game
 
 import (
-	"errors"
 	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gserver/cfg"
 	"github.com/fish-tennis/gserver/internal"
@@ -124,23 +123,23 @@ func (q *Quest) TriggerPlayerEntryGame(event *internal.EventPlayerEntryGame) {
 // 这种格式写的函数可以自动注册客户端消息回调
 func (q *Quest) OnFinishQuestReq(req *pb.FinishQuestReq) (*pb.FinishQuestRes, error) {
 	logger.Debug("OnFinishQuestReq:%v", req)
-	if questData, ok := q.Quests.Data[req.QuestCfgId]; ok {
-		questCfg := cfg.Quests.GetCfg(questData.GetCfgId())
-		if questData.GetProgress() >= questCfg.Progress.GetTotal() {
-			q.Quests.Delete(questData.GetCfgId())
-			finishedData := &pb.FinishedQuestData{
-				Timestamp: int32(q.GetPlayer().GetTimerEntries().Now().Unix()),
+	res := &pb.FinishQuestRes{}
+	for _, questCfgId := range req.GetQuestCfgIds() {
+		if questData, ok := q.Quests.Data[questCfgId]; ok {
+			questCfg := cfg.Quests.GetCfg(questData.GetCfgId())
+			if questData.GetProgress() >= questCfg.Progress.GetTotal() {
+				q.Quests.Delete(questData.GetCfgId())
+				finishedData := &pb.FinishedQuestData{
+					Timestamp: int32(q.GetPlayer().GetTimerEntries().Now().Unix()),
+				}
+				q.Finished.Set(questData.GetCfgId(), finishedData)
+				q.GetPlayer().progressEventMapping.RemoveProgress(questCfg.Progress, questData.GetCfgId())
+				// 任务奖励
+				q.GetPlayer().GetBags().AddItems(questCfg.GetRewards())
+				res.QuestCfgIds = append(res.QuestCfgIds, questCfgId)
+				res.FinishedQuestDatas = append(res.FinishedQuestDatas, finishedData)
 			}
-			q.Finished.Set(questData.GetCfgId(), finishedData)
-			q.GetPlayer().progressEventMapping.RemoveProgress(questCfg.Progress, questData.GetCfgId())
-			// 任务奖励
-			q.GetPlayer().GetBags().AddItems(questCfg.GetRewards())
-			return &pb.FinishQuestRes{
-				QuestCfgId:        questData.GetCfgId(),
-				FinishedQuestData: finishedData,
-			}, nil
 		}
-		return nil, errors.New("quest not finish")
 	}
-	return nil, errors.New("quest not exist")
+	return res, nil
 }

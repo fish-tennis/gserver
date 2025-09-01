@@ -78,15 +78,17 @@ func (p *Player) OnTestCmd(req *pb.TestCmd) {
 		if strings.ToLower(cmdArgs[0]) == "all" {
 			for cfgId, _ := range p.GetQuest().Quests.Data {
 				p.GetQuest().OnFinishQuestReq(&pb.FinishQuestReq{
-					QuestCfgId: cfgId,
+					QuestCfgIds: []int32{cfgId},
 				})
 			}
 		} else {
-			// 完成某一个任务
-			cfgId := int32(util.Atoi(cmdArgs[0]))
-			p.GetQuest().OnFinishQuestReq(&pb.FinishQuestReq{
-				QuestCfgId: cfgId,
-			})
+			// 完成1个或多个任务
+			questReq := &pb.FinishQuestReq{}
+			for _, arg := range cmdArgs {
+				cfgId := int32(util.Atoi(arg))
+				questReq.QuestCfgIds = append(questReq.QuestCfgIds, cfgId)
+			}
+			p.GetQuest().OnFinishQuestReq(questReq)
 		}
 
 	case strings.ToLower("Fight"):
@@ -136,15 +138,19 @@ func (p *Player) OnTestCmd(req *pb.TestCmd) {
 			p.SendErrorRes(cmd, "Exchange cmdArgs error")
 			return
 		}
-		cfgId := int32(util.Atoi(cmdArgs[0]))
-		count := int32(1)
-		if len(cmdArgs) > 1 {
-			count = int32(util.Atoi(cmdArgs[1]))
+		exchangeReq := &pb.ExchangeReq{}
+		for i := 0; i < len(cmdArgs); i += 2 {
+			cfgId := int32(util.Atoi(cmdArgs[i]))
+			count := int32(1)
+			if i+1 < len(cmdArgs) {
+				count = int32(util.Atoi(cmdArgs[i+1]))
+			}
+			exchangeReq.IdCounts = append(exchangeReq.IdCounts, &pb.IdCount{
+				Id:    cfgId,
+				Count: count,
+			})
 		}
-		p.GetExchange().OnExchangeReq(&pb.ExchangeReq{
-			CfgId: cfgId,
-			Count: count,
-		})
+		p.GetExchange().OnExchangeReq(exchangeReq)
 
 	case strings.ToLower("GuildRouteError"):
 		// 模拟一个rpc错误,向一个不存在的公会发送rpc消息
@@ -172,6 +178,7 @@ func (p *Player) OnTestCmd(req *pb.TestCmd) {
 					slog.Error("OnTestCmd fieldNameError", "messageName", messageName, "fieldName", fieldName)
 					continue
 				}
+				// NOTE: 暂不支持repeated和map类型的字段的动态赋值
 				switch fieldVal.Kind() {
 				case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 					fieldVal.SetInt(int64(util.Atoi(fieldValue)))

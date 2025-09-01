@@ -25,11 +25,11 @@ message QuestRemoveRes {
 
 // 完成任务
 message FinishQuestReq {
-  int32 questCfgId = 1; // 任务id
+  repeated int32 questCfgIds = 1; // 任务id
 }
 
 // 完成任务的返回结果
 message FinishQuestRes {
-  int32 questCfgId = 1; // 任务id
-  FinishedQuestData finishedQuestData = 2; // 完成任务的数据
+  repeated int32 questCfgIds = 1; // 任务id
+  repeated FinishedQuestData finishedQuestDatas = 2; // 完成任务的数据
 }

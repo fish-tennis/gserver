@@ -11,10 +11,10 @@ type ElemContainer interface {
 	GetElemCount(elemCfgId int32) int32
 
 	// 添加元素,返回实际添加数量
-	AddElem(arg *pb.AddElemArg, bagUpdate *pb.ElemContainerUpdate) int32
+	AddElem(arg *pb.AddElemArg, containerUpdate *pb.ElemContainerUpdate) int32
 
 	// 删除指定数量元素,返回实际删除数量
-	DelElem(arg *pb.DelElemArg, bagUpdate *pb.ElemContainerUpdate) int32
+	DelElem(arg *pb.DelElemArg, containerUpdate *pb.ElemContainerUpdate) int32
 }
 
 // 有唯一id的对象

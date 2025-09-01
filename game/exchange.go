@@ -141,13 +141,14 @@ func (e *Exchange) Exchange(exchangeCfgId, exchangeCount int32) error {
 
 // 响应客户端的兑换请求(购买物品,兑换礼包,领取奖励等)
 func (e *Exchange) OnExchangeReq(req *pb.ExchangeReq) (*pb.ExchangeRes, error) {
-	err := e.Exchange(req.CfgId, req.Count)
-	if err != nil {
-		return nil, err
+	res := &pb.ExchangeRes{}
+	for _, idCount := range req.GetIdCounts() {
+		err := e.Exchange(idCount.GetId(), idCount.GetCount())
+		if err != nil {
+			continue
+		}
+		res.IdCounts = append(res.IdCounts, idCount)
+		res.Records = append(res.Records, e.GetRecordsByIds(idCount.GetId())...)
 	}
-	return &pb.ExchangeRes{
-		CfgId:        req.CfgId,
-		Count:        req.Count,
-		CurrentCount: e.GetCount(req.CfgId),
-	}, nil
+	return res, nil
 }
