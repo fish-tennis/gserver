@@ -4,9 +4,8 @@
     "CountLimit": 1,
     "Rewards": [
       {
-        "CfgId": 0,
-        "Num": 0,
-        "TimeType": 2
+        "CfgId": 1,
+        "Num": 2
       }
     ]
   },
@@ -14,22 +13,19 @@
     "CfgId": 50001,
     "Consumes": [
       {
-        "CfgId": 0,
-        "Num": 1,
-        "UniqueId": 0
+        "CfgId": 1,
+        "Num": 1
       },
       {
-        "CfgId": 0,
-        "Num": 2,
-        "UniqueId": 0
+        "CfgId": 2,
+        "Num": 2
       }
     ],
     "CountLimit": 1,
     "Rewards": [
       {
-        "CfgId": 0,
-        "Num": 0,
-        "TimeType": 1
+        "CfgId": 3,
+        "Num": 1
       }
     ]
   },
@@ -37,22 +33,19 @@
     "CfgId": 50002,
     "Consumes": [
       {
-        "CfgId": 0,
-        "Num": 1,
-        "UniqueId": 0
+        "CfgId": 3,
+        "Num": 1
       },
       {
-        "CfgId": 0,
-        "Num": 2,
-        "UniqueId": 0
+        "CfgId": 4,
+        "Num": 2
       }
     ],
     "CountLimit": 2,
     "Rewards": [
       {
-        "CfgId": 0,
-        "Num": 0,
-        "TimeType": 10
+        "CfgId": 1,
+        "Num": 10
       }
     ]
   }

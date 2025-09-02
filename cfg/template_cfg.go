@@ -21,11 +21,12 @@ func convertConditionCfg(cfgArg *pb.CfgArgs) *pb.ConditionCfg {
 		return nil
 	}
 	return &pb.ConditionCfg{
-		Type:       conditionTemplate.Type,
-		Key:        conditionTemplate.Key,
-		Op:         conditionTemplate.Op,
-		Values:     slices.Clone(cfgArg.Args),
-		Properties: maps.Clone(conditionTemplate.Properties),
+		Type:        conditionTemplate.Type,
+		Key:         conditionTemplate.Key,
+		Op:          conditionTemplate.Op,
+		Values:      slices.Clone(cfgArg.Args),
+		Properties:  maps.Clone(conditionTemplate.Properties),
+		ClientCheck: conditionTemplate.ClientCheck,
 	}
 }
 

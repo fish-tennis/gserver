@@ -124,6 +124,7 @@ message ConditionCfg {
   string Op = 3; // 操作符 = > >= < <= != [] ![]
   repeated int32 Values = 4; // 比较的值(可配多个)
   map<string,string> Properties = 5; // 扩展属性
+  bool ClientCheck = 6; // 客户端是否可以直接判断条件,比如玩家的等级
 }
 
 // 条件模板配置
