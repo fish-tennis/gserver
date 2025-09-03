@@ -23,7 +23,7 @@ func init() {
 	})
 }
 
-// 玩家的钱财组件
+// 玩家的钱财组件 TODO:可以删了 玩家的金币也可以视作普通道具,放在背包里
 type Money struct {
 	PlayerDataComponent
 	// 该字段必须导出(首字母大写)

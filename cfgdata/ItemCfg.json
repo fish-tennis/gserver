@@ -1,22 +1,55 @@
 {
   "1": {
     "CfgId": 1,
+    "Detail": "金币也是背包里的一个物品",
     "ItemType": 0,
-    "Name": "普通物品1"
+    "Name": "金币",
+    "SubType": 1
+  },
+  "10001": {
+    "CfgId": 10001,
+    "Detail": "倚天剑的描述",
+    "ItemType": 1,
+    "Name": "倚天剑"
+  },
+  "10002": {
+    "CfgId": 10002,
+    "Detail": "屠龙刀的描述",
+    "ItemType": 1,
+    "Name": "屠龙刀"
   },
   "2": {
     "CfgId": 2,
+    "Detail": "普通道具2",
     "ItemType": 0,
-    "Name": "普通物品2"
+    "Name": "道具2"
+  },
+  "21": {
+    "Arg": 10,
+    "CfgId": 21,
+    "Detail": "使用后增加10点经验值(功能待实现)",
+    "ItemType": 0,
+    "Name": "小经验丹",
+    "SubType": 2
+  },
+  "22": {
+    "Arg": 50,
+    "CfgId": 22,
+    "Detail": "使用后增加50点经验值(功能待实现)",
+    "ItemType": 0,
+    "Name": "大经验丹",
+    "SubType": 2
   },
   "3": {
     "CfgId": 3,
-    "ItemType": 1,
-    "Name": "装备3"
+    "Detail": "普通道具3",
+    "ItemType": 0,
+    "Name": "道具3"
   },
   "4": {
     "CfgId": 4,
-    "ItemType": 1,
-    "Name": "装备4"
+    "Detail": "普通道具4",
+    "ItemType": 0,
+    "Name": "道具4"
   }
 }

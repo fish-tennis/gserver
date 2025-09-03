@@ -26,12 +26,6 @@ enum TimeType {
   TimeType_Date       = 2; // 日期(格式:20240219) 
 }
 
-// 物品类型
-enum ItemType {
-  ItemType_None 	= 0; // 普通物品
-  ItemType_Equip  	= 1; // 装备
-}
-
 // 物品数量
 message ItemNum {
   int32 CfgId = 1; // 物品配置id
@@ -44,15 +38,38 @@ message IdCount {
   int32 Count = 2; // 数量
 }
 
+// 物品类型
+enum ItemType {
+  ItemType_None 	= 0; // 普通物品
+  ItemType_Equip  	= 1; // 装备
+}
+
+// 物品子类
+enum ItemSubType
+{
+  ItemSubType_None = 0;
+  ItemSubType_Gold = 1; // 金币
+  ItemSubType_Exp  = 2; // 经验丹
+}
+
+// 物品分类
+enum ItemCategory
+{
+  ItemCategory_None = 0;
+}
+
 // 物品配置
 message ItemCfg {
   int32 CfgId = 1;
   string Name = 2;
   string Detail = 3;
   int32 ItemType = 4; // 物品类型(enum ItemType)
-  int32 TimeType = 5; // 时间类型(enum TimeType)
-  int32 Timeout = 6; // 结束时间
-  int32 Category = 7; // 物品分类(可用于客户端分类显示)
+  int32 SubType  = 5; // 物品子类(enum ItemSubType)
+  int32 Category = 6; // 物品分类(enum ItemCategory)
+  int32 Arg      = 7; // 参数(比如ItemSubType=ItemSubType_Exp是,表示加经验的数值)
+  int32 TimeType = 8; // 限时道具的时间类型(enum TimeType)
+  int32 Timeout  = 9; // 限时道具的时限
+  map<string,string> Properties = 10; // 扩展属性
 }
 
 // 添加元素参数
@@ -87,10 +104,19 @@ message CfgArgs {
   repeated int32 Args = 2; // 参数数组
 }
 
-// 时间类型
+// 任务类型
 enum QuestType {
   QuestType_None		= 0;
   QuestType_SubQuest 	= 1; // 其他系统的子任务(如活动的子任务)
+  QuestType_Achievement = 2; // 成就
+}
+
+// 任务分类
+enum QuestCategory
+{
+  QuestCategory_None = 0;
+  QuestCategory_Main = 1; // 主线任务
+  QuestCategory_Side = 2; // 支线任务
 }
 
 // 任务配置
@@ -99,15 +125,14 @@ message QuestCfg {
   string Name = 2;
   int32 QuestType = 3; // 任务类型(enum QuestType)
   int32 RefreshType = 4; // 刷新机制(enum RefreshType)
-  int32 Category = 5; // 分类
+  int32 Category = 5; // 任务分类(enum QuestCategory)
   repeated AddElemArg Rewards = 6; // 任务奖励
   int32 PreQuest = 7; // 前置任务
   repeated int32 NextQuests = 8; // 完成该任务后,自动接后续的任务(任务链)
   repeated ConditionCfg Conditions = 9; // 任务条件
   ProgressCfg Progress = 10; // 任务进度
   map<string,string> Properties = 11; // 扩展属性
-  int32 Category = 12; // 任务分类(可用于客户端分类显示 如主线任务 支线任务 成就等)
-  string Detail = 13; // 任务描述
+  string Detail = 12; // 任务描述
 
   repeated CfgArgs ConditionTemplates = 21; // 关联的配置模板id和参数,简化配置表用,业务代码不要调用
   CfgArg ProgressTemplate = 22; // 关联的配置模板id和参数,简化配置表用,业务代码不要调用
@@ -163,6 +188,13 @@ message ProgressTemplateCfg {
   map<string,string> Properties = 8; // 扩展属性
 }
 
+// 兑换分类
+enum ExchangeCategory
+{
+  ExchangeCategory_None = 0;
+  ExchangeCategory_Shop = 1; // 商店
+}
+
 // 兑换配置
 message ExchangeCfg {
   int32 CfgId = 1;
@@ -171,9 +203,11 @@ message ExchangeCfg {
   repeated AddElemArg Rewards = 4; // 获得物品
   int32 CountLimit = 5; // 兑换次数限制(0表示无次数限制)
   int32 RefreshType = 6; // 刷新机制(enum RefreshType)
-  int32 Category = 7; // 分类
+  int32 Category = 7; // 兑换分类(enum ExchangeCategory)
   map<string,string> Properties = 8; // 扩展属性
-  repeated CfgArgs ConditionTemplates = 11; // 关联的配置模板id和参数,简化配置表用,业务代码不要调用
+  string Detail = 9;
+  
+  repeated CfgArgs ConditionTemplates = 21; // 关联的配置模板id和参数,简化配置表用,业务代码不要调用
 }
 
 // 活动基础配置

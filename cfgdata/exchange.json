@@ -2,6 +2,7 @@
   "10001": {
     "CfgId": 10001,
     "CountLimit": 1,
+    "Detail": "活动1的兑换配置1",
     "Rewards": [
       {
         "CfgId": 1,
@@ -22,6 +23,7 @@
       }
     ],
     "CountLimit": 1,
+    "Detail": "活动5的兑换配置1",
     "Rewards": [
       {
         "CfgId": 3,
@@ -42,6 +44,7 @@
       }
     ],
     "CountLimit": 2,
+    "Detail": "活动5的兑换配置2",
     "Rewards": [
       {
         "CfgId": 1,
