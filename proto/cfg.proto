@@ -52,6 +52,7 @@ message ItemCfg {
   int32 ItemType = 4; // 物品类型(enum ItemType)
   int32 TimeType = 5; // 时间类型(enum TimeType)
   int32 Timeout = 6; // 结束时间
+  int32 Category = 7; // 物品分类(可用于客户端分类显示)
 }
 
 // 添加元素参数
@@ -98,17 +99,18 @@ message QuestCfg {
   string Name = 2;
   int32 QuestType = 3; // 任务类型(enum QuestType)
   int32 RefreshType = 4; // 刷新机制(enum RefreshType)
-  repeated AddElemArg Rewards = 5; // 任务奖励
-  int32 PreQuest = 6; // 前置任务
-  repeated int32 NextQuests = 7; // 完成该任务后,自动接后续的任务(任务链)
-  repeated ConditionCfg Conditions = 8; // 任务条件
-  ProgressCfg Progress = 9; // 任务进度
-  map<string,string> Properties = 10; // 扩展属性
-  int32 Category = 11; // 任务分类(可用于客户端分类显示 如主线任务 支线任务 成就等)
-  string Detail = 12; // 任务描述
+  int32 Category = 5; // 分类
+  repeated AddElemArg Rewards = 6; // 任务奖励
+  int32 PreQuest = 7; // 前置任务
+  repeated int32 NextQuests = 8; // 完成该任务后,自动接后续的任务(任务链)
+  repeated ConditionCfg Conditions = 9; // 任务条件
+  ProgressCfg Progress = 10; // 任务进度
+  map<string,string> Properties = 11; // 扩展属性
+  int32 Category = 12; // 任务分类(可用于客户端分类显示 如主线任务 支线任务 成就等)
+  string Detail = 13; // 任务描述
 
-  repeated CfgArgs ConditionTemplates = 13; // 关联的配置模板id和参数,简化配置表用,业务代码不要调用
-  CfgArg ProgressTemplate = 14; // 关联的配置模板id和参数,简化配置表用,业务代码不要调用
+  repeated CfgArgs ConditionTemplates = 21; // 关联的配置模板id和参数,简化配置表用,业务代码不要调用
+  CfgArg ProgressTemplate = 22; // 关联的配置模板id和参数,简化配置表用,业务代码不要调用
 }
 
 // 数值比较配置
@@ -169,7 +171,8 @@ message ExchangeCfg {
   repeated AddElemArg Rewards = 4; // 获得物品
   int32 CountLimit = 5; // 兑换次数限制(0表示无次数限制)
   int32 RefreshType = 6; // 刷新机制(enum RefreshType)
-  map<string,string> Properties = 7; // 扩展属性
+  int32 Category = 7; // 分类
+  map<string,string> Properties = 8; // 扩展属性
   repeated CfgArgs ConditionTemplates = 11; // 关联的配置模板id和参数,简化配置表用,业务代码不要调用
 }
 

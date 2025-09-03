@@ -65,7 +65,7 @@ func main() {
 	// 监听系统的kill信号
 	signalKillNotify := make(chan os.Signal, 1)
 	signal.Notify(signalKillNotify, os.Interrupt, os.Kill, syscall.SIGTERM)
-	if !isDaemon {
+	if !isDaemon && runtime.GOOS == "windows" {
 		// 加一个控制台输入,以方便调试
 		go func() {
 			consoleReader := bufio.NewReader(os.Stdin)
@@ -96,6 +96,9 @@ func main() {
 }
 
 func daemon() {
+	if os.Getppid() == 1 {
+		return
+	}
 	args := os.Args[1:]
 	for i := 0; i < len(args); i++ {
 		if args[i] == "-d=true" {
@@ -105,8 +108,9 @@ func daemon() {
 	}
 	cmd := exec.Command(os.Args[0], args...)
 	cmd.Start()
+	fmt.Println(fmt.Sprintf("%v %v", os.Args[0], args))
 	fmt.Println("[PID]", cmd.Process.Pid)
-	os.Exit(0)
+	//os.Exit(0)
 }
 
 func initLog(logFileName string, useStdOutput bool) {
