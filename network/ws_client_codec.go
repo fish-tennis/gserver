@@ -39,7 +39,7 @@ func (this *WsClientCodec) Decode(connection Connection, data []byte) (newPacket
 			newProtoMessage := reflect.New(protoMessageType).Interface().(proto.Message)
 			err = proto.Unmarshal(data[SimplePacketHeaderSize:], newProtoMessage)
 			if err != nil {
-				logger.Error("proto decode err:%v cmd:%v", err, command)
+				logger.Error("proto decode err:%v cmd:%v name:%v", err, command, protoMessageType.Name())
 				return nil, err
 			}
 			return NewProtoPacket(PacketCommand(command), newProtoMessage), nil

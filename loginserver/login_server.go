@@ -3,6 +3,7 @@ package loginserver
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/fish-tennis/gentity"
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
@@ -84,11 +85,11 @@ func (this *LoginServer) Exit() {
 func (this *LoginServer) readConfig() {
 	fileData, err := os.ReadFile(this.GetConfigFile())
 	if err != nil {
-		panic("read config file err")
+		panic(fmt.Sprintf("read config file err:%v", err))
 	}
 	err = yaml.Unmarshal(fileData, this.config)
 	if err != nil {
-		panic("decode config file err")
+		panic(fmt.Sprintf("decode config file err:%v", err))
 	}
 	slog.Debug("readConfig", "config", this.config)
 	this.BaseServer.GetServerInfo().ServerId = this.config.ServerId

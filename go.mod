@@ -5,7 +5,7 @@ go 1.21
 require (
 	github.com/fish-tennis/csv v1.0.5
 	github.com/fish-tennis/gentity v1.4.2
-	github.com/fish-tennis/gnet v1.2.2
+	github.com/fish-tennis/gnet v1.3.0
 	github.com/go-redis/redis/v8 v8.11.5
 	go.mongodb.org/mongo-driver v1.14.0
 	google.golang.org/protobuf v1.34.2
@@ -14,12 +14,11 @@ require (
 )
 
 require (
-	github.com/bufbuild/protocompile v0.14.1 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/fish-tennis/snowflake v1.0.1 // indirect
-	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/golang/snappy v0.0.1 // indirect
+	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/gorilla/websocket v1.5.1 // indirect
 	github.com/klauspost/compress v1.13.6 // indirect
 	github.com/montanaflynn/stats v0.0.0-20171201202039-1bf9dbcd8cbe // indirect

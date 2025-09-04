@@ -7,6 +7,7 @@ import (
 	"github.com/fish-tennis/gserver/cfg"
 	"github.com/fish-tennis/gserver/network"
 	"github.com/fish-tennis/gserver/pb"
+	"google.golang.org/protobuf/proto"
 	"log/slog"
 	"reflect"
 	"strconv"
@@ -163,45 +164,66 @@ func (p *Player) OnTestCmd(req *pb.TestCmd) {
 		}
 		slog.Debug("GuildRouteError reply", "reply", reply)
 
+	case strings.ToLower("FireEvent"):
+		// 通用的事件分发消息 FireEvent eventName 字段名1 字段值1 字段名2 字段值2
+		// 如 FireEvent EventFight IsPvp true IsWin true RoomType 1 RoomLevel 1 Score 10
+		messageName := cmdArgs[0]
+		cmdArgs = cmdArgs[1:]
+		newMsg := parseMessageFromCmd(messageName, cmdArgs)
+		if newMsg != nil {
+			slog.Info("mockEvent", "messageName", messageName, "newMsg", newMsg)
+			p.FireEvent(newMsg)
+			return
+		}
+		p.SendErrorRes(cmd, fmt.Sprintf("parse event err messageName:%v", messageName))
+
 	default:
 		// 通用的客户端请求消息 proto消息名 字段名1 字段值1 字段名2 字段值2
 		// 如 ActivityExchangeReq ActivityId 1 ExchangeCfgId 10001 ExchangeCount 1
 		messageName := cmdStrs[0]
-		newMsg := network.NewMessageByName(messageName)
+		newMsg := parseMessageFromCmd(messageName, cmdArgs)
 		if newMsg != nil {
-			msgVal := reflect.ValueOf(newMsg).Elem()
-			for i := 0; i < len(cmdArgs)/2; i++ {
-				fieldName := cmdArgs[i*2]
-				fieldValue := cmdArgs[i*2+1]
-				fieldVal := msgVal.FieldByName(fieldName)
-				if !fieldVal.IsValid() {
-					slog.Error("OnTestCmd fieldNameError", "messageName", messageName, "fieldName", fieldName)
-					continue
-				}
-				// NOTE: 暂不支持repeated和map类型的字段的动态赋值
-				switch fieldVal.Kind() {
-				case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-					fieldVal.SetInt(int64(util.Atoi(fieldValue)))
-				case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-					fieldVal.SetUint(util.Atou(fieldValue))
-				case reflect.Float32:
-					f, _ := strconv.ParseFloat(fieldValue, 32)
-					fieldVal.SetFloat(f)
-				case reflect.Float64:
-					f, _ := strconv.ParseFloat(fieldValue, 64)
-					fieldVal.SetFloat(f)
-				case reflect.Bool:
-					fieldVal.SetBool(strings.ToLower(fieldValue) == "true" || fieldValue == "1")
-				case reflect.String:
-					fieldVal.SetString(fieldValue)
-				default:
-					slog.Error("OnTestCmd fieldTypeError", "messageName", messageName, "fieldName", fieldName, "fieldType", fieldVal.Kind())
-				}
-			}
 			slog.Info("mockMessage", "messageName", messageName, "newMsg", newMsg)
 			p.PushMessage(network.NewPacket(newMsg))
 			return
 		}
-		p.SendErrorRes(cmd, fmt.Sprintf("unsupported test cmd:%v", cmdKey))
+		p.SendErrorRes(cmd, fmt.Sprintf("unsupported test cmd:%v messageName:%v", cmdKey, messageName))
 	}
+}
+
+func parseMessageFromCmd(messageName string, cmdArgs []string) proto.Message {
+	newMsg := network.NewMessageByName(messageName)
+	if newMsg != nil {
+		msgVal := reflect.ValueOf(newMsg).Elem()
+		for i := 0; i < len(cmdArgs)/2; i++ {
+			fieldName := cmdArgs[i*2]
+			fieldValue := cmdArgs[i*2+1]
+			fieldVal := msgVal.FieldByName(fieldName)
+			if !fieldVal.IsValid() {
+				slog.Error("OnTestCmd fieldNameError", "messageName", messageName, "fieldName", fieldName)
+				continue
+			}
+			// NOTE: 暂不支持repeated和map类型的字段的动态赋值
+			switch fieldVal.Kind() {
+			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+				fieldVal.SetInt(int64(util.Atoi(fieldValue)))
+			case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+				fieldVal.SetUint(util.Atou(fieldValue))
+			case reflect.Float32:
+				f, _ := strconv.ParseFloat(fieldValue, 32)
+				fieldVal.SetFloat(f)
+			case reflect.Float64:
+				f, _ := strconv.ParseFloat(fieldValue, 64)
+				fieldVal.SetFloat(f)
+			case reflect.Bool:
+				fieldVal.SetBool(strings.ToLower(fieldValue) == "true" || fieldValue == "1")
+			case reflect.String:
+				fieldVal.SetString(fieldValue)
+			default:
+				slog.Error("parseMessageFromCmd fieldTypeError", "messageName", messageName, "fieldName", fieldName, "fieldType", fieldVal.Kind())
+			}
+		}
+		slog.Info("mockMessage", "messageName", messageName, "newMsg", newMsg)
+	}
+	return newMsg
 }
