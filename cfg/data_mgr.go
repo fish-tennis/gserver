@@ -70,8 +70,8 @@ func Load(dataDir string, filter func(fileName string) bool) error {
     }
     defer atomic.StoreInt32(&isLoading, 0)
     dataDir = filepath.ToSlash(dataDir)
-    if strings.LastIndexByte(dataDir, filepath.Separator) != len(dataDir)-1 {
-        dataDir += string(filepath.Separator)
+    if strings.LastIndexByte(dataDir, '/') != len(dataDir)-1 {
+        dataDir += string('/')
     }
     var err error
     

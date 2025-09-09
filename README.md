@@ -132,6 +132,15 @@ func (g *GuildBaseInfo) HandleGuildDataViewReq(m *GuildMessage, req *pb.GuildDat
 
 编译运行
 
+```shell
+# 启动一个网关服
+gserver -d=true -cfgDir=/cfgdata -conf=/gate_1.yaml
+# 启动一个登录服
+gserver -d=true -cfgDir=/cfgdata -conf=/login_1.yaml
+#启动一个游戏服
+gserver -d=true -cfgDir=/cfgdata -conf=/gamer_101.yaml
+```
+
 ## 测试
 go测试客户端[gtestclient](https://github.com/fish-tennis/gtestclient)
 

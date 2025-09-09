@@ -40,9 +40,9 @@ type GateServerConfig struct {
 	WsClient ListerConfig `yaml:"WsClient"`
 }
 
-func NewGateServer(ctx context.Context, configFile string) *GateServer {
+func NewGateServer(ctx context.Context, configFile string, cfgDir string) *GateServer {
 	s := &GateServer{
-		BaseServer: NewBaseServer(ctx, ServerType_Gate, configFile),
+		BaseServer: NewBaseServer(ctx, ServerType_Gate, configFile, cfgDir),
 		config:     new(GateServerConfig),
 	}
 	s.readConfig()

@@ -39,9 +39,9 @@ type LoginServerConfig struct {
 	BaseServerConfig `yaml:",inline"`
 }
 
-func NewLoginServer(ctx context.Context, configFile string) *LoginServer {
+func NewLoginServer(ctx context.Context, configFile string, cfgDir string) *LoginServer {
 	s := &LoginServer{
-		BaseServer: NewBaseServer(ctx, ServerType_Login, configFile),
+		BaseServer: NewBaseServer(ctx, ServerType_Login, configFile, cfgDir),
 		config:     new(LoginServerConfig),
 	}
 	s.readConfig()

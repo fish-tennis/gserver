@@ -34,8 +34,10 @@ func main() {
 
 	isDaemon := false
 	configFile := ""
+	cfgDir := ""
 	// 配置文件名格式: serverType_xxx.json
 	flag.StringVar(&configFile, "conf", "", "server's config file")
+	flag.StringVar(&cfgDir, "cfg", "cfgdata", "cfg dir")
 	flag.BoolVar(&isDaemon, "d", false, "daemon mode")
 	flag.Parse()
 
@@ -53,7 +55,7 @@ func main() {
 	serverType := getServerTypeFromConfigFile(configFile)                       // login
 	initLog(baseFileName, !isDaemon)
 	ctx, cancel := context.WithCancel(context.Background())
-	server := createServer(ctx, serverType, configFile)
+	server := createServer(ctx, serverType, configFile, cfgDir)
 	gentity.SetApplication(server)
 	// 服务器初始化
 	if !server.Init(ctx, configFile) {
@@ -156,14 +158,14 @@ func getServerTypeFromConfigFile(configFile string) string {
 }
 
 // 创建相应类型的服务器
-func createServer(ctx context.Context, serverType, configFile string) gentity.Application {
+func createServer(ctx context.Context, serverType, configFile, cfgDir string) gentity.Application {
 	switch strings.ToLower(serverType) {
 	case strings.ToLower(internal.ServerType_Gate):
-		return gateserver.NewGateServer(ctx, configFile)
+		return gateserver.NewGateServer(ctx, configFile, cfgDir)
 	case strings.ToLower(internal.ServerType_Login):
-		return loginserver.NewLoginServer(ctx, configFile)
+		return loginserver.NewLoginServer(ctx, configFile, cfgDir)
 	case strings.ToLower(internal.ServerType_Game):
-		return gameserver.NewGameServer(ctx, configFile)
+		return gameserver.NewGameServer(ctx, configFile, cfgDir)
 	}
 	panic("err server type")
 }

@@ -12,6 +12,8 @@ import (
 	"google.golang.org/protobuf/proto"
 	"io"
 	"log/slog"
+	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 )
@@ -46,6 +48,8 @@ type BaseServerConfig struct {
 type BaseServer struct {
 	// 配置文件
 	configFile string
+	// 配置数据目录
+	cfgDir string
 	// 自己的服务器信息
 	serverInfo *pb.ServerInfo
 	// 服务器列表
@@ -59,10 +63,15 @@ type BaseServer struct {
 	serverHooks []gentity.ApplicationHook
 }
 
-func NewBaseServer(ctx context.Context, serverType string, configFile string) *BaseServer {
+func NewBaseServer(ctx context.Context, serverType string, configFile string, cfgDir string) *BaseServer {
+	cfgDir = filepath.ToSlash(cfgDir)
+	if strings.LastIndexByte(cfgDir, '/') != len(cfgDir)-1 {
+		cfgDir += string('/')
+	}
 	return &BaseServer{
 		ctx:        ctx,
 		configFile: configFile,
+		cfgDir:     cfgDir,
 		serverInfo: &pb.ServerInfo{
 			ServerType: serverType,
 		},
@@ -71,6 +80,10 @@ func NewBaseServer(ctx context.Context, serverType string, configFile string) *B
 
 func (this *BaseServer) GetConfigFile() string {
 	return this.configFile
+}
+
+func (this *BaseServer) GetCfgDir() string {
+	return this.cfgDir
 }
 
 func (this *BaseServer) GetId() int32 {
@@ -106,7 +119,7 @@ func (this *BaseServer) Init(ctx context.Context, configFile string) bool {
 	slog.Info("BaseServer.Init")
 	// 初始化id生成器
 	util.InitIdGenerator(uint16(this.serverInfo.ServerId))
-	network.InitCommandMappingFromFile("cfgdata/message_command_mapping.json")
+	network.InitCommandMappingFromFile(this.GetCfgDir() + "message_command_mapping.json")
 	this.serverList = NewServerList(this.serverInfo)
 	this.updateInterval = time.Second
 	return true

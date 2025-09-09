@@ -39,9 +39,9 @@ type GameServerConfig struct {
 	BaseServerConfig `yaml:",inline"`
 }
 
-func NewGameServer(ctx context.Context, configFile string) *GameServer {
+func NewGameServer(ctx context.Context, configFile string, cfgDir string) *GameServer {
 	s := &GameServer{
-		BaseServer: NewBaseServer(ctx, ServerType_Game, configFile),
+		BaseServer: NewBaseServer(ctx, ServerType_Game, configFile, cfgDir),
 		config:     new(GameServerConfig),
 	}
 	s.readConfig()
@@ -116,8 +116,7 @@ func (this *GameServer) readConfig() {
 
 // 加载配置数据
 func (this *GameServer) loadCfgs() {
-	//cfg.LoadAllCfgs("cfgdata", cfg.LoadCfgFilter)
-	err := cfg.Load("cfgdata", nil)
+	err := cfg.Load(this.GetCfgDir(), nil)
 	if err != nil {
 		panic(fmt.Sprintf("loadCfgs:%v", err))
 	}
