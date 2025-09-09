@@ -19,7 +19,10 @@
     "Event": "EventFight",
     "IntEventFields": {
       "IsPvp": {
-        "Op": "1"
+        "Op": "=",
+        "Values": [
+          1
+        ]
       }
     },
     "Type": 1

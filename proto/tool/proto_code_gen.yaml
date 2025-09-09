@@ -11,8 +11,8 @@ Reader:
   MessageFilter:
   #是否是proto v2版本
   ProtoV2: false
+
 #自动生成消息号
 CommandMapping:
   #输出文件
-  OutFile: "./../../gen/message_command_mapping.json"
-
+  OutFile: "./../../cfgdata/message_command_mapping.json"

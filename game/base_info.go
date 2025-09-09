@@ -64,6 +64,10 @@ func (b *BaseInfo) IncExp(incExp int32) {
 	}
 	logger.Debug("%v exp:%v lvl:%v", b.GetPlayerId(), b.Data.Exp, b.Data.Level)
 	if oldLevel != b.Data.Level {
+		// 玩家等级更新时,自动接任务
+		for i := oldLevel + 1; i <= b.Data.Level; i++ {
+			b.GetPlayer().GetQuest().WhenPlayerLevelup(i)
+		}
 		b.GetPlayer().FireConditionEvent(&pb.EventPlayerProperty{
 			PlayerId: b.GetPlayerId(),
 			Property: "Level",

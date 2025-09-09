@@ -73,7 +73,7 @@ func InitCommandMappingFromFile(file string) {
 			typ := messageInfo.GoReflectType.Elem()
 			_messageTypeCmdMapping[typ] = int32(messageId)
 			_cmdMessageNameMapping[int32(messageId)] = messageName
-			slog.Info("CommandMapping", "messageName", messageName, "id", messageId)
+			slog.Info("CommandMapping", "name", messageName, "id", messageId)
 		}
 	}
 }

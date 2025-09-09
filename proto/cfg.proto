@@ -58,6 +58,13 @@ enum ItemCategory
   ItemCategory_None = 0;
 }
 
+// 物品显示类型
+enum ItemViewType
+{
+  ItemViewType_None = 0;
+  ItemViewType_Hide = 1; // 隐藏,不显示在背包中,不占背包格子
+}
+
 // 物品配置
 message ItemCfg {
   int32 CfgId = 1;
@@ -69,7 +76,9 @@ message ItemCfg {
   int32 Arg      = 7; // 参数(比如ItemSubType=ItemSubType_Exp是,表示加经验的数值)
   int32 TimeType = 8; // 限时道具的时间类型(enum TimeType)
   int32 Timeout  = 9; // 限时道具的时限
-  map<string,string> Properties = 10; // 扩展属性
+  int32 ViewType = 10; // 物品显示类型(enum ItemViewType)
+  map<string,string> Properties = 11; // 扩展属性
+  string Icon = 12; // 物品图标(客户端使用)
 }
 
 // 添加元素参数
@@ -104,19 +113,17 @@ message CfgArgs {
   repeated int32 Args = 2; // 参数数组
 }
 
-// 任务类型
+// 任务类型 (NOTE:根据项目实际需求,自行调整)
 enum QuestType {
   QuestType_None		= 0;
   QuestType_SubQuest 	= 1; // 其他系统的子任务(如活动的子任务)
   QuestType_Achievement = 2; // 成就
 }
 
-// 任务分类
+// 任务分类 (NOTE:根据项目实际需求,自行调整)
 enum QuestCategory
 {
   QuestCategory_None = 0;
-  QuestCategory_Main = 1; // 主线任务
-  QuestCategory_Side = 2; // 支线任务
 }
 
 // 任务配置
@@ -133,6 +140,7 @@ message QuestCfg {
   ProgressCfg Progress = 10; // 任务进度
   map<string,string> Properties = 11; // 扩展属性
   string Detail = 12; // 任务描述
+  int32 PlayerLevel = 13; // 玩家等级限制(0表示不限制)
 
   repeated CfgArgs ConditionTemplates = 21; // 关联的配置模板id和参数,简化配置表用,业务代码不要调用
   CfgArg ProgressTemplate = 22; // 关联的配置模板id和参数,简化配置表用,业务代码不要调用
@@ -206,6 +214,7 @@ message ExchangeCfg {
   int32 Category = 7; // 兑换分类(enum ExchangeCategory)
   map<string,string> Properties = 8; // 扩展属性
   string Detail = 9;
+  string Icon = 10; // 图标(客户端使用)
   
   repeated CfgArgs ConditionTemplates = 21; // 关联的配置模板id和参数,简化配置表用,业务代码不要调用
 }
@@ -232,6 +241,14 @@ message ActivityCfg {
 
 // 升级经验
 message LevelExp {
-	int32 Level = 1; // 等级
-	int32 NeedExp = 2; // 升到该等级需要的经验值
+  int32 Level = 1; // 等级
+  int32 NeedExp = 2; // 升到该等级需要的经验值
+}
+
+// 商店配置
+message ShopCfg {
+  int32 CfgId = 1; // 商店id
+  string Name = 2; // 商店名
+  repeated int32 ExchangeIds = 3; // 商店的每1个格子就是1个兑换礼包
+  map<string,string> Properties = 8; // 扩展属性
 }

@@ -58,7 +58,7 @@ func (p *ProgressEventMapping) UpdateProgress(event any, progress internal.CfgDa
 				QuestCfgId: v.GetCfgId(),
 				Data:       util.CloneMessage(v),
 			})
-			slog.Debug("QuestProgressUpdate", "questId", v.GetCfgId(), "progress", v.GetProgress(), "activityId", v.GetActivityId())
+			slog.Debug("QuestProgressUpdate", "name", questCfg.GetName(), "questId", v.GetCfgId(), "progress", v.GetProgress(), "activityId", v.GetActivityId())
 		}
 	default:
 		slog.Error("CheckProgressErr", "progress", progress)

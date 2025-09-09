@@ -7,7 +7,7 @@ protoc --go_out=.\..\..\ --proto_path=.\..\ .\..\*.proto
 if [ -d "../../../gtestclient" ]; then
     # Create destination directories if they don't exist
     mkdir -p ../../../gtestclient/pb
-    mkdir -p ../../../gtestclient/gen
+    mkdir -p ../../../gtestclient/cfgdata
     
     # Copy .pb.go files recursively, excluding specified files
     # Explanation:
@@ -23,7 +23,7 @@ if [ -d "../../../gtestclient" ]; then
         -exec cp {} ../../../gtestclient/pb/ \;
     
     # Copy the JSON configuration file
-    cp ../../gen/message_command_mapping.json ../../../gtestclient/gen/
+    cp ../../cfgdata/message_command_mapping.json ../../../gtestclient/cfgdata/
 else
     echo "gtestclient directory not found"
 fi

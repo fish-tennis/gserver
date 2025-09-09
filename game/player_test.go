@@ -71,8 +71,8 @@ func initTestEnv(t *testing.T) {
 	initLog("test", true)
 	util.InitIdGenerator(1)
 	InitPlayerStructAndHandler()
+	network.InitCommandMappingFromFile("./../cfgdata/message_command_mapping.json")
 	AutoRegisterPlayerPacketHandler(nil)
-	//cfg.LoadAllCfgs("./../cfgdata", cfg.LoadCfgFilter)
 	cfg.Load("./../cfgdata", nil)
 }
 
@@ -210,18 +210,11 @@ func TestQuest(t *testing.T) {
 	player.GetBaseInfo().Data.Level = 2
 
 	q := player.GetQuest()
-	cfg.Quests.Range(func(questCfg *pb.QuestCfg) bool {
-		// 排除其他模块的子任务
-		if questCfg.GetQuestType() != 0 {
-			return true
-		}
-		questData := &pb.QuestData{CfgId: questCfg.CfgId}
-		q.AddQuest(questData)
-		return true
-	})
+	for i := int32(1); i <= player.GetBaseInfo().Data.Level; i++ {
+		q.WhenPlayerLevelup(i)
+	}
 
 	var eventPlayerProperty *pb.EventPlayerProperty
-
 	eventPlayerProperty = &pb.EventPlayerProperty{
 		PlayerId: player.GetId(),
 		Property: "Level",

@@ -7,6 +7,7 @@ import (
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 	"log/slog"
+	"time"
 )
 
 const (
@@ -100,23 +101,88 @@ func (q *Quest) RangeByActivityId(activityId int32, f func(questData *pb.QuestDa
 	})
 }
 
-// 事件接口
-func (q *Quest) TriggerPlayerEntryGame(event *internal.EventPlayerEntryGame) {
-	// 测试代码:给新玩家添加初始任务
-	if len(q.Quests.Data) == 0 && len(q.Finished.Data) == 0 {
-		cfg.Quests.Range(func(questCfg *pb.QuestCfg) bool {
+// 检查任务满足接取条件
+func (q *Quest) CanAccept(obj any, questCfg *pb.QuestCfg) bool {
+	if questCfg.GetPlayerLevel() > 0 && questCfg.GetPlayerLevel() > q.GetPlayer().GetLevel() {
+		return false
+	}
+	return internal.CheckConditions(obj, questCfg.GetConditions())
+}
+
+// 玩家等级更新时,自动接任务
+func (q *Quest) WhenPlayerLevelup(level int32) {
+	if quests, ok := cfg.QuestsByLevel[level]; ok {
+		quests.Range(func(questCfg *pb.QuestCfg) bool {
 			// 排除其他模块的子任务
 			if questCfg.GetQuestType() != 0 {
 				return true
 			}
-			if !internal.CheckConditions(q.GetPlayer(), questCfg.Conditions) {
+			if !q.CanAccept(q.GetPlayer(), questCfg) {
 				return true
 			}
-			questData := &pb.QuestData{CfgId: questCfg.CfgId}
+			if q.Quests.Contains(questCfg.GetCfgId()) {
+				return true
+			}
+			questData := &pb.QuestData{CfgId: questCfg.GetCfgId()}
 			q.AddQuest(questData)
 			return true
 		})
 	}
+}
+
+// 事件接口
+func (q *Quest) TriggerPlayerEntryGame(event *internal.EventPlayerEntryGame) {
+	// 给新玩家添加初始任务
+	if len(q.Quests.Data) == 0 && len(q.Finished.Data) == 0 {
+		// 1级玩家可接的任务
+		q.WhenPlayerLevelup(1)
+	}
+}
+
+func (q *Quest) OnEvent(event interface{}) {
+	switch e := event.(type) {
+	case *internal.EventDateChange:
+		q.Refresh(e.OldDate, e.CurDate)
+		return
+	}
+}
+
+func (q *Quest) Refresh(oldDate time.Time, curDate time.Time) {
+	q.Finished.Range(func(questCfgId int32, v *pb.FinishedQuestData) bool {
+		questCfg := cfg.Quests.GetCfg(questCfgId)
+		if questCfg == nil {
+			return true
+		}
+		if questCfg.GetRefreshType() == int32(pb.RefreshType_RefreshType_Day) {
+			q.Finished.Delete(questCfgId)
+			// NOTE:暂时和删除当前任务用同一个消息
+			q.GetPlayer().Send(&pb.QuestRemoveRes{
+				QuestCfgId: questCfgId,
+			})
+		}
+		return true
+	})
+	q.Quests.Range(func(questCfgId int32, v *pb.QuestData) bool {
+		questCfg := cfg.Quests.GetCfg(questCfgId)
+		// 活动的子任务由活动接口去处理
+		if questCfg == nil || v.ActivityId > 0 {
+			return true
+		}
+		q.RemoveQuest(questCfgId)
+		return true
+	})
+	// 重新接取日常任务,实际项目可能还涉及到随机等额外逻辑,这里简单演示一下,接取所有的满足接取条件的日常任务
+	cfg.QuestsDay.Range(func(questCfg *pb.QuestCfg) bool {
+		if !q.CanAccept(q.GetPlayer(), questCfg) {
+			return true
+		}
+		if q.Quests.Contains(questCfg.GetCfgId()) {
+			return true
+		}
+		questData := &pb.QuestData{CfgId: questCfg.GetCfgId()}
+		q.AddQuest(questData)
+		return true
+	})
 }
 
 // 完成任务的消息回调
@@ -138,6 +204,28 @@ func (q *Quest) OnFinishQuestReq(req *pb.FinishQuestReq) (*pb.FinishQuestRes, er
 				q.GetPlayer().GetBags().AddItems(questCfg.GetRewards())
 				res.QuestCfgIds = append(res.QuestCfgIds, questCfgId)
 				res.FinishedQuestDatas = append(res.FinishedQuestDatas, finishedData)
+				// 任务链
+				for _, nextQuestId := range questCfg.GetNextQuests() {
+					nextQuestCfg := cfg.Quests.GetCfg(nextQuestId)
+					if nextQuestCfg == nil {
+						logger.Error("nextQuestCfg nil %v", nextQuestId)
+						continue
+					}
+					var checkObj any
+					if questData.GetActivityId() > 0 {
+						checkObj = q.GetPlayer().GetActivities().GetActivity(questData.GetActivityId())
+					}
+					if checkObj == nil {
+						checkObj = q.GetPlayer()
+					}
+					if !q.CanAccept(checkObj, nextQuestCfg) {
+						continue
+					}
+					if q.Quests.Contains(questCfg.GetCfgId()) {
+						continue
+					}
+					q.AddQuest(&pb.QuestData{CfgId: nextQuestId, ActivityId: questData.GetActivityId()})
+				}
 			}
 		}
 	}

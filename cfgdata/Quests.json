@@ -3,6 +3,7 @@
     "CfgId": 1,
     "Detail": "升级任务示例",
     "Name": "升到5级",
+    "PlayerLevel": 1,
     "ProgressTemplate": {
       "Arg": 5,
       "CfgId": 1
@@ -15,10 +16,48 @@
       }
     ]
   },
+  "1001": {
+    "CfgId": 1001,
+    "Detail": "演示任务链,该任务完成后会自动接1002任务",
+    "Name": "升到10级",
+    "NextQuests": [
+      1002
+    ],
+    "PlayerLevel": 1,
+    "ProgressTemplate": {
+      "Arg": 10,
+      "CfgId": 1
+    },
+    "QuestType": 2,
+    "Rewards": [
+      {
+        "CfgId": 1,
+        "Num": 2
+      }
+    ]
+  },
+  "1002": {
+    "CfgId": 1002,
+    "Detail": "升到20级",
+    "Name": "升到20级",
+    "PlayerLevel": 11,
+    "ProgressTemplate": {
+      "Arg": 20,
+      "CfgId": 1
+    },
+    "QuestType": 2,
+    "Rewards": [
+      {
+        "CfgId": 1,
+        "Num": 2
+      }
+    ]
+  },
   "2": {
     "CfgId": 2,
     "Detail": "5场战斗示例",
     "Name": "5场战斗",
+    "PlayerLevel": 1,
     "ProgressTemplate": {
       "Arg": 5,
       "CfgId": 2
@@ -51,6 +90,7 @@
     "CfgId": 3,
     "Detail": "5场PVP示例,演示同一个进度类型使用动态属性而编辑出新的任务",
     "Name": "5场PVP",
+    "PlayerLevel": 2,
     "ProgressTemplate": {
       "Arg": 5,
       "CfgId": 3
@@ -151,6 +191,7 @@
     ],
     "Detail": "赢5场PVP示例,演示同一个进度类型使用动态属性而编辑出新的任务",
     "Name": "赢5场PVP",
+    "PlayerLevel": 2,
     "ProgressTemplate": {
       "Arg": 5,
       "CfgId": 4
@@ -233,6 +274,7 @@
     ],
     "Detail": "赢5场指定条件的PVP,演示复杂的数值比较接口",
     "Name": "赢5场指定条件的PVP",
+    "PlayerLevel": 2,
     "ProgressTemplate": {
       "Arg": 5,
       "CfgId": 5
@@ -249,6 +291,24 @@
       },
       {
         "CfgId": 4,
+        "Num": 3
+      }
+    ]
+  },
+  "6": {
+    "CfgId": 6,
+    "Detail": "日常任务-1场战斗,演示每日刷新的任务",
+    "Name": "日常任务-1场战斗",
+    "PlayerLevel": 1,
+    "ProgressTemplate": {
+      "Arg": 1,
+      "CfgId": 2
+    },
+    "QuestType": 0,
+    "RefreshType": 1,
+    "Rewards": [
+      {
+        "CfgId": 2,
         "Num": 3
       }
     ]

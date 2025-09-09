@@ -2,11 +2,72 @@
   "10001": {
     "CfgId": 10001,
     "CountLimit": 1,
-    "Detail": "活动1的兑换配置1",
+    "Detail": "活动1的礼包1",
     "Rewards": [
       {
         "CfgId": 1,
         "Num": 2
+      }
+    ]
+  },
+  "1001": {
+    "CfgId": 1001,
+    "ConditionTemplates": [
+      {
+        "Args": [
+          5
+        ],
+        "CfgId": 1
+      }
+    ],
+    "CountLimit": 1,
+    "Detail": "商店1的商品1,5级可买",
+    "Rewards": [
+      {
+        "CfgId": 1,
+        "Num": 2
+      }
+    ]
+  },
+  "1002": {
+    "CfgId": 1002,
+    "Consumes": [
+      {
+        "CfgId": 1,
+        "Num": 1
+      },
+      {
+        "CfgId": 2,
+        "Num": 2
+      }
+    ],
+    "CountLimit": 5,
+    "Detail": "商店1的商品2",
+    "Rewards": [
+      {
+        "CfgId": 3,
+        "Num": 1
+      }
+    ]
+  },
+  "1003": {
+    "CfgId": 1003,
+    "Consumes": [
+      {
+        "CfgId": 3,
+        "Num": 1
+      },
+      {
+        "CfgId": 4,
+        "Num": 2
+      }
+    ],
+    "CountLimit": 10,
+    "Detail": "商店1的商品3",
+    "Rewards": [
+      {
+        "CfgId": 1,
+        "Num": 10
       }
     ]
   },
@@ -23,7 +84,7 @@
       }
     ],
     "CountLimit": 1,
-    "Detail": "活动5的兑换配置1",
+    "Detail": "活动5的礼包1",
     "Rewards": [
       {
         "CfgId": 3,
@@ -44,7 +105,7 @@
       }
     ],
     "CountLimit": 2,
-    "Detail": "活动5的兑换配置2",
+    "Detail": "活动5的礼包2",
     "Rewards": [
       {
         "CfgId": 1,

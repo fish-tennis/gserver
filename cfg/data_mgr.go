@@ -33,6 +33,9 @@ var (
     //任务数据
     Quests *DataMap[*pb.QuestCfg]
     
+    //商店数据
+    ShopCfgs *DataMap[*pb.ShopCfg]
+    
     //活动数据
     ActivityCfgs *DataMap[*pb.ActivityCfg]
     
@@ -52,6 +55,8 @@ type processRegister struct {
     ExchangeCfgsProcess func(mgr *DataMap[*pb.ExchangeCfg]) error
     
     QuestsProcess func(mgr *DataMap[*pb.QuestCfg]) error
+    
+    ShopCfgsProcess func(mgr *DataMap[*pb.ShopCfg]) error
     
     ActivityCfgsProcess func(mgr *DataMap[*pb.ActivityCfg]) error
     
@@ -130,6 +135,16 @@ func Load(dataDir string, filter func(fileName string) bool) error {
         // 最后再赋值给全局变量(引用赋值是原子操作)
         Quests = tmpQuests
     }
+    if filter == nil || filter("ShopCfg.json") {
+        // 考虑到并发安全,这里先加载到临时变量
+        tmpShopCfgs := NewDataMap[*pb.ShopCfg]()
+        err = tmpShopCfgs.LoadJson(dataDir+"ShopCfg.json")
+        if err != nil {
+            return err
+        }
+        // 最后再赋值给全局变量(引用赋值是原子操作)
+        ShopCfgs = tmpShopCfgs
+    }
     if filter == nil || filter("activitycfg.json") {
         // 考虑到并发安全,这里先加载到临时变量
         tmpActivityCfgs := NewDataMap[*pb.ActivityCfg]()
@@ -185,6 +200,14 @@ func Load(dataDir string, filter func(fileName string) bool) error {
     if register.QuestsProcess != nil {
         // 预处理数据
         err = register.QuestsProcess(Quests)
+        if err != nil {
+            return err
+        }
+    }
+    
+    if register.ShopCfgsProcess != nil {
+        // 预处理数据
+        err = register.ShopCfgsProcess(ShopCfgs)
         if err != nil {
             return err
         }

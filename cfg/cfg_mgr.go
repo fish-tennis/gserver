@@ -2,46 +2,41 @@ package cfg
 
 import (
 	"encoding/json"
-	"errors"
 	"github.com/fish-tennis/gserver/internal"
 	"log/slog"
 	"os"
-	"strings"
 )
 
 // map类型的配置数据管理
 type DataMap[E internal.CfgData] struct {
-	cfgs map[int32]E
+	Elems map[int32]E
 	// TODO: 加一个tag any字段
 }
 
 func NewDataMap[E internal.CfgData]() *DataMap[E] {
 	return &DataMap[E]{
-		cfgs: make(map[int32]E),
+		Elems: make(map[int32]E),
 	}
 }
 
 func (this *DataMap[E]) GetCfg(cfgId int32) E {
-	return this.cfgs[cfgId]
+	return this.Elems[cfgId]
 }
 
 func (this *DataMap[E]) Range(f func(e E) bool) {
-	for _, cfg := range this.cfgs {
+	for _, cfg := range this.Elems {
 		if !f(cfg) {
 			return
 		}
 	}
 }
 
-// 加载配置数据,支持json和csv
+// 加载配置数据
 func (this *DataMap[E]) Load(fileName string) error {
-	if this.cfgs == nil {
-		this.cfgs = make(map[int32]E)
+	if this.Elems == nil {
+		this.Elems = make(map[int32]E)
 	}
-	if strings.HasSuffix(fileName, ".json") {
-		return this.LoadJson(fileName)
-	}
-	return errors.New("unsupported file type")
+	return this.LoadJson(fileName)
 }
 
 // 从json文件加载数据
@@ -57,38 +52,70 @@ func (this *DataMap[E]) LoadJson(fileName string) error {
 		slog.Error("LoadJsonErr", "fileName", fileName, "err", err)
 		return err
 	}
-	this.cfgs = cfgMap
-	slog.Info("LoadJson", "fileName", fileName, "count", len(this.cfgs))
+	this.Elems = cfgMap
+	slog.Info("LoadJson", "fileName", fileName, "count", len(this.Elems))
 	return nil
+}
+
+// 创建索引
+func (this *DataMap[E]) CreateIndexInt32(indexFn func(e E) int32) map[int32]*DataMap[E] {
+	indexMap := make(map[int32]*DataMap[E])
+	for _, e := range this.Elems {
+		index := indexFn(e)
+		if indexMap[index] == nil {
+			indexMap[index] = NewDataMap[E]()
+		}
+		indexMap[index].Elems[e.GetCfgId()] = e
+	}
+	return indexMap
+}
+
+// 创建子集
+func (this *DataMap[E]) CreateSubset(filter func(e E) bool) *DataMap[E] {
+	subMap := NewDataMap[E]()
+	for _, e := range this.Elems {
+		if filter(e) {
+			subMap.Elems[e.GetCfgId()] = e
+		}
+	}
+	return subMap
+}
+
+// 创建slice
+func (this *DataMap[E]) CreateSlice(filter func(e E) bool) []E {
+	var s []E
+	for _, e := range this.Elems {
+		if filter(e) {
+			s = append(s, e)
+		}
+	}
+	return s
 }
 
 // slice类型的配置数据管理
 type DataSlice[E any] struct {
-	cfgs []E
+	Elems []E
 }
 
 func (this *DataSlice[E]) Len() int {
-	return len(this.cfgs)
+	return len(this.Elems)
 }
 
 func (this *DataSlice[E]) GetCfg(index int) E {
-	return this.cfgs[index]
+	return this.Elems[index]
 }
 
 func (this *DataSlice[E]) Range(f func(e E) bool) {
-	for _, cfg := range this.cfgs {
+	for _, cfg := range this.Elems {
 		if !f(cfg) {
 			return
 		}
 	}
 }
 
-// 加载配置数据,支持json和csv
+// 加载配置数据
 func (this *DataSlice[E]) Load(fileName string) error {
-	if strings.HasSuffix(fileName, ".json") {
-		return this.LoadJson(fileName)
-	}
-	return errors.New("unsupported file type")
+	return this.LoadJson(fileName)
 }
 
 // 从json文件加载数据
@@ -104,21 +131,21 @@ func (this *DataSlice[E]) LoadJson(fileName string) error {
 		slog.Error("LoadJsonErr", "fileName", fileName, "err", err)
 		return err
 	}
-	this.cfgs = cfgList
-	slog.Info("LoadJson", "fileName", fileName, "count", len(this.cfgs))
+	this.Elems = cfgList
+	slog.Info("LoadJson", "fileName", fileName, "count", len(this.Elems))
 	this.checkDuplicateCfgId(fileName)
 	return nil
 }
 
 // 如果配置项是CfgData,检查id是否重复
 func (this *DataSlice[E]) checkDuplicateCfgId(fileName string) {
-	for i := 0; i < len(this.cfgs); i++ {
-		cfgDataI, ok := any(this.cfgs[i]).(internal.CfgData)
+	for i := 0; i < len(this.Elems); i++ {
+		cfgDataI, ok := any(this.Elems[i]).(internal.CfgData)
 		if !ok {
 			return
 		}
-		for j := i + 1; j < len(this.cfgs); j++ {
-			cfgDataJ := any(this.cfgs[j]).(internal.CfgData)
+		for j := i + 1; j < len(this.Elems); j++ {
+			cfgDataJ := any(this.Elems[j]).(internal.CfgData)
 			if cfgDataI.GetCfgId() == cfgDataJ.GetCfgId() {
 				slog.Error("duplicate id", "fileName", fileName, "id", cfgDataI.GetCfgId())
 			}

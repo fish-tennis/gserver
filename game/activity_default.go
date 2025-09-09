@@ -52,7 +52,8 @@ func newActivityDefault(activities ActivityMgr, activityCfg *pb.ActivityCfg) *Ac
 
 // 添加一个活动任务
 func (a *ActivityDefault) AddQuest(questCfg *pb.QuestCfg) {
-	if !CheckConditions(a, questCfg.Conditions) {
+	quests := a.Activities.GetPlayer().GetQuest()
+	if !quests.CanAccept(a, questCfg) {
 		return
 	}
 	questData := &pb.QuestData{
@@ -60,7 +61,7 @@ func (a *ActivityDefault) AddQuest(questCfg *pb.QuestCfg) {
 		ActivityId: a.GetId(), // 关联该任务属于哪个活动
 	}
 	// 活动的子任务跟玩家的普通任务是同一个模块,这就要求不同活动的子任务id不能重复
-	a.Activities.GetPlayer().GetQuest().AddQuest(questData)
+	quests.AddQuest(questData)
 }
 
 // 响应事件

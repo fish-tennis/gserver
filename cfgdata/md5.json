@@ -1,9 +1,10 @@
 {
   "ItemCfg.json": "a97264643dd3aebb990834f9d58120d0",
-  "Quests.json": "1bb877818ce3ea99ecc8cf438e7f6110",
+  "Quests.json": "24498eeffd9dff90c1f650ea2cdd2637",
+  "ShopCfg.json": "4c7da50043c8754463081fdf926170ca",
   "activitycfg.json": "d1e11276ee1e7aa9549c49a81f06fa5b",
   "condition_template.json": "1be469adf0588ae3c3b00b1288f29e7e",
-  "exchange.json": "3c6aaba126fd78e9197be849158092b1",
+  "exchange.json": "b8512edfc590302eaf12415eb8b4527f",
   "levelcfg.json": "817767ff28b97ab64c43538b5d58d808",
-  "progress_template.json": "7989d82fe5d059624fdb81d8467116bb"
+  "progress_template.json": "e898ca835fd4cca43f9800a982ecdd91"
 }
