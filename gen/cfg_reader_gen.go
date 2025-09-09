@@ -36,6 +36,34 @@ func (r *ItemNumR) GetNum() int32 {
 }
 
 
+type IdCountR struct {
+	v *pb.IdCount
+}
+
+func NewIdCountR(src *pb.IdCount) *IdCountR {
+	return &IdCountR{v:src}
+}
+
+func (r *IdCountR) IsNil() bool {
+	return r == nil || r.v == nil
+}
+
+func (r *IdCountR) Raw() *pb.IdCount {
+    if r == nil {
+        return nil
+    }
+	return r.v
+}
+
+func (r *IdCountR) GetId() int32 {
+	return r.v.GetId()
+}
+
+func (r *IdCountR) GetCount() int32 {
+	return r.v.GetCount()
+}
+
+
 type ItemCfgR struct {
 	v *pb.ItemCfg
 }
@@ -71,12 +99,46 @@ func (r *ItemCfgR) GetItemType() int32 {
 	return r.v.GetItemType()
 }
 
+func (r *ItemCfgR) GetSubType() int32 {
+	return r.v.GetSubType()
+}
+
+func (r *ItemCfgR) GetCategory() int32 {
+	return r.v.GetCategory()
+}
+
+func (r *ItemCfgR) GetArg() int32 {
+	return r.v.GetArg()
+}
+
 func (r *ItemCfgR) GetTimeType() int32 {
 	return r.v.GetTimeType()
 }
 
 func (r *ItemCfgR) GetTimeout() int32 {
 	return r.v.GetTimeout()
+}
+
+func (r *ItemCfgR) GetViewType() int32 {
+	return r.v.GetViewType()
+}
+
+func (r *ItemCfgR) LenOfProperties() int {
+    return len(r.v.GetProperties())
+}
+func (r *ItemCfgR) ElemOfProperties(key string) string {
+    return r.v.GetProperties()[key]
+}
+func (r *ItemCfgR) RangeProperties(f func(k string,v string) bool) {
+    for k,v := range r.v.GetProperties() {
+        if !f(k,v) {
+            return
+        }
+    }
+}
+
+func (r *ItemCfgR) GetIcon() string {
+	return r.v.GetIcon()
 }
 
 
@@ -278,6 +340,10 @@ func (r *QuestCfgR) GetRefreshType() int32 {
 	return r.v.GetRefreshType()
 }
 
+func (r *QuestCfgR) GetCategory() int32 {
+	return r.v.GetCategory()
+}
+
 func (r *QuestCfgR) LenOfRewards() int {
     return len(r.v.GetRewards())
 }
@@ -322,12 +388,12 @@ func (r *QuestCfgR) RangeProperties(f func(k string,v string) bool) {
     }
 }
 
-func (r *QuestCfgR) GetCategory() int32 {
-	return r.v.GetCategory()
-}
-
 func (r *QuestCfgR) GetDetail() string {
 	return r.v.GetDetail()
+}
+
+func (r *QuestCfgR) GetPlayerLevel() int32 {
+	return r.v.GetPlayerLevel()
 }
 
 func (r *QuestCfgR) LenOfConditionTemplates() int {
@@ -426,6 +492,10 @@ func (r *ConditionCfgR) RangeProperties(f func(k string,v string) bool) {
     }
 }
 
+func (r *ConditionCfgR) GetClientCheck() bool {
+	return r.v.GetClientCheck()
+}
+
 
 type ConditionTemplateCfgR struct {
 	v *pb.ConditionTemplateCfg
@@ -474,6 +544,10 @@ func (r *ConditionTemplateCfgR) RangeProperties(f func(k string,v string) bool) 
             return
         }
     }
+}
+
+func (r *ConditionTemplateCfgR) GetClientCheck() bool {
+	return r.v.GetClientCheck()
 }
 
 
@@ -699,6 +773,10 @@ func (r *ExchangeCfgR) GetRefreshType() int32 {
 	return r.v.GetRefreshType()
 }
 
+func (r *ExchangeCfgR) GetCategory() int32 {
+	return r.v.GetCategory()
+}
+
 func (r *ExchangeCfgR) LenOfProperties() int {
     return len(r.v.GetProperties())
 }
@@ -711,6 +789,14 @@ func (r *ExchangeCfgR) RangeProperties(f func(k string,v string) bool) {
             return
         }
     }
+}
+
+func (r *ExchangeCfgR) GetDetail() string {
+	return r.v.GetDetail()
+}
+
+func (r *ExchangeCfgR) GetIcon() string {
+	return r.v.GetIcon()
 }
 
 func (r *ExchangeCfgR) LenOfConditionTemplates() int {
@@ -846,5 +932,54 @@ func (r *LevelExpR) GetLevel() int32 {
 
 func (r *LevelExpR) GetNeedExp() int32 {
 	return r.v.GetNeedExp()
+}
+
+
+type ShopCfgR struct {
+	v *pb.ShopCfg
+}
+
+func NewShopCfgR(src *pb.ShopCfg) *ShopCfgR {
+	return &ShopCfgR{v:src}
+}
+
+func (r *ShopCfgR) IsNil() bool {
+	return r == nil || r.v == nil
+}
+
+func (r *ShopCfgR) Raw() *pb.ShopCfg {
+    if r == nil {
+        return nil
+    }
+	return r.v
+}
+
+func (r *ShopCfgR) GetCfgId() int32 {
+	return r.v.GetCfgId()
+}
+
+func (r *ShopCfgR) GetName() string {
+	return r.v.GetName()
+}
+
+func (r *ShopCfgR) LenOfExchangeIds() int {
+    return len(r.v.GetExchangeIds())
+}
+func (r *ShopCfgR) ElemOfExchangeIds(index int) int32 {
+    return r.v.GetExchangeIds()[index]
+}
+
+func (r *ShopCfgR) LenOfProperties() int {
+    return len(r.v.GetProperties())
+}
+func (r *ShopCfgR) ElemOfProperties(key string) string {
+    return r.v.GetProperties()[key]
+}
+func (r *ShopCfgR) RangeProperties(f func(k string,v string) bool) {
+    for k,v := range r.v.GetProperties() {
+        if !f(k,v) {
+            return
+        }
+    }
 }
 
