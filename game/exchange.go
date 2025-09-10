@@ -121,21 +121,35 @@ func (e *Exchange) Exchange(exchangeCfgId, exchangeCount int32) error {
 		return errors.New("conditions err")
 	}
 	// 如果配置了兑换消耗物品,就是购买礼包,如果不配置,就是免费礼包
-	totalConsumes := slices.Clone(exchangeCfg.Consumes)
-	for _, consume := range totalConsumes {
-		if util.IsMultiOverflow(consume.Num, exchangeCount) {
-			slog.Debug("Exchange ConsumeItems overflow", "pid", e.GetPlayer().GetId(), "exchangeCfgId", exchangeCfgId, "exchangeCount", exchangeCount)
-			return errors.New("ConsumeItemsOverflow")
+	totalConsumes := exchangeCfg.Consumes
+	if exchangeCount > 1 {
+		totalConsumes = slices.Clone(exchangeCfg.Consumes)
+		for _, consume := range totalConsumes {
+			if util.IsMultiOverflow(consume.Num, exchangeCount) {
+				slog.Debug("Exchange ConsumeItems overflow", "pid", e.GetPlayer().GetId(), "exchangeCfgId", exchangeCfgId, "exchangeCount", exchangeCount)
+				return errors.New("ConsumeItemsOverflow")
+			}
+			consume.Num *= exchangeCount
 		}
-		consume.Num *= exchangeCount
 	}
-	if !e.GetPlayer().GetBags().IsEnough(totalConsumes) {
+	totalRewards := exchangeCfg.Rewards
+	if exchangeCount > 1 {
+		totalRewards = slices.Clone(exchangeCfg.Rewards)
+		for _, reward := range exchangeCfg.Rewards {
+			if util.IsMultiOverflow(reward.Num, exchangeCount) {
+				slog.Debug("Exchange rewards overflow", "pid", e.GetPlayer().GetId(), "exchangeCfgId", exchangeCfgId, "exchangeCount", exchangeCount)
+				return errors.New("RewardsItemsOverflow")
+			}
+			reward.Num *= exchangeCount
+		}
+	}
+	if !e.GetPlayer().GetBags().IsEnoughByItemNums(totalConsumes) {
 		slog.Debug("Exchange ConsumeItems notEnough", "pid", e.GetPlayer().GetId(), "exchangeCfgId", exchangeCfgId)
 		return errors.New("ConsumeItemsNotEnough")
 	}
-	e.addExchangeCount(exchangeCfgId, exchangeCount)       // 记录兑换次数
-	e.GetPlayer().GetBags().DelItems(exchangeCfg.Consumes) // 消耗
-	e.GetPlayer().GetBags().AddItems(exchangeCfg.Rewards)  // 购买
+	e.addExchangeCount(exchangeCfgId, exchangeCount)          // 记录兑换次数
+	e.GetPlayer().GetBags().DelItemsByItemNums(totalConsumes) // 消耗
+	e.GetPlayer().GetBags().AddItems(totalRewards)            // 购买
 	return nil
 }
 

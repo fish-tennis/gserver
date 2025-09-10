@@ -213,6 +213,7 @@ func (q *Quest) OnFinishQuestReq(req *pb.FinishQuestReq) (*pb.FinishQuestRes, er
 					}
 					var checkObj any
 					if questData.GetActivityId() > 0 {
+						// 活动任务要特殊处理,传入活动对象
 						checkObj = q.GetPlayer().GetActivities().GetActivity(questData.GetActivityId())
 					}
 					if checkObj == nil {

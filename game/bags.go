@@ -136,6 +136,31 @@ func (b *Bags) DelItems(delItems []*pb.DelElemArg) int32 {
 	return total
 }
 
+func (b *Bags) DelItemsByItemNums(itemNums []*pb.ItemNum) int32 {
+	bagUpdate := &pb.ElemContainerUpdate{}
+	total := int32(0)
+	for _, delItem := range itemNums {
+		bag := b.GetBag(delItem.CfgId)
+		if bag == nil {
+			slog.Debug("bag is nil", "cfgId", delItem.CfgId)
+			continue
+		}
+		total += bag.DelElem(&pb.DelElemArg{
+			CfgId: delItem.GetCfgId(),
+			Num:   delItem.GetNum(),
+		}, bagUpdate)
+	}
+	if len(bagUpdate.ElemOps) > 0 {
+		b.GetPlayer().Send(bagUpdate) // 同步背包变化给客户端
+		//slog.Info("DelItems", "bagUpdate", bagUpdate)
+	}
+	return total
+}
+
+func (b *Bags) IsEnoughByItemNums(items []*pb.ItemNum) bool {
+	return b.IsEnough(cfg.ConvertToDelElemArgs(items))
+}
+
 func (b *Bags) IsEnough(items []*pb.DelElemArg) bool {
 	// items可能有重复的物品,所以转换成map来统计总数量
 	itemNumMap := make(map[int32]int64)

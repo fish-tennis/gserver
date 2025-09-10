@@ -141,6 +141,7 @@ message QuestCfg {
   map<string,string> Properties = 11; // 扩展属性
   string Detail = 12; // 任务描述
   int32 PlayerLevel = 13; // 玩家等级限制(0表示不限制)
+  repeated ItemNum Collects = 14; // 需要收集的物品(一般是任务物品)
 
   repeated CfgArgs ConditionTemplates = 21; // 关联的配置模板id和参数,简化配置表用,业务代码不要调用
   CfgArg ProgressTemplate = 22; // 关联的配置模板id和参数,简化配置表用,业务代码不要调用
@@ -207,7 +208,7 @@ enum ExchangeCategory
 message ExchangeCfg {
   int32 CfgId = 1;
   repeated ConditionCfg Conditions = 2; // 兑换条件
-  repeated DelElemArg Consumes = 3; // 需要消耗的物品
+  repeated ItemNum Consumes = 3; // 需要消耗的物品
   repeated AddElemArg Rewards = 4; // 获得物品
   int32 CountLimit = 5; // 兑换次数限制(0表示无次数限制)
   int32 RefreshType = 6; // 刷新机制(enum RefreshType)

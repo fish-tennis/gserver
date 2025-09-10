@@ -396,6 +396,13 @@ func (r *QuestCfgR) GetPlayerLevel() int32 {
 	return r.v.GetPlayerLevel()
 }
 
+func (r *QuestCfgR) LenOfCollects() int {
+    return len(r.v.GetCollects())
+}
+func (r *QuestCfgR) ElemOfCollects(index int) *ItemNumR {
+    return NewItemNumR(r.v.GetCollects()[index])
+}
+
 func (r *QuestCfgR) LenOfConditionTemplates() int {
     return len(r.v.GetConditionTemplates())
 }
@@ -754,8 +761,8 @@ func (r *ExchangeCfgR) ElemOfConditions(index int) *ConditionCfgR {
 func (r *ExchangeCfgR) LenOfConsumes() int {
     return len(r.v.GetConsumes())
 }
-func (r *ExchangeCfgR) ElemOfConsumes(index int) *DelElemArgR {
-    return NewDelElemArgR(r.v.GetConsumes()[index])
+func (r *ExchangeCfgR) ElemOfConsumes(index int) *ItemNumR {
+    return NewItemNumR(r.v.GetConsumes()[index])
 }
 
 func (r *ExchangeCfgR) LenOfRewards() int {
