@@ -21,6 +21,9 @@ func (p *ProgressEventMapping) getKey(progressCfg *pb.ProgressCfg) string {
 }
 
 func (p *ProgressEventMapping) AddProgress(progressCfg *pb.ProgressCfg, progress internal.CfgData) {
+	if progressCfg == nil {
+		return
+	}
 	key := p.getKey(progressCfg)
 	if key == "" {
 		slog.Error("addProgressErr", "progressCfg", progressCfg, "progress", progress)
@@ -36,6 +39,9 @@ func (p *ProgressEventMapping) AddProgress(progressCfg *pb.ProgressCfg, progress
 }
 
 func (p *ProgressEventMapping) RemoveProgress(progressCfg *pb.ProgressCfg, cfgId int32) {
+	if progressCfg == nil {
+		return
+	}
 	key := p.getKey(progressCfg)
 	progressSlice, _ := p.mapping[key]
 	for i := 0; i < len(progressSlice); i++ {

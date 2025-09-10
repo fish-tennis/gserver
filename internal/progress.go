@@ -49,7 +49,7 @@ func InitProgress(obj any, progressHolder ProgressHolder, progressCfg *pb.Progre
 
 // 检查事件是否触发进度的更新,并更新进度
 func UpdateProgress(obj any, progressHolder ProgressHolder, event any, progressCfg *pb.ProgressCfg) bool {
-	if ProgressUpdateFn != nil {
+	if ProgressUpdateFn != nil && progressCfg != nil {
 		return ProgressUpdateFn(obj, progressHolder, event, progressCfg) > 0
 	}
 	return false

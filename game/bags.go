@@ -110,6 +110,10 @@ func (b *Bags) AddItems(addItemArgs []*pb.AddElemArg) int32 {
 	return total
 }
 
+func (b *Bags) AddItemsByItemNums(itemNums []*pb.ItemNum) int32 {
+	return b.AddItems(cfg.ConvertToAddElemArgs(itemNums))
+}
+
 func (b *Bags) AddItemById(cfgId, num int32) int32 {
 	bagUpdate := &pb.ElemContainerUpdate{}
 	return b.AddItem(&pb.AddElemArg{

@@ -250,6 +250,19 @@ func TestQuest(t *testing.T) {
 		Score:     123,
 	}
 	player.FireEvent(eventFight) // 任务2,3,4,5 进度+1
+
+	collectQuestId := int32(7) // 收集任务
+	collectQuest, _ := q.Quests.Get(collectQuestId)
+	if collectQuest != nil {
+		questCfg := cfg.Quests.GetCfg(collectQuestId)
+		canFinish := q.CanFinish(collectQuest, questCfg)
+		t.Logf("questId:%v canFinish:%v", collectQuestId, canFinish)
+		if !canFinish {
+			q.GetPlayer().GetBags().AddItemsByItemNums(questCfg.GetCollects())
+			canFinish = q.CanFinish(collectQuest, questCfg)
+			t.Logf("questId:%v canFinish:%v", collectQuestId, canFinish)
+		}
+	}
 }
 
 func TestActivity(t *testing.T) {
@@ -392,7 +405,7 @@ func TestBags(t *testing.T) {
 	initRedis()
 
 	ctx, cancel := context.WithCancel(context.Background())
-	server := internal.NewBaseServer(ctx, "test", "")
+	server := internal.NewBaseServer(ctx, "test", "", "./../cfgdata")
 	gentity.SetApplication(server)
 	SetPlayerMgr(new(dummyPlayerMgr))
 

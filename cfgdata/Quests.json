@@ -360,5 +360,18 @@
         "Num": 10
       }
     ]
+  },
+  "7": {
+    "CfgId": 7,
+    "Collects": [
+      {
+        "CfgId": 20001,
+        "Num": 1
+      }
+    ],
+    "Detail": "收集任务示例",
+    "Name": "收集任务",
+    "PlayerLevel": 1,
+    "QuestType": 0
   }
 }

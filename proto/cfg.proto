@@ -47,9 +47,10 @@ enum ItemType {
 // 物品子类
 enum ItemSubType
 {
-  ItemSubType_None = 0;
-  ItemSubType_Gold = 1; // 金币
-  ItemSubType_Exp  = 2; // 经验丹
+  ItemSubType_None  = 0;
+  ItemSubType_Gold  = 1; // 金币
+  ItemSubType_Exp   = 2; // 经验丹
+  ItemSubType_Quest = 3; // 任务物品
 }
 
 // 物品分类

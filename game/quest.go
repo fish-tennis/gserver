@@ -185,6 +185,19 @@ func (q *Quest) Refresh(oldDate time.Time, curDate time.Time) {
 	})
 }
 
+// 检查任务是否处于完成状态
+func (q *Quest) CanFinish(questData *pb.QuestData, questCfg *pb.QuestCfg) bool {
+	if questData.GetProgress() < questCfg.GetProgress().GetTotal() {
+		return false
+	}
+	if len(questCfg.GetCollects()) > 0 {
+		if !q.GetPlayer().GetBags().IsEnoughByItemNums(questCfg.GetCollects()) {
+			return false
+		}
+	}
+	return true
+}
+
 // 完成任务的消息回调
 // 这种格式写的函数可以自动注册客户端消息回调
 func (q *Quest) OnFinishQuestReq(req *pb.FinishQuestReq) (*pb.FinishQuestRes, error) {
@@ -193,13 +206,17 @@ func (q *Quest) OnFinishQuestReq(req *pb.FinishQuestReq) (*pb.FinishQuestRes, er
 	for _, questCfgId := range req.GetQuestCfgIds() {
 		if questData, ok := q.Quests.Data[questCfgId]; ok {
 			questCfg := cfg.Quests.GetCfg(questData.GetCfgId())
-			if questData.GetProgress() >= questCfg.Progress.GetTotal() {
+			if q.CanFinish(questData, questCfg) {
 				q.Quests.Delete(questData.GetCfgId())
 				finishedData := &pb.FinishedQuestData{
 					Timestamp: int32(q.GetPlayer().GetTimerEntries().Now().Unix()),
 				}
 				q.Finished.Set(questData.GetCfgId(), finishedData)
 				q.GetPlayer().progressEventMapping.RemoveProgress(questCfg.Progress, questData.GetCfgId())
+				// 任务收集物品删除
+				if len(questCfg.GetCollects()) > 0 {
+					q.GetPlayer().GetBags().DelItemsByItemNums(questCfg.GetCollects())
+				}
 				// 任务奖励
 				q.GetPlayer().GetBags().AddItems(questCfg.GetRewards())
 				res.QuestCfgIds = append(res.QuestCfgIds, questCfgId)

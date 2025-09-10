@@ -17,11 +17,14 @@ func init() {
 func questAfterLoad(mgr *DataMap[*pb.QuestCfg]) error {
 	mgr.Range(func(e *pb.QuestCfg) bool {
 		e.Conditions = convertConditionCfgs(e.ConditionTemplates)
-		if e.ProgressTemplate == nil {
-			slog.Error("ProgressTemplate nil", "QuestCfgId", e.GetCfgId())
+		// 任务不能同时没有进度和收集物品
+		if e.ProgressTemplate == nil && len(e.GetCollects()) == 0 {
+			slog.Info("QuestCfgErr", "QuestCfgId", e.GetCfgId())
 			return true
 		}
-		e.Progress = convertProgressCfg(e.ProgressTemplate)
+		if e.ProgressTemplate != nil {
+			e.Progress = convertProgressCfg(e.ProgressTemplate)
+		}
 		return true
 	})
 	QuestsByLevel = mgr.CreateIndexInt32(func(e *pb.QuestCfg) int32 {
