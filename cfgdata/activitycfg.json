@@ -3,7 +3,7 @@
     "BeginTime": 0,
     "CfgId": 1,
     "CycleType": 1,
-    "Detail": "签到拿奖励.每天一次",
+    "Detail": "签到礼包.每天一次",
     "EndTime": 0,
     "ExchangeIds": [
       10001
@@ -33,6 +33,9 @@
     "CycleType": 1,
     "Detail": "每天一个小目标.3天一个大目标",
     "EndTime": 0,
+    "ExchangeIds": [
+      30001
+    ],
     "Name": "3日目标",
     "QuestIds": [
       30001,

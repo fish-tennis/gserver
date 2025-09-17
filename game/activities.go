@@ -104,6 +104,9 @@ func (a *Activities) AddNewActivity(activityCfg *pb.ActivityCfg, t time.Time) in
 
 func (a *Activities) RemoveActivity(activityId int32) {
 	a.Data.Delete(activityId)
+	a.GetPlayer().Send(&pb.ActivityRemoveRes{
+		ActivityId: activityId,
+	})
 }
 
 // 检查所有还没参加的活动,如果满足参加条件,则参加

@@ -372,6 +372,12 @@
     "Detail": "收集任务示例",
     "Name": "收集任务",
     "PlayerLevel": 1,
-    "QuestType": 0
+    "QuestType": 0,
+    "Rewards": [
+      {
+        "CfgId": 2,
+        "Num": 1
+      }
+    ]
   }
 }

@@ -263,6 +263,24 @@ func TestQuest(t *testing.T) {
 			t.Logf("questId:%v canFinish:%v", collectQuestId, canFinish)
 		}
 	}
+
+	// 活动4:在线奖励
+	activityId := int32(4)
+	activityCfg := cfg.ActivityCfgs.GetCfg(activityId)
+	activity := player.GetActivities().AddNewActivity(activityCfg, time.Now())
+	if activity != nil {
+		eventOnlineTime := &pb.EventPlayerProperty{
+			PlayerId: player.GetId(),
+			Property: "OnlineMinute", //在线时长
+			Delta:    2,
+			Current:  player.GetPropertyInt32("OnlineMinute"),
+		}
+		player.FireEvent(eventOnlineTime)
+
+		player.GetQuest().OnFinishQuestReq(&pb.FinishQuestReq{
+			QuestCfgIds: []int32{40001},
+		})
+	}
 }
 
 func TestActivity(t *testing.T) {

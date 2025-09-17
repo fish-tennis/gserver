@@ -5,12 +5,12 @@ import (
 	"github.com/fish-tennis/gserver/internal"
 	"log/slog"
 	"os"
+	"slices"
 )
 
 // map类型的配置数据管理
 type DataMap[E internal.CfgData] struct {
 	Elems map[int32]E
-	// TODO: 加一个tag any字段
 }
 
 func NewDataMap[E internal.CfgData]() *DataMap[E] {
@@ -82,12 +82,15 @@ func (this *DataMap[E]) CreateSubset(filter func(e E) bool) *DataMap[E] {
 }
 
 // 创建slice
-func (this *DataMap[E]) CreateSlice(filter func(e E) bool) []E {
+func (this *DataMap[E]) CreateSlice(filter func(e E) bool, cmpFn func(a, b E) int) []E {
 	var s []E
 	for _, e := range this.Elems {
 		if filter(e) {
 			s = append(s, e)
 		}
+	}
+	if cmpFn != nil {
+		slices.SortFunc(s, cmpFn)
 	}
 	return s
 }

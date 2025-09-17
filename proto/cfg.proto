@@ -138,7 +138,7 @@ message QuestCfg {
   int32 PreQuest = 7; // 前置任务
   repeated int32 NextQuests = 8; // 完成该任务后,自动接后续的任务(任务链)
   repeated ConditionCfg Conditions = 9; // 任务条件
-  ProgressCfg Progress = 10; // 任务进度
+  ProgressCfg Progress = 10; // 任务进度(收集类物品,此字段可能为空)
   map<string,string> Properties = 11; // 扩展属性
   string Detail = 12; // 任务描述
   int32 PlayerLevel = 13; // 玩家等级限制(0表示不限制)

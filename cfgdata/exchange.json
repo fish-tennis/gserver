@@ -71,6 +71,17 @@
       }
     ]
   },
+  "30001": {
+    "CfgId": 30001,
+    "CountLimit": 2,
+    "Detail": "活动3的礼包",
+    "Rewards": [
+      {
+        "CfgId": 1,
+        "Num": 2
+      }
+    ]
+  },
   "50001": {
     "CfgId": 50001,
     "Consumes": [

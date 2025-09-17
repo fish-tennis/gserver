@@ -142,9 +142,11 @@ gserver -d=true -cfgDir=/cfgdata -conf=/gamer_101.yaml
 ```
 
 ## 测试
-go测试客户端[gtestclient](https://github.com/fish-tennis/gtestclient)
+go控制台测试客户端[gtestclient](https://github.com/fish-tennis/gtestclient)
 
-c#测试客户端[cshap_client](https://github.com/fish-tennis/cshap_client)
+c#控制台测试客户端[cshap_client](https://github.com/fish-tennis/cshap_client)
+
+unity测试客户端[unity_client](https://github.com/fish-tennis/unity_client)
 
 ## 编码规范参考
 [https://github.com/uber-go/guide](https://github.com/uber-go/guide)
