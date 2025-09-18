@@ -22,14 +22,16 @@ type timeoutCheckData struct {
 // 通用的不可叠加的物品容器(如装备背包或限时道具背包)
 type UniqueContainer[E internal.Uniquely] struct {
 	*gentity.MapData[int64, E] `db:""`
+	Bags                       *Bags
 	containerType              pb.ContainerType
 	ElemCtor                   func(arg *pb.AddElemArg) E // 元素的构造接口
 	timeoutCheckList           []*timeoutCheckData        // 限时类物品超时检查列表(排序的)
 }
 
-func NewBagUnique[E internal.Uniquely](bagType pb.ContainerType, elemCtor func(arg *pb.AddElemArg) E) *UniqueContainer[E] {
+func NewBagUnique[E internal.Uniquely](bags *Bags, bagType pb.ContainerType, elemCtor func(arg *pb.AddElemArg) E) *UniqueContainer[E] {
 	return &UniqueContainer[E]{
 		MapData:       gentity.NewMapData[int64, E](),
+		Bags:          bags,
 		containerType: bagType,
 		ElemCtor:      elemCtor,
 	}
@@ -108,10 +110,10 @@ func (b *UniqueContainer[E]) AddElem(arg *pb.AddElemArg, bagUpdate *pb.ElemConta
 		timeout := int32(0)
 		if arg.GetTimeType() > 0 {
 			// 可以在添加物品的时候,附加限时属性
-			timeout = util.GetTimeoutTimestamp(arg.GetTimeType(), arg.GetTimeout())
+			timeout = util.GetTimeoutTimestamp(arg.GetTimeType(), arg.GetTimeout(), b.Bags.GetPlayer().GetTimerEntries().Now())
 		} else if itemCfg.GetItemType() > 0 {
 			// 也可以在物品配置表里配置限时属性
-			timeout = util.GetTimeoutTimestamp(itemCfg.GetTimeType(), itemCfg.GetTimeout())
+			timeout = util.GetTimeoutTimestamp(itemCfg.GetTimeType(), itemCfg.GetTimeout(), b.Bags.GetPlayer().GetTimerEntries().Now())
 		}
 		if timeout > 0 {
 			// NOTE:假设固定字段是Timeout

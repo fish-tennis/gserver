@@ -11,12 +11,14 @@ import (
 // 有数量的容器(如常见的道具背包,每个格子只需要记录一个配置id和数量即可)
 type CountContainer struct {
 	*gentity.MapData[int32, int32] `db:""`
+	Bags                           *Bags
 	containerType                  pb.ContainerType
 }
 
-func NewBagCountItem() *CountContainer {
+func NewBagCountItem(bags *Bags) *CountContainer {
 	bag := &CountContainer{
 		MapData:       gentity.NewMapData[int32, int32](),
+		Bags:          bags,
 		containerType: pb.ContainerType_ContainerType_CountItem,
 	}
 	return bag

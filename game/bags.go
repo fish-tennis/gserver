@@ -18,15 +18,16 @@ const (
 // 利用go的init进行组件的自动注册
 func init() {
 	_playerComponentRegister.Register(ComponentNameBag, 100, func(player *Player, _ any) gentity.Component {
-		return &Bags{
+		bags := &Bags{
 			BasePlayerComponent: BasePlayerComponent{
 				player: player,
 				name:   ComponentNameBag,
 			},
-			BagCountItem:  NewBagCountItem(),
-			BagUniqueItem: NewUniqueItemBag(),
-			BagEquip:      NewBagEquip(),
 		}
+		bags.BagCountItem = NewBagCountItem(bags)
+		bags.BagUniqueItem = NewUniqueItemBag(bags)
+		bags.BagEquip = NewBagEquip(bags)
+		return bags
 	})
 }
 

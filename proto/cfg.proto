@@ -87,7 +87,7 @@ message AddElemArg {
 	int32 CfgId = 1; // 配置id
 	int32 Num = 2; // 数量
 	int32 TimeType = 3; // 时间类型(enum TimeType)
-	int32 Timeout = 4; // 结束时间
+	int32 Timeout = 4; // 结束时间(TimeType=Timestamp时,表示超时秒数 TimeType=Date时,表示日期,如20240219)
 	int32 Source = 5; // 来源(一般用于数据分析)
 	map<string,string> Properties = 6; // 扩展属性
 	// NOTE: 有些项目有绑定属性,可以在这里加

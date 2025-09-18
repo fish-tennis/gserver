@@ -10,9 +10,9 @@ type EquipBag struct {
 	*UniqueContainer[*pb.Equip] `db:""`
 }
 
-func NewBagEquip() *EquipBag {
+func NewBagEquip(bags *Bags) *EquipBag {
 	bag := &EquipBag{
-		UniqueContainer: NewBagUnique[*pb.Equip](pb.ContainerType_ContainerType_Equip, func(arg *pb.AddElemArg) *pb.Equip {
+		UniqueContainer: NewBagUnique[*pb.Equip](bags, pb.ContainerType_ContainerType_Equip, func(arg *pb.AddElemArg) *pb.Equip {
 			return &pb.Equip{
 				CfgId:    arg.GetCfgId(),
 				UniqueId: util.GenUniqueId(),

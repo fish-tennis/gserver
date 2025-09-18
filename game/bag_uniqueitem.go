@@ -10,9 +10,9 @@ type UniqueItemBag struct {
 	*UniqueContainer[*pb.UniqueCountItem] `db:""`
 }
 
-func NewUniqueItemBag() *UniqueItemBag {
+func NewUniqueItemBag(bags *Bags) *UniqueItemBag {
 	bag := &UniqueItemBag{
-		UniqueContainer: NewBagUnique[*pb.UniqueCountItem](pb.ContainerType_ContainerType_UniqueItem, func(arg *pb.AddElemArg) *pb.UniqueCountItem {
+		UniqueContainer: NewBagUnique[*pb.UniqueCountItem](bags, pb.ContainerType_ContainerType_UniqueItem, func(arg *pb.AddElemArg) *pb.UniqueCountItem {
 			return &pb.UniqueCountItem{
 				CfgId:    arg.GetCfgId(),
 				UniqueId: util.GenUniqueId(),
