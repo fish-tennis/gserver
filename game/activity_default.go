@@ -7,6 +7,7 @@ import (
 	"github.com/fish-tennis/gserver/pb"
 	"github.com/fish-tennis/gserver/util"
 	"log/slog"
+	"reflect"
 	"time"
 )
 
@@ -218,4 +219,19 @@ func (a *ActivityDefault) SyncDataToClient() {
 		ActivityId: a.GetId(),
 		BaseData:   a.Base,
 	})
+}
+
+// 分发一个事件,只对本活动的任务进行进度更新
+func (a *ActivityDefault) UpdateQuestProgress(event any) {
+	key := reflect.TypeOf(event).Elem().Name()
+	p := a.Activities.GetPlayer().progressEventMapping
+	if progressSlice, ok := p.mapping[key]; ok { //快速查询该事件对应的进度对象
+		for _, progress := range progressSlice {
+			if questData, ok := progress.(*pb.QuestData); ok {
+				if questData.GetActivityId() == a.GetId() {
+					p.UpdateProgress(event, progress)
+				}
+			}
+		}
+	}
 }

@@ -54,7 +54,7 @@ func (p *ProgressEventMapping) RemoveProgress(progressCfg *pb.ProgressCfg, cfgId
 	}
 }
 
-func (p *ProgressEventMapping) UpdateProgress(event any, progress internal.CfgData) {
+func (p *ProgressEventMapping) UpdateProgress(event any, progress internal.CfgData) bool {
 	switch v := progress.(type) {
 	case *pb.QuestData:
 		questCfg := cfg.Quests.GetCfg(v.GetCfgId())
@@ -65,10 +65,12 @@ func (p *ProgressEventMapping) UpdateProgress(event any, progress internal.CfgDa
 				Data:       util.CloneMessage(v),
 			})
 			slog.Debug("QuestProgressUpdate", "name", questCfg.GetName(), "questId", v.GetCfgId(), "progress", v.GetProgress(), "activityId", v.GetActivityId())
+			return true
 		}
 	default:
 		slog.Error("CheckProgressErr", "progress", progress)
 	}
+	return false
 }
 
 // 事件分发后,检查进度更新

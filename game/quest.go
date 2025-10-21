@@ -86,6 +86,10 @@ func (q *Quest) AddQuest(questData *pb.QuestData) {
 
 func (q *Quest) RemoveQuest(questCfgId int32) {
 	q.Quests.Delete(questCfgId)
+	questCfg := cfg.Quests.GetCfg(questCfgId)
+	if questCfg != nil && questCfg.Progress != nil {
+		q.GetPlayer().progressEventMapping.RemoveProgress(questCfg.Progress, questCfgId)
+	}
 	q.GetPlayer().Send(&pb.QuestRemoveRes{
 		QuestCfgId: questCfgId,
 	})
