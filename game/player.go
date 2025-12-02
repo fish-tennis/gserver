@@ -85,6 +85,11 @@ func (p *Player) SetConnection(connection Connection, useGate bool) {
 }
 
 func (p *Player) ResetConnection() {
+	if !p.useGate {
+		if p.connection != nil {
+			p.connection.Close()
+		}
+	}
 	p.connection = nil
 }
 

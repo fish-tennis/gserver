@@ -4,7 +4,7 @@ go 1.21
 
 require (
 	github.com/fish-tennis/gentity v1.4.2
-	github.com/fish-tennis/gnet v1.3.0
+	github.com/fish-tennis/gnet v1.3.1
 	github.com/go-redis/redis/v8 v8.11.5
 	go.mongodb.org/mongo-driver v1.14.0
 	google.golang.org/protobuf v1.34.2

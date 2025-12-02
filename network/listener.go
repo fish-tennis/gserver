@@ -9,38 +9,42 @@ import (
 
 var (
 	ClientConnectionConfig = gnet.ConnectionConfig{
-		SendPacketCacheCap: 32,
+		SendPacketCacheCap: 256,
 		SendBufferSize:     8 * 1024,  // 8K
 		RecvBufferSize:     8 * 1024,  // 8K
 		MaxPacketSize:      16 * 1024, // 16K
-		RecvTimeout:        20,        // seconds
+		RecvTimeout:        20,        // 20s
+		WriteTimeout:       10,        // 10s
 	}
 
 	WebSocketClientConnectionConfig = gnet.ConnectionConfig{
-		SendPacketCacheCap: 32,
+		SendPacketCacheCap: 256,
 		SendBufferSize:     8 * 1024,  // 8K
 		RecvBufferSize:     8 * 1024,  // 8K
 		MaxPacketSize:      16 * 1024, // 16K
-		RecvTimeout:        20,        // seconds
+		RecvTimeout:        20,        // 20s
+		WriteTimeout:       10,        // 10s
 		Path:               "/ws",
 	}
 
 	GateConnectionConfig = gnet.ConnectionConfig{
-		SendPacketCacheCap: 128,
+		SendPacketCacheCap: 512,
 		SendBufferSize:     512 * 1024,  // 512K
 		RecvBufferSize:     512 * 1024,  // 512K
 		MaxPacketSize:      1024 * 1024, // 1M
-		RecvTimeout:        5,           // second
-		HeartBeatInterval:  2,           // second
+		RecvTimeout:        5,           // 5s
+		WriteTimeout:       5,           // 5s
+		HeartBeatInterval:  2,           // 2s
 	}
 
 	ServerConnectionConfig = gnet.ConnectionConfig{
-		SendPacketCacheCap: 128,
+		SendPacketCacheCap: 512,
 		SendBufferSize:     512 * 1024,  // 512K
 		RecvBufferSize:     512 * 1024,  // 512K
 		MaxPacketSize:      1024 * 1024, // 1M
-		RecvTimeout:        5,           // second
-		HeartBeatInterval:  2,           // second
+		RecvTimeout:        5,           // 5s
+		WriteTimeout:       5,           // 5s
+		HeartBeatInterval:  2,           // 2s
 	}
 )
 

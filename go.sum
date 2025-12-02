@@ -4,12 +4,10 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f h1:lO4WD4F/rVNCu3HqELle0jiPLLBs70cWOduZpkS1E78=
 github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f/go.mod h1:cuUVRXasLTGF7a8hSLbxyZXjz+1KgoB3wDUb6vlszIc=
-github.com/fish-tennis/csv v1.0.5 h1:bwGI0/b6ZQV4/MNMUIHdU3nn3f9lwgn0Srp0B/dGDlE=
-github.com/fish-tennis/csv v1.0.5/go.mod h1:vcwOeWm4eoFJET6KOkAppnxu9g6MeDBdmxbAgvr/h5I=
 github.com/fish-tennis/gentity v1.4.2 h1:SWlymQHQbnA31VJUCdJabE6NJpuMDuvF9sBBJM1cQAo=
 github.com/fish-tennis/gentity v1.4.2/go.mod h1:tDM/uCSTZO6XyTd7MrL2EoQ1dLT8N6iKyHHWEOIggvc=
-github.com/fish-tennis/gnet v1.3.0 h1:GHQa02DLDazIK2RziY2vQPUE4P7LFpTQqc72F8Ztjfw=
-github.com/fish-tennis/gnet v1.3.0/go.mod h1:f33rsGHToKEmKhtyicpRcJX9uKVBrBof1aJcuaNUjcg=
+github.com/fish-tennis/gnet v1.3.1 h1:KYqLItt0g+cyzQ0NDyVwjzum7pZQKSDvZi8ul5sL0nI=
+github.com/fish-tennis/gnet v1.3.1/go.mod h1:f33rsGHToKEmKhtyicpRcJX9uKVBrBof1aJcuaNUjcg=
 github.com/fish-tennis/snowflake v1.0.1 h1:IfutFtA3ZET6g4fXT+4CQs9znQ0utQcOUs/2N4D93xs=
 github.com/fish-tennis/snowflake v1.0.1/go.mod h1:qmrmzE3fPRKx5S4IUnoqHb131MaiJUw0To4XJWkRDJg=
 github.com/fsnotify/fsnotify v1.4.9 h1:hsms1Qyu0jgnwNXIxa+/V/PDsU6CfLf6CNO8H7IWoS4=
