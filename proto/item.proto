@@ -24,3 +24,21 @@ message Equip {
   int32 timeout = 3; // 超时时间戳(秒)
   // NOTE: 其他装备属性,如强化等级等
 }
+
+// 使用道具请求
+message ItemUseReq {
+  int32 cfgId = 1;    // 物品配置id
+  int64 uniqueId = 2; // 唯一id
+}
+
+// 使用道具结果
+message ItemUseRes {
+  int32 cfgId = 1;    // 物品配置id
+  int64 uniqueId = 2; // 唯一id
+}
+
+// 使用物品时,可以传入的参数
+message ItemUseArgs {
+  int32 cfgId = 1;    // 物品配置id
+  int64 uniqueId = 2; // 唯一id
+}

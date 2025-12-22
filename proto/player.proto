@@ -18,12 +18,6 @@ message BaseInfo {
   int32 totalOnlineSeconds = 8; // 总在线时长(秒)
 }
 
-// 玩家的钱财数据
-message Money {
-  int32 coin = 1; // 金币
-  int32 diamond = 2; // 钻石
-}
-
 // 背包模块数据
 message BagSaveData {
   map<int32,int32> CountItem = 1;
@@ -62,7 +56,6 @@ message PlayerData {
   int64 AccountId = 3; // 账号id
   int32 RegionId = 4; // 区服id
   BaseInfo BaseInfo = 5;
-  bytes Money = 6;
   BagSaveData Bags = 7;
   QuestSaveData Quest = 8;
   PlayerGuildData Guild = 9;

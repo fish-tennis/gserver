@@ -365,3 +365,8 @@ func CreatePlayerFromData(playerData *pb.PlayerData) *Player {
 func CreateTempPlayer(playerId, accountId int64) *Player {
 	return CreatePlayer(playerId, "", accountId, 0)
 }
+
+// 获取金币数量(金币就是背包里的一件普通物品)
+func (p *Player) GetCoin() int32 {
+	return p.GetBags().GetItemCount(int32(pb.ItemId_ItemId_Coin))
+}

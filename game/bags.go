@@ -1,9 +1,11 @@
 package game
 
 import (
+	"errors"
 	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gserver/cfg"
 	"github.com/fish-tennis/gserver/internal"
+	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 	"log/slog"
 	"math"
@@ -210,4 +212,64 @@ func (b *Bags) TriggerPlayerEntryGame(event *internal.EventPlayerEntryGame) {
 		}
 		return time.Second
 	})
+}
+
+// 使用道具请求
+func (b *Bags) OnItemUseReq(req *pb.ItemUseReq) (*pb.ItemUseRes, error) {
+	logger.Debug("OnItemUseReq:%v", req)
+	itemCfg := cfg.ItemCfgs.GetCfg(req.GetCfgId())
+	if itemCfg == nil {
+		slog.Error("ErrItemCfgId", "playerId", b.GetPlayer().GetId(), "itemCfgId", req.GetCfgId())
+		return nil, errors.New("CfgIdError")
+	}
+	var item any
+	switch itemCfg.GetItemType() {
+	case int32(pb.ItemType_ItemType_None):
+		// 普通物品
+		if req.GetUniqueId() == 0 {
+			if b.BagCountItem.GetElemCount(req.GetCfgId()) == 0 {
+				return nil, errors.New("CountError")
+			}
+		} else {
+			// 限时道具
+			item, _ = b.BagUniqueItem.Get(req.GetUniqueId())
+			if item == nil {
+				return nil, errors.New("CountError")
+			}
+		}
+	case int32(pb.ItemType_ItemType_Equip):
+		item, _ = b.BagEquip.Get(req.GetUniqueId())
+		if item == nil {
+			return nil, errors.New("CountError")
+		}
+	}
+	useFunc := _itemUseRegisterByItemId[itemCfg.GetCfgId()]
+	if useFunc == nil {
+		useFunc = _itemUseRegisterByItemSubType[itemCfg.GetSubType()]
+	}
+	if useFunc == nil {
+		return nil, errors.New("UseFuncError")
+	}
+	useArgs := &pb.ItemUseArgs{
+		CfgId:    itemCfg.GetCfgId(),
+		UniqueId: req.GetUniqueId(),
+	}
+	useError := useFunc(b.GetPlayer(), itemCfg, item, useArgs)
+	if useError != nil {
+		slog.Error("UseItemError", "playerId", b.GetPlayer().GetId(), "useError", useError)
+		return nil, useError
+	}
+	// 假设物品是单次使用的,使用完就删除
+	b.DelItems([]*pb.DelElemArg{
+		{
+			CfgId:    itemCfg.GetCfgId(),
+			UniqueId: req.GetUniqueId(),
+			Num:      1,
+		},
+	})
+	res := &pb.ItemUseRes{
+		CfgId:    itemCfg.GetCfgId(),
+		UniqueId: req.GetUniqueId(),
+	}
+	return res, nil
 }

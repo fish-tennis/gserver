@@ -89,15 +89,14 @@ func TestSaveable(t *testing.T) {
 	}
 	t.Log(fmt.Sprintf("%v", saveData))
 
-	// 序列化保存的proto
-	money := player.GetMoney()
-	money.IncCoin(10)
-	money.IncDiamond(100)
-	saveData, err = gentity.GetComponentSaveData(money)
-	if err != nil {
-		t.Error(err)
-	}
-	t.Log(fmt.Sprintf("%v", saveData))
+	//// 序列化保存的proto
+	//money := player.GetMoney()
+	//money.IncCoin(10)
+	//saveData, err = gentity.GetComponentSaveData(money)
+	//if err != nil {
+	//	t.Error(err)
+	//}
+	//t.Log(fmt.Sprintf("%v", saveData))
 
 	// value是子模块的组合
 	bag := player.GetBags()

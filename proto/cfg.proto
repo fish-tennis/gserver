@@ -66,6 +66,12 @@ enum ItemViewType
   ItemViewType_Hide = 1; // 隐藏,不显示在背包中,不占背包格子
 }
 
+// 特殊的物品Id
+enum ItemId {
+  ItemId_None = 0;
+  ItemId_Coin = 1; // 金币
+}
+
 // 物品配置
 message ItemCfg {
   int32 CfgId = 1;
@@ -74,7 +80,7 @@ message ItemCfg {
   int32 ItemType = 4; // 物品类型(enum ItemType)
   int32 SubType  = 5; // 物品子类(enum ItemSubType)
   int32 Category = 6; // 物品分类(enum ItemCategory)
-  int32 Arg      = 7; // 参数(比如ItemSubType=ItemSubType_Exp是,表示加经验的数值)
+  repeated int32 Args = 7; // 参数列表(比如ItemSubType=ItemSubType_Exp是,表示加经验的数值)
   int32 TimeType = 8; // 限时道具的时间类型(enum TimeType)
   int32 Timeout  = 9; // 限时道具的时限
   int32 ViewType = 10; // 物品显示类型(enum ItemViewType)

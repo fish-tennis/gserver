@@ -107,8 +107,11 @@ func (r *ItemCfgR) GetCategory() int32 {
 	return r.v.GetCategory()
 }
 
-func (r *ItemCfgR) GetArg() int32 {
-	return r.v.GetArg()
+func (r *ItemCfgR) LenOfArgs() int {
+    return len(r.v.GetArgs())
+}
+func (r *ItemCfgR) ElemOfArgs(index int) int32 {
+    return r.v.GetArgs()[index]
 }
 
 func (r *ItemCfgR) GetTimeType() int32 {
