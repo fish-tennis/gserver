@@ -144,6 +144,7 @@ func initLog(logFileName string, useStdOutput bool) {
 			return a
 		},
 	}, useStdOutput)))
+	slog.Info("initLog", "logFileName", logFileName, "useStdOutput", useStdOutput)
 }
 
 // 从配置文件名解析出服务器类型

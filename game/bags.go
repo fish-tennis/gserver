@@ -5,7 +5,6 @@ import (
 	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gserver/cfg"
 	"github.com/fish-tennis/gserver/internal"
-	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 	"log/slog"
 	"math"
@@ -216,10 +215,10 @@ func (b *Bags) TriggerPlayerEntryGame(event *internal.EventPlayerEntryGame) {
 
 // 使用道具请求
 func (b *Bags) OnItemUseReq(req *pb.ItemUseReq) (*pb.ItemUseRes, error) {
-	logger.Debug("OnItemUseReq:%v", req)
+	b.GetPlayer().Log.Debug("OnItemUseReq", "req", req)
 	itemCfg := cfg.ItemCfgs.GetCfg(req.GetCfgId())
 	if itemCfg == nil {
-		slog.Error("ErrItemCfgId", "playerId", b.GetPlayer().GetId(), "itemCfgId", req.GetCfgId())
+		b.GetPlayer().Log.Error("ErrItemCfgId", "itemCfgId", req.GetCfgId())
 		return nil, errors.New("CfgIdError")
 	}
 	var item internal.Uniquely
@@ -251,9 +250,15 @@ func (b *Bags) OnItemUseReq(req *pb.ItemUseReq) (*pb.ItemUseRes, error) {
 		CfgId: itemCfg.GetCfgId(),
 		Item:  item,
 	}
+	oldLog := b.GetPlayer().Log
+	b.GetPlayer().Log = oldLog.With("itemCfgId", itemCfg.GetCfgId())
+	if req.GetUniqueId() > 0 {
+		b.GetPlayer().Log = b.GetPlayer().Log.With("uniqueId", req.GetUniqueId())
+	}
 	useError := useFunc(b.GetPlayer(), itemCfg, useArgs)
+	b.GetPlayer().Log = oldLog
 	if useError != nil {
-		slog.Error("UseItemError", "playerId", b.GetPlayer().GetId(), "useError", useError)
+		b.GetPlayer().Log.Error("UseItemError", "useError", useError)
 		return nil, useError
 	}
 	// 假设物品是单次使用的,使用完就删除

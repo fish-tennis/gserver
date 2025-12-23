@@ -42,6 +42,7 @@ type Player struct {
 	postEvents           []any
 	// 进度事件映射
 	progressEventMapping *ProgressEventMapping
+	Log                  *slog.Logger // slog.With("pid", p.GetId())
 }
 
 // 玩家名(unique)
@@ -142,12 +143,12 @@ func (p *Player) SendPacket(packet Packet, opts ...SendOption) bool {
 }
 
 // 通用的错误返回消息
-func (p *Player) SendErrorRes(errorReqCmd PacketCommand, errorMsg string) bool {
+func (p *Player) SendErrorRes(errorReqCmd PacketCommand, errorMsg string, opts ...SendOption) bool {
 	cmd := network.GetCommandByProto(new(pb.ErrorRes))
 	return p.SendWithCommand(PacketCommand(cmd), &pb.ErrorRes{
 		Command:   int32(errorReqCmd),
 		ResultStr: errorMsg,
-	})
+	}, opts...)
 }
 
 // 分发事件
@@ -261,7 +262,8 @@ func (p *Player) processMessage(message *ProtoPacket) {
 			logger.LogStack()
 		}
 	}()
-	logger.Debug("processMessage %v", proto.MessageName(message.Message()).Name())
+	p.Log = slog.Default().With("pid", p.GetId())
+	p.Log.Debug("processMessage", "msg", proto.MessageName(message.Message()).Name())
 	// func (c *Component) OnXxxReq(req *pb.XxxReq)
 	// func (c *Component) OnXxxReq(req *pb.XxxReq) (*pb.XxxRes,error)
 	if _playerPacketHandlerMgr.Invoke(p, message, func(handlerInfo *internal.PacketHandlerInfo, returnValues []reflect.Value) {
@@ -274,10 +276,11 @@ func (p *Player) processMessage(message *ProtoPacket) {
 			resProto = reflect.New(handlerInfo.ResMessageElem).Interface().(proto.Message)
 		}
 		// 返回消息给客户端
+		// NOTE:这里加了超时时间,防止Send阻塞导致玩家协程阻塞
 		if resErr != nil {
-			p.SendErrorRes(handlerInfo.ResCmd, resErr.Error())
+			p.SendErrorRes(handlerInfo.ResCmd, resErr.Error(), Timeout(time.Second))
 		} else {
-			p.Send(resProto)
+			p.Send(resProto, Timeout(time.Second))
 		}
 	}) {
 		p.firePostedEvents()
@@ -285,23 +288,23 @@ func (p *Player) processMessage(message *ProtoPacket) {
 		p.SaveCache(cache.Get())
 		return
 	}
-	logger.Error("unhandled cmd:%v message:%v", message.Command(), proto.MessageName(message.Message()).Name())
+	p.Log.Error("processMessageUnhandled", "msg", proto.MessageName(message.Message()).Name())
 }
 
 // 放入消息队列
 func (p *Player) OnRecvPacket(packet *ProtoPacket) {
-	logger.Debug("OnRecvPacket %v", proto.MessageName(packet.Message()).Name())
+	p.Log.Debug("OnRecvPacket", "msg", proto.MessageName(packet.Message()).Name())
 	p.PushMessage(packet)
 }
 
 // 玩家进入游戏服
 func (p *Player) HandlePlayerEntryGameOk(msg *pb.PlayerEntryGameOk) {
-	slog.Debug("HandlePlayerEntryGameOk", "pid", p.GetId(), "msg", msg)
+	p.Log.Debug("HandlePlayerEntryGameOk", "msg", msg)
 	// 同步各模块的数据给客户端
 	p.RangeComponent(func(component gentity.Component) bool {
 		if dataSyncer, ok := component.(DataSyncer); ok {
 			dataSyncer.SyncDataToClient()
-			slog.Debug("SyncDataToClient", "pid", p.GetId(), "component", component.GetName())
+			p.Log.Debug("SyncDataToClient", "component", component.GetName())
 		}
 		return true
 	})
@@ -326,6 +329,7 @@ func CreatePlayer(playerId int64, playerName string, accountId int64, regionId i
 		accountId:         accountId,
 		regionId:          regionId,
 		BaseRoutineEntity: *gentity.NewRoutineEntity(32),
+		Log:               slog.With("pid", playerId),
 	}
 	player.Id = playerId
 	player.progressEventMapping = &ProgressEventMapping{
@@ -333,6 +337,7 @@ func CreatePlayer(playerId int64, playerName string, accountId int64, regionId i
 	}
 	// 初始化玩家的各个模块
 	_playerComponentRegister.InitComponents(player, nil)
+	player.Log.Debug("CreatePlayer")
 	return player
 }
 
@@ -342,20 +347,20 @@ func CreatePlayerFromData(playerData *pb.PlayerData) *Player {
 	defer func() {
 		if err := recover(); err != nil {
 			player = nil
-			logger.Error("fatal %v", err.(error))
+			slog.Error("CreatePlayerFromDataErr", "pid", playerData.XId, "err", err.(error))
 			LogStack()
 		}
 	}()
 	player = CreatePlayer(playerData.XId, playerData.Name, playerData.AccountId, playerData.RegionId)
 	err := gentity.LoadEntityData(player, playerData)
 	if err != nil {
-		slog.Error("LoadPlayerDataErr", "playerId", player.GetId(), "err", err)
+		player.Log.Error("LoadPlayerDataErr", "err", err)
 		return nil
 	}
 	player.RangeComponent(func(component gentity.Component) bool {
 		if dataLoader, ok := component.(internal.DataLoader); ok {
 			dataLoader.OnDataLoad()
-			slog.Debug("OnDataLoad", "pid", player.GetId(), "component", component.GetName())
+			player.Log.Debug("OnDataLoad", "component", component.GetName())
 		}
 		return true
 	})

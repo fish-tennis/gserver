@@ -36,5 +36,6 @@ func UseItem_Exp(player *Player, itemCfg *pb.ItemCfg, useArgs *ItemUseArgs) erro
 		return errors.New("ArgError")
 	}
 	player.GetBaseInfo().IncExp(addExp)
+	player.Log.Debug("UseItem_Exp", "addExp", addExp)
 	return nil
 }
