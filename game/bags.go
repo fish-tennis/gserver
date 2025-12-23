@@ -222,7 +222,7 @@ func (b *Bags) OnItemUseReq(req *pb.ItemUseReq) (*pb.ItemUseRes, error) {
 		slog.Error("ErrItemCfgId", "playerId", b.GetPlayer().GetId(), "itemCfgId", req.GetCfgId())
 		return nil, errors.New("CfgIdError")
 	}
-	var item any
+	var item internal.Uniquely
 	switch itemCfg.GetItemType() {
 	case int32(pb.ItemType_ItemType_None):
 		// 普通物品
@@ -233,15 +233,12 @@ func (b *Bags) OnItemUseReq(req *pb.ItemUseReq) (*pb.ItemUseRes, error) {
 		} else {
 			// 限时道具
 			item, _ = b.BagUniqueItem.Get(req.GetUniqueId())
-			if item == nil {
-				return nil, errors.New("CountError")
-			}
 		}
 	case int32(pb.ItemType_ItemType_Equip):
 		item, _ = b.BagEquip.Get(req.GetUniqueId())
-		if item == nil {
-			return nil, errors.New("CountError")
-		}
+	}
+	if req.GetUniqueId() > 0 && item == nil {
+		return nil, errors.New("CountError")
 	}
 	useFunc := _itemUseRegisterByItemId[itemCfg.GetCfgId()]
 	if useFunc == nil {
@@ -250,11 +247,11 @@ func (b *Bags) OnItemUseReq(req *pb.ItemUseReq) (*pb.ItemUseRes, error) {
 	if useFunc == nil {
 		return nil, errors.New("UseFuncError")
 	}
-	useArgs := &pb.ItemUseArgs{
-		CfgId:    itemCfg.GetCfgId(),
-		UniqueId: req.GetUniqueId(),
+	useArgs := &ItemUseArgs{
+		CfgId: itemCfg.GetCfgId(),
+		Item:  item,
 	}
-	useError := useFunc(b.GetPlayer(), itemCfg, item, useArgs)
+	useError := useFunc(b.GetPlayer(), itemCfg, useArgs)
 	if useError != nil {
 		slog.Error("UseItemError", "playerId", b.GetPlayer().GetId(), "useError", useError)
 		return nil, useError

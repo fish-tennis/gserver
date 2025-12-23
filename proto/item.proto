@@ -36,9 +36,3 @@ message ItemUseRes {
   int32 cfgId = 1;    // 物品配置id
   int64 uniqueId = 2; // 唯一id
 }
-
-// 使用物品时,可以传入的参数
-message ItemUseArgs {
-  int32 cfgId = 1;    // 物品配置id
-  int64 uniqueId = 2; // 唯一id
-}
