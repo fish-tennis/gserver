@@ -364,7 +364,12 @@ func (this *ServerList) GetServerConnection(serverId int32) gnet.Connection {
 func (this *ServerList) Send(serverId int32, cmd gnet.PacketCommand, message proto.Message, opts ...gnet.SendOption) bool {
 	connection := this.GetServerConnection(serverId)
 	if connection != nil && connection.IsConnected() {
-		return connection.Send(cmd, message, opts...)
+		bytes, err := proto.Marshal(message)
+		if err != nil {
+			slog.Error("SendErr", "serverId", serverId, "msg", proto.MessageName(message).Name(), "err", err)
+			return false
+		}
+		return connection.SendPacket(gnet.NewProtoPacketWithData(cmd, bytes), opts...)
 	}
 	return false
 }

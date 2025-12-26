@@ -119,11 +119,18 @@ func (p *Player) Send(message proto.Message, opts ...SendOption) bool {
 
 func (p *Player) SendWithCommand(cmd PacketCommand, message proto.Message, opts ...SendOption) bool {
 	if p.connection != nil {
+		// 在业务协程中序列化proto,防止message在gnet的网络协程中序列化时,业务层如果继续修改该message可能有并发问题
+		// 尤其是message有引用性的字段时
+		bytes, err := proto.Marshal(message)
+		if err != nil {
+			p.Log.Error("SendWithCommandErr", "msg", proto.MessageName(message).Name(), "err", err)
+			return false
+		}
 		if p.useGate {
 			// 网关模式,自动附加上playerId
-			return p.connection.SendPacket(network.NewGatePacket(p.GetId(), cmd, message), opts...)
+			return p.connection.SendPacket(network.NewGatePacketWithData(p.GetId(), cmd, bytes), opts...)
 		} else {
-			return p.connection.Send(cmd, message, opts...)
+			return p.connection.SendPacket(NewProtoPacketWithData(cmd, bytes), opts...)
 		}
 	}
 	return false
@@ -132,9 +139,18 @@ func (p *Player) SendWithCommand(cmd PacketCommand, message proto.Message, opts 
 func (p *Player) SendPacket(packet Packet, opts ...SendOption) bool {
 	if p.connection != nil {
 		if p.useGate {
+			bytes := packet.GetStreamData()
+			if len(bytes) == 0 && packet.Message() != nil {
+				var err error
+				bytes, err = proto.Marshal(packet.Message())
+				if err != nil {
+					p.Log.Error("SendPacketErr", "msg", proto.MessageName(packet.Message()).Name(), "err", err)
+					return false
+				}
+			}
 			// 网关模式,自动附加上playerId
-			return p.connection.SendPacket(network.NewGatePacket(p.GetId(), packet.Command(), packet.Message()).
-				WithStreamData(packet.GetStreamData()).WithRpc(packet), opts...)
+			return p.connection.SendPacket(network.NewGatePacketWithData(p.GetId(), packet.Command(), bytes).
+				WithRpc(packet), opts...)
 		} else {
 			return p.connection.SendPacket(packet, opts...)
 		}
