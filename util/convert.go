@@ -1,6 +1,7 @@
 package util
 
 import (
+	"reflect"
 	"strconv"
 	"strings"
 )
@@ -37,6 +38,11 @@ func ToInt(v any) int {
 			return 0
 		}
 		return int(i64)
+	default:
+		val := reflect.ValueOf(v)
+		if val.CanInt() {
+			return int(val.Int())
+		}
 	}
 	return 0
 }
@@ -73,6 +79,11 @@ func ToUint(v any) uint {
 			return 0
 		}
 		return uint(u64)
+	default:
+		val := reflect.ValueOf(v)
+		if val.CanUint() {
+			return uint(val.Uint())
+		}
 	}
 	return 0
 }
@@ -109,6 +120,11 @@ func ToFloat(v any) float64 {
 			return 0
 		}
 		return f64
+	default:
+		val := reflect.ValueOf(v)
+		if val.CanFloat() {
+			return val.Float()
+		}
 	}
 	return 0
 }
