@@ -237,6 +237,15 @@ func (this *ServerList) FindAndConnectServers(ctx context.Context) {
 			//}
 			// 只连接Id>=自己的服务器,让每2个服务器之间只有一条链接
 			// NOTE: 自己和自己也会产生一条链接
+			// 目的:简化某些业务代码,使跨进程和本进程上的跨协程操作统一接口
+			//需求举例:
+			//  游戏服务器进程A上,需要给玩家X发送一条消息请求,如果玩家X在A上,则直接往玩家X的协程chan写入一个request
+			//  如果玩家X在游戏服务器进程B上,则需要先给游戏服务器进程B发送一条网络消息,待游戏服务器进程B再转发到玩家X的协程chan上
+			//  如上所述,给玩家X发消息,就需要一个if else来处理不同的情况
+			//
+			//自己和自己建立连接之后:
+			//  不用知道玩家X在哪个游戏服务器进程上,直接给玩家X所在的游戏服务器进程发消息(包含本进程),由其所在的进程转发到玩家X的协程chan上
+			//  从而统一了操作接口,简化了接口
 			if info.GetServerId() < this.localServerInfo.GetServerId() {
 				continue
 			}
