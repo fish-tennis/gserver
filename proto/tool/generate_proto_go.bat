@@ -28,10 +28,10 @@ if exist .\..\..\..\cshap_client (
 if exist .\..\..\..\unity_client (
     REM 生成proto的C#代码
     .\protoc.exe --csharp_out=.\..\..\..\unity_client\client\project\Assets\Code\pb\ --proto_path=.\..\ .\..\*.proto
-	REM 拷贝消息号映射文件到gtestclient
+	REM 拷贝消息号映射文件到unity_client
 	copy .\..\..\cfgdata\message_command_mapping.json .\..\..\..\unity_client\client\project\Assets\cfgdata\message_command_mapping.json
 	REM 生成C#模板代码
-	.\proto_code_gen.exe -input=.\..\..\pb\*.pb.go -config=.\proto_code_gen_csharp.yaml
+	.\proto_code_gen.exe -input=.\..\..\pb\*.pb.go -config=.\proto_code_gen_unity.yaml
 ) else (
     echo not find unity_client
 )
