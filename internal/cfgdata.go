@@ -4,3 +4,7 @@ package internal
 type CfgData interface {
 	GetCfgId() int32
 }
+
+type StrCfgData interface {
+	GetCfgId() string
+}

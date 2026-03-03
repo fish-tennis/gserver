@@ -12,7 +12,7 @@ namespace cshap_client.cfg
     internal class DataMgr
     {
 		{{range.Mgrs}}//{{.CodeComment}}
-		{{if eq .MgrType "map"}}public static Dictionary<int, Gserver.{{.MessageName}}> {{.MgrName}};{{end}}
+		{{if eq .MgrType "map"}}public static Dictionary<{{.MapKeyType}}, Gserver.{{.MessageName}}> {{.MgrName}};{{end}}
 		{{if eq .MgrType "slice"}}public static List<Gserver.{{.MessageName}}> {{.MgrName}};{{end}}
 		{{if eq .MgrType "object"}}public static Gserver.{{.MessageName}} {{.MgrName}};{{end}}{{end}}
 
@@ -22,7 +22,7 @@ namespace cshap_client.cfg
 			{{range.Mgrs}}{{if eq .MgrType "map"}}try
             {
                 string jsonContent = File.ReadAllText(dataDir+"{{.FileName}}");
-                {{.MgrName}} = JsonConvert.DeserializeObject<Dictionary<int, Gserver.{{.MessageName}}>>(jsonContent);
+                {{.MgrName}} = JsonConvert.DeserializeObject<Dictionary<{{.MapKeyType}}, Gserver.{{.MessageName}}>>(jsonContent);
                 Console.WriteLine("Load {{.FileName}}:" + {{.MgrName}}.Count);
             }
             catch (Exception ex)

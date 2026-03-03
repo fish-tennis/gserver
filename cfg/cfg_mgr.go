@@ -95,6 +95,80 @@ func (this *DataMap[E]) CreateSlice(filter func(e E) bool, cmpFn func(a, b E) in
 	return s
 }
 
+// map[string]E类型的配置数据管理
+type StrDataMap[E internal.StrCfgData] struct {
+	Elems map[string]E
+}
+
+func NewStrDataMap[E internal.StrCfgData]() *StrDataMap[E] {
+	return &StrDataMap[E]{
+		Elems: make(map[string]E),
+	}
+}
+
+func (m *StrDataMap[E]) GetCfg(cfgId string) E {
+	return m.Elems[cfgId]
+}
+
+func (m *StrDataMap[E]) Range(f func(e E) bool) {
+	for _, cfg := range m.Elems {
+		if !f(cfg) {
+			return
+		}
+	}
+}
+
+// 加载配置数据,支持json和csv
+func (m *StrDataMap[E]) Load(fileName string) error {
+	if m.Elems == nil {
+		m.Elems = make(map[string]E)
+	}
+	return m.LoadJson(fileName)
+}
+
+// 从json文件加载数据
+func (m *StrDataMap[E]) LoadJson(fileName string) error {
+	fileData, err := os.ReadFile(fileName)
+	if err != nil {
+		slog.Error("LoadJsonErr", "fileName", fileName, "err", err)
+		return err
+	}
+	cfgMap := make(map[string]E)
+	err = json.Unmarshal(fileData, &cfgMap)
+	if err != nil {
+		slog.Error("LoadJsonErr", "fileName", fileName, "err", err)
+		return err
+	}
+	m.Elems = cfgMap
+	slog.Info("LoadJson", "fileName", fileName, "count", len(m.Elems))
+	return nil
+}
+
+// 创建子集
+func (m *StrDataMap[E]) CreateSubset(filter func(e E) bool) *StrDataMap[E] {
+	subMap := NewStrDataMap[E]()
+	for _, e := range m.Elems {
+		if filter(e) {
+			subMap.Elems[e.GetCfgId()] = e
+		}
+	}
+	return subMap
+}
+
+// 创建slice
+func (m *StrDataMap[E]) CreateSlice(filter func(e E) bool, cmpFn func(a, b E) int) []E {
+	var s []E
+	for _, e := range m.Elems {
+		if filter(e) {
+			s = append(s, e)
+		}
+	}
+	if cmpFn != nil {
+		slices.SortFunc(s, cmpFn)
+	}
+	return s
+}
+
 // slice类型的配置数据管理
 type DataSlice[E any] struct {
 	Elems []E
