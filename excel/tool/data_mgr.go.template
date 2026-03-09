@@ -16,7 +16,7 @@ var (
     register = &processRegister{}
 
     {{range.Mgrs}}//{{.CodeComment}}
-    {{if eq .MgrType "map"}}{{.MgrName}}{{if eq .MapKeyType "int"}}*DataMap{{else}}*StrDataMap{{end}}[*pb.{{.MessageName}}]{{end}}
+    {{if eq .MgrType "map"}}{{.MgrName}}{{if eq .MapKeyType "int"}} *DataMap{{else}}*StrDataMap{{end}}[*pb.{{.MessageName}}]{{end}}
     {{if eq .MgrType "slice"}}{{.MgrName}} *DataSlice[*pb.{{.MessageName}}]{{end}}
     {{if eq .MgrType "object"}}{{.MgrName}} *pb.{{.MessageName}}{{end}}{{end}}
 )
@@ -25,7 +25,8 @@ var (
 type processRegister struct {
     {{range.Mgrs}}{{if eq .MgrType "map"}}{{.MgrName}}Process func(mgr {{if eq .MapKeyType "int"}}*DataMap{{else}}*StrDataMap{{end}}[*pb.{{.MessageName}}]) error{{end}}
     {{if eq .MgrType "slice"}}{{.MgrName}}Process func(mgr *DataSlice[*pb.{{.MessageName}}]) error{{end}}
-    {{if eq .MgrType "object"}}{{.MgrName}}Process func(obj *pb.{{.MessageName}}) error{{end}}{{end}}
+    {{if eq .MgrType "object"}}{{.MgrName}}Process func(obj *pb.{{.MessageName}}) error{{end}}
+	{{end}}
 }
 
 // filter:过滤接口,返回false则不加载该文件
@@ -46,6 +47,8 @@ func Load(dataDir string, filter func(fileName string) bool) error {
         err = tmp{{.MgrName}}.LoadJson(dataDir+"{{.FileName}}")
         {{else if eq .MgrType "slice"}}tmp{{.MgrName}} := &DataSlice[*pb.{{.MessageName}}]{}
         err = tmp{{.MgrName}}.LoadJson(dataDir+"{{.FileName}}")
+		{{else if eq .MgrType "object"}}tmp{{.MgrName}} := &pb.{{.MessageName}}{}
+        err = LoadObjectFromJson(dataDir+"{{.FileName}}", tmp{{.MgrName}})
         {{end}}if err != nil {
             return err
         }
