@@ -183,6 +183,13 @@ docker-compose up -d
 
 docker build -t gserver:latest .
 
+## AI skills
+目前本人AI编码使用的Trae,所以skills脚本放在了.trae目录下
+
+- player-component-generator: 生成1个新的玩家模块
+- bag-generator: 生成1个新背包
+- client-handler: 生成客户端请求事件的响应代码
+
 
 ## 讨论
 QQ群: 764912827
