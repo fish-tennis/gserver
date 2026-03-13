@@ -1,4 +1,5 @@
-version: '3.8' # 使用较新的Compose版本
+version: '3.8'
+#快速构建一个测试环境,包含1个gate,1个login,2个game
 
 services:
   gate:
@@ -11,7 +12,7 @@ services:
     #  - "8080:8080"
     #  - "10001:10001"
     volumes:
-      - ./config/gate_1.yaml:/app/config/gate_1.yaml #服务配置文件
+      - ./config/gate_1.yaml:/app/config/gate_1.yaml #dev环境的服务配置文件
     network_mode: host
     restart: unless-stopped
     depends_on:
@@ -67,7 +68,7 @@ services:
   # --- Redis 服务 ---
   redis:
     image: redis:7-alpine # 使用轻量级镜像
-    #container_name: my-redis
+    #container_name: dev-redis
     #ports:
     #  - "6379:6379"
     network_mode: host
@@ -81,7 +82,7 @@ services:
   # --- MongoDB 服务 ---
   mongodb:
     image: mongo:7
-    #container_name: my-mongo
+    #container_name: dev-mongodb
     #ports:
     #  - "27017:27017"
     network_mode: host
@@ -92,7 +93,7 @@ services:
       # 初始化root用户和密码
       #MONGO_INITDB_ROOT_USERNAME: root
       #MONGO_INITDB_ROOT_PASSWORD: 123456
-      MONGO_INITDB_DATABASE: eat
+      MONGO_INITDB_DATABASE: testdb
 
 # 定义持久化卷
 volumes:
