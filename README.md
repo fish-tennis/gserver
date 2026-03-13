@@ -176,9 +176,11 @@ generate_proto_go集成了protoc和proto_code_gen
 
 ## docker
 快速构建1个测试环境:在docker/dev目录下运行(docker/dev/config下配置测试环境的参数)
+
 docker-compose up -d
 
 单独打包gserver
+
 docker build -t gserver:latest .
 
 
