@@ -36,6 +36,25 @@ The skill generates a Go file with:
 7. **SyncDataToClient()**: Method for client synchronization
 8. **Request handlers**: `On<Xxx>Req()` methods for each client request
 
+## Implementation Steps
+
+### Step 1: Check Proto Definitions
+
+Check if the required proto messages exist in `pb/` directory:
+- Search for `<ComponentName>Data` in `pb/*.pb.go`
+- Search for Req/Res messages for client handlers
+
+### Step 2: Check and Update PlayerData
+
+Check `../proto/player.proto` (parent directory's proto folder):
+- Look for `message PlayerData` definition
+- Check if the component field exists (e.g., `<componentName> *<ComponentName>Data`)
+- If not found, add the field to PlayerData message
+
+### Step 3: Generate Component File
+
+Create the component file at `game/<componentname>.go` using the appropriate template.
+
 ## Code Template
 
 ### Single Proto Data (PlayerDataComponent)
@@ -204,7 +223,8 @@ For a "Exchange" component with ExchangeReq/ExchangeRes:
 
 1. Check `pb/exchange.pb.go` for message definitions
 2. Check `cfg/data_mgr.go` for configuration data
-3. Generate the component file at `game/exchange.go`
+3. Check `../proto/player.proto` for PlayerData, add `exchange *ExchangeData` if missing
+4. Generate the component file at `game/exchange.go`
 
 ## Notes
 
@@ -217,5 +237,9 @@ For a "Exchange" component with ExchangeReq/ExchangeRes:
   - **MapData[int32, *pb.Xxx]**: For data keyed by int32 (e.g., quest id, item id)
   - **MapData[int64, *pb.Xxx]**: For data keyed by int64 (e.g., unique ids)
   - **MapData[string, *pb.Xxx]**: For data keyed by string (e.g., names)
+- **Proto Files**:
+  - Proto definitions are in `../proto/` directory (parent of project root)
+  - `player.proto` contains `PlayerData` message with all component fields
+  - After modifying proto files, run `protoc` to regenerate Go code
 - Follow existing patterns in `game/base_info.go`, `game/exchange.go`, `game/bags.go`, `game/quest.go`
 - Check protobuf definitions in `pb/` directory for Req/Res message structures
