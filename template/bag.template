@@ -1,0 +1,19 @@
+package game
+
+import "github.com/fish-tennis/gserver/pb"
+
+// {{.Comment}}
+type {{.Name}}Bag struct {
+	*{{.Container}}[*pb.{{.Message}}] `db:""`
+}
+
+func New{{.Name}}Bag(bags *Bags) *{{.Name}}Bag {
+	bag := &{{.Name}}Bag{
+		{{.Container}}: New{{.Container}}[*pb.{{.Message}}](bags, pb.ContainerType_ContainerType_{{.Name}}, func(arg *pb.AddElemArg) *pb.{{.Message}} {
+			return &pb.{{.Message}}{
+				Id:    arg.GetId(),
+			}
+		}),
+	}
+	return bag
+}

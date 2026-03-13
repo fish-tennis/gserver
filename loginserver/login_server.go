@@ -108,7 +108,7 @@ func (this *LoginServer) initDb() {
 	// kv数据库
 	mongoDb.RegisterKvDb(db.GlobalDbName, true, db.GlobalDbKeyName, db.GlobalDbValueName)
 	if !mongoDb.Connect() {
-		panic("connect db error")
+		panic(fmt.Sprintf("connect db error,uri:%v db:%v", this.config.Mongo.Uri, this.config.Mongo.Db))
 	}
 	// 账号名建立唯一索引
 	this.accountDb.(*gentity.MongoCollection).CreateIndex(db.AccountName, true)

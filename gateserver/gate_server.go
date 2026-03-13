@@ -2,6 +2,7 @@ package gateserver
 
 import (
 	"context"
+	"fmt"
 	"github.com/fish-tennis/gentity"
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
@@ -66,7 +67,7 @@ func (s *GateServer) Init(ctx context.Context, configFile string) bool {
 func (s *GateServer) readConfig() {
 	fileData, err := os.ReadFile(s.GetConfigFile())
 	if err != nil {
-		panic("read config file err")
+		panic(fmt.Sprintf("read %v err:%v", s.GetConfigFile(), err))
 	}
 	s.config = &GateServerConfig{}
 	err = yaml.Unmarshal(fileData, s.config)
@@ -83,7 +84,8 @@ func (s *GateServer) initCache() {
 	cache.NewRedis(s.config.Redis.Uri, s.config.Redis.UserName, s.config.Redis.Password, s.config.Redis.Cluster)
 	pong, err := cache.GetRedis().Ping(context.Background()).Result()
 	if err != nil || pong == "" {
-		panic("redis connect error")
+		slog.Error("redis connect error", "uri", s.config.Redis.Uri, "cluster", s.config.Redis.Cluster, "err", err)
+		panic(fmt.Sprintf("redis connect error: uri:%v(%v) err:%v", s.config.Redis.Uri, s.config.Redis.Cluster, err))
 	}
 }
 
@@ -93,6 +95,7 @@ func (s *GateServer) initNetwork() {
 	if s.clientListener == nil {
 		panic("listen client failed")
 	}
+	slog.Info("listen client", "addr", s.config.Client.Addr)
 
 	// 监听WebSocket客户端
 	if s.config.WsClient.Addr != "" {
@@ -101,6 +104,7 @@ func (s *GateServer) initNetwork() {
 		if s.wsClientListener == nil {
 			panic("listen websocket client failed")
 		}
+		slog.Info("listen websocket client", "addr", s.config.WsClient.Addr)
 	}
 
 	s.GetServerList().SetCache(cache.Get())

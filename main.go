@@ -54,6 +54,9 @@ func main() {
 	baseFileName = strings.TrimSuffix(baseFileName, filepath.Ext(baseFileName)) // login_test
 	serverType := getServerTypeFromConfigFile(configFile)                       // login
 	initLog(baseFileName, !isDaemon)
+	cwd, _ := os.Getwd()
+	slog.Info("args", "conf", configFile, "cfgDir", cfgDir, "isDaemon", isDaemon, "cwd", cwd)
+	slog.Info("build", "BuildTime", internal.BuildTime, "BuildType", internal.BuildType, "GitVersion", internal.GitVersion)
 	ctx, cancel := context.WithCancel(context.Background())
 	server := createServer(ctx, serverType, configFile, cfgDir)
 	gentity.SetApplication(server)
