@@ -2,10 +2,10 @@
 ServerId: 11
 #监听客户端
 Client:
-  Addr: 127.0.0.1:10002
+  Addr: :10002
 #监听网关
 Gate:
-  Addr: 127.0.0.1:10003
+  Addr: :10003
 #数据库
 Mongo:
   Uri: mongodb://127.0.0.1:27017
