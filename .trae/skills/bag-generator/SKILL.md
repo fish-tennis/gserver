@@ -1,81 +1,81 @@
 ---
 name: "bag-generator"
-description: "Generates initial code for bag/container in Go. Invoke when user wants to create a new bag type with specific container type."
+description: "生成Go语言的背包/容器初始代码。当用户想要创建具有特定容器类型的新背包类型时调用。"
 ---
 
-# Bag Generator
+# 背包生成器
 
-This skill generates initial code for bag/container following the project's conventions.
+此技能用于生成遵循项目规范的背包/容器初始代码。
 
-## When to Invoke
+## 调用时机
 
-- User wants to create a new bag/container
-- User asks to generate a new inventory type
-- User needs boilerplate code for a bag feature
+- 用户想要创建新的背包/容器
+- 用户要求生成新的物品栏类型
+- 用户需要背包功能的样板代码
 
-## Required Information
+## 所需信息
 
-Ask the user for:
-1. **Bag Name**: The name of the bag (e.g., "Equip", "UniqueItem")
-2. **Container Type**: Which ElemContainer to inherit from:
-   - **CountContainer**: For stackable items (key: int32, value: count)
-   - **UniqueContainer**: For unique items with uniqueId (key: int64)
-   - **CfgContainer**: For config-based items (key: int32, config id)
-3. **Proto Data Type**: If using UniqueContainer or CfgContainer, specify the proto message type (e.g., `*pb.Equip`, `*pb.UniqueCountItem`)
+向用户询问以下信息：
+1. **背包名称**：背包的名称（例如："Equip"、"UniqueItem"）
+2. **容器类型**：继承哪个ElemContainer：
+   - **CountContainer**：用于可堆叠物品（键：int32，值：数量）
+   - **UniqueContainer**：用于带有uniqueId的唯一物品（键：int64）
+   - **CfgContainer**：用于基于配置的物品（键：int32，配置id）
+3. **Proto数据类型**：如果使用UniqueContainer或CfgContainer，指定proto消息类型（例如：`*pb.Equip`、`*pb.HeroData`）
 
-## Naming Conventions
+## 命名规范
 
-Based on bag name, generate:
-- **Struct Name**: `<BagName>Bag` (e.g., "Equip" → "EquipBag")
-- **Container Enum**: `ContainerType_ContainerType_<BagName>` (e.g., "Equip" → `ContainerType_ContainerType_Equip`)
-- **Item Type Enum**: `ItemType_ItemType_<BagName>` (e.g., "Equip" → `ItemType_ItemType_Equip`)
-- **Member Variable**: `Bag<BagName>` (e.g., "Equip" → `BagEquip`)
+根据背包名称生成：
+- **结构体名称**：`<BagName>Bag`（例如："Equip" → "EquipBag"）
+- **容器枚举**：`ContainerType_ContainerType_<BagName>`（例如："Equip" → `ContainerType_ContainerType_Equip`）
+- **物品类型枚举**：`ItemType_ItemType_<BagName>`（例如："Equip" → `ItemType_ItemType_Equip`）
+- **成员变量**：`Bag<BagName>`（例如："Equip" → `BagEquip`）
 
-## Implementation Steps
+## 实现步骤
 
-### Step 1: Check and Update Proto Files
+### 步骤1：检查并更新Proto文件
 
-Check the following proto files (located in parent directory's `proto/` folder):
+检查以下proto文件（位于`proto/`文件夹）：
 
-1. **`proto/bags.proto`** - Check `enum ContainerType`:
-   - If container enum doesn't exist, add: `ContainerType_<BagName> = <next_value>`
+1. **`proto/bags.proto`** - 检查`enum ContainerType`：
+   - 如果容器枚举不存在，添加：`ContainerType_<BagName> = <next_value>`
    
-2. **`proto/cfg.proto`** - Check `enum ItemType`:
-   - If item type enum doesn't exist, add: `ItemType_<BagName> = <next_value>`
+2. **`proto/cfg.proto`** - 检查`enum ItemType`：
+   - 如果物品类型枚举不存在，添加：`ItemType_<BagName> = <next_value>`
    
-3. **`proto/bags.proto`** - Check `message BagsSync`:
-   - Add the bag field with appropriate map type
+3. **`proto/bags.proto`** - 检查`message BagsSync`：
+   - 添加带有适当map类型的背包字段
 
-### Step 2: Create Bag File
+### 步骤2：创建背包文件
 
-Create `game/bag_<bagname>.go` with appropriate template.
+使用适当的模板创建`game/bag_<bagname>.go`。
 
-### Step 3: Update game/bags.go
+### 步骤3：更新game/bags.go
 
-1. Add bag field to `Bags` struct:
+1. 向`Bags`结构体添加背包字段：
    ```go
    Bag<BagName> *<BagName>Bag `child:"<BagName>"`
    ```
 
-2. Initialize bag in `init()` function:
+2. 在`init()`函数中初始化背包：
    ```go
    bags.Bag<BagName> = New<BagName>Bag(bags)
    ```
 
-3. Add case in `GetBagByArg()`:
+3. 在`GetBagByArg()`中添加case：
    ```go
    case int32(pb.ItemType_ItemType_<BagName>):
        return b.Bag<BagName>
    ```
 
-4. Add bag to `SyncDataToClient()`:
+4. 将背包添加到`SyncDataToClient()`：
    ```go
    <BagName>: b.Bag<BagName>.Data,
    ```
 
-## Code Templates
+## 代码模板
 
-### CountContainer Template
+### CountContainer模板
 
 ```go
 package game
@@ -94,7 +94,7 @@ func New<BagName>Bag(bags *Bags) *<BagName>Bag {
 }
 ```
 
-### UniqueContainer Template
+### UniqueContainer模板
 
 ```go
 package game
@@ -112,9 +112,9 @@ func New<BagName>Bag(bags *Bags) *<BagName>Bag {
 	bag := &<BagName>Bag{
 		UniqueContainer: NewBagUnique[*pb.<DataType>](bags, pb.ContainerType_ContainerType_<BagName>, func(arg *pb.AddElemArg) *pb.<DataType> {
 			return &pb.<DataType>{
-				CfgId: arg.GetCfgId(),
+				Id: arg.GetId(),
                 UniqueId: util.GenUniqueId(),
-				// TODO: Initialize other fields
+				// TODO: 初始化其他字段
 			}
 		}),
 	}
@@ -122,7 +122,7 @@ func New<BagName>Bag(bags *Bags) *<BagName>Bag {
 }
 ```
 
-### CfgContainer Template
+### CfgContainer模板
 
 ```go
 package game
@@ -137,8 +137,8 @@ func New<BagName>Bag(bags *Bags) *<BagName>Bag {
 	bag := &<BagName>Bag{
 		CfgContainer: NewBagCfg[*pb.<DataType>](bags, pb.ContainerType_ContainerType_<BagName>, func(arg *pb.AddElemArg) *pb.<DataType> {
 			return &pb.<DataType>{
-				CfgId: arg.GetCfgId(),
-				// TODO: Initialize other fields
+				Id: arg.GetId(),
+				// TODO: 初始化其他字段
 			}
 		}),
 	}
@@ -146,24 +146,24 @@ func New<BagName>Bag(bags *Bags) *<BagName>Bag {
 }
 ```
 
-## Example
+## 示例
 
-For a "Pet" bag using CfgContainer with `*pb.PetData`:
+对于使用CfgContainer和`*pb.PetData`的"Pet"背包：
 
-1. Check `proto/bags.proto` - Add `ContainerType_Pet = 6`
-2. Check `proto/cfg.proto` - Add `ItemType_Pet = 4`
-3. Check `proto/bags.proto` - Add `Pet map[int32]*PetData` to BagsSync
-4. Create `game/bag_pet.go`
-5. Update `game/bags.go`:
-   - Add `BagPet *PetBag \`child:"Pet"\``
-   - Add `bags.BagPet = NewPetBag(bags)`
-   - Add case for `ItemType_ItemType_Pet`
-   - Add `Pet: b.BagPet.Data` to SyncDataToClient
+1. 检查`proto/bags.proto` - 添加`ContainerType_Pet = 6`
+2. 检查`proto/cfg.proto` - 添加`ItemType_Pet = 4`
+3. 检查`proto/bags.proto` - 向BagsSync添加`Pet map[int32]*PetData`
+4. 创建`game/bag_pet.go`
+5. 更新`game/bags.go`：
+   - 添加`BagPet *PetBag \`child:"Pet"\``
+   - 添加`bags.BagPet = NewPetBag(bags)`
+   - 为`ItemType_ItemType_Pet`添加case
+   - 向SyncDataToClient添加`Pet: b.BagPet.Data`
 
-## Notes
+## 注意事项
 
-- Proto files are in `../proto/` directory (parent of project root)
-- After modifying proto files, run `protoc` to regenerate Go code
-- Follow existing patterns in `game/bag_equip.go`
-- ContainerType values must be unique and sequential
-- ItemType values must be unique and sequential
+- Proto文件位于`proto/`目录
+- 修改proto文件后，运行`protoc`重新生成Go代码
+- 遵循`game/bag_equip.go`中的现有模式
+- ContainerType值必须唯一且连续
+- ItemType值必须唯一且连续

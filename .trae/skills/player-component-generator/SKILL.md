@@ -1,63 +1,69 @@
 ---
 name: "player-component-generator"
-description: "Generates initial code for player components in Go. Invoke when user wants to create a new player component with client request handlers."
+description: "生成Go语言玩家组件的初始代码。当用户想要创建带有客户端请求处理函数的新玩家组件时调用。"
 ---
 
-# Player Component Generator
+# 玩家组件生成器
 
-This skill generates initial code for player components following the project's conventions.
+此技能用于生成遵循项目规范的玩家组件初始代码。
 
-## When to Invoke
+## 调用时机
 
-- User wants to create a new player component
-- User asks to generate a new component for the game
-- User needs boilerplate code for a player feature
+- 用户想要创建新的玩家组件
+- 用户要求为游戏生成新组件
+- 用户需要玩家功能的样板代码
 
-## Usage
+## 使用方法
 
-Ask the user for:
-1. **Component Name**: The name of the component (e.g., "BaseInfo", "Exchange", "Quest")
-2. **Client Request Handlers**: List of Req/Res message pairs from protobuf
-3. **Data Storage Type**: 
-   - **Single Proto**: Component data is a single protobuf message (e.g., `*pb.XxxData`)
-   - **MapData**: Component data is a map structure using `gentity.MapData`
-     - If MapData, also ask for **Map Key Type**: `int32` or `string`
+向用户询问以下信息：
+1. **组件名称**：组件的名称（例如："BaseInfo"、"Exchange"、"Quest"）
+2. **客户端请求处理函数**：来自protobuf的Req/Res消息对列表
+3. **数据存储类型**：
+   - 无持久化数据,组件继承BasePlayerComponent
+   - **Single Proto**：组件数据是单个protobuf消息（例如：`*pb.XxxData`）
+     - 如果是明文存储,则数据字段使用`db:"plain"`标签,否则使用`db:""`标签
+   - **MapData**：组件数据是使用`gentity.MapData`的map结构
+     - 如果是MapData，还需要询问**Map键类型**：`int32`或`int64`或`string`
 
-## Generated Code Structure
+## 生成的代码结构
 
-The skill generates a Go file with:
+`该技能生成的Go文件包含：`
 
-1. **Package declaration**: `package game`
-2. **Imports**: Standard imports for the project
-3. **Constants**: Component name constant
-4. **init() function**: Component registration
-5. **Struct definition**: Component struct with BasePlayerComponent or PlayerDataComponent
-6. **Getter method**: `Get<ComponentName>()` for Player
-7. **SyncDataToClient()**: Method for client synchronization
-8. **Request handlers**: `On<Xxx>Req()` methods for each client request
+1. **包声明**：`package game`
+2. **导入**：项目的标准导入
+3. **常量**：组件名称常量
+4. **init()函数**：组件注册
+5. **结构体定义**：带有BasePlayerComponent或PlayerDataComponent的组件结构体
+6. **Getter方法**：Player的`Get<ComponentName>()`方法
+7. **SyncDataToClient()**：客户端同步方法
+8. **请求处理函数**：每个客户端请求的`On<Xxx>Req()`方法
 
-## Implementation Steps
+## 实现步骤
 
-### Step 1: Check Proto Definitions
+### 步骤1：检查Proto定义
 
-Check if the required proto messages exist in `pb/` directory:
-- Search for `<ComponentName>Data` in `pb/*.pb.go`
-- Search for Req/Res messages for client handlers
+检查`pb/`目录中是否存在所需的proto消息：
+- 在`pb/*.pb.go`中搜索`<ComponentName>Data`
+- 搜索客户端处理函数的Req/Res消息
 
-### Step 2: Check and Update PlayerData
+### 步骤2：检查并更新PlayerData
 
-Check `../proto/player.proto` (parent directory's proto folder):
-- Look for `message PlayerData` definition
-- Check if the component field exists (e.g., `<componentName> *<ComponentName>Data`)
-- If not found, add the field to PlayerData message
+检查`proto/player.proto`：
+- 查找`message PlayerData`定义
+- 检查组件字段是否存在（例如：`<ComponentName> <ComponentName>`或`bytes <ComponentName>`或`map<int32,bytes> <ComponentName>`或`map<int64,bytes> <ComponentName>`或`map<string,bytes> <ComponentName>`）
+- 如果未找到，则将字段添加到PlayerData消息中
+  - **Single Proto**：组件数据是单个protobuf消息（例如：`*pb.XxxData`）
+    - 如果是明文存储,在字段为<ComponentName> <ComponentName>,否则为`bytes <ComponentName>`
+  - **MapData**：组件数据是使用`gentity.MapData`的map结构
+    - 如果是MapData，根据**Map键类型**,字段为`map<**Map键类型**,bytes> <ComponentName>`
 
-### Step 3: Generate Component File
+### 步骤3：生成组件文件
 
-Create the component file at `game/<componentname>.go` using the appropriate template.
+使用适当的模板在`game/<componentname>.go`创建组件文件。
 
-## Code Template
+## 代码模板
 
-### Single Proto Data (PlayerDataComponent)
+### Single Proto Data（PlayerDataComponent）
 
 ```go
 package game
@@ -76,14 +82,9 @@ const (
 func init() {
 	_playerComponentRegister.Register(ComponentName<ComponentName>, 0, func(player *Player, _ any) gentity.Component {
 		return &<ComponentName>{
-			PlayerDataComponent: PlayerDataComponent{
-				BasePlayerComponent: BasePlayerComponent{
-					player: player,
-					name:   ComponentName<ComponentName>,
-				},
-			},
+			PlayerDataComponent: *NewPlayerDataComponent(player, ComponentName<ComponentName>),
 			Data: &pb.<ComponentName>Data{
-				// TODO: Initialize default values
+				// TODO: 初始化默认值
 			},
 		}
 	})
@@ -107,13 +108,13 @@ func (c *<ComponentName>) SyncDataToClient() {
 func (c *<ComponentName>) On<Xxx>Req(req *pb.<Xxx>Req) (*pb.<Xxx>Res, error) {
 	l := c.GetPlayer().Log
 	l.Debug("On<Xxx>Req", "req", req)
-	// TODO: Implement logic
+	// TODO: 实现逻辑
 	res := &pb.<Xxx>Res{}
 	return res, nil
 }
 ```
 
-### MapData with int32 key (BasePlayerComponent)
+### MapData with int32 key（BasePlayerComponent）
 
 ```go
 package game
@@ -159,13 +160,13 @@ func (c *<ComponentName>) SyncDataToClient() {
 func (c *<ComponentName>) On<Xxx>Req(req *pb.<Xxx>Req) (*pb.<Xxx>Res, error) {
 	l := c.GetPlayer().Log
 	l.Debug("On<Xxx>Req", "req", req)
-	// TODO: Implement logic
+	// TODO: 实现逻辑
 	res := &pb.<Xxx>Res{}
 	return res, nil
 }
 ```
 
-### MapData with string key (BasePlayerComponent)
+### MapData with string key（BasePlayerComponent）
 
 ```go
 package game
@@ -211,35 +212,35 @@ func (c *<ComponentName>) SyncDataToClient() {
 func (c *<ComponentName>) On<Xxx>Req(req *pb.<Xxx>Req) (*pb.<Xxx>Res, error) {
 	l := c.GetPlayer().Log
 	l.Debug("On<Xxx>Req", "req", req)
-	// TODO: Implement logic
+	// TODO: 实现逻辑
 	res := &pb.<Xxx>Res{}
 	return res, nil
 }
 ```
 
-## Example
+## 示例
 
-For a "Exchange" component with ExchangeReq/ExchangeRes:
+对于带有ExchangeReq/ExchangeRes的"Exchange"组件：
 
-1. Check `pb/exchange.pb.go` for message definitions
-2. Check `cfg/data_mgr.go` for configuration data
-3. Check `../proto/player.proto` for PlayerData, add `exchange *ExchangeData` if missing
-4. Generate the component file at `game/exchange.go`
+1. 检查`pb/exchange.pb.go`中的消息定义
+2. 检查`cfg/data_mgr.go`中的配置数据
+3. 检查`proto/player.proto`中的PlayerData，如果缺少则添加`map<int32,bytes> Exchange`
+4. 在`game/exchange.go`生成组件文件
 
-## Notes
+## 注意事项
 
-- **Component Base Types**:
-  - Use `PlayerDataComponent` for components with persistent data (Single Proto)
-  - Use `BasePlayerComponent` for components with persistent data (MapData)
-  - Use `BasePlayerComponent` only for components without any persistent data
-- **Data Storage Types**:
-  - **Single Proto**: Data field with `db:"plain"` tag for plain storage (e.g., `*pb.BaseInfo`)
-  - **MapData[int32, *pb.Xxx]**: For data keyed by int32 (e.g., quest id, item id)
-  - **MapData[int64, *pb.Xxx]**: For data keyed by int64 (e.g., unique ids)
-  - **MapData[string, *pb.Xxx]**: For data keyed by string (e.g., names)
-- **Proto Files**:
-  - Proto definitions are in `../proto/` directory (parent of project root)
-  - `player.proto` contains `PlayerData` message with all component fields
-  - After modifying proto files, run `protoc` to regenerate Go code
-- Follow existing patterns in `game/base_info.go`, `game/exchange.go`, `game/bags.go`, `game/quest.go`
-- Check protobuf definitions in `pb/` directory for Req/Res message structures
+- **组件基类类型**：
+  - 对于有持久化数据的组件使用`PlayerDataComponent`（Single Proto）
+  - 对于有持久化数据的组件使用`BasePlayerComponent`（MapData）
+  - 对于没有任何持久化数据的组件仅使用`BasePlayerComponent`
+- **数据存储类型**：
+  - **Single Proto**：带有`db:"plain"`标签的数据字段，用于明文存储（例如：`*pb.BaseInfo`）,带有`db:""`标签的数据字段，用于序列化存储
+  - **MapData[int32, *pb.Xxx]**：用于以int32为键的数据（例如：任务id、物品id）
+  - **MapData[int64, *pb.Xxx]**：用于以int64为键的数据（例如：唯一id）
+  - **MapData[string, *pb.Xxx]**：用于以string为键的数据（例如：名称）
+- **Proto文件**：
+  - Proto定义位于`proto/`目录
+  - `player.proto`包含带有所有组件字段的`PlayerData`消息
+  - 修改proto文件后，运行`protoc`重新生成Go代码
+- 遵循`game/base_info.go`、`game/exchange.go`、`game/bags.go`、`game/quest.go`中的现有模式
+- 检查`pb/`目录中的protobuf定义以了解Req/Res消息结构

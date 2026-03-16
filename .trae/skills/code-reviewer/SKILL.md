@@ -1,126 +1,126 @@
 ---
 name: "code-reviewer"
-description: "Reviews Go code for best practices, bugs, concurrency safety, and business logic. Invoke when user asks for code review or after completing significant code changes."
+description: "审查Go代码的最佳实践、bug、并发安全和业务逻辑。当用户要求代码审查或完成重要代码更改后调用。"
 ---
 
-# Code Reviewer
+# 代码审查器
 
-This skill performs comprehensive code review for Go projects following the project's conventions and best practices.
+此技能用于对遵循项目规范和最佳实践的Go项目进行全面的代码审查。
 
-## When to Invoke
+## 调用时机
 
-- User asks for code review
-- After completing significant code changes
-- Before merging code changes
-- User wants to check code quality
+- 用户要求代码审查
+- 完成重要代码更改后
+- 合并代码更改前
+- 用户想要检查代码质量
 
-## Review Checklist
+## 审查清单
 
-### 1. Code Style and Format
+### 1. 代码风格和格式
 
-- [ ] Are variable, function, and type names clear and follow Go conventions?
-- [ ] Are there unnecessary code comments or missing critical comments?
-- [ ] Is the code formatted with `gofmt`?
+- [ ] 变量、函数和类型名称是否清晰并遵循Go规范？
+- [ ] 是否有不必要的代码注释或缺少关键注释？
+- [ ] 代码是否使用`gofmt`格式化？
 
-### 2. Error Handling
+### 2. 错误处理
 
-- [ ] Are errors properly checked (`if err != nil`)?
-- [ ] Do error messages have sufficient context (e.g., `fmt.Errorf("xxx: %v", err)`)?
-- [ ] Are `panic` and `recover` used appropriately (avoid abuse)?
+- [ ] 错误是否正确检查（`if err != nil`）？
+- [ ] 错误消息是否有足够的上下文（例如：`fmt.Errorf("xxx: %v", err)`）？
+- [ ] `panic`和`recover`是否使用得当（避免滥用）？
 
-### 3. Concurrency Safety
+### 3. 并发安全
 
-- [ ] Is access to shared variables protected with mutex (`sync.Mutex`) or atomic operations?
-- [ ] Are channels used correctly for goroutine synchronization?
-- [ ] Are there potential deadlocks, race conditions, or goroutine leaks?
-- [ ] Are `sync.WaitGroup` and `context.Context` used properly for concurrency control?
+- [ ] 对共享变量的访问是否使用互斥锁（`sync.Mutex`）或原子操作保护？
+- [ ] 通道是否正确用于goroutine同步？
+- [ ] 是否存在潜在的死锁、竞态条件或goroutine泄漏？
+- [ ] `sync.WaitGroup`和`context.Context`是否正确用于并发控制？
 
-### 4. Performance and Resource Management
+### 4. 性能和资源管理
 
-- [ ] Are there unnecessary memory allocations (e.g., string concatenation with `+` instead of `strings.Builder`)?
-- [ ] Are resources properly closed (files, network connections, HTTP response bodies)? Use `defer` when appropriate.
-- [ ] Can repeated calculations inside loops be extracted outside?
-- [ ] Can `sync.Pool` be used to reduce object allocation?
+- [ ] 是否有不必要的内存分配（例如：使用`+`连接字符串而不是`strings.Builder`）？
+- [ ] 资源是否正确关闭（文件、网络连接、HTTP响应体）？适当时使用`defer`。
+- [ ] 循环内的重复计算是否可以提取到外部？
+- [ ] 是否可以使用`sync.Pool`减少对象分配？
 
-### 5. Code Organization and Readability
+### 5. 代码组织和可读性
 
-- [ ] Are functions too long? Can they be split into smaller functions?
-- [ ] Is the "early return" principle followed to reduce nesting?
-- [ ] Is the package structure clear with single responsibility?
-- [ ] Are global variables and package-level state used appropriately?
+- [ ] 函数是否过长？是否可以拆分为更小的函数？
+- [ ] 是否遵循"提前返回"原则以减少嵌套？
+- [ ] 包结构是否清晰且职责单一？
+- [ ] 全局变量和包级状态是否使用得当？
 
-### 6. Testing
+### 6. 测试
 
-- [ ] Are errors in tests handled correctly (use `t.Fatal` instead of `panic`)?
+- [ ] 测试中的错误是否正确处理（使用`t.Fatal`而不是`panic`）？
 
-### 7. Common Pitfalls
+### 7. 常见陷阱
 
-- [ ] Is `defer` used inside loops? (May cause delayed resource release, consider anonymous functions)
-- [ ] Are non-copyable types like `sync.Mutex`, `sync.WaitGroup` incorrectly copied?
-- [ ] Is `time.After` used incorrectly causing memory leaks?
+- [ ] 是否在循环内使用`defer`？（可能导致资源释放延迟，考虑使用匿名函数）
+- [ ] 是否错误地复制了不可复制的类型，如`sync.Mutex`、`sync.WaitGroup`？
+- [ ] 是否错误使用`time.After`导致内存泄漏？
 
-### 8. Business Logic Checks
+### 8. 业务逻辑检查
 
-- [ ] Are client request message fields fully validated?
-  - Integer fields: negative values, excessively large values
-  - Arrays: empty check
-- [ ] Numeric overflow issues: Can int32 arithmetic operations exceed max/min values?
-- [ ] Division by zero: Can the denominator be zero?
-- [ ] Purchase/exchange logic: Deduct costs first, then deliver items
-- [ ] Array index out of bounds risks
-- [ ] Nil pointer dereference risks
+- [ ] 客户端请求消息字段是否完全验证？
+  - 整数字段：负值、过大的值
+  - 数组：空检查
+- [ ] 数值溢出问题：int32算术运算是否会超过最大/最小值？
+- [ ] 除零问题：分母是否可能为零？
+- [ ] 购买/兑换逻辑：先扣除成本，再发放物品
+- [ ] 数组索引越界风险
+- [ ] 空指针解引用风险
 
-## Review Process
+## 审查流程
 
-1. **Read the code file(s)** to understand the implementation
-2. **Check each item** in the review checklist
-3. **Identify issues** and categorize by severity:
-   - **Critical**: Security vulnerabilities, data corruption, crashes
-   - **Major**: Logic errors, resource leaks, concurrency issues
-   - **Minor**: Code style, performance optimizations, readability
-4. **Provide feedback** with:
-   - Issue description
-   - File location and line numbers
-   - Suggested fix or improvement
-   - Code example when applicable
+1. **阅读代码文件**以理解实现
+2. **检查每个项目**在审查清单中
+3. **识别问题**并按严重程度分类：
+   - **严重**：安全漏洞、数据损坏、崩溃
+   - **重要**：逻辑错误、资源泄漏、并发问题
+   - **次要**：代码风格、性能优化、可读性
+4. **提供反馈**，包括：
+   - 问题描述
+   - 文件位置和行号
+   - 建议的修复或改进
+   - 适用时提供代码示例
 
-## Output Format
+## 输出格式
 
 ```markdown
-## Code Review Report
+## 代码审查报告
 
-### Summary
-Brief overview of the code quality and main findings.
+### 概述
+代码质量和主要发现的简要概述。
 
-### Critical Issues
-1. [File:Line] Issue description
-   - Suggested fix: ...
+### 严重问题
+1. [文件:行号] 问题描述
+   - 建议修复：...
 
-### Major Issues
-1. [File:Line] Issue description
-   - Suggested fix: ...
+### 重要问题
+1. [文件:行号] 问题描述
+   - 建议修复：...
 
-### Minor Issues
-1. [File:Line] Issue description
-   - Suggested fix: ...
+### 次要问题
+1. [文件:行号] 问题描述
+   - 建议修复：...
 
-### Suggestions
-- Improvement suggestions that are not bugs but could enhance code quality.
+### 建议
+- 不是bug但可以提高代码质量的改进建议。
 
-### Positive Aspects
-- Highlight good practices found in the code.
+### 积极方面
+- 突出代码中发现的好做法。
 ```
 
-## Example Issues
+## 问题示例
 
-### Nil Pointer Check
+### 空指针检查
 
 ```go
-// Bad
+// 错误
 hero := bagHero.GetElem(req.GetId())
-hero.Level += 1  // Potential nil pointer dereference
+hero.Level += 1  // 潜在的空指针解引用
 
-// Good
+// 正确
 hero := bagHero.GetElem(req.GetId())
 if hero == nil {
     l.Error("hero not found", "heroId", req.GetId())
@@ -129,27 +129,27 @@ if hero == nil {
 hero.Level += 1
 ```
 
-### Integer Overflow
+### 整数溢出
 
 ```go
-// Bad
-total := a + b  // May overflow int32
+// 错误
+total := a + b  // 可能溢出int32
 
-// Good
+// 正确
 if int64(a) + int64(b) > math.MaxInt32 {
     return errors.New("overflow")
 }
 total := a + b
 ```
 
-### Resource Management
+### 资源管理
 
 ```go
-// Bad
+// 错误
 file, _ := os.Open(path)
 data, _ := io.ReadAll(file)
 
-// Good
+// 正确
 file, err := os.Open(path)
 if err != nil {
     return err
@@ -161,14 +161,14 @@ if err != nil {
 }
 ```
 
-### Business Logic Order
+### 业务逻辑顺序
 
 ```go
-// Bad: Deliver first, then deduct (may cause exploitation)
+// 错误：先发放，后扣除（可能导致漏洞）
 bag.AddItem(item)
 bag.DelItems(cost)
 
-// Good: Deduct first, then deliver
+// 正确：先扣除，后发放
 if !bag.IsEnough(cost) {
     return errors.New("notEnough")
 }
@@ -176,10 +176,10 @@ bag.DelItems(cost)
 bag.AddItem(item)
 ```
 
-## Notes
+## 注意事项
 
-- Focus on actionable feedback
-- Prioritize security and correctness over style
-- Consider the project's existing patterns and conventions
-- Provide context for why something is an issue
-- Suggest concrete solutions, not just problems
+- 专注于可操作的反馈
+- 优先考虑安全性和正确性而非风格
+- 考虑项目现有的模式和规范
+- 提供问题的上下文说明
+- 建议具体的解决方案，而不仅仅是问题
