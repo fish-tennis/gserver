@@ -2,7 +2,7 @@ package cache
 
 import (
 	"github.com/fish-tennis/gentity"
-	"github.com/go-redis/redis/v8"
+	"github.com/redis/go-redis/v9"
 )
 
 var (

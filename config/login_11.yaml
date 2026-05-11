@@ -16,4 +16,4 @@ Redis:
     - 127.0.0.1:6379
   UserName:
   Password:
-  Cluster: true
+  Cluster: false
