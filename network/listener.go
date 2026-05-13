@@ -106,6 +106,11 @@ func ListenGate(listenAddr string, packetRegister func(handler *gnet.DefaultConn
 	packetRegister(handler)
 	listenerConfig := &gnet.ListenerConfig{
 		AcceptConfig: GateConnectionConfig,
+		// NOTE:有些客户端会发送特定的Origin,如果使用默认的gorilla/websocket默认的checkSameOrigin会导致连接不上,比如ts版本的cocos
+		// 如果有该类问题,打开下面的注释
+		//CheckOrigin: func(r *http.Request) bool {
+		//	return true
+		//},
 	}
 	listenerConfig.AcceptConfig.Codec = codec
 	listenerConfig.AcceptConfig.Handler = handler
