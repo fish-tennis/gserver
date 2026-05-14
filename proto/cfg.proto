@@ -111,13 +111,26 @@ message DelElemArg {
 // CfgId + Arg
 message CfgArg {
   int32 CfgId = 1; // 配置id
-  int32 Arg = 2; // 单个参数
+  int32 Arg = 2; // 单个参数值
 }
 
 // CfgId + Args
 message CfgArgs {
   int32 CfgId = 1; // 配置id
-  repeated int32 Args = 2; // 参数数组
+  repeated int32 Args = 2; // 参数值数组
+}
+
+// CfgId + Args + Options
+message CfgArgOptions {
+  int32 CfgId = 1; // 配置id
+  repeated int32 Args = 2; // 参数值数组
+  repeated int32 Options = 3; // 可选参数数组
+}
+
+// Type + Value
+message TypeValue {
+  int32 Type = 1; // 类型
+  int32 Value = 2; // 值
 }
 
 // 任务类型 (NOTE:根据项目实际需求,自行调整)
@@ -150,7 +163,7 @@ message QuestCfg {
   int32 PlayerLevel = 13; // 玩家等级限制(0表示不限制)
   repeated ItemNum Collects = 14; // 需要收集的物品(一般是任务物品)
 
-  repeated CfgArgs ConditionTemplates = 21; // 关联的配置模板id和参数,简化配置表用,业务代码不要调用
+  repeated CfgArgOptions ConditionTemplates = 21; // 关联的配置模板id和参数,简化配置表用,业务代码不要调用
   CfgArg ProgressTemplate = 22; // 关联的配置模板id和参数,简化配置表用,业务代码不要调用
 }
 
@@ -160,14 +173,15 @@ message ValueCompareCfg {
   repeated int32 Values = 2; // 比较的值(可配多个)
 }
 
-// 条件配置(ConditionTemplateCfg + Values)
+// 条件配置(ConditionTemplateCfg + Values + 可选Options)
 message ConditionCfg {
   int32 Type = 1; // 条件类型(enum ConditionType)
   string Key = 2; // 关键字,如ConditionType_PlayerPropertyCompare对应的属性名
   string Op = 3; // 操作符 = > >= < <= != [] ![]
   repeated int32 Values = 4; // 比较的值(可配多个)
-  map<string,string> Properties = 5; // 扩展属性
-  bool ClientCheck = 6; // 客户端是否可以直接判断条件,比如玩家的等级
+  repeated int32 Options = 5; // 可选参数(可配多个)
+  map<string,string> Properties = 6; // 扩展属性
+  bool ClientCheck = 7; // 客户端是否可以直接判断条件,比如玩家的等级
 }
 
 // 条件模板配置
@@ -224,7 +238,7 @@ message ExchangeCfg {
   string Detail = 9;
   string Icon = 10; // 图标(客户端使用)
   
-  repeated CfgArgs ConditionTemplates = 21; // 关联的配置模板id和参数,简化配置表用,业务代码不要调用
+  repeated CfgArgOptions ConditionTemplates = 21; // 关联的配置模板id和参数,简化配置表用,业务代码不要调用
 }
 
 // 活动基础配置

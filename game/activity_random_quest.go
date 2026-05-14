@@ -40,7 +40,7 @@ func randomQuestInit(a *ActivityDefault, t time.Time) {
 
 func randomQuestRefresh(a *ActivityDefault, t time.Time, refreshType int32) {
 	// 先删除之前随机出来的任务
-	a.Activities.GetPlayer().GetQuest().RemoveQuest(a.GetPropertyInt32("QuestId"))
+	a.Activities.GetPlayer().GetQuest().RemoveQuest(a.GetPropertyInt32("QuestId", nil))
 	// 再重新随机一个
 	randomQuestInit(a, t)
 	a.defaultRefreshExchange(t, refreshType) // 兑换的刷新继续复用默认接口

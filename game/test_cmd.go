@@ -115,7 +115,7 @@ func (p *Player) OnTestCmd(req *pb.TestCmd) {
 			PlayerId: p.GetId(),
 			Property: cmdArgs[0],
 			Delta:    int32(util.Atoi(cmdArgs[1])),
-			Current:  p.GetPropertyInt32(cmdArgs[0]),
+			Current:  p.GetPropertyInt32(cmdArgs[0], nil),
 		}
 		p.FireEvent(evt)
 

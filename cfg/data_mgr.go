@@ -14,6 +14,7 @@ var (
     ErrLoadingConcurrency = errors.New("loading concurrency")
     isLoading   = int32(0)
     register = &processRegister{}
+	DataDir string
 
     //物品数据
     ItemCfgs *DataMap[*pb.ItemCfg]
@@ -46,21 +47,29 @@ var (
 type processRegister struct {
     ItemCfgsProcess func(mgr *DataMap[*pb.ItemCfg]) error
     
-    ConditionTemplateCfgsProcess func(mgr *DataMap[*pb.ConditionTemplateCfg]) error
     
-    ProgressTemplateCfgsProcess func(mgr *DataMap[*pb.ProgressTemplateCfg]) error
+	ConditionTemplateCfgsProcess func(mgr *DataMap[*pb.ConditionTemplateCfg]) error
     
     
+	ProgressTemplateCfgsProcess func(mgr *DataMap[*pb.ProgressTemplateCfg]) error
+    
+    
+	
     LevelExpsProcess func(mgr *DataSlice[*pb.LevelExp]) error
-    ExchangeCfgsProcess func(mgr *DataMap[*pb.ExchangeCfg]) error
     
-    QuestsProcess func(mgr *DataMap[*pb.QuestCfg]) error
-    
-    ShopCfgsProcess func(mgr *DataMap[*pb.ShopCfg]) error
-    
-    ActivityCfgsProcess func(mgr *DataMap[*pb.ActivityCfg]) error
+	ExchangeCfgsProcess func(mgr *DataMap[*pb.ExchangeCfg]) error
     
     
+	QuestsProcess func(mgr *DataMap[*pb.QuestCfg]) error
+    
+    
+	ShopCfgsProcess func(mgr *DataMap[*pb.ShopCfg]) error
+    
+    
+	ActivityCfgsProcess func(mgr *DataMap[*pb.ActivityCfg]) error
+    
+    
+	
 }
 
 // filter:过滤接口,返回false则不加载该文件
@@ -70,156 +79,61 @@ func Load(dataDir string, filter func(fileName string) bool) error {
     }
     defer atomic.StoreInt32(&isLoading, 0)
     dataDir = filepath.ToSlash(dataDir)
-    if strings.LastIndexByte(dataDir, '/') != len(dataDir)-1 {
-        dataDir += string('/')
+    if strings.LastIndexByte(dataDir, filepath.Separator) != len(dataDir)-1 {
+        dataDir += string(filepath.Separator)
     }
+	DataDir = dataDir
     var err error
     
-    if filter == nil || filter("ItemCfg.json") {
-        // 考虑到并发安全,这里先加载到临时变量
-        tmpItemCfgs := NewDataMap[*pb.ItemCfg]()
-        err = tmpItemCfgs.LoadJson(dataDir+"ItemCfg.json")
-        if err != nil {
-            return err
-        }
-        // 最后再赋值给全局变量(引用赋值是原子操作)
-        ItemCfgs = tmpItemCfgs
+    if err = LoadConfig(filter, "ItemCfg.json", dataDir, NewDataMap[*pb.ItemCfg], &ItemCfgs); err != nil {
+        return err
     }
-    if filter == nil || filter("condition_template.json") {
-        // 考虑到并发安全,这里先加载到临时变量
-        tmpConditionTemplateCfgs := NewDataMap[*pb.ConditionTemplateCfg]()
-        err = tmpConditionTemplateCfgs.LoadJson(dataDir+"condition_template.json")
-        if err != nil {
-            return err
-        }
-        // 最后再赋值给全局变量(引用赋值是原子操作)
-        ConditionTemplateCfgs = tmpConditionTemplateCfgs
+    if err = LoadConfig(filter, "condition_template.json", dataDir, NewDataMap[*pb.ConditionTemplateCfg], &ConditionTemplateCfgs); err != nil {
+        return err
     }
-    if filter == nil || filter("progress_template.json") {
-        // 考虑到并发安全,这里先加载到临时变量
-        tmpProgressTemplateCfgs := NewDataMap[*pb.ProgressTemplateCfg]()
-        err = tmpProgressTemplateCfgs.LoadJson(dataDir+"progress_template.json")
-        if err != nil {
-            return err
-        }
-        // 最后再赋值给全局变量(引用赋值是原子操作)
-        ProgressTemplateCfgs = tmpProgressTemplateCfgs
+    if err = LoadConfig(filter, "progress_template.json", dataDir, NewDataMap[*pb.ProgressTemplateCfg], &ProgressTemplateCfgs); err != nil {
+        return err
     }
-    if filter == nil || filter("levelcfg.json") {
-        // 考虑到并发安全,这里先加载到临时变量
-        tmpLevelExps := &DataSlice[*pb.LevelExp]{}
-        err = tmpLevelExps.LoadJson(dataDir+"levelcfg.json")
-        if err != nil {
-            return err
-        }
-        // 最后再赋值给全局变量(引用赋值是原子操作)
-        LevelExps = tmpLevelExps
+    if err = LoadConfig(filter, "levelcfg.json", dataDir, func() *DataSlice[*pb.LevelExp] { return &DataSlice[*pb.LevelExp]{} }, &LevelExps); err != nil {
+        return err
     }
-    if filter == nil || filter("exchange.json") {
-        // 考虑到并发安全,这里先加载到临时变量
-        tmpExchangeCfgs := NewDataMap[*pb.ExchangeCfg]()
-        err = tmpExchangeCfgs.LoadJson(dataDir+"exchange.json")
-        if err != nil {
-            return err
-        }
-        // 最后再赋值给全局变量(引用赋值是原子操作)
-        ExchangeCfgs = tmpExchangeCfgs
+    if err = LoadConfig(filter, "exchange.json", dataDir, NewDataMap[*pb.ExchangeCfg], &ExchangeCfgs); err != nil {
+        return err
     }
-    if filter == nil || filter("Quests.json") {
-        // 考虑到并发安全,这里先加载到临时变量
-        tmpQuests := NewDataMap[*pb.QuestCfg]()
-        err = tmpQuests.LoadJson(dataDir+"Quests.json")
-        if err != nil {
-            return err
-        }
-        // 最后再赋值给全局变量(引用赋值是原子操作)
-        Quests = tmpQuests
+    if err = LoadConfig(filter, "Quests.json", dataDir, NewDataMap[*pb.QuestCfg], &Quests); err != nil {
+        return err
     }
-    if filter == nil || filter("ShopCfg.json") {
-        // 考虑到并发安全,这里先加载到临时变量
-        tmpShopCfgs := NewDataMap[*pb.ShopCfg]()
-        err = tmpShopCfgs.LoadJson(dataDir+"ShopCfg.json")
-        if err != nil {
-            return err
-        }
-        // 最后再赋值给全局变量(引用赋值是原子操作)
-        ShopCfgs = tmpShopCfgs
+    if err = LoadConfig(filter, "ShopCfg.json", dataDir, NewDataMap[*pb.ShopCfg], &ShopCfgs); err != nil {
+        return err
     }
-    if filter == nil || filter("activitycfg.json") {
-        // 考虑到并发安全,这里先加载到临时变量
-        tmpActivityCfgs := NewDataMap[*pb.ActivityCfg]()
-        err = tmpActivityCfgs.LoadJson(dataDir+"activitycfg.json")
-        if err != nil {
-            return err
-        }
-        // 最后再赋值给全局变量(引用赋值是原子操作)
-        ActivityCfgs = tmpActivityCfgs
+    if err = LoadConfig(filter, "activitycfg.json", dataDir, NewDataMap[*pb.ActivityCfg], &ActivityCfgs); err != nil {
+        return err
     }
 
     
-    if register.ItemCfgsProcess != nil {
-        // 预处理数据
-        err = register.ItemCfgsProcess(ItemCfgs)
-        if err != nil {
-            return err
-        }
+    if err = Process(register.ItemCfgsProcess, ItemCfgs); err != nil {
+        return err
     }
-    
-    if register.ConditionTemplateCfgsProcess != nil {
-        // 预处理数据
-        err = register.ConditionTemplateCfgsProcess(ConditionTemplateCfgs)
-        if err != nil {
-            return err
-        }
+    if err = Process(register.ConditionTemplateCfgsProcess, ConditionTemplateCfgs); err != nil {
+        return err
     }
-    
-    if register.ProgressTemplateCfgsProcess != nil {
-        // 预处理数据
-        err = register.ProgressTemplateCfgsProcess(ProgressTemplateCfgs)
-        if err != nil {
-            return err
-        }
+    if err = Process(register.ProgressTemplateCfgsProcess, ProgressTemplateCfgs); err != nil {
+        return err
     }
-    
-    if register.LevelExpsProcess != nil {
-        // 预处理数据
-        err = register.LevelExpsProcess(LevelExps)
-        if err != nil {
-            return err
-        }
+    if err = Process(register.LevelExpsProcess, LevelExps); err != nil {
+        return err
     }
-    
-    if register.ExchangeCfgsProcess != nil {
-        // 预处理数据
-        err = register.ExchangeCfgsProcess(ExchangeCfgs)
-        if err != nil {
-            return err
-        }
+    if err = Process(register.ExchangeCfgsProcess, ExchangeCfgs); err != nil {
+        return err
     }
-    
-    if register.QuestsProcess != nil {
-        // 预处理数据
-        err = register.QuestsProcess(Quests)
-        if err != nil {
-            return err
-        }
+    if err = Process(register.QuestsProcess, Quests); err != nil {
+        return err
     }
-    
-    if register.ShopCfgsProcess != nil {
-        // 预处理数据
-        err = register.ShopCfgsProcess(ShopCfgs)
-        if err != nil {
-            return err
-        }
+    if err = Process(register.ShopCfgsProcess, ShopCfgs); err != nil {
+        return err
     }
-    
-    if register.ActivityCfgsProcess != nil {
-        // 预处理数据
-        err = register.ActivityCfgsProcess(ActivityCfgs)
-        if err != nil {
-            return err
-        }
+    if err = Process(register.ActivityCfgsProcess, ActivityCfgs); err != nil {
+        return err
     }
-    
-    return err
+    return nil
 }

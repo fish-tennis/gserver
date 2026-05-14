@@ -14,9 +14,10 @@ var (
     ErrLoadingConcurrency = errors.New("loading concurrency")
     isLoading   = int32(0)
     register = &processRegister{}
+	DataDir string
 
     {{range.Mgrs}}//{{.CodeComment}}
-    {{if eq .MgrType "map"}}{{.MgrName}}{{if eq .MapKeyType "int"}} *DataMap{{else}}*StrDataMap{{end}}[*pb.{{.MessageName}}]{{end}}
+    {{if eq .MgrType "map"}}{{.MgrName}}{{if eq .MapKeyType "int"}} *DataMap{{else}} *StrDataMap{{end}}[*pb.{{.MessageName}}]{{end}}
     {{if eq .MgrType "slice"}}{{.MgrName}} *DataSlice[*pb.{{.MessageName}}]{{end}}
     {{if eq .MgrType "object"}}{{.MgrName}} *pb.{{.MessageName}}{{end}}{{end}}
 )
@@ -36,34 +37,19 @@ func Load(dataDir string, filter func(fileName string) bool) error {
     }
     defer atomic.StoreInt32(&isLoading, 0)
     dataDir = filepath.ToSlash(dataDir)
-    if strings.LastIndexByte(dataDir, '/') != len(dataDir)-1 {
-        dataDir += string('/')
+    if strings.LastIndexByte(dataDir, filepath.Separator) != len(dataDir)-1 {
+        dataDir += string(filepath.Separator)
     }
+	DataDir = dataDir
     var err error
     {{range.Mgrs}}
-    if filter == nil || filter("{{.FileName}}") {
-        // 考虑到并发安全,这里先加载到临时变量
-        {{if eq .MgrType "map"}}tmp{{.MgrName}} := {{if eq .MapKeyType "int"}}NewDataMap{{else}}NewStrDataMap{{end}}[*pb.{{.MessageName}}]()
-        err = tmp{{.MgrName}}.LoadJson(dataDir+"{{.FileName}}")
-        {{else if eq .MgrType "slice"}}tmp{{.MgrName}} := &DataSlice[*pb.{{.MessageName}}]{}
-        err = tmp{{.MgrName}}.LoadJson(dataDir+"{{.FileName}}")
-		{{else if eq .MgrType "object"}}tmp{{.MgrName}} := &pb.{{.MessageName}}{}
-        err = LoadObjectFromJson(dataDir+"{{.FileName}}", tmp{{.MgrName}})
-        {{end}}if err != nil {
-            return err
-        }
-        // 最后再赋值给全局变量(引用赋值是原子操作)
-        {{.MgrName}} = tmp{{.MgrName}}
+    if err = {{if eq .MgrType "object"}}LoadObjectConfig{{else}}LoadConfig{{end}}(filter, "{{.FileName}}", dataDir, {{if eq .MgrType "map"}}{{if eq .MapKeyType "int"}}NewDataMap{{else}}NewStrDataMap{{end}}[*pb.{{.MessageName}}]{{else if eq .MgrType "slice"}}func() *DataSlice[*pb.{{.MessageName}}] { return &DataSlice[*pb.{{.MessageName}}]{} }{{else if eq .MgrType "object"}}func() *pb.{{.MessageName}} { return &pb.{{.MessageName}}{} }{{end}}, &{{.MgrName}}); err != nil {
+        return err
     }{{end}}
 
     {{range.Mgrs}}
-    if register.{{.MgrName}}Process != nil {
-        // 预处理数据
-        err = register.{{.MgrName}}Process({{.MgrName}})
-        if err != nil {
-            return err
-        }
-    }
-    {{end}}
-    return err
+    if err = Process(register.{{.MgrName}}Process, {{.MgrName}}); err != nil {
+        return err
+    }{{end}}
+    return nil
 }

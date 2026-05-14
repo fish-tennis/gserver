@@ -14,8 +14,8 @@ import (
 // 如condition_template.csv和progress_template.csv里配置除了参数值之外的配置项,这2个表可以由程序来配置
 // 其他表要配置条件和进度,只需要配置对应的模板id和参数即可,就可以由策划人员轻松配置了
 
-// 条件模板id+values,转换成ConditionCfg对象
-func convertConditionCfg(cfgArg *pb.CfgArgs) *pb.ConditionCfg {
+// 条件模板id+values+options,转换成ConditionCfg对象
+func ConvertConditionCfg(cfgArg *pb.CfgArgOptions) *pb.ConditionCfg {
 	conditionTemplate := ConditionTemplateCfgs.GetCfg(cfgArg.CfgId)
 	if conditionTemplate == nil {
 		return nil
@@ -25,15 +25,16 @@ func convertConditionCfg(cfgArg *pb.CfgArgs) *pb.ConditionCfg {
 		Key:         conditionTemplate.Key,
 		Op:          conditionTemplate.Op,
 		Values:      slices.Clone(cfgArg.Args),
+		Options:     slices.Clone(cfgArg.Options),
 		Properties:  maps.Clone(conditionTemplate.Properties),
 		ClientCheck: conditionTemplate.ClientCheck,
 	}
 }
 
-func convertConditionCfgs(cfgArgs []*pb.CfgArgs) []*pb.ConditionCfg {
+func ConvertConditionCfgs(cfgArgs []*pb.CfgArgOptions) []*pb.ConditionCfg {
 	var conditions []*pb.ConditionCfg
 	for _, cfgArg := range cfgArgs {
-		condition := convertConditionCfg(cfgArg)
+		condition := ConvertConditionCfg(cfgArg)
 		if condition == nil {
 			slog.Error("condition nil", "cfgArg", cfgArg)
 			continue
@@ -44,7 +45,7 @@ func convertConditionCfgs(cfgArgs []*pb.CfgArgs) []*pb.ConditionCfg {
 }
 
 // 进度模板配置id+进度值,转换成ProgressCfg对象
-func convertProgressCfg(cfgArg *pb.CfgArg) *pb.ProgressCfg {
+func ConvertProgressCfg(cfgArg *pb.CfgArg) *pb.ProgressCfg {
 	progressTemplate := ProgressTemplateCfgs.GetCfg(cfgArg.CfgId)
 	if progressTemplate == nil {
 		return nil
@@ -65,7 +66,7 @@ func convertProgressCfg(cfgArg *pb.CfgArg) *pb.ProgressCfg {
 func convertProgressCfgs(cfgArgs []*pb.CfgArg) []*pb.ProgressCfg {
 	var progressCfgs []*pb.ProgressCfg
 	for _, cfgArg := range cfgArgs {
-		progress := convertProgressCfg(cfgArg)
+		progress := ConvertProgressCfg(cfgArg)
 		if progress == nil {
 			slog.Error("progress nil", "cfgArg", cfgArg)
 			continue

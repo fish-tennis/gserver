@@ -1,18 +1,26 @@
 #Excel导入目录(excel所在目录)
 DataImportPath: "./../../excel"
 
-#数据导出目录
-DataExportPath: "./../../../unity_client/client/project/Assets/cfgdata"
+#导出格式: json、pb
+ExportFormats:
+  - "json"
+  - "pb"
 
+#数据导出目录,和ExportFormats一一对应
+DataExportPath:
+  - "./../../../unity_client/client/project/Assets/cfgdata"
+  - "./../../../unity_client/client/project/Assets/cfgdata"
+
+#可选项:导出md5文件完整路径
+Md5ExportPath:
+  - "./../../../unity_client/client/project/Assets/cfgdata/json_md5.json"
+  - "./../../../unity_client/client/project/Assets/cfgdata/pb_md5.json"
 #proto所在目录
 ProtoPath: "./../../proto"
 
 #需要解析的proto文件
 ProtoFiles:
   - "cfg.proto"
-
-#可选项:导出md5文件完整路径
-Md5ExportPath: "./../../../unity_client/client/project/Assets/cfgdata/md5.json"
 
 #代码模板目录
 CodeTemplatePath: "./"

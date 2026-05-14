@@ -170,8 +170,8 @@ func DefaultProgressUpdater(obj any, progressHolder ProgressHolder, event any, p
 func DefaultPropertyInt32InitProgress(obj any, progressHolder ProgressHolder, progressCfg *pb.ProgressCfg) int32 {
 	if propertyGetter, ok := obj.(PropertyInt32); ok {
 		if propertyName, ok2 := progressCfg.StringEventFields[PropertyKey]; ok2 {
-			slog.Debug("DefaultPropertyInt32InitProgress", "name", propertyName, "value", propertyGetter.GetPropertyInt32(propertyName))
-			return CheckAndSetProgress(progressHolder, progressCfg, propertyGetter.GetPropertyInt32(propertyName))
+			slog.Debug("DefaultPropertyInt32InitProgress", "name", propertyName, "value", propertyGetter.GetPropertyInt32(propertyName, nil))
+			return CheckAndSetProgress(progressHolder, progressCfg, propertyGetter.GetPropertyInt32(propertyName, nil))
 		}
 	}
 	return 0

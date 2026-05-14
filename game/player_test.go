@@ -218,7 +218,7 @@ func TestQuest(t *testing.T) {
 		PlayerId: player.GetId(),
 		Property: "Level",
 		Delta:    1,
-		Current:  player.GetPropertyInt32("Level"),
+		Current:  player.GetPropertyInt32("Level", nil),
 	}
 	player.FireEvent(eventPlayerProperty)
 
@@ -226,7 +226,7 @@ func TestQuest(t *testing.T) {
 		PlayerId: player.GetId(),
 		Property: "TotalPay", //累充
 		Delta:    10,
-		Current:  player.GetPropertyInt32("TotalPay"),
+		Current:  player.GetPropertyInt32("TotalPay", nil),
 	}
 	player.FireEvent(eventPlayerProperty)
 
@@ -272,7 +272,7 @@ func TestQuest(t *testing.T) {
 			PlayerId: player.GetId(),
 			Property: "OnlineMinute", //在线时长
 			Delta:    2,
-			Current:  player.GetPropertyInt32("OnlineMinute"),
+			Current:  player.GetPropertyInt32("OnlineMinute", nil),
 		}
 		player.FireEvent(eventOnlineTime)
 
@@ -311,7 +311,7 @@ func TestActivity(t *testing.T) {
 		PlayerId: player.GetId(),
 		Property: "TotalPay", //累充
 		Delta:    10,
-		Current:  player.GetPropertyInt32("TotalPay"),
+		Current:  player.GetPropertyInt32("TotalPay", nil),
 	}
 	player.FireEvent(eventTotalPay)
 
@@ -319,7 +319,7 @@ func TestActivity(t *testing.T) {
 		PlayerId: player.GetId(),
 		Property: "OnlineMinute", //在线时长
 		Delta:    2,
-		Current:  player.GetPropertyInt32("OnlineMinute"),
+		Current:  player.GetPropertyInt32("OnlineMinute", nil),
 	}
 	player.FireEvent(eventOnlineTime)
 
@@ -573,7 +573,7 @@ func TestEvent(t *testing.T) {
 		PlayerId: player.GetId(),
 		Property: "Level",
 		Delta:    1,
-		Current:  player.GetPropertyInt32("Level"),
+		Current:  player.GetPropertyInt32("Level", nil),
 	}
 	player.PostEvent(eventPlayerProperty)
 
@@ -581,7 +581,7 @@ func TestEvent(t *testing.T) {
 		PlayerId: player.GetId(),
 		Property: "TotalPay", //累充
 		Delta:    10,
-		Current:  player.GetPropertyInt32("TotalPay"),
+		Current:  player.GetPropertyInt32("TotalPay", nil),
 	}
 	player.PostEvent(eventPlayerProperty)
 

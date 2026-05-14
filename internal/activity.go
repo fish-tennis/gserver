@@ -1,6 +1,9 @@
 package internal
 
-import "time"
+import (
+	"github.com/fish-tennis/gserver/pb"
+	"time"
+)
 
 type Activity interface {
 	GetId() int32
@@ -18,7 +21,7 @@ type Activity interface {
 	OnEnd(t time.Time)
 
 	// 提供一个统一的属性值查询接口
-	GetPropertyInt32(propertyName string) int32
+	GetPropertyInt32(propertyName string, conditionCfg *pb.ConditionCfg) int32
 }
 
 type ActivityMgr interface {

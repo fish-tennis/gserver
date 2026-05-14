@@ -308,6 +308,72 @@ func (r *CfgArgsR) ElemOfArgs(index int) int32 {
 }
 
 
+type CfgArgOptionsR struct {
+	v *pb.CfgArgOptions
+}
+
+func NewCfgArgOptionsR(src *pb.CfgArgOptions) *CfgArgOptionsR {
+	return &CfgArgOptionsR{v:src}
+}
+
+func (r *CfgArgOptionsR) IsNil() bool {
+	return r == nil || r.v == nil
+}
+
+func (r *CfgArgOptionsR) Raw() *pb.CfgArgOptions {
+    if r == nil {
+        return nil
+    }
+	return r.v
+}
+
+func (r *CfgArgOptionsR) GetCfgId() int32 {
+	return r.v.GetCfgId()
+}
+
+func (r *CfgArgOptionsR) LenOfArgs() int {
+    return len(r.v.GetArgs())
+}
+func (r *CfgArgOptionsR) ElemOfArgs(index int) int32 {
+    return r.v.GetArgs()[index]
+}
+
+func (r *CfgArgOptionsR) LenOfOptions() int {
+    return len(r.v.GetOptions())
+}
+func (r *CfgArgOptionsR) ElemOfOptions(index int) int32 {
+    return r.v.GetOptions()[index]
+}
+
+
+type TypeValueR struct {
+	v *pb.TypeValue
+}
+
+func NewTypeValueR(src *pb.TypeValue) *TypeValueR {
+	return &TypeValueR{v:src}
+}
+
+func (r *TypeValueR) IsNil() bool {
+	return r == nil || r.v == nil
+}
+
+func (r *TypeValueR) Raw() *pb.TypeValue {
+    if r == nil {
+        return nil
+    }
+	return r.v
+}
+
+func (r *TypeValueR) GetType() int32 {
+	return r.v.GetType()
+}
+
+func (r *TypeValueR) GetValue() int32 {
+	return r.v.GetValue()
+}
+
+
 type QuestCfgR struct {
 	v *pb.QuestCfg
 }
@@ -409,8 +475,8 @@ func (r *QuestCfgR) ElemOfCollects(index int) *ItemNumR {
 func (r *QuestCfgR) LenOfConditionTemplates() int {
     return len(r.v.GetConditionTemplates())
 }
-func (r *QuestCfgR) ElemOfConditionTemplates(index int) *CfgArgsR {
-    return NewCfgArgsR(r.v.GetConditionTemplates()[index])
+func (r *QuestCfgR) ElemOfConditionTemplates(index int) *CfgArgOptionsR {
+    return NewCfgArgOptionsR(r.v.GetConditionTemplates()[index])
 }
 
 
@@ -486,6 +552,13 @@ func (r *ConditionCfgR) LenOfValues() int {
 }
 func (r *ConditionCfgR) ElemOfValues(index int) int32 {
     return r.v.GetValues()[index]
+}
+
+func (r *ConditionCfgR) LenOfOptions() int {
+    return len(r.v.GetOptions())
+}
+func (r *ConditionCfgR) ElemOfOptions(index int) int32 {
+    return r.v.GetOptions()[index]
 }
 
 func (r *ConditionCfgR) LenOfProperties() int {
@@ -812,8 +885,8 @@ func (r *ExchangeCfgR) GetIcon() string {
 func (r *ExchangeCfgR) LenOfConditionTemplates() int {
     return len(r.v.GetConditionTemplates())
 }
-func (r *ExchangeCfgR) ElemOfConditionTemplates(index int) *CfgArgsR {
-    return NewCfgArgsR(r.v.GetConditionTemplates()[index])
+func (r *ExchangeCfgR) ElemOfConditionTemplates(index int) *CfgArgOptionsR {
+    return NewCfgArgOptionsR(r.v.GetConditionTemplates()[index])
 }
 
 

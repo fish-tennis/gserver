@@ -178,7 +178,7 @@ func (a *ActivityDefault) OnEnd(t time.Time) {
 	}
 }
 
-func (a *ActivityDefault) GetPropertyInt32(propertyName string) int32 {
+func (a *ActivityDefault) GetPropertyInt32(propertyName string, conditionCfg *pb.ConditionCfg) int32 {
 	if property, ok := a.Base.PropertiesInt32[propertyName]; ok {
 		return property
 	}

@@ -1,6 +1,7 @@
 package game
 
 import (
+	"github.com/fish-tennis/gserver/cfg"
 	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/pb"
 	"log/slog"
@@ -41,4 +42,14 @@ func PlayerPropertyInt32Checker(obj any, conditionCfg *pb.ConditionCfg) bool {
 		return false
 	}
 	return internal.DefaultPropertyInt32Checker(player, conditionCfg)
+}
+
+func CheckConditionArg(obj any, conditionArg *pb.CfgArgOptions) bool {
+	condition := cfg.ConvertConditionCfg(conditionArg)
+	return internal.CheckCondition(obj, condition)
+}
+
+func CheckConditionArgs(obj any, conditionArgs []*pb.CfgArgOptions) bool {
+	conditions := cfg.ConvertConditionCfgs(conditionArgs)
+	return internal.CheckConditions(obj, conditions)
 }

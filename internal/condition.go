@@ -119,7 +119,7 @@ func DefaultPropertyInt32Checker(obj any, conditionCfg *pb.ConditionCfg) bool {
 			slog.Error("DefaultPropertyInt32CheckerErr", "obj", obj, "conditionCfg", conditionCfg)
 			return false
 		}
-		propertyValue := propertyGetter.GetPropertyInt32(propertyName)
+		propertyValue := propertyGetter.GetPropertyInt32(propertyName, conditionCfg)
 		return CompareOpValue(obj, propertyValue, &pb.ValueCompareCfg{
 			Op:     conditionCfg.GetOp(),
 			Values: conditionCfg.GetValues(),

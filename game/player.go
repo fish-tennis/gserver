@@ -262,7 +262,7 @@ func (p *Player) RunRoutine() bool {
 				PlayerId: p.GetId(),
 				Property: "OnlineMinute",
 				Delta:    1,
-				Current:  p.GetPropertyInt32("OnlineMinute"),
+				Current:  p.GetPropertyInt32("OnlineMinute", nil),
 			}
 			p.FireEvent(evt)
 			return time.Minute

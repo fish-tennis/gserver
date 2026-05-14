@@ -16,14 +16,14 @@ func init() {
 
 func questAfterLoad(mgr *DataMap[*pb.QuestCfg]) error {
 	mgr.Range(func(e *pb.QuestCfg) bool {
-		e.Conditions = convertConditionCfgs(e.ConditionTemplates)
+		e.Conditions = ConvertConditionCfgs(e.ConditionTemplates)
 		// 任务不能同时没有进度和收集物品
 		if e.ProgressTemplate == nil && len(e.GetCollects()) == 0 {
 			slog.Info("QuestCfgErr", "QuestCfgId", e.GetCfgId())
 			return true
 		}
 		if e.ProgressTemplate != nil {
-			e.Progress = convertProgressCfg(e.ProgressTemplate)
+			e.Progress = ConvertProgressCfg(e.ProgressTemplate)
 		}
 		return true
 	})

@@ -8,7 +8,7 @@ func init() {
 
 func exchangeAfterLoad(mgr *DataMap[*pb.ExchangeCfg]) error {
 	mgr.Range(func(e *pb.ExchangeCfg) bool {
-		e.Conditions = convertConditionCfgs(e.ConditionTemplates)
+		e.Conditions = ConvertConditionCfgs(e.ConditionTemplates)
 		return true
 	})
 	return nil
