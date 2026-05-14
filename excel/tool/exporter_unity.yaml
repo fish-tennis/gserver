@@ -27,11 +27,11 @@ CodeTemplatePath: "./"
 
 #代码模板
 CodeTemplateFiles:
-  - "DataMgr.cs.template"
+  - "DataMgr.cs.unity.template"
 
 #代码导出目录 NOTE:和CodeTemplateFiles的数量要一致
 CodeExportFiles:
-  - "./../../../unity_client/client/project/Assets/cfg/DataMgr.cs"
+  - "./../../../unity_client/client/project/Assets/Code/cfg/DataMgr.cs"
 
 #导出分组标记 c s cs
 ExportGroup: "c"
