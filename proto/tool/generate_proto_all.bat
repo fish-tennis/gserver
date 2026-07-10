@@ -13,19 +13,17 @@ REM generate message_command_mapping.json for server
     -e cfg.proto
 
 if exist .\..\..\..\gtestclient (
-    REM protoc C#
-    .\protoc.exe ^
-        --csharp_out=.\..\..\..\gtestclient\pb\ ^
-        --proto_path=.\..\ ^
-        .\..\*.proto
+	.\protoc.exe ^
+		--plugin=protoc-gen-go=.\protoc-gen-go.exe ^
+		--go_out=.\..\..\..\gtestclient\ ^
+		--proto_path=.\..\ ^
+		.\..\*.proto
 	REM proto_code_gen generate message_command_mapping.json and csharp.cs
 	.\proto_code_gen.exe ^
         -p .\..\ ^
         -m .\..\..\..\gtestclient\cfgdata\message_command_mapping.json ^
         -e cfg.proto ^
-        -oe server_base.proto ^
-        -t csharp.cs.template ^
-        -c .\..\..\..\gtestclient\pb\csharp.cs
+        -oe server_base.proto
 ) else (
     echo not find gtestclient
 )
