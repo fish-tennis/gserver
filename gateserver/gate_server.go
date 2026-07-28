@@ -119,6 +119,7 @@ func (s *GateServer) registerClientPacket(clientHandler *DefaultConnectionHandle
 	network.RegisterPacketHandler(clientHandler, new(pb.AccountReg), s.routeToLoginServer)
 	network.RegisterPacketHandler(clientHandler, new(pb.LoginReq), s.routeToLoginServer)
 	network.RegisterPacketHandler(clientHandler, new(pb.PlayerEntryGameReq), s.routeToGameServerWithConnId)
+	network.RegisterPacketHandler(clientHandler, new(pb.PlayerReconnectGameReq), s.routeReconnectToGameServer)
 	network.RegisterPacketHandler(clientHandler, new(pb.CreatePlayerReq), s.routeToGameServerWithConnId)
 
 	clientHandler.SetUnRegisterHandler(s.routeToGameServer)
@@ -172,8 +173,24 @@ func (s *GateServer) routeToGameServerWithConnId(connection Connection, packet P
 		gatePacket.SetPlayerId(int64(clientData.ConnId))
 		s.GetServerList().SendPacket(clientData.GameServerId, gatePacket)
 		logger.Debug("routeToGameServerWithConnId clientConn:%v connId:%v cmd:%v serverId:%v", connection.GetConnectionId(),
-			clientData.ConnId, packet.Command(), clientData.GameServerId)
+		clientData.ConnId, packet.Command(), clientData.GameServerId)
 	}
+}
+
+// 重连请求路由:客户端断线重连时建立的是新连接,没有ClientData绑定信息
+// 从PlayerReconnectGameReq消息体中读取GameServerId来确定目标GameServer,用新连接的connId作为GatePacket.PlayerId
+func (s *GateServer) routeReconnectToGameServer(connection Connection, packet Packet) {
+	req, ok := packet.Message().(*pb.PlayerReconnectGameReq)
+	if !ok || req == nil {
+		logger.Debug("routeReconnectToGameServer invalid message clientConn:%v", connection.GetConnectionId())
+		return
+	}
+	gatePacket := network.NewGatePacket(0, packet.Command(), req)
+	// 附加上新连接的connId,GameServer回包时用这个connId找到客户端连接
+	gatePacket.SetPlayerId(int64(connection.GetConnectionId()))
+	s.GetServerList().SendPacket(req.GetGameServerId(), gatePacket)
+	logger.Debug("routeReconnectToGameServer clientConn:%v cmd:%v serverId:%v", connection.GetConnectionId(),
+		packet.Command(), req.GetGameServerId())
 }
 
 func (s *GateServer) routeToGameServer(connection Connection, packet Packet) {
@@ -208,6 +225,7 @@ func (s *GateServer) registerServerPacket(serverHandler *DefaultConnectionHandle
 	network.RegisterPacketHandler(serverHandler, new(pb.LoginRes), s.onLoginRes)
 	network.RegisterPacketHandler(serverHandler, new(pb.CreatePlayerRes), s.routeToClientWithConnId)
 	network.RegisterPacketHandler(serverHandler, new(pb.PlayerEntryGameRes), s.onPlayerEntryGameRes)
+	network.RegisterPacketHandler(serverHandler, new(pb.PlayerReconnectGameRes), s.onPlayerReconnectGameRes)
 
 	serverHandler.SetUnRegisterHandler(s.routeToClient)
 }
@@ -270,6 +288,48 @@ func (s *GateServer) onPlayerEntryGameRes(connection Connection, packet Packet) 
 	clientPacket := NewProtoPacket(packet.Command(), packet.Message()).SetErrorCode(packet.ErrorCode())
 	clientConn.SendPacket(clientPacket)
 	logger.Debug("onPlayerEntryGameRes connId:%v playerId:%v err:%v", clientConn.GetConnectionId(),
+		res.PlayerId, packet.ErrorCode())
+}
+
+func (s *GateServer) onPlayerReconnectGameRes(connection Connection, packet Packet) {
+	res := packet.Message().(*pb.PlayerReconnectGameRes)
+	gatePacket, _ := packet.(*network.GatePacket)
+	clientConnId := uint32(gatePacket.PlayerId())
+	clientConn := s.getClientConnectionByConnId(clientConnId)
+	if clientConn == nil {
+		logger.Debug("onPlayerReconnectGameRes clientConnNil connId:%v playerId:%v err:%v", clientConnId,
+			res.PlayerId, packet.ErrorCode())
+		return
+	}
+	if packet.ErrorCode() == 0 {
+		// 重连成功:为新连接创建ClientData并绑定,恢复s.clients映射
+		// 后续的业务消息才能通过routeToGameServer路由、GameServer下发消息才能通过routeToClient找到客户端
+		clientData := &network.ClientData{
+			ConnId:       clientConn.GetConnectionId(),
+			AccountId:    res.AccountId,
+			PlayerId:     res.PlayerId,
+			GameServerId: res.GameServerId,
+		}
+		s.clientsMutex.Lock()
+		// 先清理可能残留的旧连接绑定:旧连接可能因为网络"假死"还未触发OnConnectionDisconnect
+		// 清除旧连接的tag后,旧连接延迟断开时OnConnectionDisconnect会直接return(GetTag()==nil)
+		// 不会误删新连接的s.clients映射,也不会发送虚假的ClientDisconnect通知
+		if oldClientData, ok := s.clients[res.PlayerId]; ok {
+			if oldConn := s.getClientConnectionByConnId(oldClientData.ConnId); oldConn != nil && oldConn != clientConn {
+				oldConn.SetTag(nil)
+				logger.Debug("onPlayerReconnectGameRes clear old conn:%v playerId:%v",
+					oldConn.GetConnectionId(), res.PlayerId)
+			}
+		}
+		clientConn.SetTag(clientData)
+		s.clients[clientData.PlayerId] = clientData
+		s.clientsMutex.Unlock()
+		logger.Debug("onPlayerReconnectGameRes bind connId:%v playerId:%v gameServerId:%v",
+			clientConn.GetConnectionId(), res.PlayerId, res.GameServerId)
+	}
+	clientPacket := NewProtoPacket(packet.Command(), packet.Message()).SetErrorCode(packet.ErrorCode())
+	clientConn.SendPacket(clientPacket)
+	logger.Debug("onPlayerReconnectGameRes connId:%v playerId:%v err:%v", clientConn.GetConnectionId(),
 		res.PlayerId, packet.ErrorCode())
 }
 

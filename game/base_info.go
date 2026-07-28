@@ -1,6 +1,9 @@
 package game
 
 import (
+	"fmt"
+	"time"
+
 	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gserver/cfg"
 	"github.com/fish-tennis/gserver/internal"
@@ -99,4 +102,18 @@ func (b *BaseInfo) GetOnlineSecondsThisTime() int32 {
 // 总在线时长
 func (b *BaseInfo) GetTotalOnlineSeconds() int32 {
 	return b.Data.TotalOnlineSeconds + b.GetOnlineSecondsThisTime()
+}
+
+// 生成一个新的重连session,写入数据并标记保存
+func (b *BaseInfo) GenerateReconnectSession() {
+	b.Data.ReconnectSession = fmt.Sprintf("%v", time.Now().UnixNano())
+	b.SetDirty()
+}
+
+// 校验重连session是否有效
+func (b *BaseInfo) VerifyReconnectSession(session string) bool {
+	if session == "" {
+		return false
+	}
+	return b.Data.ReconnectSession == session
 }

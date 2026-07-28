@@ -16,6 +16,7 @@ message BaseInfo {
   int64 lastLoginTimestamp = 6; // 最近一次登录时间戳
   int64 lastLogoutTimestamp = 7; // 最近一次退出时间戳
   int32 totalOnlineSeconds = 8; // 总在线时长(秒)
+  string ReconnectSession = 9; // 重连验证session
 }
 
 // 背包模块数据

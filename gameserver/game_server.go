@@ -208,6 +208,7 @@ func (this *GameServer) repairPlayerCache(playerId, accountId int64) error {
 func (this *GameServer) registerClientPacket(handler *DefaultConnectionHandler) {
 	// 手动注册特殊的消息回调
 	network.RegisterPacketHandler(handler, new(pb.PlayerEntryGameReq), onPlayerEntryGameReq)
+	network.RegisterPacketHandler(handler, new(pb.PlayerReconnectGameReq), onPlayerReconnectGameReq)
 	network.RegisterPacketHandler(handler, new(pb.CreatePlayerReq), onCreatePlayerReq)
 	handler.SetUnRegisterHandler(func(connection Connection, packet Packet) {
 		var playerId int64

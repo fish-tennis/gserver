@@ -10,6 +10,7 @@ package gserver;
 message LoginReq {
   string accountName = 1;
   string password = 2;
+  string Version = 3; // 客户端版本号,如0.0.0.1
 }
 
 // 账号登录回复
@@ -46,12 +47,28 @@ message PlayerEntryGameReq {
 }
 
 // 玩家登录游戏服回复
-// @Player
 message PlayerEntryGameRes {
   int64 accountId = 1;
   int64 playerId = 2;
   int32 regionId = 3; // 区服id
   string playerName = 4;
+  int32 GameServerId = 5; // game服Id,客户端重连时需要带上
+}
+
+// 玩家重连游戏服
+message PlayerReconnectGameReq {
+  int64 AccountId = 1;
+  int64 PlayerId = 2;
+  string ReconnectSession = 3; // 重连验证session
+  string Version = 4; // 客户端版本号,如0.0.0.1
+  int32 GameServerId = 5; // game服Id
+}
+
+// 玩家重连游戏服
+message PlayerReconnectGameRes {
+  int64 AccountId = 1;
+  int64 PlayerId = 2;
+  int32 GameServerId = 3; // game服Id
 }
 
 // 创建角色

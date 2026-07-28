@@ -23,14 +23,13 @@ func onPlayerEntryGameReq(connection Connection, packet Packet) {
 	}
 	var errorCode pb.ErrorCode
 	var entryPlayer *game.Player
-	isReconnect := false
 	defer func() {
 		network.SendPacketAdaptWithError(connection, packet, res, int32(errorCode))
 		if errorCode == 0 && entryPlayer != nil {
 			// 转到玩家协程中去处理
 			cmd := network.GetCommandByProto(new(pb.PlayerEntryGameOk))
 			entryPlayer.OnRecvPacket(NewProtoPacket(PacketCommand(cmd), &pb.PlayerEntryGameOk{
-				IsReconnect: isReconnect,
+				IsReconnect: false,
 			}))
 		}
 		logger.Debug("onPlayerEntryGameReq:%v err:%v", res, errorCode)
@@ -59,75 +58,109 @@ func onPlayerEntryGameReq(connection Connection, packet Packet) {
 	// 检查该账号是否已经有对应的在线玩家
 	entryPlayer = game.GetPlayer(playerId)
 	if entryPlayer != nil {
-		// 重连
-		isReconnect = true
-		entryPlayer.SetConnection(connection, network.IsGatePacket(packet))
-		logger.Debug("reconnect %v %v", entryPlayer.GetId(), entryPlayer.GetName())
+		// 玩家已在线,不再支持通过 PlayerEntryGameReq 隐式重连,引导客户端走 PlayerReconnectGameReq
+		errorCode = pb.ErrorCode_ErrorCode_HasLogin
+		return
 	}
-	if !isReconnect {
-		// 分布式游戏服必须保证一个账号同时只在一个游戏服上登录,防止写数据覆盖
-		// 通过redis做缓存来实现账号的"独占性"
-		if !cache.AddOnlineAccount(accountId, playerId, gentity.GetApplication().GetId()) {
-			// 该账号已经在另一个游戏服上登录了
-			_, gameServerId := cache.GetOnlinePlayer(playerId)
-			logger.Error("exist online account:%v playerId:%v gameServerId:%v",
-				accountId, playerId, gameServerId)
-			if gameServerId > 0 {
-				// 通知目标游戏服踢掉玩家
-				kickReply := new(pb.KickPlayerRes)
-				cmd := network.GetCommandByProto(new(pb.KickPlayerReq))
-				rpcErr := internal.GetServerList().Rpc(gameServerId, NewProtoPacketEx(PacketCommand(cmd), &pb.KickPlayerReq{
-					AccountId: accountId,
-					PlayerId:  playerId,
-				}), kickReply)
-				if rpcErr != nil {
-					slog.Error("kick rpcErr", "accountId", accountId, "playerId", playerId,
-						"gameServerId", gameServerId, "rpcErr", rpcErr)
-				}
-			} else {
-				// TODO: RemoveOnlineAccount?
+	// 分布式游戏服必须保证一个账号同时只在一个游戏服上登录,防止写数据覆盖
+	// 通过redis做缓存来实现账号的"独占性"
+	if !cache.AddOnlineAccount(accountId, playerId, gentity.GetApplication().GetId()) {
+		// 该账号已经在另一个游戏服上登录了
+		_, gameServerId := cache.GetOnlinePlayer(playerId)
+		logger.Error("exist online account:%v playerId:%v gameServerId:%v",
+			accountId, playerId, gameServerId)
+		if gameServerId > 0 {
+			// 通知目标游戏服踢掉玩家
+			kickReply := new(pb.KickPlayerRes)
+			cmd := network.GetCommandByProto(new(pb.KickPlayerReq))
+			rpcErr := internal.GetServerList().Rpc(gameServerId, NewProtoPacketEx(PacketCommand(cmd), &pb.KickPlayerReq{
+				AccountId: accountId,
+				PlayerId:  playerId,
+			}), kickReply)
+			if rpcErr != nil {
+				slog.Error("kick rpcErr", "accountId", accountId, "playerId", playerId,
+					"gameServerId", gameServerId, "rpcErr", rpcErr)
 			}
-			// 通知客户端稍后重新登录
-			errorCode = pb.ErrorCode_ErrorCode_TryLater
-			return
+		} else {
+			// TODO: RemoveOnlineAccount?
 		}
-		playerData := &pb.PlayerData{}
-		hasData, err := db.GetPlayerDb().FindEntityById(playerId, playerData)
-		if err != nil {
-			cache.RemoveOnlineAccount(accountId)
-			errorCode = pb.ErrorCode_ErrorCode_DbErr
-			logger.Error(err.Error())
-			return
-		}
-		if !hasData {
-			cache.RemoveOnlineAccount(accountId)
-			errorCode = pb.ErrorCode_ErrorCode_NoPlayer
-			return
-		}
-		// Q:_id为什么不会赋值?
-		// A:因为protobuf自动生成的struct tag,无法适配mongodb的_id字段
-		// 解决方案: 使用工具生成自定义的struct tag,如github.com/favadi/protoc-go-inject-tag
-		// 如果能生成下面这种struct tag,就可以直接把mongodb的_id的值赋值到playerData.XId了
-		// XId int64 `protobuf:"varint,1,opt,name=_id,json=Id,proto3" json:"_id,omitempty" bson:"_id"`
-		if playerData.XId == 0 {
-			playerData.XId = playerId
-		}
-		entryPlayer = game.CreatePlayerFromData(playerData)
-		if entryPlayer == nil {
-			cache.RemoveOnlineAccount(accountId)
-			errorCode = pb.ErrorCode_ErrorCode_NoPlayer
-			return
-		}
-		// 加入在线玩家表
-		game.GetPlayerMgr().AddPlayer(entryPlayer)
-		entryPlayer.SetConnection(connection, network.IsGatePacket(packet))
-		// 开启玩家独立线程
-		entryPlayer.RunRoutine()
+		// 通知客户端稍后重新登录
+		errorCode = pb.ErrorCode_ErrorCode_TryLater
+		return
 	}
+	playerData := &pb.PlayerData{}
+	hasData, err := db.GetPlayerDb().FindEntityById(playerId, playerData)
+	if err != nil {
+		cache.RemoveOnlineAccount(accountId)
+		errorCode = pb.ErrorCode_ErrorCode_DbErr
+		logger.Error(err.Error())
+		return
+	}
+	if !hasData {
+		cache.RemoveOnlineAccount(accountId)
+		errorCode = pb.ErrorCode_ErrorCode_NoPlayer
+		return
+	}
+	// Q:_id为什么不会赋值?
+	// A:因为protobuf自动生成的struct tag,无法适配mongodb的_id字段
+	// 解决方案: 使用工具生成自定义的struct tag,如github.com/favadi/protoc-go-inject-tag
+	// 如果能生成下面这种struct tag,就可以直接把mongodb的_id的值赋值到playerData.XId了
+	// XId int64 `protobuf:"varint,1,opt,name=_id,json=Id,proto3" json:"_id,omitempty" bson:"_id"`
+	if playerData.XId == 0 {
+		playerData.XId = playerId
+	}
+	entryPlayer = game.CreatePlayerFromData(playerData)
+	if entryPlayer == nil {
+		cache.RemoveOnlineAccount(accountId)
+		errorCode = pb.ErrorCode_ErrorCode_NoPlayer
+		return
+	}
+	// 加入在线玩家表
+	game.GetPlayerMgr().AddPlayer(entryPlayer)
+	entryPlayer.SetConnection(connection, network.IsGatePacket(packet))
+	// 开启玩家独立线程
+	entryPlayer.RunRoutine()
 	logger.Debug("entry entryPlayer:%v %v", entryPlayer.GetId(), entryPlayer.GetName())
 	res.PlayerId = entryPlayer.GetId()
 	res.PlayerName = entryPlayer.GetName()
+	res.GameServerId = gentity.GetApplication().GetId()
 	//res.GuildData = entryPlayer.GetGuild().GetGuildData()
+}
+
+// 玩家重连游戏服的请求
+// 在Connection的收包协程中调用
+func onPlayerReconnectGameReq(connection Connection, packet Packet) {
+	req := packet.Message().(*pb.PlayerReconnectGameReq)
+	res := &pb.PlayerReconnectGameRes{
+		AccountId: req.AccountId,
+		PlayerId:  req.PlayerId,
+	}
+	player := game.GetPlayer(req.PlayerId)
+	if player == nil {
+		// 玩家不在线(可能保留期已过或从未登录)
+		network.SendPacketAdaptWithError(connection, packet, res, int32(pb.ErrorCode_ErrorCode_SessionError))
+		logger.Debug("onPlayerReconnectGameReq player nil:%v", req.PlayerId)
+		return
+	}
+	// 投递到玩家协程执行,确保对 BaseInfo.ReconnectSession 的校验、SetConnection、CancelReconnectWait
+	// 都在玩家协程内串行执行,避免跨协程并发问题
+	player.OnReconnect(connection, network.IsGatePacket(packet), req.GetReconnectSession(), func(success bool) {
+		// 此回调在玩家协程内被调用
+		if !success {
+			network.SendPacketAdaptWithError(connection, packet, res, int32(pb.ErrorCode_ErrorCode_SessionError))
+			logger.Debug("onPlayerReconnectGameReq session error:%v", req.PlayerId)
+			return
+		}
+		res.GameServerId = gentity.GetApplication().GetId()
+		network.SendPacketAdaptWithError(connection, packet, res, 0)
+		// 转到玩家协程中去处理重连后的逻辑
+		// 后续的 HandlePlayerEntryGameOk 会调用 GenerateReconnectSession 生成新的 ReconnectSession
+		cmd := network.GetCommandByProto(new(pb.PlayerEntryGameOk))
+		player.OnRecvPacket(NewProtoPacket(PacketCommand(cmd), &pb.PlayerEntryGameOk{
+			IsReconnect: true,
+		}))
+		logger.Debug("onPlayerReconnectGameReq success:%v", res)
+	})
 }
 
 // 创建角色

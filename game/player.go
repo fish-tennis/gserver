@@ -18,6 +18,8 @@ import (
 const (
 	// Player在redis里的前缀
 	PlayerCachePrefix = "p"
+	// 断线后保留玩家的等待时间(秒),在此期间玩家可重连
+	ReconnectWaitSeconds = 60
 )
 
 var _ gentity.RoutineEntity = (*Player)(nil)
@@ -37,6 +39,8 @@ type Player struct {
 	// 关联的连接,如果是网关模式,就是网关的连接
 	// 如果是客户端直连模式,就是客户端连接
 	connection Connection
+	// 断线保留期定时器是否处于激活状态
+	reconnectWaitTimerActive bool
 	// 事件分发的嵌套检测
 	fireEventLoopChecker map[reflect.Type]int32
 	postEvents           []any
@@ -98,12 +102,77 @@ func (p *Player) GetConnection() Connection {
 	return p.connection
 }
 
+// playerDisconnectMessage 断线内部消息,由网络协程投递,在玩家协程内消费
+// 这样保证对 p.connection 的访问都在玩家自己的协程内串行执行,避免并发问题
+type playerDisconnectMessage struct {
+	connection Connection
+}
+
+// playerReconnectMessage 重连内部消息,由网络协程投递,在玩家协程内消费
+// 保证对 BaseInfo.ReconnectSession 的校验、SetConnection、CancelReconnectWait 都在协程内串行执行
+type playerReconnectMessage struct {
+	connection Connection
+	useGate    bool
+	session    string
+	callback   func(success bool)
+}
+
+// OnDisconnect 由网络协程(gnet读/写协程)回调,不能在此直接读写 p.connection
+// 投递到玩家自己的协程中处理
 func (p *Player) OnDisconnect(connection Connection) {
+	p.PushMessage(&playerDisconnectMessage{connection: connection})
+}
+
+// OnReconnect 由网络协程(收包协程)调用,把重连校验逻辑投递到玩家协程
+// callback 在玩家协程内被调用,success 为 true 表示校验通过且已绑定新连接
+func (p *Player) OnReconnect(connection Connection, useGate bool, session string, callback func(success bool)) {
+	p.PushMessage(&playerReconnectMessage{
+		connection: connection,
+		useGate:    useGate,
+		session:    session,
+		callback:   callback,
+	})
+}
+
+// onDisconnect 实际的断线处理逻辑,在玩家协程内调用,与本玩家其它业务串行,无需加锁
+func (p *Player) onDisconnect(connection Connection) {
 	if p.GetConnection() == connection {
 		p.ResetConnection()
-		p.Stop()
-		logger.Debug("player %v exit", p.GetId())
+		// 重复掉线场景:保留期定时器已经处于激活状态,直接返回
+		if p.reconnectWaitTimerActive {
+			return
+		}
+		// 开启断线保留期,等待玩家重连,超时后才真正下线
+		p.reconnectWaitTimerActive = true
+		p.GetTimerEntries().After(ReconnectWaitSeconds*time.Second, func() time.Duration {
+			// 保留期内重连成功会取消该定时器(reconnectWaitTimerActive被置为false)
+			if !p.reconnectWaitTimerActive {
+				return 0
+			}
+			p.Stop()
+			logger.Debug("player %v exit", p.GetId())
+			return 0
+		})
 	}
+}
+
+// CancelReconnectWait 取消断线保留期定时器,由重连处理器在玩家协程内调用
+func (p *Player) CancelReconnectWait() {
+	p.reconnectWaitTimerActive = false
+}
+
+// onReconnect 实际的重连处理逻辑,在玩家协程内调用,与本玩家其它业务串行,无需加锁
+func (p *Player) onReconnect(msg *playerReconnectMessage) {
+	// 校验 ReconnectSession
+	if !p.GetBaseInfo().VerifyReconnectSession(msg.session) {
+		msg.callback(false)
+		return
+	}
+	// 校验通过,绑定新连接
+	p.SetConnection(msg.connection, msg.useGate)
+	// 取消断线保留期定时器
+	p.CancelReconnectWait()
+	msg.callback(true)
 }
 
 // 发包(protobuf)
@@ -247,7 +316,16 @@ func (p *Player) RunRoutine() bool {
 			GetPlayerMgr().RemovePlayer(p)
 		},
 		ProcessMessageFunc: func(routineEntity gentity.RoutineEntity, message any) {
-			p.processMessage(message.(*ProtoPacket))
+			switch msg := message.(type) {
+			case *ProtoPacket:
+				p.processMessage(msg)
+			case *playerDisconnectMessage:
+				p.onDisconnect(msg.connection)
+			case *playerReconnectMessage:
+				p.onReconnect(msg)
+			default:
+				logger.Error("processMessage unknown message type: %T", message)
+			}
 		},
 		AfterTimerExecuteFunc: func(routineEntity gentity.RoutineEntity, t time.Time) {
 			p.firePostedEvents()
@@ -332,6 +410,8 @@ func (p *Player) HandlePlayerEntryGameOk(msg *pb.PlayerEntryGameOk) {
 	}
 	b.Data.LastLoginTimestamp = now
 	b.SetDirty()
+	// 进游戏服成功后生成 ReconnectSession,供后续断线重连校验
+	p.GetBaseInfo().GenerateReconnectSession()
 	// 分发事件:玩家进游戏服
 	p.FireEvent(&internal.EventPlayerEntryGame{
 		IsReconnect:    msg.IsReconnect,
