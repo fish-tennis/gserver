@@ -4,7 +4,6 @@ import (
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/logger"
 	"google.golang.org/protobuf/proto"
-	"reflect"
 )
 
 // 客户端绑定数据
@@ -34,12 +33,12 @@ func (this *WsClientCodec) Decode(connection Connection, data []byte) (newPacket
 	packetHeader := &SimplePacketHeader{}
 	packetHeader.ReadFrom(data)
 	command := packetHeader.Command
-	if protoMessageType, ok := this.MessageCreatorMap[PacketCommand(command)]; ok {
-		if protoMessageType != nil {
-			newProtoMessage := reflect.New(protoMessageType).Interface().(proto.Message)
+	if protoMessageCreator, ok := this.MessageCreatorMap[PacketCommand(command)]; ok {
+		if protoMessageCreator != nil {
+			newProtoMessage := protoMessageCreator()
 			err = proto.Unmarshal(data[SimplePacketHeaderSize:], newProtoMessage)
 			if err != nil {
-				logger.Error("proto decode err:%v cmd:%v name:%v", err, command, protoMessageType.Name())
+				logger.Error("proto decode err:%v cmd:%v name:%v", err, command, proto.MessageName(newProtoMessage))
 				return nil, err
 			}
 			return NewProtoPacket(PacketCommand(command), newProtoMessage), nil

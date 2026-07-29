@@ -15,4 +15,8 @@ enum ErrorCode {
 	ErrorCode_SessionError = 16;
 	ErrorCode_NoPlayer = 17;
 	ErrorCode_TryLater = 18;
+	ErrorCode_VersionTooLow = 19; // 客户端版本号过低
+	ErrorCode_ReconnectSessionError = 20; // 重连session校验失败
+	ErrorCode_ServerClosing = 21; // 服务器正在关闭
+	ErrorCode_ReconnectNeedRelogin = 22; // 重连失败需要重新登录
 }
