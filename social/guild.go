@@ -37,7 +37,7 @@ type GuildMessage struct {
 
 func NewGuild(guildLoadData *pb.GuildLoadData) *Guild {
 	guild := &Guild{
-		BaseRoutineEntity: *gentity.NewRoutineEntity(32),
+		BaseRoutineEntity: *gentity.NewRoutineEntity(1024),
 	}
 	guild.Id = guildLoadData.Id
 	_guildComponentRegister.InitComponents(guild, nil)

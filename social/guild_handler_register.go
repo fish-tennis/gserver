@@ -12,6 +12,7 @@ import (
 	"log/slog"
 	"reflect"
 	"strings"
+	"time"
 )
 
 // 公会消息回调接口注册
@@ -143,6 +144,16 @@ func ParseRoutePacket(mgr *gentity.DistributedEntityMgr, connection Connection, 
 		log.Debug("ParseRoutePacket convert err")
 		return gentity.ErrConvertRoutineMessage
 	}
-	toEntity.PushMessage(message)
+	// 跨协程投递用 PushMessageTimeout(1秒),兼顾:
+	// 1. 公会协程短暂卡顿时等待恢复,减少消息丢失
+	// 2. 公会协程长时间卡住时1秒后放弃,避免阻塞网络回调协程导致雪崩
+	if routineEntity, ok := toEntity.(*Guild); ok {
+		if !routineEntity.PushMessageTimeout(message, time.Second) {
+			log.Warn("ParseRoutePacket PushMessageTimeout failed")
+			return gentity.ErrConvertRoutineMessage
+		}
+	} else {
+		toEntity.PushMessage(message)
+	}
 	return nil
 }
