@@ -226,6 +226,7 @@ func (s *GateServer) registerServerPacket(serverHandler *DefaultConnectionHandle
 	network.RegisterPacketHandler(serverHandler, new(pb.CreatePlayerRes), s.routeToClientWithConnId)
 	network.RegisterPacketHandler(serverHandler, new(pb.PlayerEntryGameRes), s.onPlayerEntryGameRes)
 	network.RegisterPacketHandler(serverHandler, new(pb.PlayerReconnectGameRes), s.onPlayerReconnectGameRes)
+	network.RegisterPacketHandler(serverHandler, new(pb.GateRouteClientPacketError), s.onGateRouteClientPacketError)
 
 	serverHandler.SetUnRegisterHandler(s.routeToClient)
 }
@@ -278,8 +279,9 @@ func (s *GateServer) onPlayerEntryGameRes(connection Connection, packet Packet) 
 	if packet.ErrorCode() == 0 {
 		if clientData, ok := clientConn.GetTag().(*network.ClientData); ok {
 			// 登录游戏服成功后,绑定客户端连接和playerId,后续的消息都可以用playerId来关联
-			clientData.PlayerId = res.PlayerId
+			// 在写锁保护下修改 clientData.PlayerId,避免跨协程数据竞争
 			s.clientsMutex.Lock()
+			clientData.PlayerId = res.PlayerId
 			s.clients[clientData.PlayerId] = clientData
 			s.clientsMutex.Unlock()
 			logger.Debug("bindPlayerId connId:%v playerId:%v", clientConn.GetConnectionId(), res.PlayerId)
@@ -335,19 +337,24 @@ func (s *GateServer) onPlayerReconnectGameRes(connection Connection, packet Pack
 
 func (s *GateServer) routeToClient(connection Connection, packet Packet) {
 	gatePacket, _ := packet.(*network.GatePacket)
+	// 持锁期间只拷贝必要数据,释放锁后再发送,避免慢客户端阻塞写锁
 	s.clientsMutex.RLock()
 	clientData, ok := s.clients[gatePacket.PlayerId()]
-	defer s.clientsMutex.RUnlock()
+	connId := uint32(0)
 	if ok {
-		clientConn := s.getClientConnectionByConnId(clientData.ConnId)
+		connId = clientData.ConnId
+	}
+	s.clientsMutex.RUnlock()
+	if ok {
+		clientConn := s.getClientConnectionByConnId(connId)
 		if clientConn == nil {
-			logger.Debug("routeToClientErr clientConn:%v playerId:%v cmd:%v", clientData.ConnId,
-				clientData.PlayerId, packet.Command())
+			logger.Debug("routeToClientErr clientConn:%v playerId:%v cmd:%v", connId,
+				gatePacket.PlayerId(), packet.Command())
 			return
 		}
 		clientConn.SendPacket(NewProtoPacketEx(packet.Command(), packet.Message(), packet.GetStreamData()))
-		logger.Debug("routeToClient clientConn:%v playerId:%v cmd:%v message:%v dataLen:%v", clientData.ConnId,
-			clientData.PlayerId, packet.Command(), packet.Message(), len(packet.GetStreamData()))
+		logger.Debug("routeToClient clientConn:%v playerId:%v cmd:%v message:%v dataLen:%v", connId,
+			gatePacket.PlayerId(), packet.Command(), packet.Message(), len(packet.GetStreamData()))
 		return
 	}
 	logger.Debug("routeToClientErr playerId:%v cmd:%v message:%v packet:%v", gatePacket.PlayerId(), packet.Command(),
@@ -365,20 +372,30 @@ func (s *GateServer) getClientConnectionByConnId(clientConnId uint32) Connection
 	return clientConn
 }
 
-// 网关转发客户端消息到其他服务器,发生错误
+// 网关转发客户端消息到GameServer时发生错误(GameServer上找不到该玩家)
+// 给客户端返回一个能识别的错误,而不是转发内部协议
 func (s *GateServer) onGateRouteClientPacketError(connection Connection, packet Packet) {
 	gatePacket, _ := packet.(*network.GatePacket)
+	errorMsg := packet.Message().(*pb.GateRouteClientPacketError)
 	s.clientsMutex.RLock()
 	clientData, ok := s.clients[gatePacket.PlayerId()]
-	defer s.clientsMutex.RUnlock()
+	connId := uint32(0)
 	if ok {
-		slog.Debug("onGateRouteClientPacketError", "clientData", clientData)
-		clientData.GameServerId = 0
-		clientConn := s.getClientConnectionByConnId(clientData.ConnId)
+		connId = clientData.ConnId
+	}
+	s.clientsMutex.RUnlock()
+	if ok {
+		logger.Debug("onGateRouteClientPacketError connId:%v playerId:%v cmd:%v reason:%v",
+			connId, gatePacket.PlayerId(), errorMsg.GetCommand(), errorMsg.GetResultStr())
+		clientConn := s.getClientConnectionByConnId(connId)
 		if clientConn == nil {
-			logger.Debug("onGateRouteClientPacketError", "ConnId", clientData.ConnId)
 			return
 		}
-		clientConn.SendPacket(NewProtoPacketEx(packet.Command(), packet.Message(), packet.GetStreamData()))
+		// 转换成客户端能识别的 ErrorRes
+		cmd := network.GetCommandByProto(new(pb.ErrorRes))
+		clientConn.Send(PacketCommand(cmd), &pb.ErrorRes{
+			Command:   errorMsg.GetCommand(),
+			ResultStr: errorMsg.GetResultStr(),
+		})
 	}
 }
