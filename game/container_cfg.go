@@ -104,7 +104,10 @@ func (b *CfgContainer[E]) AddElem(arg *pb.AddElemArg, bagUpdate *pb.ElemContaine
 			bagUpdate.ElemOps = append(bagUpdate.ElemOps, itemOp)
 		}
 	}
-	return 1
+	if newId > 0 {
+		return 1
+	}
+	return 0
 }
 
 func (b *CfgContainer[E]) AddElemAndSyncData(arg *pb.AddElemArg) int32 {

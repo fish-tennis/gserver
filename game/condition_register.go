@@ -46,6 +46,9 @@ func PlayerPropertyInt32Checker(obj any, conditionCfg *pb.ConditionCfg) bool {
 
 func CheckConditionArg(obj any, conditionArg *pb.CfgArgOptions) bool {
 	condition := cfg.ConvertConditionCfg(conditionArg)
+	if condition == nil {
+		return false
+	}
 	return internal.CheckCondition(obj, condition)
 }
 

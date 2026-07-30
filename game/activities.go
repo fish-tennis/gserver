@@ -201,7 +201,7 @@ func (a *Activities) CheckJoinTime(activityCfg *pb.ActivityCfg, t time.Time) boo
 		if activityCfg.BeginTime > 0 && nowDateInt < activityCfg.BeginTime {
 			return false
 		}
-		if activityCfg.EndTime > 0 || nowDateInt > activityCfg.EndTime {
+		if activityCfg.EndTime > 0 && nowDateInt > activityCfg.EndTime {
 			return false
 		}
 	}

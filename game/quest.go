@@ -210,6 +210,10 @@ func (q *Quest) OnFinishQuestReq(req *pb.FinishQuestReq) (*pb.FinishQuestRes, er
 	for _, questCfgId := range req.GetQuestCfgIds() {
 		if questData, ok := q.Quests.Data[questCfgId]; ok {
 			questCfg := cfg.Quests.GetCfg(questData.GetCfgId())
+			if questCfg == nil {
+				logger.Error("OnFinishQuestReq questCfg nil %v", questData.GetCfgId())
+				continue
+			}
 			if q.CanFinish(questData, questCfg) {
 				q.Quests.Delete(questData.GetCfgId())
 				finishedData := &pb.FinishedQuestData{
@@ -243,7 +247,7 @@ func (q *Quest) OnFinishQuestReq(req *pb.FinishQuestReq) (*pb.FinishQuestRes, er
 					if !q.CanAccept(checkObj, nextQuestCfg) {
 						continue
 					}
-					if q.Quests.Contains(questCfg.GetCfgId()) {
+					if q.Quests.Contains(nextQuestCfg.GetCfgId()) {
 						continue
 					}
 					q.AddQuest(&pb.QuestData{CfgId: nextQuestId, ActivityId: questData.GetActivityId()})

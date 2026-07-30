@@ -112,7 +112,23 @@ func (g *Guild) OnGuildCreateReq(req *pb.GuildCreateReq) (*pb.GuildCreateRes, er
 		logger.Error("OnGuildCreateReq err:%v", err)
 		return nil, errors.New("IdError")
 	}
-	newGuildId := newGuildIdValue.(int64)
+	// BSON数值可能是int32/int64/float64等类型,用安全转换
+	var newGuildId int64
+	switch idVal := newGuildIdValue.(type) {
+	case int64:
+		newGuildId = idVal
+	case int32:
+		newGuildId = int64(idVal)
+	case float64:
+		newGuildId = int64(idVal)
+	default:
+		logger.Error("OnGuildCreateReq invalid guildId type:%T val:%v", newGuildIdValue, newGuildIdValue)
+		return nil, errors.New("IdError")
+	}
+	if newGuildId <= 0 {
+		logger.Error("OnGuildCreateReq invalid guildId val:%v", newGuildId)
+		return nil, errors.New("IdError")
+	}
 	newGuildData := &pb.GuildData{
 		Id: newGuildId,
 		BaseInfo: &pb.GuildInfo{

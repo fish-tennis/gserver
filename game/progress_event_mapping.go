@@ -58,6 +58,10 @@ func (p *ProgressEventMapping) UpdateProgress(event any, progress internal.CfgDa
 	switch v := progress.(type) {
 	case *pb.QuestData:
 		questCfg := cfg.Quests.GetCfg(v.GetCfgId())
+		if questCfg == nil {
+			slog.Error("UpdateProgress questCfg nil", "cfgId", v.GetCfgId())
+			return false
+		}
 		if internal.UpdateProgress(p.player, v, event, questCfg.Progress) {
 			p.player.GetQuest().Quests.SetDirty(v.GetCfgId(), true)
 			p.player.Send(&pb.QuestUpdate{

@@ -8,7 +8,6 @@ import (
 	"github.com/fish-tennis/gserver/pb"
 	"github.com/fish-tennis/gserver/util"
 	"log/slog"
-	"slices"
 )
 
 const (
@@ -121,27 +120,42 @@ func (e *Exchange) Exchange(exchangeCfgId, exchangeCount int32) error {
 		return errors.New("conditions err")
 	}
 	// 如果配置了兑换消耗物品,就是购买礼包,如果不配置,就是免费礼包
-	totalConsumes := exchangeCfg.Consumes
+	// 注意:必须深拷贝后再修改,不能污染全局cfg配置数据
+	var totalConsumes []*pb.ItemNum
 	if exchangeCount > 1 {
-		totalConsumes = slices.Clone(exchangeCfg.Consumes)
-		for _, consume := range totalConsumes {
+		totalConsumes = make([]*pb.ItemNum, len(exchangeCfg.Consumes))
+		for i, consume := range exchangeCfg.Consumes {
 			if util.IsMultiOverflow(consume.Num, exchangeCount) {
 				slog.Debug("Exchange ConsumeItems overflow", "pid", e.GetPlayer().GetId(), "exchangeCfgId", exchangeCfgId, "exchangeCount", exchangeCount)
 				return errors.New("ConsumeItemsOverflow")
 			}
-			consume.Num *= exchangeCount
+			totalConsumes[i] = &pb.ItemNum{
+				CfgId: consume.CfgId,
+				Num:   consume.Num * exchangeCount,
+			}
 		}
+	} else {
+		totalConsumes = exchangeCfg.Consumes
 	}
-	totalRewards := exchangeCfg.Rewards
+	var totalRewards []*pb.AddElemArg
 	if exchangeCount > 1 {
-		totalRewards = slices.Clone(exchangeCfg.Rewards)
-		for _, reward := range exchangeCfg.Rewards {
+		totalRewards = make([]*pb.AddElemArg, len(exchangeCfg.Rewards))
+		for i, reward := range exchangeCfg.Rewards {
 			if util.IsMultiOverflow(reward.Num, exchangeCount) {
 				slog.Debug("Exchange rewards overflow", "pid", e.GetPlayer().GetId(), "exchangeCfgId", exchangeCfgId, "exchangeCount", exchangeCount)
 				return errors.New("RewardsItemsOverflow")
 			}
-			reward.Num *= exchangeCount
+			totalRewards[i] = &pb.AddElemArg{
+				CfgId:      reward.CfgId,
+				Num:        reward.Num * exchangeCount,
+				TimeType:   reward.TimeType,
+				Timeout:    reward.Timeout,
+				Source:     reward.Source,
+				Properties: reward.Properties,
+			}
 		}
+	} else {
+		totalRewards = exchangeCfg.Rewards
 	}
 	if !e.GetPlayer().GetBags().IsEnoughByItemNums(totalConsumes) {
 		slog.Debug("Exchange ConsumeItems notEnough", "pid", e.GetPlayer().GetId(), "exchangeCfgId", exchangeCfgId)

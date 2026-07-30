@@ -155,7 +155,10 @@ func (a *ActivityDefault) defaultRefreshExchange(t time.Time, refreshType int32)
 	exchange := a.Activities.GetPlayer().GetExchange()
 	for _, exchangeCfgId := range activityCfg.ExchangeIds {
 		exchangeCfg := cfg.ExchangeCfgs.GetCfg(exchangeCfgId)
-		if exchangeCfg == nil || exchangeCfg.GetRefreshType() == refreshType {
+		if exchangeCfg == nil {
+			continue
+		}
+		if exchangeCfg.GetRefreshType() == refreshType {
 			removedRecord := exchange.RemoveRecord(exchangeCfgId)
 			if removedRecord != nil {
 				slog.Debug("defaultRefreshExchange", "pid", a.Activities.GetPlayer().GetId(),

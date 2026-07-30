@@ -24,6 +24,9 @@ func GetRedis() redis.Cmdable {
 }
 
 func NewRedis(addrs []string, userName, password string, isCluster bool) redis.Cmdable {
+	if len(addrs) == 0 {
+		panic("NewRedis: addrs is empty")
+	}
 	var redisCmdable redis.Cmdable
 	if isCluster {
 		redisCmdable = NewRedisClient(addrs, userName, password)

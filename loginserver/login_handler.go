@@ -63,6 +63,10 @@ func onLoginReq(connection Connection, packet Packet) {
 	}
 	// 分配一个游戏服给客户端连接
 	gameServerInfo := selectGameServer(account)
+	if gameServerInfo == nil {
+		errorCode = pb.ErrorCode_ErrorCode_TryLater
+		return
+	}
 	loginRes.GameServer = &pb.GameServerInfo{
 		ServerId:         gameServerInfo.GetServerId(),
 		ClientListenAddr: gameServerInfo.GetClientListenAddr(),
