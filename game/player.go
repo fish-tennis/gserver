@@ -1,6 +1,7 @@
 package game
 
 import (
+	"fmt"
 	"github.com/fish-tennis/gentity"
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
@@ -38,6 +39,7 @@ type Player struct {
 	useGate bool
 	// 关联的连接,如果是网关模式,就是网关的连接
 	// 如果是客户端直连模式,就是客户端连接
+	// connection 的读写都在玩家协程内串行执行(网络事件通过 PushMessage 投递),无需加锁
 	connection Connection
 	// 断线保留期定时器是否处于激活状态
 	reconnectWaitTimerActive bool
@@ -106,6 +108,14 @@ func (p *Player) GetConnection() Connection {
 // 这样保证对 p.connection 的访问都在玩家自己的协程内串行执行,避免并发问题
 type playerDisconnectMessage struct {
 	connection Connection
+}
+
+// playerKickMessage 踢人内部消息,由网络协程投递,在玩家协程内消费
+type playerKickMessage struct{}
+
+// Kick 踢玩家下线,由网络协程调用,投递到玩家协程内执行实际的 ResetConnection + Stop
+func (p *Player) Kick() {
+	p.PushMessage(&playerKickMessage{})
 }
 
 // playerReconnectMessage 重连内部消息,由网络协程投递,在玩家协程内消费
@@ -323,6 +333,9 @@ func (p *Player) RunRoutine() bool {
 				p.onDisconnect(msg.connection)
 			case *playerReconnectMessage:
 				p.onReconnect(msg)
+			case *playerKickMessage:
+				p.ResetConnection()
+				p.Stop()
 			default:
 				logger.Error("processMessage unknown message type: %T", message)
 			}
@@ -443,7 +456,7 @@ func CreatePlayerFromData(playerData *pb.PlayerData) *Player {
 	defer func() {
 		if err := recover(); err != nil {
 			player = nil
-			slog.Error("CreatePlayerFromDataErr", "pid", playerData.XId, "err", err.(error))
+			slog.Error("CreatePlayerFromDataErr", "pid", playerData.XId, "err", fmt.Sprintf("%v", err))
 			LogStack()
 		}
 	}()

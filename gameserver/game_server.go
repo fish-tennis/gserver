@@ -265,8 +265,8 @@ func (this *GameServer) onKickPlayer(connection Connection, packet Packet) {
 	req := packet.Message().(*pb.KickPlayerReq)
 	player := game.GetPlayer(req.GetPlayerId())
 	if player != nil {
-		player.ResetConnection()
-		player.Stop()
+		// 投递到玩家协程内执行 ResetConnection + Stop,避免跨协程访问 connection
+		player.Kick()
 		logger.Debug("kick player account:%v playerId:%v gameServerId:%v",
 			req.GetAccountId(), req.GetPlayerId(), this.GetId())
 	} else {

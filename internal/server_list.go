@@ -14,6 +14,7 @@ import (
 	"slices"
 	"sort"
 	"sync"
+	"sync/atomic"
 )
 
 var (
@@ -54,6 +55,8 @@ type ServerList struct {
 	serverInfoTypeMapMutex sync.RWMutex
 	// 本地服务器信息
 	localServerInfo *pb.ServerInfo
+	// Ping 的原子读写,避免心跳回调协程与 RegisterLocalServerInfo 协程的数据竞争
+	localServerInfoPing atomic.Int32
 	// 服务器的监听配置
 	serverListenerConfig gnet.ListenerConfig
 	// 服务器之间的连接配置
@@ -130,7 +133,7 @@ func (this *ServerList) initDefaultServerConnectorConfig() {
 	}
 	network.RegisterPacketHandler(handler, new(pb.HeartBeatRes), func(connection gnet.Connection, packet gnet.Packet) {
 		res := packet.Message().(*pb.HeartBeatRes)
-		this.localServerInfo.Ping = int32(util.GetCurrentMS() - res.RequestTimestamp)
+		this.localServerInfoPing.Store(int32(util.GetCurrentMS() - res.RequestTimestamp))
 	})
 
 	this.serverConnectorConfig = network.ServerConnectionConfig
@@ -265,6 +268,7 @@ func (this *ServerList) ConnectServer(ctx context.Context, info *pb.ServerInfo) 
 	if info == nil {
 		return
 	}
+	// 快速检查:已连接则跳过(仅优化,真正防止重复的是写入时的double-check)
 	this.connectedServersMutex.RLock()
 	_, ok := this.connectedServers[info.GetServerId()]
 	this.connectedServersMutex.RUnlock()
@@ -279,9 +283,16 @@ func (this *ServerList) ConnectServer(ctx context.Context, info *pb.ServerInfo) 
 	serverConn := gnet.GetNetMgr().NewConnector(ctx, targetAddr, &this.serverConnectorConfig, info.GetServerId())
 	if serverConn != nil {
 		this.connectedServersMutex.Lock()
-		this.connectedServers[info.GetServerId()] = serverConn
+		// double-check:避免在 NewConnector 期间已有连接被添加
+		if _, ok := this.connectedServers[info.GetServerId()]; !ok {
+			this.connectedServers[info.GetServerId()] = serverConn
+			logger.Info("ConnectServer %v, %v", info.GetServerId(), info.GetServerType())
+		} else if info.GetServerId() != this.localServerInfo.GetServerId() {
+			// 已有连接,关闭新建的多余连接
+			// 注意:自连场景(连接自己)会产生connector和accept两条连接,不能关闭
+			serverConn.Close()
+		}
 		this.connectedServersMutex.Unlock()
-		logger.Info("ConnectServer %v, %v", info.GetServerId(), info.GetServerType())
 	} else {
 		logger.Info("ConnectServerError %v, %v", info.GetServerId(), info.GetServerType())
 	}
@@ -289,6 +300,8 @@ func (this *ServerList) ConnectServer(ctx context.Context, info *pb.ServerInfo) 
 
 // 服务注册:上传本地服务器的信息
 func (this *ServerList) RegisterLocalServerInfo() {
+	// 从原子变量读取最新的 Ping 值,避免与心跳回调协程的数据竞争
+	this.localServerInfo.Ping = this.localServerInfoPing.Load()
 	bytes, _ := proto.Marshal(this.localServerInfo)
 	this.cache.HSet(fmt.Sprintf("servers:%v", this.localServerInfo.GetServerType()),
 		util.Itoa(this.localServerInfo.GetServerId()), bytes)
