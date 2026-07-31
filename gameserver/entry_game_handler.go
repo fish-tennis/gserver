@@ -1,6 +1,8 @@
 package gameserver
 
 import (
+	"log/slog"
+
 	"github.com/fish-tennis/gentity"
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
@@ -10,7 +12,6 @@ import (
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/network"
 	"github.com/fish-tennis/gserver/pb"
-	"log/slog"
 )
 
 // 玩家进游戏服的请求
@@ -71,15 +72,13 @@ func onPlayerEntryGameReq(connection Connection, packet Packet) {
 			accountId, playerId, gameServerId)
 		if gameServerId > 0 {
 			// 通知目标游戏服踢掉玩家
-			kickReply := new(pb.KickPlayerRes)
 			cmd := network.GetCommandByProto(new(pb.KickPlayerReq))
-			rpcErr := internal.GetServerList().Rpc(gameServerId, NewProtoPacketEx(PacketCommand(cmd), &pb.KickPlayerReq{
+			sendOk := internal.GetServerList().Send(gameServerId, PacketCommand(cmd), &pb.KickPlayerReq{
 				AccountId: accountId,
 				PlayerId:  playerId,
-			}), kickReply)
-			if rpcErr != nil {
-				slog.Error("kick rpcErr", "accountId", accountId, "playerId", playerId,
-					"gameServerId", gameServerId, "rpcErr", rpcErr)
+			})
+			if !sendOk {
+				slog.Error("kick send failed", "accountId", accountId, "playerId", playerId, "gameServerId", gameServerId)
 			}
 		} else {
 			// TODO: RemoveOnlineAccount?

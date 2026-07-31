@@ -3,6 +3,9 @@ package gameserver
 import (
 	"context"
 	"fmt"
+	"log/slog"
+	"sync"
+
 	"github.com/fish-tennis/gentity"
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
@@ -14,8 +17,6 @@ import (
 	"github.com/fish-tennis/gserver/network"
 	"github.com/fish-tennis/gserver/pb"
 	"github.com/fish-tennis/gserver/social"
-	"log/slog"
-	"sync"
 )
 
 var (
@@ -279,6 +280,9 @@ func (this *GameServer) onKickPlayer(connection Connection, packet Packet) {
 			logger.Error("kick player failed account:%v playerId:%v gameServerId:%v",
 				req.GetAccountId(), req.GetPlayerId(), this.GetId())
 		}
+	}
+	if packet.RpcCallId() == 0 {
+		return
 	}
 	// rpc reply:回复KickPlayerRes,command和类型必须与发起方期望的reply一致
 	resCmd := network.GetCommandByProto(new(pb.KickPlayerRes))
