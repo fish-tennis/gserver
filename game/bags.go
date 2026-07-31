@@ -255,13 +255,7 @@ func (b *Bags) OnItemUseReq(req *pb.ItemUseReq) (*pb.ItemUseRes, error) {
 	if req.GetUniqueId() > 0 {
 		b.GetPlayer().Log = b.GetPlayer().Log.With("uniqueId", req.GetUniqueId())
 	}
-	useError := useFunc(b.GetPlayer(), itemCfg, useArgs)
-	b.GetPlayer().Log = oldLog
-	if useError != nil {
-		b.GetPlayer().Log.Error("UseItemError", "useError", useError)
-		return nil, useError
-	}
-	// 假设物品是单次使用的,使用完就删除
+	// 先扣除物品,再使用(先扣后发原则)
 	b.DelItems([]*pb.DelElemArg{
 		{
 			CfgId:    itemCfg.GetCfgId(),
@@ -269,6 +263,12 @@ func (b *Bags) OnItemUseReq(req *pb.ItemUseReq) (*pb.ItemUseRes, error) {
 			Num:      1,
 		},
 	})
+	useError := useFunc(b.GetPlayer(), itemCfg, useArgs)
+	b.GetPlayer().Log = oldLog
+	if useError != nil {
+		b.GetPlayer().Log.Error("UseItemError", "useError", useError)
+		return nil, useError
+	}
 	res := &pb.ItemUseRes{
 		CfgId:    itemCfg.GetCfgId(),
 		UniqueId: req.GetUniqueId(),

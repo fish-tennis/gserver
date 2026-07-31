@@ -104,6 +104,13 @@ func (this *GuildJoinRequests) HandleGuildJoinAgreeReq(guildMessage *GuildMessag
 		// 利用mongodb的原子操作,来防止该玩家同时加入多个公会
 		if !game.AtomicSetGuildId(joinRequest.PlayerId, g.GetId(), 0) {
 			g.GetMembers().Remove(joinRequest.PlayerId)
+			// 通知申请者并发冲突
+			game.RoutePlayerPacket(joinRequest.PlayerId, network.NewPacket(&pb.GuildJoinReqOpResult{
+				GuildId:         g.GetId(),
+				ManagerPlayerId: guildMessage.fromPlayerId,
+				JoinPlayerId:    joinRequest.PlayerId,
+				IsAgree:         false,
+			}), game.WithSaveDb())
 			return nil, errors.New("ConcurrentError")
 		}
 		// 通知对方已经入会了
@@ -113,6 +120,14 @@ func (this *GuildJoinRequests) HandleGuildJoinAgreeReq(guildMessage *GuildMessag
 			ManagerPlayerId: guildMessage.fromPlayerId,
 			JoinPlayerId:    joinRequest.PlayerId,
 			IsAgree:         true,
+		}), game.WithSaveDb())
+	} else {
+		// 拒绝入会申请,通知申请者
+		game.RoutePlayerPacket(joinRequest.PlayerId, network.NewPacket(&pb.GuildJoinReqOpResult{
+			GuildId:         g.GetId(),
+			ManagerPlayerId: guildMessage.fromPlayerId,
+			JoinPlayerId:    joinRequest.PlayerId,
+			IsAgree:         false,
 		}), game.WithSaveDb())
 	}
 	g.GetJoinRequests().Remove(req.JoinPlayerId)

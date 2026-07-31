@@ -128,7 +128,9 @@ func (this *BaseServer) Init(ctx context.Context, configFile string) bool {
 // 运行
 func (this *BaseServer) Run(ctx context.Context) {
 	logger.Info("BaseServer.Run")
+	this.wg.Add(1)
 	go func(ctx context.Context) {
+		defer this.wg.Done()
 		this.updateLoop(ctx)
 	}(ctx)
 }

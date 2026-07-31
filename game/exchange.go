@@ -161,9 +161,9 @@ func (e *Exchange) Exchange(exchangeCfgId, exchangeCount int32) error {
 		slog.Debug("Exchange ConsumeItems notEnough", "pid", e.GetPlayer().GetId(), "exchangeCfgId", exchangeCfgId)
 		return errors.New("ConsumeItemsNotEnough")
 	}
-	e.addExchangeCount(exchangeCfgId, exchangeCount)          // 记录兑换次数
+	e.addExchangeCount(exchangeCfgId, exchangeCount)          // 先记录兑换次数
 	e.GetPlayer().GetBags().DelItemsByItemNums(totalConsumes) // 消耗
-	e.GetPlayer().GetBags().AddItems(totalRewards)            // 购买
+	e.GetPlayer().GetBags().AddItems(totalRewards)            // 最后给奖励
 	return nil
 }
 

@@ -77,7 +77,11 @@ func (this *GlobalEntity) RunRoutine() bool {
 			logger.Debug("GlobalEntity Routine End %v", this.key)
 		},
 		ProcessMessageFunc: func(routineEntity gentity.RoutineEntity, message any) {
-			this.processMessage(message.(*ProtoPacket))
+			if packet, ok := message.(*ProtoPacket); ok {
+				this.processMessage(packet)
+			} else {
+				logger.Error("GlobalEntity ProcessMessage invalid type:%T", message)
+			}
 			this.checkDataDirty()
 		},
 		AfterTimerExecuteFunc: func(routineEntity gentity.RoutineEntity, t time.Time) {

@@ -19,5 +19,8 @@ func LevelAfterLoad(mgr *DataSlice[*pb.LevelExp]) error {
 
 // 下一级所需要经验值
 func GetNeedExp(nextLevel int32) int32 {
+	if LevelExps == nil || nextLevel <= 0 || int(nextLevel) > LevelExps.Len() {
+		return 0
+	}
 	return LevelExps.GetCfg(int(nextLevel - 1)).GetNeedExp()
 }

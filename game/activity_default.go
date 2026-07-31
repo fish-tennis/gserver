@@ -226,7 +226,11 @@ func (a *ActivityDefault) SyncDataToClient() {
 
 // 分发一个事件,只对本活动的任务进行进度更新
 func (a *ActivityDefault) UpdateQuestProgress(event any) {
-	key := reflect.TypeOf(event).Elem().Name()
+	t := reflect.TypeOf(event)
+	if t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+	key := t.Name()
 	p := a.Activities.GetPlayer().progressEventMapping
 	if progressSlice, ok := p.mapping[key]; ok { //快速查询该事件对应的进度对象
 		for _, progress := range progressSlice {

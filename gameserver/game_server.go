@@ -195,7 +195,7 @@ func (this *GameServer) repairCache() {
 func (this *GameServer) repairPlayerCache(playerId, accountId int64) error {
 	defer func() {
 		if err := recover(); err != nil {
-			logger.Error("repairPlayerCache %v err:%v", playerId, err.(error).Error())
+			logger.Error("repairPlayerCache %v panic:%v", playerId, err)
 			LogStack()
 		}
 	}()

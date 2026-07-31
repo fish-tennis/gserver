@@ -272,9 +272,18 @@ func AtomicSetGuildId(playerId int64, guildId int64, oldGuildId int64) bool {
 	// NOTE: 明文保存的proto字段,字段名会被mongodb自动转为小写 Q:有办法解决吗?
 	// 所以这里的guildid用全小写
 	fieldKey := "Guild.guildid"
+	// 构建filter:玩家id + 当前guildId必须匹配oldGuildId(或为0表示新加入)
+	filterGuildIds := []any{oldGuildId}
+	if oldGuildId != 0 {
+		// 兼容旧调用方传0的情况:oldGuildId=0时只检查guildId本身
+		filterGuildIds = []any{oldGuildId}
+	} else {
+		// oldGuildId=0 表示新加入,检查当前guildId必须为0(未加入任何公会)
+		filterGuildIds = []any{int64(0)}
+	}
 	filter := bson.D{
 		{db.UniqueIdName, playerId},
-		{fieldKey, bson.D{{"$in", []any{int64(0), guildId}}}},
+		{fieldKey, bson.D{{"$in", filterGuildIds}}},
 	}
 	result := col.GetCollection().FindOneAndUpdate(context.Background(),
 		filter,
