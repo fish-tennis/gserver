@@ -52,7 +52,10 @@ func (this *ClientCodec) EncodePacket(connection Connection, packet Packet) ([][
 	// write PacketCommand
 	commandBytes := make([]byte, 2)
 	binary.LittleEndian.PutUint16(commandBytes, uint16(packet.Command()))
-	rpcCallId := packet.(*ProtoPacket).RpcCallId()
+	var rpcCallId uint32
+	if protoPacket, ok := packet.(*ProtoPacket); ok {
+		rpcCallId = protoPacket.RpcCallId()
+	}
 	var rpcCallIdBytes []byte
 	// rpcCall才会写入rpcCallId
 	if rpcCallId > 0 {

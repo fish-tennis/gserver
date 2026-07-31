@@ -239,7 +239,10 @@ func (s *GateServer) registerServerPacket(serverHandler *DefaultConnectionHandle
 
 // 登录期间,playerId还没确定,这时候GatePacket.PlayerId用来存储connId
 func (s *GateServer) routeToClientWithConnId(connection Connection, packet Packet) {
-	gatePacket, _ := packet.(*network.GatePacket)
+	gatePacket, ok := packet.(*network.GatePacket)
+	if !ok {
+		return
+	}
 	clientConn := s.getClientConnectionByConnId(uint32(gatePacket.PlayerId()))
 	if clientConn == nil {
 		return
@@ -249,7 +252,10 @@ func (s *GateServer) routeToClientWithConnId(connection Connection, packet Packe
 
 func (s *GateServer) onLoginRes(connection Connection, packet Packet) {
 	res := packet.Message().(*pb.LoginRes)
-	gatePacket, _ := packet.(*network.GatePacket)
+	gatePacket, ok := packet.(*network.GatePacket)
+	if !ok {
+		return
+	}
 	clientConnId := uint32(gatePacket.PlayerId())
 	clientConn := s.getClientConnectionByConnId(clientConnId)
 	if clientConn == nil {
@@ -303,7 +309,10 @@ func (s *GateServer) onPlayerEntryGameRes(connection Connection, packet Packet) 
 // 重连成功时,客户端是全新连接,需要为其建立ClientData绑定(包含GameServerId)
 func (s *GateServer) onPlayerReconnectGameRes(connection Connection, packet Packet) {
 	res := packet.Message().(*pb.PlayerReconnectGameRes)
-	gatePacket, _ := packet.(*network.GatePacket)
+	gatePacket, ok := packet.(*network.GatePacket)
+	if !ok {
+		return
+	}
 	clientConnId := uint32(gatePacket.PlayerId())
 	clientConn := s.getClientConnectionByConnId(clientConnId)
 	if clientConn == nil {

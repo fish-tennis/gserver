@@ -103,7 +103,19 @@ func onAccountReg(connection Connection, packet Packet) {
 		logger.Error("onAccountReg err:%v", err)
 		return
 	}
-	newAccountId := newAccountIdValue.(int64)
+	var newAccountId int64
+	switch idVal := newAccountIdValue.(type) {
+	case int64:
+		newAccountId = idVal
+	case int32:
+		newAccountId = int64(idVal)
+	case float64:
+		newAccountId = int64(idVal)
+	default:
+		errorCode = pb.ErrorCode_ErrorCode_DbErr
+		logger.Error("onAccountReg invalid accountId type:%T val:%v", newAccountIdValue, newAccountIdValue)
+		return
+	}
 	account := &pb.Account{
 		XId:      newAccountId,
 		Name:     req.GetAccountName(),

@@ -53,7 +53,12 @@ func (b *BaseInfo) SyncDataToClient() {
 
 func (b *BaseInfo) IncExp(incExp int32) {
 	oldLevel := b.Data.Level
-	b.Data.Exp += incExp
+	// 防溢出:incExp 为负数时不允许低于 0
+	newExp := int64(b.Data.Exp) + int64(incExp)
+	if newExp < 0 {
+		newExp = 0
+	}
+	b.Data.Exp = int32(newExp)
 	for {
 		if b.Data.Level < cfg.MaxLevel {
 			needExp := cfg.GetNeedExp(b.Data.Level + 1)

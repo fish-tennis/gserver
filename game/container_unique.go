@@ -121,7 +121,12 @@ func (b *UniqueContainer[E]) AddElem(arg *pb.AddElemArg, bagUpdate *pb.ElemConta
 		}
 		if timeout > 0 {
 			// NOTE:假设固定字段是Timeout
-			reflect.ValueOf(uniqueItem).Elem().FieldByName("Timeout").SetInt(int64(timeout))
+			timeoutField := reflect.ValueOf(uniqueItem).Elem().FieldByName("Timeout")
+			if timeoutField.IsValid() && timeoutField.CanSet() {
+				timeoutField.SetInt(int64(timeout))
+			} else {
+				slog.Error("AddElemErr TimeoutFieldNotFound", "containerType", b.containerType, "itemType", reflect.TypeOf(uniqueItem))
+			}
 		}
 		newUniqueId := b.AddUniqueItem(uniqueItem)
 		if bagUpdate != nil && newUniqueId > 0 {

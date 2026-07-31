@@ -119,7 +119,13 @@ func onPlayerEntryGameReq(connection Connection, packet Packet) {
 	game.GetPlayerMgr().AddPlayer(entryPlayer)
 	entryPlayer.SetConnection(connection, network.IsGatePacket(packet))
 	// 开启玩家独立线程
-	entryPlayer.RunRoutine()
+	if !entryPlayer.RunRoutine() {
+		game.GetPlayerMgr().RemovePlayer(entryPlayer)
+		cache.RemoveOnlineAccount(accountId)
+		errorCode = pb.ErrorCode_ErrorCode_TryLater
+		logger.Error("RunRoutine failed playerId:%v", entryPlayer.GetId())
+		return
+	}
 	logger.Debug("entry entryPlayer:%v %v", entryPlayer.GetId(), entryPlayer.GetName())
 	res.PlayerId = entryPlayer.GetId()
 	res.PlayerName = entryPlayer.GetName()
@@ -192,7 +198,19 @@ func onCreatePlayerReq(connection Connection, packet Packet) {
 		logger.Error("onCreatePlayerReq err:%v", err)
 		return
 	}
-	newPlayerId := newPlayerIdValue.(int64)
+	var newPlayerId int64
+	switch idVal := newPlayerIdValue.(type) {
+	case int64:
+		newPlayerId = idVal
+	case int32:
+		newPlayerId = int64(idVal)
+	case float64:
+		newPlayerId = int64(idVal)
+	default:
+		errorCode = pb.ErrorCode_ErrorCode_DbErr
+		logger.Error("onCreatePlayerReq invalid playerId type:%T val:%v", newPlayerIdValue, newPlayerIdValue)
+		return
+	}
 	playerData := &pb.PlayerData{
 		XId:       newPlayerId,
 		Name:      req.Name,

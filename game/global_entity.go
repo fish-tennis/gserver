@@ -117,7 +117,9 @@ func CreateGlobalEntityFromDb() *GlobalEntity {
 		newData := make(map[string]interface{})
 		newData[db.GlobalDbKeyName] = globalEntity.key
 		gentity.GetEntitySaveData(globalEntity, newData)
-		globalEntity.globalDb.InsertEntity(globalEntity.key, newData)
+		if insertErr, _ := globalEntity.globalDb.InsertEntity(globalEntity.key, newData); insertErr != nil {
+			logger.Error("GlobalEntity InsertEntity err:%v key:%v", insertErr, globalEntity.key)
+		}
 	}
 	return globalEntity
 }

@@ -49,7 +49,11 @@ func (this *GateCodec) Register(command PacketCommand, protoMessage proto.Messag
 }
 
 func (this *GateCodec) EncodePacket(connection Connection, packet Packet) ([][]byte, uint8) {
-	gatePacket, _ := packet.(*GatePacket)
+	gatePacket, ok := packet.(*GatePacket)
+	if !ok {
+		// 非GatePacket类型,用默认值编码
+		gatePacket = &GatePacket{}
+	}
 	protoMessage := packet.Message()
 	headerFlags := uint8(0)
 	// 先写入消息号

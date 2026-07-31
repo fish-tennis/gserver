@@ -174,6 +174,10 @@ func (p *Player) OnTestCmd(req *pb.TestCmd) {
 	case strings.ToLower("FireEvent"):
 		// 通用的事件分发消息 FireEvent eventName 字段名1 字段值1 字段名2 字段值2
 		// 如 FireEvent EventFight IsPvp true IsWin true RoomType 1 RoomLevel 1 Score 10
+		if len(cmdArgs) == 0 {
+			p.SendErrorRes(cmd, "FireEvent cmdArgs error")
+			return
+		}
 		messageName := cmdArgs[0]
 		cmdArgs = cmdArgs[1:]
 		newMsg := parseMessageFromCmd(messageName, cmdArgs)
