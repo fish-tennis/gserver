@@ -255,6 +255,10 @@ func (b *Bags) OnItemUseReq(req *pb.ItemUseReq) (*pb.ItemUseRes, error) {
 	if req.GetUniqueId() > 0 {
 		b.GetPlayer().Log = b.GetPlayer().Log.With("uniqueId", req.GetUniqueId())
 	}
+	// 确保 panic 时 Log 也能恢复,避免上层 recover 吞掉 panic 后 Log 字段被永久污染
+	defer func() {
+		b.GetPlayer().Log = oldLog
+	}()
 	// 先扣除物品,再使用(先扣后发原则)
 	b.DelItems([]*pb.DelElemArg{
 		{
@@ -264,7 +268,6 @@ func (b *Bags) OnItemUseReq(req *pb.ItemUseReq) (*pb.ItemUseRes, error) {
 		},
 	})
 	useError := useFunc(b.GetPlayer(), itemCfg, useArgs)
-	b.GetPlayer().Log = oldLog
 	if useError != nil {
 		b.GetPlayer().Log.Error("UseItemError", "useError", useError)
 		return nil, useError

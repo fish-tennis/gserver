@@ -36,7 +36,12 @@ func (g *GuildHelper) LoadEntity(entityId int64) gentity.RoutineEntity {
 
 // 创建公会实体
 func (g *GuildHelper) CreateEntity(entityData interface{}) gentity.RoutineEntity {
-	return NewGuild(entityData.(*pb.GuildLoadData))
+	data, ok := entityData.(*pb.GuildLoadData)
+	if !ok {
+		logger.Error("CreateEntity type assert failed: %T", entityData)
+		return nil
+	}
+	return NewGuild(data)
 }
 
 // 根据公会id路由到对应的服务器id
@@ -46,13 +51,21 @@ func (g *GuildHelper) RouteServerId(entityId int64) int32 {
 
 // 消息转换成路由消息
 func (g *GuildHelper) PacketToRoutePacket(from gentity.Entity, packet Packet, toEntityId int64) Packet {
-	fromPlayer := from.(*game.Player)
+	fromPlayer, ok := from.(*game.Player)
+	if !ok {
+		logger.Error("PacketToRoutePacket type assert failed: %T", from)
+		return nil
+	}
 	return PacketToGuildRoutePacket(fromPlayer.GetId(), fromPlayer.GetName(), packet, toEntityId)
 }
 
 // 路由消息转换成公会的逻辑消息
 func (g *GuildHelper) RoutePacketToRoutineMessage(connection Connection, packet Packet, toEntityId int64) interface{} {
-	req := packet.Message().(*pb.GuildRoutePlayerMessageReq)
+	req, ok := packet.Message().(*pb.GuildRoutePlayerMessageReq)
+	if !ok {
+		logger.Error("RoutePacketToRoutineMessage type assert failed: %T", packet.Message())
+		return nil
+	}
 	message, err := req.PacketData.UnmarshalNew()
 	if err != nil {
 		logger.Error("UnmarshalNew %v err: %v", req.FromGuildId, err)
@@ -72,8 +85,17 @@ func (g *GuildHelper) RoutePacketToRoutineMessage(connection Connection, packet 
 func initGuildMgr() {
 	routineArgs := &gentity.RoutineEntityRoutineArgs{
 		ProcessMessageFunc: func(routineEntity gentity.RoutineEntity, routineMessage any) {
-			guildMessage := routineMessage.(*GuildMessage)
-			routineEntity.(*Guild).processMessage(guildMessage)
+			guildMessage, ok := routineMessage.(*GuildMessage)
+			if !ok {
+				logger.Error("ProcessMessage type assert failed: %T", routineMessage)
+				return
+			}
+			guild, ok := routineEntity.(*Guild)
+			if !ok {
+				logger.Error("ProcessMessage routineEntity type assert failed: %T", routineEntity)
+				return
+			}
+			guild.processMessage(guildMessage)
 			//this.SaveCache()
 			// 这里演示一种直接保存数据库的用法,可以用于那些不经常修改的数据
 			// 这种方式,省去了要处理crash后从缓存恢复数据的步骤

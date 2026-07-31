@@ -209,9 +209,14 @@ func (s *GateServer) routeToGameServer(connection Connection, packet Packet) {
 		} else {
 			gatePacket = network.NewGatePacketWithData(0, packet.Command(), data)
 		}
+		// 在读锁保护下读取 clientData.PlayerId/GameServerId,避免与 onPlayerEntryGameRes 的并发写竞争
+		s.clientsMutex.RLock()
+		playerId := clientData.PlayerId
+		gameServerId := clientData.GameServerId
+		s.clientsMutex.RUnlock()
 		// 附加上playerId
-		gatePacket.SetPlayerId(clientData.PlayerId)
-		if !s.GetServerList().SendPacket(clientData.GameServerId, gatePacket) {
+		gatePacket.SetPlayerId(playerId)
+		if !s.GetServerList().SendPacket(gameServerId, gatePacket) {
 			cmd := network.GetCommandByProto(new(pb.ErrorRes))
 			connection.Send(PacketCommand(cmd), &pb.ErrorRes{
 				Command:   int32(packet.Command()),
@@ -220,7 +225,7 @@ func (s *GateServer) routeToGameServer(connection Connection, packet Packet) {
 			return
 		}
 		logger.Debug("routeToGameServer clientConn:%v playerId:%v cmd:%v serverId:%v message:%v", connection.GetConnectionId(),
-			clientData.PlayerId, packet.Command(), clientData.GameServerId, proto.MessageName(message))
+			playerId, packet.Command(), gameServerId, proto.MessageName(message))
 	}
 }
 
