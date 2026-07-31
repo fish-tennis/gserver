@@ -29,10 +29,12 @@ message Equip {
 message ItemUseReq {
   int32 cfgId = 1;    // 物品配置id
   int64 uniqueId = 2; // 唯一id
+  int32 Num = 3;
 }
 
 // 使用道具结果
 message ItemUseRes {
   int32 cfgId = 1;    // 物品配置id
   int64 uniqueId = 2; // 唯一id
+  int32 Num = 3;
 }

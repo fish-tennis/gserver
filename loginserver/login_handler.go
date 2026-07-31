@@ -18,8 +18,6 @@ func onLoginReq(connection Connection, packet Packet) {
 	var errorCode pb.ErrorCode
 	loginRes := &pb.LoginRes{
 		AccountName: req.GetAccountName(),
-		//AccountId:    account.XId,
-		//LoginSession: loginSession,
 	}
 	account := &pb.Account{}
 	defer func() {

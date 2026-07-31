@@ -115,7 +115,7 @@ func (b *UniqueContainer[E]) AddElem(arg *pb.AddElemArg, bagUpdate *pb.ElemConta
 		if arg.GetTimeType() > 0 {
 			// 可以在添加物品的时候,附加限时属性
 			timeout = util.GetTimeoutTimestamp(arg.GetTimeType(), arg.GetTimeout(), b.Bags.GetPlayer().GetTimerEntries().Now())
-		} else if itemCfg.GetItemType() > 0 {
+		} else if itemCfg.GetTimeType() > 0 {
 			// 也可以在物品配置表里配置限时属性
 			timeout = util.GetTimeoutTimestamp(itemCfg.GetTimeType(), itemCfg.GetTimeout(), b.Bags.GetPlayer().GetTimerEntries().Now())
 		}

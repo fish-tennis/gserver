@@ -221,19 +221,32 @@ func (b *Bags) OnItemUseReq(req *pb.ItemUseReq) (*pb.ItemUseRes, error) {
 		b.GetPlayer().Log.Error("ErrItemCfgId", "itemCfgId", req.GetCfgId())
 		return nil, errors.New("CfgIdError")
 	}
+	// 默认使用1个
+	useNum := req.GetNum()
+	if useNum <= 0 {
+		useNum = 1
+	}
 	var item internal.Uniquely
 	switch itemCfg.GetItemType() {
 	case int32(pb.ItemType_ItemType_None):
 		// 普通物品
 		if req.GetUniqueId() == 0 {
-			if b.BagCountItem.GetElemCount(req.GetCfgId()) == 0 {
+			// 数量校验:批量使用时需要保证背包有足够数量
+			if b.BagCountItem.GetElemCount(req.GetCfgId()) < useNum {
 				return nil, errors.New("CountError")
 			}
 		} else {
-			// 限时道具
+			// 限时道具(不可叠加,只能单个使用)
+			if useNum != 1 {
+				return nil, errors.New("NumError")
+			}
 			item, _ = b.BagUniqueItem.Get(req.GetUniqueId())
 		}
 	case int32(pb.ItemType_ItemType_Equip):
+		// 装备(不可叠加,只能单个使用)
+		if useNum != 1 {
+			return nil, errors.New("NumError")
+		}
 		item, _ = b.BagEquip.Get(req.GetUniqueId())
 	}
 	if req.GetUniqueId() > 0 && item == nil {
@@ -249,6 +262,7 @@ func (b *Bags) OnItemUseReq(req *pb.ItemUseReq) (*pb.ItemUseRes, error) {
 	useArgs := &ItemUseArgs{
 		CfgId: itemCfg.GetCfgId(),
 		Item:  item,
+		Num:   useNum,
 	}
 	oldLog := b.GetPlayer().Log
 	b.GetPlayer().Log = oldLog.With("itemCfgId", itemCfg.GetCfgId())
@@ -264,7 +278,7 @@ func (b *Bags) OnItemUseReq(req *pb.ItemUseReq) (*pb.ItemUseRes, error) {
 		{
 			CfgId:    itemCfg.GetCfgId(),
 			UniqueId: req.GetUniqueId(),
-			Num:      1,
+			Num:      useNum,
 		},
 	})
 	useError := useFunc(b.GetPlayer(), itemCfg, useArgs)

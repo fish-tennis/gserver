@@ -2,6 +2,7 @@ package game
 
 import (
 	"errors"
+
 	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/pb"
 )
@@ -9,6 +10,7 @@ import (
 type ItemUseArgs struct {
 	CfgId int32             // 物品配置id
 	Item  internal.Uniquely // 物品对象(唯一物品才有)
+	Num   int32             // 使用数量
 }
 
 // 物品使用接口
@@ -35,7 +37,8 @@ func UseItem_Exp(player *Player, itemCfg *pb.ItemCfg, useArgs *ItemUseArgs) erro
 	if addExp <= 0 {
 		return errors.New("ArgError")
 	}
-	player.GetBaseInfo().IncExp(addExp)
-	player.Log.Debug("UseItem_Exp", "addExp", addExp)
+	// 按使用数量成倍加经验
+	player.GetBaseInfo().IncExp(addExp * useArgs.Num)
+	player.Log.Debug("UseItem_Exp", "addExp", addExp*useArgs.Num, "num", useArgs.Num)
 	return nil
 }
