@@ -280,8 +280,12 @@ func (this *GameServer) onKickPlayer(connection Connection, packet Packet) {
 				req.GetAccountId(), req.GetPlayerId(), this.GetId())
 		}
 	}
-	// rpc reply
-	connection.SendPacket(NewProtoPacket(packet.Command(), req).WithRpc(packet))
+	// rpc reply:回复KickPlayerRes,command和类型必须与发起方期望的reply一致
+	resCmd := network.GetCommandByProto(new(pb.KickPlayerRes))
+	connection.SendPacket(NewProtoPacket(PacketCommand(resCmd), &pb.KickPlayerRes{
+		AccountId: req.GetAccountId(),
+		PlayerId:  req.GetPlayerId(),
+	}).WithRpc(packet))
 }
 
 // 转发玩家消息
