@@ -14,9 +14,7 @@ import (
 	"github.com/fish-tennis/gserver/network"
 	"github.com/fish-tennis/gserver/pb"
 	"github.com/fish-tennis/gserver/social"
-	"gopkg.in/yaml.v3"
 	"log/slog"
-	"os"
 	"sync"
 )
 
@@ -27,24 +25,17 @@ var (
 // 游戏服
 type GameServer struct {
 	*BaseServer
-	config *GameServerConfig
 	// 网关服务器listener
 	gateListener Listener
 	// 在线玩家
 	playerMap sync.Map // playerId-*player
 }
 
-// 游戏服配置
-type GameServerConfig struct {
-	BaseServerConfig `yaml:",inline"`
-}
-
 func NewGameServer(ctx context.Context, configFile string, cfgDir string) *GameServer {
 	s := &GameServer{
 		BaseServer: NewBaseServer(ctx, ServerType_Game, configFile, cfgDir),
-		config:     new(GameServerConfig),
 	}
-	s.readConfig()
+	s.ReadConfig()
 	return s
 }
 
@@ -96,24 +87,6 @@ func (this *GameServer) Exit() {
 	}
 }
 
-// 读取配置文件
-func (this *GameServer) readConfig() {
-	fileData, err := os.ReadFile(this.GetConfigFile())
-	if err != nil {
-		panic("read config file err")
-	}
-	this.config = new(GameServerConfig)
-	err = yaml.Unmarshal(fileData, this.config)
-	if err != nil {
-		panic("decode config file err")
-	}
-	logger.Debug("%v", this.config)
-	this.BaseServer.GetServerInfo().ServerId = this.config.ServerId
-	this.BaseServer.GetServerInfo().ClientListenAddr = this.config.Client.Addr
-	this.BaseServer.GetServerInfo().GateListenAddr = this.config.Gate.Addr
-	this.BaseServer.GetServerInfo().ServerListenAddr = this.config.Server.Addr
-}
-
 // 加载配置数据
 func (this *GameServer) loadCfgs() {
 	err := cfg.Load(this.GetCfgDir(), nil)
@@ -125,7 +98,7 @@ func (this *GameServer) loadCfgs() {
 // 初始化数据库
 func (this *GameServer) initDb() {
 	// 使用mongodb来演示
-	mongoDb := gentity.NewMongoDb(this.config.Mongo.Uri, this.config.Mongo.Db)
+	mongoDb := gentity.NewMongoDb(this.GetConfig().Mongo.Uri, this.GetConfig().Mongo.Db)
 	// 玩家数据库
 	mongoDb.RegisterPlayerDb(db.PlayerDbName, true, db.UniqueIdName, db.PlayerAccountId, db.PlayerRegionId)
 	// 公会数据库
@@ -138,13 +111,13 @@ func (this *GameServer) initDb() {
 		panic("connect db error")
 	}
 	// 玩家数据库设置分片
-	mongoDb.ShardDatabase(this.config.Mongo.Db)
+	mongoDb.ShardDatabase(this.GetConfig().Mongo.Db)
 	db.SetDbMgr(mongoDb)
 }
 
 // 初始化redis缓存
 func (this *GameServer) initCache() {
-	cache.NewRedis(this.config.Redis.Uri, this.config.Redis.UserName, this.config.Redis.Password, this.config.Redis.Cluster)
+	cache.NewRedis(this.GetConfig().Redis.Uri, this.GetConfig().Redis.UserName, this.GetConfig().Redis.Password, this.GetConfig().Redis.Cluster)
 	pong, err := cache.GetRedis().Ping(context.Background()).Result()
 	if err != nil || pong == "" {
 		panic("redis connect error")
@@ -155,12 +128,12 @@ func (this *GameServer) initCache() {
 func (this *GameServer) initNetwork() {
 	// NOTE: 实际项目中,监听客户端和监听网关,二选一即可
 	// 这里为了演示,同时提供客户端直连和网关两种模式
-	if network.ListenClient(this.config.Client.Addr, &ClientListerHandler{}, this.registerClientPacket) == nil {
+	if network.ListenClient(this.GetConfig().Client.Addr, &ClientListerHandler{}, this.registerClientPacket) == nil {
 		panic("listen client failed")
 	}
 
 	// 网关比较特殊,单独处理
-	this.gateListener = network.ListenGate(this.config.Gate.Addr, this.registerGatePacket)
+	this.gateListener = network.ListenGate(this.GetConfig().Gate.Addr, this.registerGatePacket)
 	if this.gateListener == nil {
 		panic("listen gateserver failed")
 	}
@@ -180,7 +153,7 @@ func (this *GameServer) initNetwork() {
 	}
 	this.GetServerList().SetFetchAndConnectServerTypes(ServerType_Game)
 	// 通用的服务器间的监听
-	if this.GetServerList().StartListen(this.GetContext(), this.config.Server.Addr) == nil {
+	if this.GetServerList().StartListen(this.GetContext(), this.GetConfig().Server.Addr) == nil {
 		panic("listen server failed")
 	}
 }

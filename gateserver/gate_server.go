@@ -11,10 +11,8 @@ import (
 	"github.com/fish-tennis/gserver/network"
 	"github.com/fish-tennis/gserver/pb"
 	"google.golang.org/protobuf/proto"
-	"gopkg.in/yaml.v3"
 	"log/slog"
 	"math/rand"
-	"os"
 	"sync"
 )
 
@@ -26,27 +24,18 @@ var (
 
 type GateServer struct {
 	*BaseServer
-	config         *GateServerConfig
-	clientListener Listener
+	clientListener   Listener
 	// WebSocket测试
 	wsClientListener Listener
 	clientsMutex     sync.RWMutex
 	clients          map[int64]*network.ClientData // key: playerId
 }
 
-// gate服配置
-type GateServerConfig struct {
-	BaseServerConfig `yaml:",inline"`
-	// WebSocket测试
-	WsClient ListerConfig `yaml:"WsClient"`
-}
-
 func NewGateServer(ctx context.Context, configFile string, cfgDir string) *GateServer {
 	s := &GateServer{
 		BaseServer: NewBaseServer(ctx, ServerType_Gate, configFile, cfgDir),
-		config:     new(GateServerConfig),
 	}
-	s.readConfig()
+	s.ReadConfig()
 	return s
 }
 
@@ -63,48 +52,32 @@ func (s *GateServer) Init(ctx context.Context, configFile string) bool {
 	return true
 }
 
-// 读取配置文件
-func (s *GateServer) readConfig() {
-	fileData, err := os.ReadFile(s.GetConfigFile())
-	if err != nil {
-		panic(fmt.Sprintf("read %v err:%v", s.GetConfigFile(), err))
-	}
-	s.config = &GateServerConfig{}
-	err = yaml.Unmarshal(fileData, s.config)
-	if err != nil {
-		panic("decode config file err")
-	}
-	logger.Debug("%v", s.config)
-	s.BaseServer.GetServerInfo().ServerId = s.config.ServerId
-	s.BaseServer.GetServerInfo().ClientListenAddr = s.config.Client.Addr
-}
-
 // 初始化redis缓存
 func (s *GateServer) initCache() {
-	cache.NewRedis(s.config.Redis.Uri, s.config.Redis.UserName, s.config.Redis.Password, s.config.Redis.Cluster)
+	cache.NewRedis(s.GetConfig().Redis.Uri, s.GetConfig().Redis.UserName, s.GetConfig().Redis.Password, s.GetConfig().Redis.Cluster)
 	pong, err := cache.GetRedis().Ping(context.Background()).Result()
 	if err != nil || pong == "" {
-		slog.Error("redis connect error", "uri", s.config.Redis.Uri, "cluster", s.config.Redis.Cluster, "err", err)
-		panic(fmt.Sprintf("redis connect error: uri:%v(%v) err:%v", s.config.Redis.Uri, s.config.Redis.Cluster, err))
+		slog.Error("redis connect error", "uri", s.GetConfig().Redis.Uri, "cluster", s.GetConfig().Redis.Cluster, "err", err)
+		panic(fmt.Sprintf("redis connect error: uri:%v(%v) err:%v", s.GetConfig().Redis.Uri, s.GetConfig().Redis.Cluster, err))
 	}
 }
 
 func (s *GateServer) initNetwork() {
 	// 监听普通TCP客户端
-	s.clientListener = network.ListenGateClient(s.config.Client.Addr, &ClientListerHandler{}, s.registerClientPacket)
+	s.clientListener = network.ListenGateClient(s.GetConfig().Client.Addr, &ClientListerHandler{}, s.registerClientPacket)
 	if s.clientListener == nil {
 		panic("listen client failed")
 	}
-	slog.Info("listen client", "addr", s.config.Client.Addr)
+	slog.Info("listen client", "addr", s.GetConfig().Client.Addr)
 
 	// 监听WebSocket客户端
-	if s.config.WsClient.Addr != "" {
+	if s.GetConfig().WsClient.Addr != "" {
 		// WebSocket测试
-		s.wsClientListener = network.ListenWebSocketClient(s.config.WsClient.Addr, &ClientListerHandler{}, s.registerClientPacket)
+		s.wsClientListener = network.ListenWebSocketClient(s.GetConfig().WsClient.Addr, &ClientListerHandler{}, s.registerClientPacket)
 		if s.wsClientListener == nil {
 			panic("listen websocket client failed")
 		}
-		slog.Info("listen websocket client", "addr", s.config.WsClient.Addr)
+		slog.Info("listen websocket client", "addr", s.GetConfig().WsClient.Addr)
 	}
 
 	s.GetServerList().SetCache(cache.Get())

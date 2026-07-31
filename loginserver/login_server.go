@@ -13,9 +13,7 @@ import (
 	"github.com/fish-tennis/gserver/pb"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
-	"gopkg.in/yaml.v3"
 	"log/slog"
-	"os"
 )
 
 var (
@@ -27,24 +25,17 @@ var (
 // 登录服
 type LoginServer struct {
 	*BaseServer
-	config *LoginServerConfig
 	// 网关服务器listener
 	gateListener Listener
 	// 账号数据接口
 	accountDb gentity.EntityDb
 }
 
-// 登录服配置
-type LoginServerConfig struct {
-	BaseServerConfig `yaml:",inline"`
-}
-
 func NewLoginServer(ctx context.Context, configFile string, cfgDir string) *LoginServer {
 	s := &LoginServer{
 		BaseServer: NewBaseServer(ctx, ServerType_Login, configFile, cfgDir),
-		config:     new(LoginServerConfig),
 	}
-	s.readConfig()
+	s.ReadConfig()
 	return s
 }
 
@@ -81,34 +72,16 @@ func (this *LoginServer) Exit() {
 	}
 }
 
-// 读取配置文件
-func (this *LoginServer) readConfig() {
-	fileData, err := os.ReadFile(this.GetConfigFile())
-	if err != nil {
-		panic(fmt.Sprintf("read config file err:%v", err))
-	}
-	err = yaml.Unmarshal(fileData, this.config)
-	if err != nil {
-		panic(fmt.Sprintf("decode config file err:%v", err))
-	}
-	slog.Debug("readConfig", "config", this.config)
-	this.BaseServer.GetServerInfo().ServerId = this.config.ServerId
-	// NOTE: 实际项目中,监听客户端和监听网关,二选一即可
-	// 这里为了演示,同时提供客户端直连和网关两种模式
-	this.BaseServer.GetServerInfo().ClientListenAddr = this.config.Client.Addr
-	this.BaseServer.GetServerInfo().GateListenAddr = this.config.Gate.Addr
-}
-
 // 初始化数据库
 func (this *LoginServer) initDb() {
 	// 使用mongodb来演示
-	mongoDb := gentity.NewMongoDb(this.config.Mongo.Uri, this.config.Mongo.Db)
+	mongoDb := gentity.NewMongoDb(this.GetConfig().Mongo.Uri, this.GetConfig().Mongo.Db)
 	// 账号数据库
 	this.accountDb = mongoDb.RegisterEntityDb(db.AccountDbName, true, db.UniqueIdName)
 	// kv数据库
 	mongoDb.RegisterKvDb(db.GlobalDbName, true, db.GlobalDbKeyName, db.GlobalDbValueName)
 	if !mongoDb.Connect() {
-		panic(fmt.Sprintf("connect db error,uri:%v db:%v", this.config.Mongo.Uri, this.config.Mongo.Db))
+		panic(fmt.Sprintf("connect db error,uri:%v db:%v", this.GetConfig().Mongo.Uri, this.GetConfig().Mongo.Db))
 	}
 	// 账号名建立唯一索引
 	this.accountDb.(*gentity.MongoCollection).CreateIndex(db.AccountName, true)
@@ -117,7 +90,7 @@ func (this *LoginServer) initDb() {
 
 // 初始化redis缓存
 func (this *LoginServer) initCache() {
-	cache.NewRedis(this.config.Redis.Uri, this.config.Redis.UserName, this.config.Redis.Password, this.config.Redis.Cluster)
+	cache.NewRedis(this.GetConfig().Redis.Uri, this.GetConfig().Redis.UserName, this.GetConfig().Redis.Password, this.GetConfig().Redis.Cluster)
 	pong, err := cache.GetRedis().Ping(context.Background()).Result()
 	if err != nil || pong == "" {
 		panic("redis connect error")
@@ -127,10 +100,10 @@ func (this *LoginServer) initCache() {
 func (this *LoginServer) initNetwork() {
 	// NOTE: 实际项目中,监听客户端和监听网关,二选一即可
 	// 这里为了演示,同时提供客户端直连和网关两种模式
-	if network.ListenClient(this.config.Client.Addr, nil, this.registerClientPacket) == nil {
+	if network.ListenClient(this.GetConfig().Client.Addr, nil, this.registerClientPacket) == nil {
 		panic("listen client failed")
 	}
-	if network.ListenGate(this.config.Gate.Addr, this.registerServerPacket) == nil {
+	if network.ListenGate(this.GetConfig().Gate.Addr, this.registerServerPacket) == nil {
 		panic("listen gateserver failed")
 	}
 	this.GetServerList().SetCache(cache.Get())

@@ -12,10 +12,12 @@ import (
 	"google.golang.org/protobuf/proto"
 	"io"
 	"log/slog"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 	"time"
+	"gopkg.in/yaml.v3"
 )
 
 type ListerConfig struct {
@@ -36,16 +38,22 @@ type RedisConfig struct {
 
 type BaseServerConfig struct {
 	// 服务器id
-	ServerId int32        `yaml:"ServerId"`
-	Client   ListerConfig `yaml:"Client"`
-	Gate     ListerConfig `yaml:"Gate"`
-	Server   ListerConfig `yaml:"Server"`
+	ServerId int32 `yaml:"ServerId"`
+	// 是否开启测试命令(仅测试环境开启,防止正式服作弊)
+	IsOpenTestCommand bool `yaml:"IsOpenTestCommand"`
+	Client            ListerConfig `yaml:"Client"`
+	Gate              ListerConfig `yaml:"Gate"`
+	Server            ListerConfig `yaml:"Server"`
+	// WebSocket客户端监听(仅GateServer使用,其他服务器不处理)
+	WsClient ListerConfig `yaml:"WsClient"`
 	Mongo    MongoConfig  `yaml:"Mongo"`
 	Redis    RedisConfig  `yaml:"Redis"`
 }
 
 // 服务器基础流程
 type BaseServer struct {
+	// 配置
+	config *BaseServerConfig
 	// 配置文件
 	configFile string
 	// 配置数据目录
@@ -69,6 +77,7 @@ func NewBaseServer(ctx context.Context, serverType string, configFile string, cf
 		cfgDir += string('/')
 	}
 	return &BaseServer{
+		config:     new(BaseServerConfig),
 		ctx:        ctx,
 		configFile: configFile,
 		cfgDir:     cfgDir,
@@ -78,12 +87,33 @@ func NewBaseServer(ctx context.Context, serverType string, configFile string, cf
 	}
 }
 
+func (this *BaseServer) GetConfig() *BaseServerConfig {
+	return this.config
+}
+
 func (this *BaseServer) GetConfigFile() string {
 	return this.configFile
 }
 
 func (this *BaseServer) GetCfgDir() string {
 	return this.cfgDir
+}
+
+// 读取配置文件(统一逻辑,子类无需重复实现)
+func (this *BaseServer) ReadConfig() {
+	fileData, err := os.ReadFile(this.configFile)
+	if err != nil {
+		panic("read config file err: " + err.Error())
+	}
+	err = yaml.Unmarshal(fileData, this.config)
+	if err != nil {
+		panic("decode config file err: " + err.Error())
+	}
+	logger.Debug("%v", this.config)
+	this.serverInfo.ServerId = this.config.ServerId
+	this.serverInfo.ClientListenAddr = this.config.Client.Addr
+	this.serverInfo.GateListenAddr = this.config.Gate.Addr
+	this.serverInfo.ServerListenAddr = this.config.Server.Addr
 }
 
 func (this *BaseServer) GetId() int32 {

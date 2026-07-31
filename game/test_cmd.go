@@ -2,9 +2,11 @@ package game
 
 import (
 	"fmt"
+	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gentity/util"
 	"github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cfg"
+	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/network"
 	"github.com/fish-tennis/gserver/pb"
 	"google.golang.org/protobuf/proto"
@@ -17,7 +19,12 @@ import (
 // 客户端输入的测试命令
 func (p *Player) OnTestCmd(req *pb.TestCmd) {
 	slog.Info("OnTestCmd", "cmd", req.Cmd)
-	// NOTE: 实际项目中,这里要检查一下是否是测试环境
+	// 测试命令仅在测试环境可用,由配置文件的IsOpenTestCommand控制
+	app, ok := gentity.GetApplication().(interface{ GetConfig() *internal.BaseServerConfig })
+	if !ok || !app.GetConfig().IsOpenTestCommand {
+		p.SendErrorRes(gnet.PacketCommand(network.GetCommandByProto(req)), "test cmd disabled")
+		return
+	}
 	cmd := gnet.PacketCommand(network.GetCommandByProto(req))
 	cmdStrs := strings.Split(req.GetCmd(), " ")
 	if len(cmdStrs) == 0 {
