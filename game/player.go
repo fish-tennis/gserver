@@ -239,8 +239,7 @@ func (p *Player) SendPacket(packet Packet, opts ...SendOption) bool {
 
 // 通用的错误返回消息
 func (p *Player) SendErrorRes(errorReqCmd PacketCommand, errorMsg string, opts ...SendOption) bool {
-	cmd := network.GetCommandByProto(new(pb.ErrorRes))
-	return p.SendWithCommand(PacketCommand(cmd), &pb.ErrorRes{
+	return p.SendWithCommand(network.ErrorResCmd, &pb.ErrorRes{
 		Command:   int32(errorReqCmd),
 		ResultStr: errorMsg,
 	}, opts...)
@@ -369,7 +368,6 @@ func (p *Player) processMessage(message *ProtoPacket) {
 			logger.LogStack()
 		}
 	}()
-	p.Log = slog.Default().With("pid", p.GetId())
 	p.Log.Debug("processMessage", "msg", proto.MessageName(message.Message()).Name())
 	// func (c *Component) OnXxxReq(req *pb.XxxReq)
 	// func (c *Component) OnXxxReq(req *pb.XxxReq) (*pb.XxxRes,error)

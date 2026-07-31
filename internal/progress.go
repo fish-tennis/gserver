@@ -6,7 +6,31 @@ import (
 	"log/slog"
 	"math"
 	"reflect"
+	"sync"
 )
+
+// progressFieldKey 用于缓存事件字段的反射索引
+type progressFieldKey struct {
+	eventType reflect.Type
+	fieldName string
+}
+
+// 事件字段索引缓存,避免每次 DefaultProgressUpdater 都调用 FieldByName 做线性查找
+var _progressFieldIndexCache sync.Map // map[progressFieldKey][]int
+
+// getCachedFieldIndex 获取事件结构体中指定字段的索引,带缓存
+func getCachedFieldIndex(eventType reflect.Type, fieldName string) ([]int, bool) {
+	key := progressFieldKey{eventType, fieldName}
+	if cached, ok := _progressFieldIndexCache.Load(key); ok {
+		return cached.([]int), true
+	}
+	field, ok := eventType.FieldByName(fieldName)
+	if !ok {
+		return nil, false
+	}
+	_progressFieldIndexCache.Store(key, field.Index)
+	return field.Index, true
+}
 
 const (
 	PropertyKey = "Property"
@@ -58,11 +82,11 @@ func UpdateProgress(obj any, progressHolder ProgressHolder, event any, progressC
 // 默认的进度更新接口
 func DefaultProgressUpdater(obj any, progressHolder ProgressHolder, event any, progressCfg *pb.ProgressCfg) int32 {
 	// 通用事件匹配,先检查事件名是否匹配
+	eventTyp := reflect.TypeOf(event)
+	if eventTyp.Kind() == reflect.Pointer {
+		eventTyp = eventTyp.Elem()
+	}
 	if progressCfg.GetType() == int32(pb.ProgressType_ProgressType_Event) {
-		eventTyp := reflect.TypeOf(event)
-		if eventTyp.Kind() == reflect.Pointer {
-			eventTyp = eventTyp.Elem()
-		}
 		if eventTyp.Name() != progressCfg.GetEvent() {
 			return 0
 		}
@@ -70,10 +94,11 @@ func DefaultProgressUpdater(obj any, progressHolder ProgressHolder, event any, p
 	eventVal := reflect.ValueOf(event).Elem()
 	// 事件字段值(字符串形式),这里也包含了对比较操作符为=的数值字段值的支持
 	for fieldName, fieldValue := range progressCfg.GetStringEventFields() {
-		eventFieldVal := eventVal.FieldByName(fieldName)
-		if !eventFieldVal.IsValid() {
+		fieldIndex, ok := getCachedFieldIndex(eventTyp, fieldName)
+		if !ok {
 			return 0
 		}
+		eventFieldVal := eventVal.FieldByIndex(fieldIndex)
 		switch eventFieldVal.Kind() {
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 			eventFieldInt := eventFieldVal.Int()
@@ -112,10 +137,11 @@ func DefaultProgressUpdater(obj any, progressHolder ProgressHolder, event any, p
 	}
 	// 数值类型的事件字段值(只支持整数和bool 数值字段支持更丰富的Op操作符)
 	for fieldName, fieldValueCompareCfg := range progressCfg.GetIntEventFields() {
-		eventFieldVal := eventVal.FieldByName(fieldName)
-		if !eventFieldVal.IsValid() {
+		fieldIndex, ok := getCachedFieldIndex(eventTyp, fieldName)
+		if !ok {
 			return 0
 		}
+		eventFieldVal := eventVal.FieldByIndex(fieldIndex)
 		switch eventFieldVal.Kind() {
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 			eventFieldInt := eventFieldVal.Int()
@@ -145,12 +171,13 @@ func DefaultProgressUpdater(obj any, progressHolder ProgressHolder, event any, p
 	progress := int32(1)
 	// 如果配置了事件属性字段,则读取该字段的值作为进度值,没配置就默认进度值是1
 	if progressCfg.GetProgressField() != "" {
-		eventFieldVal := eventVal.FieldByName(progressCfg.GetProgressField())
-		if !eventFieldVal.IsValid() {
+		fieldIndex, ok := getCachedFieldIndex(eventTyp, progressCfg.GetProgressField())
+		if !ok {
 			// event没有这个属性
 			slog.Error("unsupported EventField", "progressCfg", progressCfg, "event", event)
 			return 0
 		}
+		eventFieldVal := eventVal.FieldByIndex(fieldIndex)
 		switch eventFieldVal.Kind() {
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 			progress = int32(eventFieldVal.Int())

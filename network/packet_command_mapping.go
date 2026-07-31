@@ -22,6 +22,8 @@ var (
 	// reflect.TypeOf(*pb.Xxx).Elem() -> packetCommand
 	_messageTypeCmdMapping = make(map[reflect.Type]int32)
 	_cmdMessageNameMapping = make(map[int32]string)
+	// ErrorRes消息号,在InitCommandMappingFromFile时赋值,供高频路径直接使用
+	ErrorResCmd gnet.PacketCommand
 )
 
 // 本项目的request和response的消息号规范: XxxReq XxxRes
@@ -73,6 +75,9 @@ func InitCommandMappingFromFile(file string) {
 			typ := messageInfo.GoReflectType.Elem()
 			_messageTypeCmdMapping[typ] = int32(messageId)
 			_cmdMessageNameMapping[int32(messageId)] = messageName
+			if messageName == "ErrorRes" {
+				ErrorResCmd = gnet.PacketCommand(messageId)
+			}
 			slog.Info("CommandMapping", "name", messageName, "id", messageId)
 		}
 	}
