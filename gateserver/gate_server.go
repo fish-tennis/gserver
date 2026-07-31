@@ -209,11 +209,9 @@ func (s *GateServer) routeToGameServer(connection Connection, packet Packet) {
 		} else {
 			gatePacket = network.NewGatePacketWithData(0, packet.Command(), data)
 		}
-		// 在读锁保护下读取 clientData.PlayerId/GameServerId,避免与 onPlayerEntryGameRes 的并发写竞争
-		s.clientsMutex.RLock()
-		playerId := clientData.PlayerId
+		// PlayerId 用 atomic 读,GameServerId 创建后不可变
+		playerId := clientData.GetPlayerId()
 		gameServerId := clientData.GameServerId
-		s.clientsMutex.RUnlock()
 		// 附加上playerId
 		gatePacket.SetPlayerId(playerId)
 		if !s.GetServerList().SendPacket(gameServerId, gatePacket) {
@@ -296,10 +294,11 @@ func (s *GateServer) onPlayerEntryGameRes(connection Connection, packet Packet) 
 	if packet.ErrorCode() == 0 {
 		if clientData, ok := clientConn.GetTag().(*network.ClientData); ok {
 			// 登录游戏服成功后,绑定客户端连接和playerId,后续的消息都可以用playerId来关联
-			// 在写锁保护下修改 clientData.PlayerId,避免跨协程数据竞争
+			// PlayerId 用 atomic 写,保证其他协程的读可见
+			clientData.SetPlayerId(res.PlayerId)
+			// clients map 的操作仍需锁保护
 			s.clientsMutex.Lock()
-			clientData.PlayerId = res.PlayerId
-			s.clients[clientData.PlayerId] = clientData
+			s.clients[res.PlayerId] = clientData
 			s.clientsMutex.Unlock()
 			logger.Debug("bindPlayerId connId:%v playerId:%v", clientConn.GetConnectionId(), res.PlayerId)
 		}
@@ -331,9 +330,9 @@ func (s *GateServer) onPlayerReconnectGameRes(connection Connection, packet Pack
 		clientData := &network.ClientData{
 			ConnId:       clientConn.GetConnectionId(),
 			AccountId:    res.AccountId,
-			PlayerId:     res.PlayerId,
 			GameServerId: res.GameServerId,
 		}
+		clientData.SetPlayerId(res.PlayerId)
 		s.clientsMutex.Lock()
 		// 先清理可能残留的旧连接绑定:旧连接可能因为网络"假死"还未触发OnConnectionDisconnect
 		// 清除旧连接的tag后,旧连接延迟断开时OnConnectionDisconnect会直接return(GetTag()==nil)
@@ -346,7 +345,7 @@ func (s *GateServer) onPlayerReconnectGameRes(connection Connection, packet Pack
 			}
 		}
 		clientConn.SetTag(clientData)
-		s.clients[clientData.PlayerId] = clientData
+		s.clients[res.PlayerId] = clientData
 		s.clientsMutex.Unlock()
 		logger.Debug("onPlayerReconnectGameRes bind connId:%v playerId:%v gameServerId:%v",
 			clientConn.GetConnectionId(), res.PlayerId, res.GameServerId)

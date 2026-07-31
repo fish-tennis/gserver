@@ -21,15 +21,16 @@ func (this *ClientListerHandler) OnConnectionDisconnect(listener Listener, conne
 	}
 	if clientData, ok := connection.GetTag().(*network.ClientData); ok {
 		connection.SetTag(nil)
-		if clientData.PlayerId > 0 {
+		playerId := clientData.GetPlayerId()
+		if playerId > 0 {
 			// 持锁后校验当前映射确实属于本连接的 clientData,避免重连后旧连接误删新连接的映射
 			_gateServer.clientsMutex.Lock()
-			if current, exists := _gateServer.clients[clientData.PlayerId]; exists && current == clientData {
-				delete(_gateServer.clients, clientData.PlayerId)
+			if current, exists := _gateServer.clients[playerId]; exists && current == clientData {
+				delete(_gateServer.clients, playerId)
 				_gateServer.clientsMutex.Unlock()
 				// 通知GameServer,玩家掉线了
 				_gateServer.GetServerList().SendPacket(clientData.GameServerId, network.NewGatePacket(
-					clientData.PlayerId, 0, &pb.ClientDisconnect{
+					playerId, 0, &pb.ClientDisconnect{
 						ClientConnId: connection.GetConnectionId(),
 					}))
 			} else {
@@ -37,6 +38,6 @@ func (this *ClientListerHandler) OnConnectionDisconnect(listener Listener, conne
 				_gateServer.clientsMutex.Unlock()
 			}
 		}
-		logger.Debug("ClientDisconnect connId:%v playerId:%v", connection.GetConnectionId(), clientData.PlayerId)
+		logger.Debug("ClientDisconnect connId:%v playerId:%v", connection.GetConnectionId(), playerId)
 	}
 }

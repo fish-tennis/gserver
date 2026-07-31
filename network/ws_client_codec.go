@@ -4,14 +4,26 @@ import (
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/logger"
 	"google.golang.org/protobuf/proto"
+	"sync/atomic"
 )
 
 // 客户端绑定数据
+// GameServerId/ConnId/AccountId 在创建后不可变(immutable),无需同步
+// PlayerId 在 onPlayerEntryGameRes 中异步写入,在客户端连接收包协程中读取,
+// 因此用 atomic 保证可见性和原子性,避免散落在各处的锁或无锁读
 type ClientData struct {
 	ConnId       uint32
 	AccountId    int64
-	PlayerId     int64
 	GameServerId int32
+	playerId     atomic.Int64
+}
+
+func (c *ClientData) GetPlayerId() int64 {
+	return c.playerId.Load()
+}
+
+func (c *ClientData) SetPlayerId(playerId int64) {
+	c.playerId.Store(playerId)
 }
 
 // WebSocket客户端和gate之间的编解码
@@ -50,7 +62,7 @@ func (this *WsClientCodec) Decode(connection Connection, data []byte) (newPacket
 	}
 	// 其他消息,gate直接转发,附加上playerId
 	if clientData, ok := connection.GetTag().(*ClientData); ok {
-		return NewGatePacketWithData(clientData.PlayerId, PacketCommand(command), data[SimplePacketHeaderSize:]), nil
+		return NewGatePacketWithData(clientData.GetPlayerId(), PacketCommand(command), data[SimplePacketHeaderSize:]), nil
 	}
 	logger.Error("unSupport command:%v", command)
 	return nil, ErrNotSupport
