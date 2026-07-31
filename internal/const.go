@@ -9,4 +9,6 @@ const (
 	EventHandlerMethodNamePrefix = "Trigger"
 	// 事件分发嵌套层次限制
 	SameEventLoopLimit = int32(3)
+	// 单次添加唯一物品的最大数量,防止客户端传入超大值导致CPU/内存耗尽
+	MaxBatchAddUniqueElemCount = int32(1000)
 )

@@ -119,8 +119,9 @@ func (s *GateServer) registerClientPacket(clientHandler *DefaultConnectionHandle
 	network.RegisterPacketHandler(clientHandler, new(pb.AccountReg), s.routeToLoginServer)
 	network.RegisterPacketHandler(clientHandler, new(pb.LoginReq), s.routeToLoginServer)
 	network.RegisterPacketHandler(clientHandler, new(pb.PlayerEntryGameReq), s.routeToGameServerWithConnId)
-	network.RegisterPacketHandler(clientHandler, new(pb.PlayerReconnectGameReq), s.routeReconnectToGameServer)
 	network.RegisterPacketHandler(clientHandler, new(pb.CreatePlayerReq), s.routeToGameServerWithConnId)
+	// 重连请求:客户端是新连接没有GameServerId,需通过Redis查找玩家所在游戏服来路由
+	network.RegisterPacketHandler(clientHandler, new(pb.PlayerReconnectGameReq), s.routeReconnectToGameServer)
 
 	clientHandler.SetUnRegisterHandler(s.routeToGameServer)
 }
@@ -173,24 +174,55 @@ func (s *GateServer) routeToGameServerWithConnId(connection Connection, packet P
 		gatePacket.SetPlayerId(int64(clientData.ConnId))
 		s.GetServerList().SendPacket(clientData.GameServerId, gatePacket)
 		logger.Debug("routeToGameServerWithConnId clientConn:%v connId:%v cmd:%v serverId:%v", connection.GetConnectionId(),
-		clientData.ConnId, packet.Command(), clientData.GameServerId)
+			clientData.ConnId, packet.Command(), clientData.GameServerId)
 	}
 }
 
-// 重连请求路由:客户端断线重连时建立的是新连接,没有ClientData绑定信息
-// 从PlayerReconnectGameReq消息体中读取GameServerId来确定目标GameServer,用新连接的connId作为GatePacket.PlayerId
+// routeReconnectToGameServer 重连请求路由
+// 客户端重连时是新连接,没有ClientData,由请求体中的GameServerId指定目标游戏服
+// 路由策略:
+//   - 玩家在线(Redis有记录):校验req.GameServerId与在线游戏服一致,不一致则通知重新登录
+//   - 玩家不在线(超过保留期/从未在线):直接转发到req.GameServerId,由游戏服从数据库加载
+// client -> gateserver -> gameServer
 func (s *GateServer) routeReconnectToGameServer(connection Connection, packet Packet) {
-	req, ok := packet.Message().(*pb.PlayerReconnectGameReq)
-	if !ok || req == nil {
-		logger.Debug("routeReconnectToGameServer invalid message clientConn:%v", connection.GetConnectionId())
+	req := packet.Message().(*pb.PlayerReconnectGameReq)
+	targetGameServerId := req.GetGameServerId()
+	// 客户端未携带有效GameServerId,通知重新登录
+	if targetGameServerId <= 0 {
+		logger.Debug("routeReconnectToGameServer invalidGameServerId playerId:%v", req.GetPlayerId())
+		cmd := network.GetCommandByProto(new(pb.ErrorRes))
+		connection.Send(PacketCommand(cmd), &pb.ErrorRes{
+			Command:  int32(packet.Command()),
+			ResultId: int32(pb.ErrorCode_ErrorCode_ReconnectNeedRelogin),
+		})
 		return
 	}
-	gatePacket := network.NewGatePacket(0, packet.Command(), req)
-	// 附加上新连接的connId,GameServer回包时用这个connId找到客户端连接
+	// 玩家在线时校验GameServerId一致性,防止客户端用过期的GameServerId重连到错误的服务器
+	_, onlineGameServerId := cache.GetOnlinePlayer(req.GetPlayerId())
+	if onlineGameServerId > 0 && onlineGameServerId != targetGameServerId {
+		logger.Debug("routeReconnectToGameServer gameServerIdMismatch playerId:%v online:%v req:%v",
+			req.GetPlayerId(), onlineGameServerId, targetGameServerId)
+		cmd := network.GetCommandByProto(new(pb.ErrorRes))
+		connection.Send(PacketCommand(cmd), &pb.ErrorRes{
+			Command:  int32(packet.Command()),
+			ResultId: int32(pb.ErrorCode_ErrorCode_ReconnectNeedRelogin),
+		})
+		return
+	}
+	// 玩家在线且GameServerId一致,或玩家不在线(转发到req.GameServerId由游戏服加载DB)
+	message := packet.Message()
+	data := packet.GetStreamData()
+	var gatePacket *network.GatePacket
+	if message != nil {
+		gatePacket = network.NewGatePacket(0, packet.Command(), message)
+	} else {
+		gatePacket = network.NewGatePacketWithData(0, packet.Command(), data)
+	}
+	// 登录期间playerId还没确定,用connId临时存储在GatePacket.PlayerId中
 	gatePacket.SetPlayerId(int64(connection.GetConnectionId()))
-	s.GetServerList().SendPacket(req.GetGameServerId(), gatePacket)
-	logger.Debug("routeReconnectToGameServer clientConn:%v cmd:%v serverId:%v", connection.GetConnectionId(),
-		packet.Command(), req.GetGameServerId())
+	s.GetServerList().SendPacket(targetGameServerId, gatePacket)
+	logger.Debug("routeReconnectToGameServer clientConn:%v playerId:%v cmd:%v serverId:%v online:%v",
+		connection.GetConnectionId(), req.GetPlayerId(), packet.Command(), targetGameServerId, onlineGameServerId)
 }
 
 func (s *GateServer) routeToGameServer(connection Connection, packet Packet) {
@@ -225,6 +257,7 @@ func (s *GateServer) registerServerPacket(serverHandler *DefaultConnectionHandle
 	network.RegisterPacketHandler(serverHandler, new(pb.LoginRes), s.onLoginRes)
 	network.RegisterPacketHandler(serverHandler, new(pb.CreatePlayerRes), s.routeToClientWithConnId)
 	network.RegisterPacketHandler(serverHandler, new(pb.PlayerEntryGameRes), s.onPlayerEntryGameRes)
+	// 重连响应:需要为新的客户端连接建立ClientData绑定
 	network.RegisterPacketHandler(serverHandler, new(pb.PlayerReconnectGameRes), s.onPlayerReconnectGameRes)
 	network.RegisterPacketHandler(serverHandler, new(pb.GateRouteClientPacketError), s.onGateRouteClientPacketError)
 
@@ -293,6 +326,8 @@ func (s *GateServer) onPlayerEntryGameRes(connection Connection, packet Packet) 
 		res.PlayerId, packet.ErrorCode())
 }
 
+// onPlayerReconnectGameRes 处理游戏服返回的重连响应
+// 重连成功时,客户端是全新连接,需要为其建立ClientData绑定(包含GameServerId)
 func (s *GateServer) onPlayerReconnectGameRes(connection Connection, packet Packet) {
 	res := packet.Message().(*pb.PlayerReconnectGameRes)
 	gatePacket, _ := packet.(*network.GatePacket)

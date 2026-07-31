@@ -96,6 +96,10 @@ func (b *UniqueContainer[E]) AddElem(arg *pb.AddElemArg, bagUpdate *pb.ElemConta
 	if addCount <= 0 {
 		return 0
 	}
+	// 限制单次添加数量,防止客户端传入超大值导致CPU/内存耗尽
+	if addCount > internal.MaxBatchAddUniqueElemCount {
+		addCount = internal.MaxBatchAddUniqueElemCount
+	}
 	itemCfg := cfg.ItemCfgs.GetCfg(arg.GetCfgId())
 	if itemCfg == nil {
 		return 0

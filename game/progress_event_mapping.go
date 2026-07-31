@@ -80,8 +80,14 @@ func (p *ProgressEventMapping) UpdateProgress(event any, progress internal.CfgDa
 // 事件分发后,检查进度更新
 func (p *ProgressEventMapping) OnTriggerEvent(event any) {
 	// 属性值更新
-	key := reflect.TypeOf(event).Elem().Name()
+	t := reflect.TypeOf(event)
+	if t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+	key := t.Name()
 	if progressSlice, ok := p.mapping[key]; ok { //快速查询该事件对应的进度对象
+		// UpdateProgress只更新进度数值,不会触发RemoveProgress,因此可以直接遍历
+		// 注意:如果将来在UpdateProgress的回调链中引入了RemoveProgress调用,需要改为先拷贝slice再遍历
 		for _, progress := range progressSlice {
 			p.UpdateProgress(event, progress)
 		}
