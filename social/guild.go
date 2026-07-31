@@ -119,15 +119,19 @@ func (this *Guild) RouteClientPacket(guildMessage *GuildMessage, message proto.M
 // 广播公会消息
 // this server -> other server -> player
 func (this *Guild) BroadcastPlayerPacket(message proto.Message) {
+	memberIds := make([]int64, 0, len(this.GetMembers().Data))
 	for _, member := range this.GetMembers().Data {
-		game.RoutePlayerPacket(member.Id, network.NewPacket(message))
+		memberIds = append(memberIds, member.Id)
 	}
+	game.RoutePlayerPackets(memberIds, network.NewPacket(message))
 }
 
 // 广播公会消息,直接发给客户端
 // this server -> other server -> client
 func (this *Guild) BroadcastClientPacket(message proto.Message) {
+	memberIds := make([]int64, 0, len(this.GetMembers().Data))
 	for _, member := range this.GetMembers().Data {
-		game.RoutePlayerPacket(member.Id, network.NewPacket(message), game.WithDirectSendClient())
+		memberIds = append(memberIds, member.Id)
 	}
+	game.RoutePlayerPackets(memberIds, network.NewPacket(message), game.WithDirectSendClient())
 }

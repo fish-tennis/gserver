@@ -50,11 +50,6 @@ func (this *PendingMessages) TriggerPlayerEntryGame(event *internal.EventPlayerE
 			logger.Error("UnmarshalNew %v err:%v", this.GetPlayerId(), err)
 			continue
 		}
-		err = req.PacketData.UnmarshalTo(message)
-		if err != nil {
-			logger.Error("UnmarshalTo %v err:%v", this.GetPlayerId(), err)
-			continue
-		}
 		this.GetPlayer().processMessage(gnet.NewProtoPacket(gnet.PacketCommand(req.PacketCommand), message))
 		// 处理过的消息,单独删除数据
 		db.GetPlayerDb().DeleteComponentField(this.GetPlayerId(), this.GetName(), util.Itoa(req.MessageId))

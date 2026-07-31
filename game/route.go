@@ -104,18 +104,23 @@ func RoutePlayerPacket(playerId int64, packet Packet, opts ...RouteOption) bool 
 	for _, opt := range opts {
 		opt.apply(routeOpts)
 	}
-	pendingMessageId := int64(0)
-	if routeOpts.SaveDb {
-		anyMessage, err := anypb.New(packet.Message())
+	// 消息只序列化1次,SaveDb和路由共用
+	var anyPacket *anypb.Any
+	if packet.Message() != nil {
+		var err error
+		anyPacket, err = anypb.New(packet.Message())
 		if err != nil {
-			log.Error("RoutePlayerPacketErr", "err", err)
+			log.Error("RoutePlayerPacketErr anypb.New", "err", err)
 			return false
 		}
+	}
+	pendingMessageId := int64(0)
+	if routeOpts.SaveDb {
 		pendingMessageId = util.GenUniqueId()
 		pendingMessage := &pb.PendingMessage{
 			MessageId:     pendingMessageId, // 消息号生成唯一id
 			PacketCommand: int32(packet.Command()),
-			PacketData:    anyMessage,
+			PacketData:    anyPacket,
 			Timestamp:     int32(time.Now().Unix()),
 		}
 		pendingMessageBytes, err := proto.Marshal(pendingMessage)
@@ -143,15 +148,7 @@ func RoutePlayerPacket(playerId int64, packet Packet, opts ...RouteOption) bool 
 		}
 		conn = internal.GetServerList().GetServerConnection(toServerId)
 	}
-	var anyPacket *anypb.Any
-	if packet.Message() != nil {
-		var err error
-		anyPacket, err = anypb.New(packet.Message())
-		if err != nil {
-			log.Error("RoutePlayerPacketWithServerErr", "err", err)
-			return false
-		}
-	} else {
+	if anyPacket == nil {
 		log.Debug("anyPacketNil", "cmd", packet.Command(), "err", routeOpts.Error, "DirectSendClient", routeOpts.DirectSendClient)
 	}
 	var errStr string
@@ -170,4 +167,56 @@ func RoutePlayerPacket(playerId int64, packet Packet, opts ...RouteOption) bool 
 		routePacket.SetRpcCallId(protoPacket.RpcCallId())
 	}
 	return conn.SendPacket(routePacket)
+}
+
+// RoutePlayerPackets 批量路由同一消息给多个玩家
+// 优化:用1次Redis MGET替代N次GET,消息只序列化1次
+// playerIds:目标玩家列表, message:要路由的消息, opts:路由选项(所有玩家共用)
+func RoutePlayerPackets(playerIds []int64, packet Packet, opts ...RouteOption) {
+	if len(playerIds) == 0 {
+		return
+	}
+	routeOpts := defaultRouteOptions()
+	for _, opt := range opts {
+		opt.apply(routeOpts)
+	}
+	// 1次MGET批量查询所有玩家所在的服务器
+	serverMap := cache.GetOnlinePlayers(playerIds)
+	if len(serverMap) == 0 {
+		return
+	}
+	// 消息只序列化1次
+	var anyPacket *anypb.Any
+	if packet.Message() != nil {
+		var err error
+		anyPacket, err = anypb.New(packet.Message())
+		if err != nil {
+			slog.Error("RoutePlayerPackets anypb.New err", "err", err)
+			return
+		}
+	}
+	var errStr string
+	if routeOpts.Error != nil {
+		errStr = routeOpts.Error.Error()
+	}
+	cmd := int32(packet.Command())
+	// 按服务器分组发送
+	for _, playerId := range playerIds {
+		toServerId, ok := serverMap[playerId]
+		if !ok {
+			continue
+		}
+		conn := internal.GetServerList().GetServerConnection(toServerId)
+		if conn == nil {
+			continue
+		}
+		routePacket := network.NewPacket(&pb.RoutePlayerMessage{
+			Error:            errStr,
+			ToPlayerId:       playerId,
+			PacketCommand:    cmd,
+			DirectSendClient: routeOpts.DirectSendClient,
+			PacketData:       anyPacket,
+		})
+		conn.SendPacket(routePacket)
+	}
 }

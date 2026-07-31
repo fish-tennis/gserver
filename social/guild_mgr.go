@@ -58,11 +58,6 @@ func (g *GuildHelper) RoutePacketToRoutineMessage(connection Connection, packet 
 		logger.Error("UnmarshalNew %v err: %v", req.FromGuildId, err)
 		return nil
 	}
-	err = req.PacketData.UnmarshalTo(message)
-	if err != nil {
-		logger.Error("UnmarshalTo %v err: %v", req.FromGuildId, err)
-		return nil
-	}
 	return &GuildMessage{
 		fromPlayerId:   req.FromPlayerId,
 		fromServerId:   req.FromServerId,

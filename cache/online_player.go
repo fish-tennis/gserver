@@ -2,24 +2,25 @@ package cache
 
 import (
 	"context"
-	"fmt"
 	"github.com/fish-tennis/gentity/util"
 	"github.com/fish-tennis/gserver/logger"
+	"github.com/redis/go-redis/v9"
+	"strconv"
 	"strings"
 )
 
 func keyOnlinePlayer(playerId int64) string {
-	return fmt.Sprintf("onlineplayer:%v", playerId)
+	return "onlineplayer:" + strconv.FormatInt(playerId, 10)
 }
 
 func keyGameServerPlayer(gameServerId int32) string {
-	return fmt.Sprintf("game:%v", gameServerId)
+	return "game:" + strconv.FormatInt(int64(gameServerId), 10)
 }
 
 // 添加一个在线玩家
 // 缓存玩家和游戏服的对应关系,这样在分布式系统里,可以知道某个玩家当前在哪一台gameServer上
 func AddOnlinePlayer(playerId,accountId int64, gameServerId int32) bool {
-	val := fmt.Sprintf("%v;%v", accountId, gameServerId)
+	val := strconv.FormatInt(accountId, 10) + ";" + strconv.FormatInt(int64(gameServerId), 10)
 	// 一个游戏服上的在线玩家缓存,用于在服务器宕机后的恢复操作
 	// 当一个游戏服异常宕机时,在线玩家(keyOnlinePlayer)缓存没能清除,将导致这部分玩家不能正常登录游戏
 	// 所有游戏服务器需要把该服务器上的玩家记录在缓存中,当宕机重启后,游戏服会修复这部分玩家的缓存数据
@@ -83,7 +84,7 @@ func ResetOnlinePlayer(gameServerId int32,repairFunc func(playerId,accountId int
 
 // 获取一个在线玩家当前所在的游戏服id
 func GetOnlinePlayer(playerId int64) (accountId int64, gameServerId int32) {
-	accountIdAndGameServerId,err := GetRedis().Get(context.Background(), fmt.Sprintf("onlineplayer:%v", playerId)).Result()
+	accountIdAndGameServerId,err := GetRedis().Get(context.Background(), keyOnlinePlayer(playerId)).Result()
 	if IsRedisError(err) {
 		return
 	}
@@ -97,4 +98,37 @@ func GetOnlinePlayer(playerId int64) (accountId int64, gameServerId int32) {
 	accountId = util.Atoi64(ids[0])
 	gameServerId = int32(util.Atoi(ids[1]))
 	return
+}
+
+// 批量获取多个在线玩家当前所在的游戏服id
+// 返回 playerId -> gameServerId 映射,不在线或查询失败的玩家不在返回值中
+// 使用 Pipeline 而非 MGet:Pipeline 天然兼容 Redis Cluster(跨 slot),且只需一次网络往返
+func GetOnlinePlayers(playerIds []int64) map[int64]int32 {
+	if len(playerIds) == 0 {
+		return nil
+	}
+	ctx := context.Background()
+	pipe := GetRedis().Pipeline()
+	cmds := make([]*redis.StringCmd, len(playerIds))
+	for i, pid := range playerIds {
+		cmds[i] = pipe.Get(ctx, keyOnlinePlayer(pid))
+	}
+	_, err := pipe.Exec(ctx)
+	if err != nil && err != redis.Nil {
+		logger.Error("GetOnlinePlayers Pipeline err:%v", err)
+		// Pipeline 部分失败不影响已成功的,继续处理
+	}
+	serverMap := make(map[int64]int32, len(playerIds))
+	for i, cmd := range cmds {
+		val, err := cmd.Result()
+		if err != nil { // redis.Nil 或其他错误,玩家不在线
+			continue
+		}
+		ids := strings.Split(val, ";")
+		if len(ids) != 2 {
+			continue
+		}
+		serverMap[playerIds[i]] = int32(util.Atoi(ids[1]))
+	}
+	return serverMap
 }

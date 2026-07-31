@@ -2,18 +2,18 @@ package cache
 
 import (
 	"context"
-	"fmt"
 	"github.com/fish-tennis/gentity/util"
+	"strconv"
 	"strings"
 )
 
 func keyOnlineAccount(accountId int64) string {
-	return fmt.Sprintf("onlineaccount:%v", accountId)
+	return "onlineaccount:" + strconv.FormatInt(accountId, 10)
 }
 
 // 添加一个在线账号
 func AddOnlineAccount(accountId int64, playerId int64, gameServerId int32) bool {
-	val := fmt.Sprintf("%v;%v", playerId, gameServerId)
+	val := strconv.FormatInt(playerId, 10) + ";" + strconv.FormatInt(int64(gameServerId), 10)
 	ok, err := GetRedis().SetNX(context.Background(), keyOnlineAccount(accountId), val, 0).Result()
 	if IsRedisError(err) {
 		return false
@@ -33,7 +33,7 @@ func RemoveOnlineAccount(accountId int64) bool {
 // 获取在线账号对应的玩家id
 // 返回0表示账号不在线
 func GetOnlineAccount(accountId int64) (playerId int64, gameServerId int32) {
-	playerIdAndGameServerId,err := GetRedis().Get(context.Background(), fmt.Sprintf("onlineaccount:%v", accountId)).Result()
+	playerIdAndGameServerId,err := GetRedis().Get(context.Background(), keyOnlineAccount(accountId)).Result()
 	if IsRedisError(err) {
 		return
 	}

@@ -313,11 +313,6 @@ func (this *GameServer) onRoutePlayerMessage(connection Connection, packet Packe
 		logger.Error("UnmarshalNew %v cmd:%v err:%v", req.ToPlayerId, req.PacketCommand, err)
 		return
 	}
-	err = req.PacketData.UnmarshalTo(message)
-	if err != nil {
-		logger.Error("UnmarshalTo %v cmd:%v err:%v DirectSendClient:%v", req.ToPlayerId, req.PacketCommand, err, req.DirectSendClient)
-		return
-	}
 	if req.DirectSendClient {
 		// 不需要player处理的消息,直接转发给客户端
 		player.SendWithCommand(PacketCommand(uint16(req.PacketCommand)), message)

@@ -2,19 +2,19 @@ package cache
 
 import (
 	"context"
-	"fmt"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
+	"strconv"
 	"time"
 )
 
 func keyLoginSession(accountId int64) string {
-	return fmt.Sprintf("ses:%v",accountId)
+	return "ses:" + strconv.FormatInt(accountId, 10)
 }
 
 // 新生成一个登录session
 func NewLoginSession(account *pb.Account) string {
-	session := fmt.Sprintf("%v", time.Now().UnixNano())
+	session := strconv.FormatInt(time.Now().UnixNano(), 10)
 	// 登录session存redis,供玩家登录游戏服时验证用,使登录服和游戏服可以解耦
 	_,err := GetRedis().SetEx(context.Background(), keyLoginSession(account.GetXId()), session, time.Minute*10).Result()
 	if IsRedisError(err) {
