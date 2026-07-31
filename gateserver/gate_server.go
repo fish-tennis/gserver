@@ -294,10 +294,10 @@ func (s *GateServer) onPlayerEntryGameRes(connection Connection, packet Packet) 
 	if packet.ErrorCode() == 0 {
 		if clientData, ok := clientConn.GetTag().(*network.ClientData); ok {
 			// 登录游戏服成功后,绑定客户端连接和playerId,后续的消息都可以用playerId来关联
-			// PlayerId 用 atomic 写,保证其他协程的读可见
-			clientData.SetPlayerId(res.PlayerId)
-			// clients map 的操作仍需锁保护
+			// SetPlayerId 和 map 插入在同一个锁临界区内执行
+			// 确保其他协程(如 OnConnectionDisconnect)看到 playerId > 0 时,map 必然已就绪
 			s.clientsMutex.Lock()
+			clientData.SetPlayerId(res.PlayerId)
 			s.clients[res.PlayerId] = clientData
 			s.clientsMutex.Unlock()
 			logger.Debug("bindPlayerId connId:%v playerId:%v", clientConn.GetConnectionId(), res.PlayerId)

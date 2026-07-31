@@ -2,6 +2,8 @@ package game
 
 import (
 	"errors"
+	"math"
+
 	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gserver/cfg"
 	. "github.com/fish-tennis/gserver/internal"
@@ -60,7 +62,12 @@ func (e *Exchange) addExchangeCount(exchangeCfgId, exchangeCount int32) {
 			CfgId: exchangeCfgId,
 		}
 	}
-	v.Count += exchangeCount
+	// 用 int64 运算防止累加溢出,结果限制在 int32 范围内
+	newCount := int64(v.Count) + int64(exchangeCount)
+	if newCount > math.MaxInt32 {
+		newCount = math.MaxInt32
+	}
+	v.Count = int32(newCount)
 	v.Timestamp = int32(e.GetPlayer().GetTimerEntries().Now().Unix())
 	e.Records.Set(exchangeCfgId, v)
 	e.GetPlayer().Send(&pb.ExchangeUpdate{
@@ -101,7 +108,7 @@ func (e *Exchange) Exchange(exchangeCfgId, exchangeCount int32) error {
 		return errors.New("exchangeCfg nil")
 	}
 	curExchangeCount := e.GetCount(exchangeCfgId)
-	if exchangeCfg.CountLimit > 0 && curExchangeCount+exchangeCount > exchangeCfg.CountLimit {
+	if exchangeCfg.CountLimit > 0 && int64(curExchangeCount)+int64(exchangeCount) > int64(exchangeCfg.CountLimit) {
 		slog.Debug("Exchange CountLimit", "pid", e.GetPlayer().GetId(), "exchangeCfgId", exchangeCfgId, "exchangeCount", exchangeCount)
 		return errors.New("exchangeCountLimit")
 	}

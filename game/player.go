@@ -43,6 +43,9 @@ type Player struct {
 	connection Connection
 	// 断线保留期定时器是否处于激活状态
 	reconnectWaitTimerActive bool
+	// 断线保留期定时器的代际计数器,用于区分不同轮次的定时器
+	// 防止陈旧定时器在新一轮保留期内误触发 Stop
+	reconnectWaitGen int
 	// 事件分发的嵌套检测
 	fireEventLoopChecker map[reflect.Type]int32
 	postEvents           []any
@@ -148,7 +151,7 @@ type playerReconnectMessage struct {
 	connection Connection
 	useGate    bool
 	session    string
-	callback   func(success bool)
+	packet     Packet
 }
 
 // OnDisconnect 由网络协程(gnet读/写协程)回调,不能在此直接读写 p.connection
@@ -158,13 +161,13 @@ func (p *Player) OnDisconnect(connection Connection) {
 }
 
 // OnReconnect 由网络协程(收包协程)调用,把重连校验逻辑投递到玩家协程
-// callback 在玩家协程内被调用,success 为 true 表示校验通过且已绑定新连接
-func (p *Player) OnReconnect(connection Connection, useGate bool, session string, callback func(success bool)) {
+// 重连的响应发送和后续逻辑都在玩家协程内的 onReconnect 中处理
+func (p *Player) OnReconnect(connection Connection, useGate bool, session string, packet Packet) {
 	p.PushMessage(&playerReconnectMessage{
 		connection: connection,
 		useGate:    useGate,
 		session:    session,
-		callback:   callback,
+		packet:     packet,
 	})
 }
 
@@ -178,9 +181,11 @@ func (p *Player) onDisconnect(connection Connection) {
 		}
 		// 开启断线保留期,等待玩家重连,超时后才真正下线
 		p.reconnectWaitTimerActive = true
+		p.reconnectWaitGen++
+		gen := p.reconnectWaitGen
 		p.GetTimerEntries().After(ReconnectWaitSeconds*time.Second, func() time.Duration {
-			// 保留期内重连成功会取消该定时器(reconnectWaitTimerActive被置为false)
-			if !p.reconnectWaitTimerActive {
+			// 检查代际:如果重连成功后再次断线,旧定时器的 gen 不匹配,直接忽略
+			if !p.reconnectWaitTimerActive || p.reconnectWaitGen != gen {
 				return 0
 			}
 			p.Stop()
@@ -197,16 +202,31 @@ func (p *Player) CancelReconnectWait() {
 
 // onReconnect 实际的重连处理逻辑,在玩家协程内调用,与本玩家其它业务串行,无需加锁
 func (p *Player) onReconnect(msg *playerReconnectMessage) {
+	res := &pb.PlayerReconnectGameRes{
+		AccountId: p.GetAccountId(),
+		PlayerId:  p.GetId(),
+	}
 	// 校验 ReconnectSession
 	if !p.GetBaseInfo().VerifyReconnectSession(msg.session) {
-		msg.callback(false)
+		network.SendPacketAdaptWithError(msg.connection, msg.packet, res, int32(pb.ErrorCode_ErrorCode_SessionError))
+		logger.Debug("onReconnect session error:%v", p.GetId())
 		return
 	}
 	// 校验通过,绑定新连接
 	p.SetConnection(msg.connection, msg.useGate)
 	// 取消断线保留期定时器
 	p.CancelReconnectWait()
-	msg.callback(true)
+	// 立即轮换 ReconnectSession,防止旧 session 被重复使用(一次性凭证)
+	p.GetBaseInfo().GenerateReconnectSession()
+	// 发送重连成功响应
+	res.GameServerId = gentity.GetApplication().GetId()
+	network.SendPacketAdaptWithError(msg.connection, msg.packet, res, 0)
+	// 处理重连后的逻辑(与正常登录走相同的 PlayerEntryGameOk 流程)
+	cmd := network.GetCommandByProto(new(pb.PlayerEntryGameOk))
+	p.processMessage(NewProtoPacket(PacketCommand(cmd), &pb.PlayerEntryGameOk{
+		IsReconnect: true,
+	}))
+	logger.Debug("onReconnect success:%v", res)
 }
 
 // 发包(protobuf)

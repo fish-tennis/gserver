@@ -136,36 +136,19 @@ func onPlayerEntryGameReq(connection Connection, packet Packet) {
 // 在Connection的收包协程中调用
 func onPlayerReconnectGameReq(connection Connection, packet Packet) {
 	req := packet.Message().(*pb.PlayerReconnectGameReq)
-	res := &pb.PlayerReconnectGameRes{
-		AccountId: req.AccountId,
-		PlayerId:  req.PlayerId,
-	}
 	player := game.GetPlayer(req.PlayerId)
 	if player == nil {
 		// 玩家不在线(可能保留期已过或从未登录)
+		res := &pb.PlayerReconnectGameRes{
+			AccountId: req.AccountId,
+			PlayerId:  req.PlayerId,
+		}
 		network.SendPacketAdaptWithError(connection, packet, res, int32(pb.ErrorCode_ErrorCode_SessionError))
 		logger.Debug("onPlayerReconnectGameReq player nil:%v", req.PlayerId)
 		return
 	}
-	// 投递到玩家协程执行,确保对 BaseInfo.ReconnectSession 的校验、SetConnection、CancelReconnectWait
-	// 都在玩家协程内串行执行,避免跨协程并发问题
-	player.OnReconnect(connection, network.IsGatePacket(packet), req.GetReconnectSession(), func(success bool) {
-		// 此回调在玩家协程内被调用
-		if !success {
-			network.SendPacketAdaptWithError(connection, packet, res, int32(pb.ErrorCode_ErrorCode_SessionError))
-			logger.Debug("onPlayerReconnectGameReq session error:%v", req.PlayerId)
-			return
-		}
-		res.GameServerId = gentity.GetApplication().GetId()
-		network.SendPacketAdaptWithError(connection, packet, res, 0)
-		// 转到玩家协程中去处理重连后的逻辑
-		// 后续的 HandlePlayerEntryGameOk 会调用 GenerateReconnectSession 生成新的 ReconnectSession
-		cmd := network.GetCommandByProto(new(pb.PlayerEntryGameOk))
-		player.OnRecvPacket(NewProtoPacket(PacketCommand(cmd), &pb.PlayerEntryGameOk{
-			IsReconnect: true,
-		}))
-		logger.Debug("onPlayerReconnectGameReq success:%v", res)
-	})
+	// 投递到玩家协程执行,重连的校验、绑定连接、响应发送都在玩家协程内串行处理
+	player.OnReconnect(connection, network.IsGatePacket(packet), req.GetReconnectSession(), packet)
 }
 
 // 创建角色
