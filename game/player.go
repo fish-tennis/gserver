@@ -118,6 +118,18 @@ func (p *Player) Kick() {
 	p.PushMessage(&playerKickMessage{})
 }
 
+// playerDirectSendMessage 直接转发给客户端的消息,由网络协程投递,在玩家协程内消费
+// 避免 DirectSendClient 路径在网络协程中直接读 p.connection,与玩家协程的 ResetConnection 竞争
+type playerDirectSendMessage struct {
+	cmd     PacketCommand
+	message proto.Message
+}
+
+// DirectSendClient 由网络协程调用,投递到玩家协程内执行 SendWithCommand
+func (p *Player) DirectSendClient(cmd PacketCommand, message proto.Message) {
+	p.PushMessage(&playerDirectSendMessage{cmd: cmd, message: message})
+}
+
 // playerReconnectMessage 重连内部消息,由网络协程投递,在玩家协程内消费
 // 保证对 BaseInfo.ReconnectSession 的校验、SetConnection、CancelReconnectWait 都在协程内串行执行
 type playerReconnectMessage struct {
@@ -335,6 +347,8 @@ func (p *Player) RunRoutine() bool {
 			case *playerKickMessage:
 				p.ResetConnection()
 				p.Stop()
+			case *playerDirectSendMessage:
+				p.SendWithCommand(msg.cmd, msg.message)
 			default:
 				logger.Error("processMessage unknown message type: %T", message)
 			}

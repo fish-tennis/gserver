@@ -314,8 +314,8 @@ func (this *GameServer) onRoutePlayerMessage(connection Connection, packet Packe
 		return
 	}
 	if req.DirectSendClient {
-		// 不需要player处理的消息,直接转发给客户端
-		player.SendWithCommand(PacketCommand(uint16(req.PacketCommand)), message)
+		// 不需要player处理的消息,投递到玩家协程内转发给客户端,避免跨协程读 p.connection
+		player.DirectSendClient(PacketCommand(uint16(req.PacketCommand)), message)
 	} else {
 		// 需要player处理的消息,放进player的消息队列,在玩家的逻辑协程中处理
 		player.OnRecvPacket(NewProtoPacket(PacketCommand(req.PacketCommand), message))

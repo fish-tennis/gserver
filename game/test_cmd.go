@@ -84,7 +84,12 @@ func (p *Player) OnTestCmd(req *pb.TestCmd) {
 		}
 		// 完成所有任务
 		if strings.ToLower(cmdArgs[0]) == "all" {
-			for cfgId, _ := range p.GetQuest().Quests.Data {
+			// 先收集所有key,避免range map同时delete导致漏处理
+			questCfgIds := make([]int32, 0, len(p.GetQuest().Quests.Data))
+			for cfgId := range p.GetQuest().Quests.Data {
+				questCfgIds = append(questCfgIds, cfgId)
+			}
+			for _, cfgId := range questCfgIds {
 				p.GetQuest().OnFinishQuestReq(&pb.FinishQuestReq{
 					QuestCfgIds: []int32{cfgId},
 				})

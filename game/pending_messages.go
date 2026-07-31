@@ -44,14 +44,21 @@ func (p *Player) GetPendingMessages() *PendingMessages {
 
 // 事件接口
 func (this *PendingMessages) TriggerPlayerEntryGame(event *internal.EventPlayerEntryGame) {
-	for _, req := range this.Messages {
+	// 先收集所有消息,避免在range map同时delete导致漏处理
+	ids := make([]int64, 0, len(this.Messages))
+	for id := range this.Messages {
+		ids = append(ids, id)
+	}
+	for _, msgId := range ids {
+		req := this.Messages[msgId]
 		message, err := req.PacketData.UnmarshalNew()
 		if err != nil {
 			logger.Error("UnmarshalNew %v err:%v", this.GetPlayerId(), err)
 			continue
 		}
 		this.GetPlayer().processMessage(gnet.NewProtoPacket(gnet.PacketCommand(req.PacketCommand), message))
-		// 处理过的消息,单独删除数据
+		// 处理过的消息,删除内存和数据库
+		delete(this.Messages, msgId)
 		db.GetPlayerDb().DeleteComponentField(this.GetPlayerId(), this.GetName(), util.Itoa(req.MessageId))
 		logger.Debug("%v delete pending message:%v", this.GetPlayerId(), req.MessageId)
 	}

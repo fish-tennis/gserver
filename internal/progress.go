@@ -83,7 +83,8 @@ func UpdateProgress(obj any, progressHolder ProgressHolder, event any, progressC
 func DefaultProgressUpdater(obj any, progressHolder ProgressHolder, event any, progressCfg *pb.ProgressCfg) int32 {
 	// 通用事件匹配,先检查事件名是否匹配
 	eventTyp := reflect.TypeOf(event)
-	if eventTyp.Kind() == reflect.Pointer {
+	isPointer := eventTyp.Kind() == reflect.Pointer
+	if isPointer {
 		eventTyp = eventTyp.Elem()
 	}
 	if progressCfg.GetType() == int32(pb.ProgressType_ProgressType_Event) {
@@ -91,7 +92,12 @@ func DefaultProgressUpdater(obj any, progressHolder ProgressHolder, event any, p
 			return 0
 		}
 	}
-	eventVal := reflect.ValueOf(event).Elem()
+	var eventVal reflect.Value
+	if isPointer {
+		eventVal = reflect.ValueOf(event).Elem()
+	} else {
+		eventVal = reflect.ValueOf(event)
+	}
 	// 事件字段值(字符串形式),这里也包含了对比较操作符为=的数值字段值的支持
 	for fieldName, fieldValue := range progressCfg.GetStringEventFields() {
 		fieldIndex, ok := getCachedFieldIndex(eventTyp, fieldName)

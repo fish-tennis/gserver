@@ -147,6 +147,10 @@ func RoutePlayerPacket(playerId int64, packet Packet, opts ...RouteOption) bool 
 			}
 		}
 		conn = internal.GetServerList().GetServerConnection(toServerId)
+		if conn == nil {
+			log.Error("RoutePlayerPacketErr server connection nil", "cmd", packet.Command(), "toServerId", toServerId)
+			return false
+		}
 	}
 	if anyPacket == nil {
 		log.Debug("anyPacketNil", "cmd", packet.Command(), "err", routeOpts.Error, "DirectSendClient", routeOpts.DirectSendClient)

@@ -17,6 +17,9 @@ func RouteGuildServerId(guildId int64) int32 {
 	}
 	// 这里只演示了最简单的路由方式
 	index := guildId % int64(len(servers))
+	if index < 0 {
+		index += int64(len(servers))
+	}
 	return servers[index].GetServerId()
 }
 
