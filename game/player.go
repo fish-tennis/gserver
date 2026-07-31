@@ -125,9 +125,21 @@ type playerDirectSendMessage struct {
 	message proto.Message
 }
 
+// playerCheckConnectionMessage 验证连接归属并投递消息,由网络协程投递,在玩家协程内消费
+// 避免在网络协程中直接读 p.connection 与玩家协程的 ResetConnection/SetConnection 竞争
+type playerCheckConnectionMessage struct {
+	connection Connection
+	packet     *ProtoPacket
+}
+
 // DirectSendClient 由网络协程调用,投递到玩家协程内执行 SendWithCommand
 func (p *Player) DirectSendClient(cmd PacketCommand, message proto.Message) {
 	p.PushMessage(&playerDirectSendMessage{cmd: cmd, message: message})
+}
+
+// CheckConnectionAndRecvPacket 由网络协程调用,投递到玩家协程内验证连接归属后处理消息
+func (p *Player) CheckConnectionAndRecvPacket(connection Connection, packet *ProtoPacket) {
+	p.PushMessage(&playerCheckConnectionMessage{connection: connection, packet: packet})
 }
 
 // playerReconnectMessage 重连内部消息,由网络协程投递,在玩家协程内消费
@@ -349,6 +361,10 @@ func (p *Player) RunRoutine() bool {
 				p.Stop()
 			case *playerDirectSendMessage:
 				p.SendWithCommand(msg.cmd, msg.message)
+			case *playerCheckConnectionMessage:
+				if p.GetConnection() == msg.connection {
+					p.processMessage(msg.packet)
+				}
 			default:
 				logger.Error("processMessage unknown message type: %T", message)
 			}

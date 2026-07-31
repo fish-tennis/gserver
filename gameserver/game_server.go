@@ -214,10 +214,8 @@ func (this *GameServer) registerClientPacket(handler *DefaultConnectionHandler) 
 			return
 		}
 		if gamePlayer, ok := player.(*game.Player); ok {
-			if gamePlayer.GetConnection() == connection {
-				// 在线玩家的消息,转到玩家消息处理协程去处理
-				gamePlayer.OnRecvPacket(playerPacket)
-			}
+			// 投递到玩家协程内验证连接归属后处理,避免跨协程读 p.connection
+			gamePlayer.CheckConnectionAndRecvPacket(connection, playerPacket)
 		}
 	})
 	// 通过反射自动注册消息回调
