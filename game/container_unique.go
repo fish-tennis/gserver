@@ -1,17 +1,17 @@
 package game
 
 import (
+	"log/slog"
+	"reflect"
+	"slices"
+
 	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gserver/cfg"
 	"github.com/fish-tennis/gserver/internal"
-	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 	"github.com/fish-tennis/gserver/util"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
-	"log/slog"
-	"reflect"
-	"slices"
 )
 
 type timeoutCheckData struct {
@@ -62,7 +62,7 @@ func (b *UniqueContainer[E]) AddUniqueItem(e E) int64 {
 		if timeoutItem, ok := any(e).(internal.TimeLimited); ok && timeoutItem.GetTimeout() > 0 {
 			b.addToTimeoutList(e.GetUniqueId(), timeoutItem.GetTimeout())
 		}
-		logger.Debug("AddUniqueItem CfgId:%v UniqueId:%v", e.GetCfgId(), e.GetUniqueId())
+		slog.Debug("AddUniqueItem", "cfgId", e.GetCfgId(), "uniqueId", e.GetUniqueId())
 		return e.GetUniqueId()
 	}
 	return 0

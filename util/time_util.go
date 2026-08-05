@@ -46,3 +46,34 @@ func DayCount(a time.Time, b time.Time) int {
 	}
 	return int(days)
 }
+
+// GetWeekStart 返回 t 所在自然周的周一 0 点(本地时区 time.Local)
+// 自然周定义为: 周一 00:00:00 ~ 周日 23:59:59
+// 注意: Go 的 time.Weekday 枚举中 Sunday=0, Monday=1, ..., Saturday=6
+// 因为 Sunday 在枚举值上比 Monday 小,直接相减会得到 -1,
+// 而 Sunday 实际上属于本周最后一天,需要回退 6 天到本周周一
+func GetWeekStart(t time.Time) time.Time {
+	daysSinceMonday := int(t.Weekday() - time.Monday)
+	if daysSinceMonday < 0 { // 即 Sunday, 需特殊处理
+		daysSinceMonday = 6
+	}
+	y, m, d := t.Date()
+	return time.Date(y, m, d-daysSinceMonday, 0, 0, 0, 0, time.Local)
+}
+
+// GetMonthStart 返回 t 所在自然月的 1 日 0 点(本地时区 time.Local)
+func GetMonthStart(t time.Time) time.Time {
+	return time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, time.Local)
+}
+
+// IsSameWeek 判断两个时刻是否处于同一自然周
+// 通过比较各自所在周的周一 0 点是否相同来实现
+func IsSameWeek(a, b time.Time) bool {
+	return GetWeekStart(a).Equal(GetWeekStart(b))
+}
+
+// IsSameMonth 判断两个时刻是否处于同一自然月
+// 必须同时比较年份和月份,避免跨年但月份相同的情况(如 2025-12 与 2026-12)被误判
+func IsSameMonth(a, b time.Time) bool {
+	return a.Year() == b.Year() && a.Month() == b.Month()
+}

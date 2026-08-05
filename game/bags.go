@@ -289,6 +289,7 @@ func (b *Bags) OnItemUseReq(req *pb.ItemUseReq) (*pb.ItemUseRes, error) {
 	res := &pb.ItemUseRes{
 		CfgId:    itemCfg.GetCfgId(),
 		UniqueId: req.GetUniqueId(),
+		Num:      useNum,
 	}
 	return res, nil
 }

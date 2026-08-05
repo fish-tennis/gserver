@@ -2,13 +2,13 @@ package social
 
 import (
 	"errors"
+	"log/slog"
+
 	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gentity/util"
 	"github.com/fish-tennis/gserver/game"
-	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/network"
 	"github.com/fish-tennis/gserver/pb"
-	"log/slog"
 )
 
 const (
@@ -44,12 +44,12 @@ func (this *GuildJoinRequests) Get(playerId int64) *pb.GuildJoinRequest {
 
 func (this *GuildJoinRequests) Add(joinRequest *pb.GuildJoinRequest) {
 	this.Set(joinRequest.PlayerId, joinRequest)
-	logger.Debug("Add request:%v", joinRequest)
+	slog.Debug("Add request", "joinRequest", joinRequest)
 }
 
 func (this *GuildJoinRequests) Remove(playerId int64) {
 	this.Delete(playerId)
-	logger.Debug("Remove request:%v", playerId)
+	slog.Debug("Remove request", "playerId", playerId)
 }
 
 // 加入公会请求
@@ -80,7 +80,7 @@ func (this *GuildJoinRequests) HandleGuildJoinReq(guildMessage *GuildMessage, re
 // 公会管理员处理申请者的入会申请
 func (this *GuildJoinRequests) HandleGuildJoinAgreeReq(guildMessage *GuildMessage, req *pb.GuildJoinAgreeReq) (*pb.GuildJoinAgreeRes, error) {
 	g := this.GetGuild()
-	logger.Debug("HandleGuildJoinAgreeReq %v %v", g.GetId(), guildMessage.fromPlayerId)
+	slog.Debug("HandleGuildJoinAgreeReq", "gid", g.GetId(), "pid", guildMessage.fromPlayerId)
 	member := g.GetMember(guildMessage.fromPlayerId)
 	if member == nil {
 		return nil, errors.New("not a member")
@@ -111,6 +111,9 @@ func (this *GuildJoinRequests) HandleGuildJoinAgreeReq(guildMessage *GuildMessag
 				JoinPlayerId:    joinRequest.PlayerId,
 				IsAgree:         false,
 			}), game.WithSaveDb())
+			// 并发冲突时也要清理入会申请,否则该申请会残留在列表中,
+			// 导致玩家日后无法再次申请加入本公会(HandleGuildJoinReq 会判定 "already have a join request")
+			g.GetJoinRequests().Remove(req.JoinPlayerId)
 			return nil, errors.New("ConcurrentError")
 		}
 		// 通知对方已经入会了

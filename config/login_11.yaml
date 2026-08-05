@@ -17,3 +17,6 @@ Redis:
   UserName:
   Password:
   Cluster: false
+  DB: 0
+#接收告警信息的webhook地址
+#AlertWebhook: 

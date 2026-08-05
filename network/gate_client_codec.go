@@ -2,10 +2,11 @@ package network
 
 import (
 	"encoding/binary"
-	. "github.com/fish-tennis/gnet"
-	"github.com/fish-tennis/gserver/logger"
-	"google.golang.org/protobuf/proto"
+	"log/slog"
 	"reflect"
+
+	. "github.com/fish-tennis/gnet"
+	"google.golang.org/protobuf/proto"
 )
 
 // Tcp客户端和gate之间的编解码
@@ -62,7 +63,6 @@ func (this *ClientCodec) EncodePacket(connection Connection, packet Packet) ([][
 		rpcCallIdBytes = make([]byte, 4)
 		binary.LittleEndian.PutUint32(rpcCallIdBytes, rpcCallId)
 		headerFlags = RpcCall
-		//logger.Debug("write rpcCallId:%v", rpcCallId)
 	}
 	var errorCodeBytes []byte
 	if packet.ErrorCode() != 0 {
@@ -75,7 +75,7 @@ func (this *ClientCodec) EncodePacket(connection Connection, packet Packet) ([][
 		var err error
 		messageBytes, err = proto.Marshal(protoMessage)
 		if err != nil {
-			logger.Error("proto encode err:%v cmd:%v", err, packet.Command())
+			slog.Error("ClientCodec.EncodePacket: proto encode error", "error", err, "cmd", packet.Command())
 			return nil, 0
 		}
 	} else {
@@ -111,7 +111,6 @@ func (this *ClientCodec) DecodePacket(connection Connection, packetHeader Packet
 		}
 		rpcCallId = binary.LittleEndian.Uint32(decodedPacketData)
 		decodedPacketData = decodedPacketData[4:]
-		//logger.Debug("read rpcCallId:%v", rpcCallId)
 	}
 	if packetHeader.HasFlag(ErrorCode) {
 		if len(decodedPacketData) < 4 {
@@ -119,7 +118,6 @@ func (this *ClientCodec) DecodePacket(connection Connection, packetHeader Packet
 		}
 		errorCode = binary.LittleEndian.Uint32(decodedPacketData)
 		decodedPacketData = decodedPacketData[4:]
-		//logger.Debug("read rpcCallId:%v", rpcCallId)
 	}
 	if protoMessageType, ok := this.MessageCreatorMap[PacketCommand(command)]; ok {
 		// 有一些客户端消息,是gate处理
@@ -127,7 +125,7 @@ func (this *ClientCodec) DecodePacket(connection Connection, packetHeader Packet
 			newProtoMessage := reflect.New(protoMessageType).Interface().(proto.Message)
 			err := proto.Unmarshal(decodedPacketData, newProtoMessage)
 			if err != nil {
-				logger.Error("proto decode err:%v cmd:%v", err, command)
+				slog.Error("ClientCodec.DecodePacket: proto decode error", "error", err, "cmd", command)
 				return nil
 			}
 			newPacket := NewProtoPacket(PacketCommand(command), newProtoMessage)
@@ -150,6 +148,6 @@ func (this *ClientCodec) DecodePacket(connection Connection, packetHeader Packet
 		newPacket.SetErrorCode(errorCode)
 		return newPacket
 	}
-	logger.Error("unSupport command:%v", command)
+	slog.Error("ClientCodec.DecodePacket: unsupported command", "command", command)
 	return nil
 }

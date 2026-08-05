@@ -2120,7 +2120,7 @@ func (x *LevelExp) GetNeedExp() int32 {
 // 商店配置
 type ShopCfg struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	CfgId         int32                  `protobuf:"varint,1,opt,name=CfgId,proto3" json:"CfgId,omitempty"`                                                                                    // 商店id
+	CfgId         int32                  `protobuf:"varint,1,opt,name=CfgId,proto3" json:"CfgId,omitempty"`                                                                                    // 配置id
 	Name          string                 `protobuf:"bytes,2,opt,name=Name,proto3" json:"Name,omitempty"`                                                                                       // 商店名
 	ExchangeIds   []int32                `protobuf:"varint,3,rep,packed,name=ExchangeIds,proto3" json:"ExchangeIds,omitempty"`                                                                 // 商店的每1个格子就是1个兑换礼包
 	Properties    map[string]string      `protobuf:"bytes,8,rep,name=Properties,proto3" json:"Properties,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // 扩展属性

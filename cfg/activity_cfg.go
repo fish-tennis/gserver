@@ -1,7 +1,8 @@
 package cfg
 
 import (
-	"github.com/fish-tennis/gserver/logger"
+	"log/slog"
+
 	"github.com/fish-tennis/gserver/pb"
 )
 
@@ -20,7 +21,7 @@ func activityAfterLoad(mgr *DataMap[*pb.ActivityCfg]) error {
 		for _, exchangeId := range e.GetExchangeIds() {
 			exchangeCfg := ExchangeCfgs.GetCfg(exchangeId)
 			if exchangeCfg == nil {
-				logger.Error("exchangeCfg nil %v", exchangeId)
+				slog.Error("exchangeCfg nil", "exchangeId", exchangeId)
 				return true
 			}
 			tmpExchangeIdsByActivity[exchangeId] = e.GetCfgId()

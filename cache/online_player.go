@@ -2,11 +2,12 @@ package cache
 
 import (
 	"context"
-	"github.com/fish-tennis/gentity/util"
-	"github.com/fish-tennis/gserver/logger"
+	"log/slog"
 	"github.com/redis/go-redis/v9"
 	"strconv"
 	"strings"
+
+	"github.com/fish-tennis/gentity/util"
 )
 
 func keyOnlinePlayer(playerId int64) string {
@@ -29,13 +30,14 @@ func AddOnlinePlayer(playerId,accountId int64, gameServerId int32) bool {
 	// 若先 SetNX 再 SAdd,崩溃窗口会导致 keyOnlinePlayer 永久残留且无法被修复 -> 玩家永久无法登录
 	_, err := GetRedis().SAdd(context.Background(), keyGameServerPlayer(gameServerId), playerId).Result()
 	if IsRedisError(err) {
-		logger.Error("%v", err)
+		slog.Error("AddOnlinePlayer error", "error", err)
 		return false
 	}
 	ok, err := GetRedis().SetNX(context.Background(), keyOnlinePlayer(playerId), val, 0).Result()
 	if IsRedisError(err) {
 		// Redis异常才回滚 SAdd
 		GetRedis().SRem(context.Background(), keyGameServerPlayer(gameServerId), playerId)
+		slog.Error("AddOnlinePlayer error", "error", err)
 		return false
 	}
 	// 注意: SetNX 返回 false(玩家已在线)时,不能执行 SRem 回滚!
@@ -48,13 +50,13 @@ func AddOnlinePlayer(playerId,accountId int64, gameServerId int32) bool {
 
 // 移除一个在线玩家
 func RemoveOnlinePlayer(playerId int64, gameServerId int32) bool {
-	_,err := GetRedis().Del(context.Background(), keyOnlinePlayer(playerId)).Result()
+	_, err := GetRedis().Del(context.Background(), keyOnlinePlayer(playerId)).Result()
 	if IsRedisError(err) {
 		return false
 	}
-	_,err = GetRedis().SRem(context.Background(), keyGameServerPlayer(gameServerId), playerId).Result()
+	_, err = GetRedis().SRem(context.Background(), keyGameServerPlayer(gameServerId), playerId).Result()
 	if IsRedisError(err) {
-		logger.Error("%v", err)
+		slog.Error("RemoveOnlinePlayer error", "error", err)
 	}
 	return true
 }
@@ -62,22 +64,22 @@ func RemoveOnlinePlayer(playerId int64, gameServerId int32) bool {
 // 重置一个服务器上的在线玩家缓存
 func ResetOnlinePlayer(gameServerId int32,repairFunc func(playerId,accountId int64) error) {
 	for {
-		playerIds,err := GetRedis().SPopN(context.Background(), keyGameServerPlayer(gameServerId), 128).Result()
+		playerIds, err := GetRedis().SPopN(context.Background(), keyGameServerPlayer(gameServerId), 128).Result()
 		if IsRedisError(err) {
 			break
 		}
 		if len(playerIds) == 0 {
 			break
 		}
-		for _,v := range playerIds {
+		for _, v := range playerIds {
 			playerId := util.Atoi64(v)
-			accountId,_ := GetOnlinePlayer(playerId)
+			accountId, _ := GetOnlinePlayer(playerId)
 			if repairFunc != nil {
 				repairFunc(playerId, accountId)
 			}
 			GetRedis().Del(context.Background(), keyOnlinePlayer(playerId))
 			RemoveOnlineAccount(accountId)
-			logger.Debug("repair:%v %v %v", playerId, accountId, gameServerId)
+			slog.Debug("ResetOnlinePlayer repair", "playerId", playerId, "accountId", accountId, "gameServerId", gameServerId)
 		}
 	}
 }
@@ -91,7 +93,7 @@ func GetOnlinePlayer(playerId int64) (accountId int64, gameServerId int32) {
 	if len(accountIdAndGameServerId) == 0 {
 		return
 	}
-	ids := strings.Split(accountIdAndGameServerId,";")
+	ids := strings.Split(accountIdAndGameServerId, ";")
 	if len(ids) != 2 {
 		return
 	}
@@ -115,7 +117,7 @@ func GetOnlinePlayers(playerIds []int64) map[int64]int32 {
 	}
 	_, err := pipe.Exec(ctx)
 	if err != nil && err != redis.Nil {
-		logger.Error("GetOnlinePlayers Pipeline err:%v", err)
+		slog.Error("GetOnlinePlayers Pipeline err", "error", err)
 		// Pipeline 部分失败不影响已成功的,继续处理
 	}
 	serverMap := make(map[int64]int32, len(playerIds))

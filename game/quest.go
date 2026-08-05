@@ -1,13 +1,13 @@
 package game
 
 import (
+	"log/slog"
+	"time"
+
 	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gserver/cfg"
 	"github.com/fish-tennis/gserver/internal"
-	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
-	"log/slog"
-	"time"
 )
 
 const (
@@ -48,7 +48,7 @@ func (q *Quest) OnDataLoad() {
 	q.Quests.Range(func(k int32, questData *pb.QuestData) bool {
 		questCfg := cfg.Quests.GetCfg(questData.GetCfgId())
 		if questCfg == nil {
-			logger.Error("questCfg nil %v", questData.GetCfgId())
+			slog.Error("questCfg nil", "cfgId", questData.GetCfgId())
 			return true
 		}
 		q.GetPlayer().progressEventMapping.AddProgress(questCfg.Progress, questData)
@@ -205,13 +205,13 @@ func (q *Quest) CanFinish(questData *pb.QuestData, questCfg *pb.QuestCfg) bool {
 // 完成任务的消息回调
 // 这种格式写的函数可以自动注册客户端消息回调
 func (q *Quest) OnFinishQuestReq(req *pb.FinishQuestReq) (*pb.FinishQuestRes, error) {
-	logger.Debug("OnFinishQuestReq:%v", req)
+	slog.Debug("OnFinishQuestReq", "req", req)
 	res := &pb.FinishQuestRes{}
 	for _, questCfgId := range req.GetQuestCfgIds() {
 		if questData, ok := q.Quests.Data[questCfgId]; ok {
 			questCfg := cfg.Quests.GetCfg(questData.GetCfgId())
 			if questCfg == nil {
-				logger.Error("OnFinishQuestReq questCfg nil %v", questData.GetCfgId())
+				slog.Error("OnFinishQuestReq questCfg nil", "questCfgId", questData.GetCfgId())
 				continue
 			}
 			if q.CanFinish(questData, questCfg) {
@@ -233,7 +233,7 @@ func (q *Quest) OnFinishQuestReq(req *pb.FinishQuestReq) (*pb.FinishQuestRes, er
 				for _, nextQuestId := range questCfg.GetNextQuests() {
 					nextQuestCfg := cfg.Quests.GetCfg(nextQuestId)
 					if nextQuestCfg == nil {
-						logger.Error("nextQuestCfg nil %v", nextQuestId)
+						slog.Error("nextQuestCfg nil", "nextQuestId", nextQuestId)
 						continue
 					}
 					var checkObj any

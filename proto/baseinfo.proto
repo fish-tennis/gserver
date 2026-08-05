@@ -8,9 +8,9 @@ import "player.proto";
 
 // 玩家进游戏服成功,非客户端消息
 message PlayerEntryGameOk {
-  bool isReconnect = 1;
+  bool IsReconnect = 1;
 }
 
 message BaseInfoSync {
-  BaseInfo data = 1;
+  BaseInfo Data = 1;
 }

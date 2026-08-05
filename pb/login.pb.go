@@ -24,8 +24,8 @@ const (
 // 账号登录请求
 type LoginReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	AccountName   string                 `protobuf:"bytes,1,opt,name=accountName,proto3" json:"accountName,omitempty"`
-	Password      string                 `protobuf:"bytes,2,opt,name=password,proto3" json:"password,omitempty"`
+	AccountName   string                 `protobuf:"bytes,1,opt,name=AccountName,proto3" json:"AccountName,omitempty"`
+	Password      string                 `protobuf:"bytes,2,opt,name=Password,proto3" json:"Password,omitempty"`
 	Version       string                 `protobuf:"bytes,3,opt,name=Version,proto3" json:"Version,omitempty"` // 客户端版本号,如0.0.0.1
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -85,10 +85,10 @@ func (x *LoginReq) GetVersion() string {
 // 账号登录回复
 type LoginRes struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	AccountName   string                 `protobuf:"bytes,1,opt,name=accountName,proto3" json:"accountName,omitempty"`
-	AccountId     int64                  `protobuf:"varint,2,opt,name=accountId,proto3" json:"accountId,omitempty"`
-	LoginSession  string                 `protobuf:"bytes,3,opt,name=loginSession,proto3" json:"loginSession,omitempty"` // 账号验证成功后的缓存session
-	GameServer    *GameServerInfo        `protobuf:"bytes,4,opt,name=gameServer,proto3" json:"gameServer,omitempty"`     // 游戏服信息
+	AccountName   string                 `protobuf:"bytes,1,opt,name=AccountName,proto3" json:"AccountName,omitempty"`
+	AccountId     int64                  `protobuf:"varint,2,opt,name=AccountId,proto3" json:"AccountId,omitempty"`
+	LoginSession  string                 `protobuf:"bytes,3,opt,name=LoginSession,proto3" json:"LoginSession,omitempty"` // 账号验证成功后的缓存session
+	GameServer    *GameServerInfo        `protobuf:"bytes,4,opt,name=GameServer,proto3" json:"GameServer,omitempty"`     // 游戏服信息
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -154,8 +154,8 @@ func (x *LoginRes) GetGameServer() *GameServerInfo {
 // 注册账号
 type AccountReg struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	AccountName   string                 `protobuf:"bytes,1,opt,name=accountName,proto3" json:"accountName,omitempty"`
-	Password      string                 `protobuf:"bytes,2,opt,name=password,proto3" json:"password,omitempty"`
+	AccountName   string                 `protobuf:"bytes,1,opt,name=AccountName,proto3" json:"AccountName,omitempty"`
+	Password      string                 `protobuf:"bytes,2,opt,name=Password,proto3" json:"Password,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -207,8 +207,8 @@ func (x *AccountReg) GetPassword() string {
 // 注册账号回复
 type AccountRes struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	AccountName   string                 `protobuf:"bytes,1,opt,name=accountName,proto3" json:"accountName,omitempty"`
-	AccountId     int64                  `protobuf:"varint,2,opt,name=accountId,proto3" json:"accountId,omitempty"`
+	AccountName   string                 `protobuf:"bytes,1,opt,name=AccountName,proto3" json:"AccountName,omitempty"`
+	AccountId     int64                  `protobuf:"varint,2,opt,name=AccountId,proto3" json:"AccountId,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -260,8 +260,8 @@ func (x *AccountRes) GetAccountId() int64 {
 // 游戏服务器信息
 type GameServerInfo struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
-	ServerId         int32                  `protobuf:"varint,1,opt,name=serverId,proto3" json:"serverId,omitempty"`                // 服务器编号
-	ClientListenAddr string                 `protobuf:"bytes,2,opt,name=clientListenAddr,proto3" json:"clientListenAddr,omitempty"` // 游戏服监听客户端地址
+	ServerId         int32                  `protobuf:"varint,1,opt,name=ServerId,proto3" json:"ServerId,omitempty"`                // 服务器编号
+	ClientListenAddr string                 `protobuf:"bytes,2,opt,name=ClientListenAddr,proto3" json:"ClientListenAddr,omitempty"` // 游戏服监听客户端地址
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -313,9 +313,9 @@ func (x *GameServerInfo) GetClientListenAddr() string {
 // 玩家登录游戏服
 type PlayerEntryGameReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	AccountId     int64                  `protobuf:"varint,1,opt,name=accountId,proto3" json:"accountId,omitempty"`
-	LoginSession  string                 `protobuf:"bytes,2,opt,name=loginSession,proto3" json:"loginSession,omitempty"` // 账号验证成功后的缓存session
-	RegionId      int32                  `protobuf:"varint,3,opt,name=regionId,proto3" json:"regionId,omitempty"`        // 区服id
+	AccountId     int64                  `protobuf:"varint,1,opt,name=AccountId,proto3" json:"AccountId,omitempty"`
+	LoginSession  string                 `protobuf:"bytes,2,opt,name=LoginSession,proto3" json:"LoginSession,omitempty"` // 账号验证成功后的缓存session
+	RegionId      int32                  `protobuf:"varint,3,opt,name=RegionId,proto3" json:"RegionId,omitempty"`        // 区服id
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -374,10 +374,10 @@ func (x *PlayerEntryGameReq) GetRegionId() int32 {
 // 玩家登录游戏服回复
 type PlayerEntryGameRes struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	AccountId     int64                  `protobuf:"varint,1,opt,name=accountId,proto3" json:"accountId,omitempty"`
-	PlayerId      int64                  `protobuf:"varint,2,opt,name=playerId,proto3" json:"playerId,omitempty"`
-	RegionId      int32                  `protobuf:"varint,3,opt,name=regionId,proto3" json:"regionId,omitempty"` // 区服id
-	PlayerName    string                 `protobuf:"bytes,4,opt,name=playerName,proto3" json:"playerName,omitempty"`
+	AccountId     int64                  `protobuf:"varint,1,opt,name=AccountId,proto3" json:"AccountId,omitempty"`
+	PlayerId      int64                  `protobuf:"varint,2,opt,name=PlayerId,proto3" json:"PlayerId,omitempty"`
+	RegionId      int32                  `protobuf:"varint,3,opt,name=RegionId,proto3" json:"RegionId,omitempty"` // 区服id
+	PlayerName    string                 `protobuf:"bytes,4,opt,name=PlayerName,proto3" json:"PlayerName,omitempty"`
 	GameServerId  int32                  `protobuf:"varint,5,opt,name=GameServerId,proto3" json:"GameServerId,omitempty"` // game服Id,客户端重连时需要带上
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -589,11 +589,11 @@ func (x *PlayerReconnectGameRes) GetGameServerId() int32 {
 // 创建角色
 type CreatePlayerReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	AccountId     int64                  `protobuf:"varint,1,opt,name=accountId,proto3" json:"accountId,omitempty"`
-	LoginSession  string                 `protobuf:"bytes,2,opt,name=loginSession,proto3" json:"loginSession,omitempty"` // 账号验证成功后的缓存session
-	RegionId      int32                  `protobuf:"varint,3,opt,name=regionId,proto3" json:"regionId,omitempty"`        // 区服id
-	Name          string                 `protobuf:"bytes,4,opt,name=name,proto3" json:"name,omitempty"`                 // 玩家名
-	Gender        int32                  `protobuf:"varint,5,opt,name=gender,proto3" json:"gender,omitempty"`            // 性别
+	AccountId     int64                  `protobuf:"varint,1,opt,name=AccountId,proto3" json:"AccountId,omitempty"`
+	LoginSession  string                 `protobuf:"bytes,2,opt,name=LoginSession,proto3" json:"LoginSession,omitempty"` // 账号验证成功后的缓存session
+	RegionId      int32                  `protobuf:"varint,3,opt,name=RegionId,proto3" json:"RegionId,omitempty"`        // 区服id
+	Name          string                 `protobuf:"bytes,4,opt,name=Name,proto3" json:"Name,omitempty"`                 // 玩家名
+	Gender        int32                  `protobuf:"varint,5,opt,name=Gender,proto3" json:"Gender,omitempty"`            // 性别
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -666,9 +666,9 @@ func (x *CreatePlayerReq) GetGender() int32 {
 // 创建角色
 type CreatePlayerRes struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	AccountId     int64                  `protobuf:"varint,1,opt,name=accountId,proto3" json:"accountId,omitempty"`
-	RegionId      int32                  `protobuf:"varint,2,opt,name=regionId,proto3" json:"regionId,omitempty"` // 区服id
-	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`          // 玩家名
+	AccountId     int64                  `protobuf:"varint,1,opt,name=AccountId,proto3" json:"AccountId,omitempty"`
+	RegionId      int32                  `protobuf:"varint,2,opt,name=RegionId,proto3" json:"RegionId,omitempty"` // 区服id
+	Name          string                 `protobuf:"bytes,3,opt,name=Name,proto3" json:"Name,omitempty"`          // 玩家名
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -727,7 +727,7 @@ func (x *CreatePlayerRes) GetName() string {
 // 测试命令
 type TestCmd struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Cmd           string                 `protobuf:"bytes,1,opt,name=cmd,proto3" json:"cmd,omitempty"`
+	Cmd           string                 `protobuf:"bytes,1,opt,name=Cmd,proto3" json:"Cmd,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -769,44 +769,89 @@ func (x *TestCmd) GetCmd() string {
 	return ""
 }
 
+// 测试命令响应
+type TestRes struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Result        string                 `protobuf:"bytes,1,opt,name=Result,proto3" json:"Result,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TestRes) Reset() {
+	*x = TestRes{}
+	mi := &file_login_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TestRes) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TestRes) ProtoMessage() {}
+
+func (x *TestRes) ProtoReflect() protoreflect.Message {
+	mi := &file_login_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TestRes.ProtoReflect.Descriptor instead.
+func (*TestRes) Descriptor() ([]byte, []int) {
+	return file_login_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *TestRes) GetResult() string {
+	if x != nil {
+		return x.Result
+	}
+	return ""
+}
+
 var File_login_proto protoreflect.FileDescriptor
 
 const file_login_proto_rawDesc = "" +
 	"\n" +
 	"\vlogin.proto\x12\agserver\x1a\fplayer.proto\"b\n" +
 	"\bLoginReq\x12 \n" +
-	"\vaccountName\x18\x01 \x01(\tR\vaccountName\x12\x1a\n" +
-	"\bpassword\x18\x02 \x01(\tR\bpassword\x12\x18\n" +
+	"\vAccountName\x18\x01 \x01(\tR\vAccountName\x12\x1a\n" +
+	"\bPassword\x18\x02 \x01(\tR\bPassword\x12\x18\n" +
 	"\aVersion\x18\x03 \x01(\tR\aVersion\"\xa7\x01\n" +
 	"\bLoginRes\x12 \n" +
-	"\vaccountName\x18\x01 \x01(\tR\vaccountName\x12\x1c\n" +
-	"\taccountId\x18\x02 \x01(\x03R\taccountId\x12\"\n" +
-	"\floginSession\x18\x03 \x01(\tR\floginSession\x127\n" +
+	"\vAccountName\x18\x01 \x01(\tR\vAccountName\x12\x1c\n" +
+	"\tAccountId\x18\x02 \x01(\x03R\tAccountId\x12\"\n" +
+	"\fLoginSession\x18\x03 \x01(\tR\fLoginSession\x127\n" +
 	"\n" +
-	"gameServer\x18\x04 \x01(\v2\x17.gserver.GameServerInfoR\n" +
-	"gameServer\"J\n" +
+	"GameServer\x18\x04 \x01(\v2\x17.gserver.GameServerInfoR\n" +
+	"GameServer\"J\n" +
 	"\n" +
 	"AccountReg\x12 \n" +
-	"\vaccountName\x18\x01 \x01(\tR\vaccountName\x12\x1a\n" +
-	"\bpassword\x18\x02 \x01(\tR\bpassword\"L\n" +
+	"\vAccountName\x18\x01 \x01(\tR\vAccountName\x12\x1a\n" +
+	"\bPassword\x18\x02 \x01(\tR\bPassword\"L\n" +
 	"\n" +
 	"AccountRes\x12 \n" +
-	"\vaccountName\x18\x01 \x01(\tR\vaccountName\x12\x1c\n" +
-	"\taccountId\x18\x02 \x01(\x03R\taccountId\"X\n" +
+	"\vAccountName\x18\x01 \x01(\tR\vAccountName\x12\x1c\n" +
+	"\tAccountId\x18\x02 \x01(\x03R\tAccountId\"X\n" +
 	"\x0eGameServerInfo\x12\x1a\n" +
-	"\bserverId\x18\x01 \x01(\x05R\bserverId\x12*\n" +
-	"\x10clientListenAddr\x18\x02 \x01(\tR\x10clientListenAddr\"r\n" +
+	"\bServerId\x18\x01 \x01(\x05R\bServerId\x12*\n" +
+	"\x10ClientListenAddr\x18\x02 \x01(\tR\x10ClientListenAddr\"r\n" +
 	"\x12PlayerEntryGameReq\x12\x1c\n" +
-	"\taccountId\x18\x01 \x01(\x03R\taccountId\x12\"\n" +
-	"\floginSession\x18\x02 \x01(\tR\floginSession\x12\x1a\n" +
-	"\bregionId\x18\x03 \x01(\x05R\bregionId\"\xae\x01\n" +
+	"\tAccountId\x18\x01 \x01(\x03R\tAccountId\x12\"\n" +
+	"\fLoginSession\x18\x02 \x01(\tR\fLoginSession\x12\x1a\n" +
+	"\bRegionId\x18\x03 \x01(\x05R\bRegionId\"\xae\x01\n" +
 	"\x12PlayerEntryGameRes\x12\x1c\n" +
-	"\taccountId\x18\x01 \x01(\x03R\taccountId\x12\x1a\n" +
-	"\bplayerId\x18\x02 \x01(\x03R\bplayerId\x12\x1a\n" +
-	"\bregionId\x18\x03 \x01(\x05R\bregionId\x12\x1e\n" +
+	"\tAccountId\x18\x01 \x01(\x03R\tAccountId\x12\x1a\n" +
+	"\bPlayerId\x18\x02 \x01(\x03R\bPlayerId\x12\x1a\n" +
+	"\bRegionId\x18\x03 \x01(\x05R\bRegionId\x12\x1e\n" +
 	"\n" +
-	"playerName\x18\x04 \x01(\tR\n" +
-	"playerName\x12\"\n" +
+	"PlayerName\x18\x04 \x01(\tR\n" +
+	"PlayerName\x12\"\n" +
 	"\fGameServerId\x18\x05 \x01(\x05R\fGameServerId\"\xbc\x01\n" +
 	"\x16PlayerReconnectGameReq\x12\x1c\n" +
 	"\tAccountId\x18\x01 \x01(\x03R\tAccountId\x12\x1a\n" +
@@ -819,17 +864,19 @@ const file_login_proto_rawDesc = "" +
 	"\bPlayerId\x18\x02 \x01(\x03R\bPlayerId\x12\"\n" +
 	"\fGameServerId\x18\x03 \x01(\x05R\fGameServerId\"\x9b\x01\n" +
 	"\x0fCreatePlayerReq\x12\x1c\n" +
-	"\taccountId\x18\x01 \x01(\x03R\taccountId\x12\"\n" +
-	"\floginSession\x18\x02 \x01(\tR\floginSession\x12\x1a\n" +
-	"\bregionId\x18\x03 \x01(\x05R\bregionId\x12\x12\n" +
-	"\x04name\x18\x04 \x01(\tR\x04name\x12\x16\n" +
-	"\x06gender\x18\x05 \x01(\x05R\x06gender\"_\n" +
+	"\tAccountId\x18\x01 \x01(\x03R\tAccountId\x12\"\n" +
+	"\fLoginSession\x18\x02 \x01(\tR\fLoginSession\x12\x1a\n" +
+	"\bRegionId\x18\x03 \x01(\x05R\bRegionId\x12\x12\n" +
+	"\x04Name\x18\x04 \x01(\tR\x04Name\x12\x16\n" +
+	"\x06Gender\x18\x05 \x01(\x05R\x06Gender\"_\n" +
 	"\x0fCreatePlayerRes\x12\x1c\n" +
-	"\taccountId\x18\x01 \x01(\x03R\taccountId\x12\x1a\n" +
-	"\bregionId\x18\x02 \x01(\x05R\bregionId\x12\x12\n" +
-	"\x04name\x18\x03 \x01(\tR\x04name\"\x1b\n" +
+	"\tAccountId\x18\x01 \x01(\x03R\tAccountId\x12\x1a\n" +
+	"\bRegionId\x18\x02 \x01(\x05R\bRegionId\x12\x12\n" +
+	"\x04Name\x18\x03 \x01(\tR\x04Name\"\x1b\n" +
 	"\aTestCmd\x12\x10\n" +
-	"\x03cmd\x18\x01 \x01(\tR\x03cmdB\x06Z\x04./pbb\x06proto3"
+	"\x03Cmd\x18\x01 \x01(\tR\x03Cmd\"!\n" +
+	"\aTestRes\x12\x16\n" +
+	"\x06Result\x18\x01 \x01(\tR\x06ResultB\x06Z\x04./pbb\x06proto3"
 
 var (
 	file_login_proto_rawDescOnce sync.Once
@@ -843,7 +890,7 @@ func file_login_proto_rawDescGZIP() []byte {
 	return file_login_proto_rawDescData
 }
 
-var file_login_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
+var file_login_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_login_proto_goTypes = []any{
 	(*LoginReq)(nil),               // 0: gserver.LoginReq
 	(*LoginRes)(nil),               // 1: gserver.LoginRes
@@ -857,9 +904,10 @@ var file_login_proto_goTypes = []any{
 	(*CreatePlayerReq)(nil),        // 9: gserver.CreatePlayerReq
 	(*CreatePlayerRes)(nil),        // 10: gserver.CreatePlayerRes
 	(*TestCmd)(nil),                // 11: gserver.TestCmd
+	(*TestRes)(nil),                // 12: gserver.TestRes
 }
 var file_login_proto_depIdxs = []int32{
-	4, // 0: gserver.LoginRes.gameServer:type_name -> gserver.GameServerInfo
+	4, // 0: gserver.LoginRes.GameServer:type_name -> gserver.GameServerInfo
 	1, // [1:1] is the sub-list for method output_type
 	1, // [1:1] is the sub-list for method input_type
 	1, // [1:1] is the sub-list for extension type_name
@@ -879,7 +927,7 @@ func file_login_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_login_proto_rawDesc), len(file_login_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   12,
+			NumMessages:   13,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

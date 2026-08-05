@@ -25,15 +25,16 @@ const (
 // 玩家基础信息
 type BaseInfo struct {
 	state               protoimpl.MessageState `protogen:"open.v1"`
-	Gender              int32                  `protobuf:"varint,1,opt,name=gender,proto3" json:"gender,omitempty"`                           // 性别
-	Level               int32                  `protobuf:"varint,2,opt,name=level,proto3" json:"level,omitempty"`                             // 等级
-	Exp                 int32                  `protobuf:"varint,3,opt,name=exp,proto3" json:"exp,omitempty"`                                 // 经验值
-	TotalPay            int32                  `protobuf:"varint,4,opt,name=totalPay,proto3" json:"totalPay,omitempty"`                       // 累充总额
-	LastUpdateDate      int32                  `protobuf:"varint,5,opt,name=lastUpdateDate,proto3" json:"lastUpdateDate,omitempty"`           // 上次刷新日期,格式:yyyymmdd
-	LastLoginTimestamp  int64                  `protobuf:"varint,6,opt,name=lastLoginTimestamp,proto3" json:"lastLoginTimestamp,omitempty"`   // 最近一次登录时间戳
-	LastLogoutTimestamp int64                  `protobuf:"varint,7,opt,name=lastLogoutTimestamp,proto3" json:"lastLogoutTimestamp,omitempty"` // 最近一次退出时间戳
-	TotalOnlineSeconds  int32                  `protobuf:"varint,8,opt,name=totalOnlineSeconds,proto3" json:"totalOnlineSeconds,omitempty"`   // 总在线时长(秒)
+	Gender              int32                  `protobuf:"varint,1,opt,name=Gender,proto3" json:"Gender,omitempty"`                           // 性别
+	Level               int32                  `protobuf:"varint,2,opt,name=Level,proto3" json:"Level,omitempty"`                             // 等级
+	Exp                 int32                  `protobuf:"varint,3,opt,name=Exp,proto3" json:"Exp,omitempty"`                                 // 经验值
+	TotalPay            int32                  `protobuf:"varint,4,opt,name=TotalPay,proto3" json:"TotalPay,omitempty"`                       // 累充总额
+	LastUpdateDate      int32                  `protobuf:"varint,5,opt,name=LastUpdateDate,proto3" json:"LastUpdateDate,omitempty"`           // 上次刷新日期,格式:yyyymmdd
+	LastLoginTimestamp  int64                  `protobuf:"varint,6,opt,name=LastLoginTimestamp,proto3" json:"LastLoginTimestamp,omitempty"`   // 最近一次登录时间戳
+	LastLogoutTimestamp int64                  `protobuf:"varint,7,opt,name=LastLogoutTimestamp,proto3" json:"LastLogoutTimestamp,omitempty"` // 最近一次退出时间戳
+	TotalOnlineSeconds  int32                  `protobuf:"varint,8,opt,name=TotalOnlineSeconds,proto3" json:"TotalOnlineSeconds,omitempty"`   // 总在线时长(秒)
 	ReconnectSession    string                 `protobuf:"bytes,9,opt,name=ReconnectSession,proto3" json:"ReconnectSession,omitempty"`        // 重连验证session
+	CreateTimestamp     int64                  `protobuf:"varint,10,opt,name=CreateTimestamp,proto3" json:"CreateTimestamp,omitempty"`        // 创建角色时间戳(秒)
 	unknownFields       protoimpl.UnknownFields
 	sizeCache           protoimpl.SizeCache
 }
@@ -131,6 +132,13 @@ func (x *BaseInfo) GetReconnectSession() string {
 	return ""
 }
 
+func (x *BaseInfo) GetCreateTimestamp() int64 {
+	if x != nil {
+		return x.CreateTimestamp
+	}
+	return 0
+}
+
 // 背包模块数据
 type BagSaveData struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -195,8 +203,8 @@ func (x *BagSaveData) GetEquip() map[int64][]byte {
 // 任务模块数据
 type QuestSaveData struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Finished      map[int32][]byte       `protobuf:"bytes,1,rep,name=finished,proto3" json:"finished,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // 已完成的任务
-	Quests        map[int32][]byte       `protobuf:"bytes,2,rep,name=quests,proto3" json:"quests,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`     // 进行中的任务
+	Finished      map[int32][]byte       `protobuf:"bytes,1,rep,name=Finished,proto3" json:"Finished,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // 已完成的任务
+	Quests        map[int32][]byte       `protobuf:"bytes,2,rep,name=Quests,proto3" json:"Quests,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`     // 进行中的任务
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -248,9 +256,9 @@ func (x *QuestSaveData) GetQuests() map[int32][]byte {
 // 任务数据
 type QuestData struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	CfgId         int32                  `protobuf:"varint,1,opt,name=cfgId,proto3" json:"cfgId,omitempty"`           // 配置id
-	Progress      int32                  `protobuf:"varint,2,opt,name=progress,proto3" json:"progress,omitempty"`     // 进度
-	ActivityId    int32                  `protobuf:"varint,3,opt,name=activityId,proto3" json:"activityId,omitempty"` // 活动id,只有活动子任务才会有值
+	CfgId         int32                  `protobuf:"varint,1,opt,name=CfgId,proto3" json:"CfgId,omitempty"`           // 配置id
+	Progress      int32                  `protobuf:"varint,2,opt,name=Progress,proto3" json:"Progress,omitempty"`     // 进度
+	ActivityId    int32                  `protobuf:"varint,3,opt,name=ActivityId,proto3" json:"ActivityId,omitempty"` // 活动id,只有活动子任务才会有值
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -309,7 +317,7 @@ func (x *QuestData) GetActivityId() int32 {
 // 已完成的任务
 type FinishedQuestData struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Timestamp     int32                  `protobuf:"varint,1,opt,name=timestamp,proto3" json:"timestamp,omitempty"` // 完成时间戳(秒)
+	Timestamp     int32                  `protobuf:"varint,1,opt,name=Timestamp,proto3" json:"Timestamp,omitempty"` // 完成时间戳(秒)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -354,7 +362,7 @@ func (x *FinishedQuestData) GetTimestamp() int32 {
 // 玩家身上的公会数据
 type PlayerGuildData struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	GuildId       int64                  `protobuf:"varint,1,opt,name=guildId,proto3" json:"guildId,omitempty"` // 公会id
+	GuildId       int64                  `protobuf:"varint,1,opt,name=GuildId,proto3" json:"GuildId,omitempty"` // 公会id
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -586,10 +594,10 @@ func (x *ActivityDefaultBaseData) GetPropertiesInt32() map[string]int32 {
 // 待处理消息
 type PendingMessage struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	MessageId     int64                  `protobuf:"varint,1,opt,name=messageId,proto3" json:"messageId,omitempty"`         // 唯一id
-	PacketCommand int32                  `protobuf:"varint,2,opt,name=packetCommand,proto3" json:"packetCommand,omitempty"` // 消息号
-	PacketData    *anypb.Any             `protobuf:"bytes,3,opt,name=packetData,proto3" json:"packetData,omitempty"`        // 消息内容
-	Timestamp     int32                  `protobuf:"varint,4,opt,name=timestamp,proto3" json:"timestamp,omitempty"`         // 时间戳
+	MessageId     int64                  `protobuf:"varint,1,opt,name=MessageId,proto3" json:"MessageId,omitempty"`         // 唯一id
+	PacketCommand int32                  `protobuf:"varint,2,opt,name=PacketCommand,proto3" json:"PacketCommand,omitempty"` // 消息号
+	PacketData    *anypb.Any             `protobuf:"bytes,3,opt,name=PacketData,proto3" json:"PacketData,omitempty"`        // 消息内容
+	Timestamp     int32                  `protobuf:"varint,4,opt,name=Timestamp,proto3" json:"Timestamp,omitempty"`         // 时间戳
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -717,17 +725,19 @@ var File_player_proto protoreflect.FileDescriptor
 
 const file_player_proto_rawDesc = "" +
 	"\n" +
-	"\fplayer.proto\x12\agserver\x1a\x19google/protobuf/any.proto\"\xcc\x02\n" +
+	"\fplayer.proto\x12\agserver\x1a\x19google/protobuf/any.proto\"\xf6\x02\n" +
 	"\bBaseInfo\x12\x16\n" +
-	"\x06gender\x18\x01 \x01(\x05R\x06gender\x12\x14\n" +
-	"\x05level\x18\x02 \x01(\x05R\x05level\x12\x10\n" +
-	"\x03exp\x18\x03 \x01(\x05R\x03exp\x12\x1a\n" +
-	"\btotalPay\x18\x04 \x01(\x05R\btotalPay\x12&\n" +
-	"\x0elastUpdateDate\x18\x05 \x01(\x05R\x0elastUpdateDate\x12.\n" +
-	"\x12lastLoginTimestamp\x18\x06 \x01(\x03R\x12lastLoginTimestamp\x120\n" +
-	"\x13lastLogoutTimestamp\x18\a \x01(\x03R\x13lastLogoutTimestamp\x12.\n" +
-	"\x12totalOnlineSeconds\x18\b \x01(\x05R\x12totalOnlineSeconds\x12*\n" +
-	"\x10ReconnectSession\x18\t \x01(\tR\x10ReconnectSession\"\x84\x03\n" +
+	"\x06Gender\x18\x01 \x01(\x05R\x06Gender\x12\x14\n" +
+	"\x05Level\x18\x02 \x01(\x05R\x05Level\x12\x10\n" +
+	"\x03Exp\x18\x03 \x01(\x05R\x03Exp\x12\x1a\n" +
+	"\bTotalPay\x18\x04 \x01(\x05R\bTotalPay\x12&\n" +
+	"\x0eLastUpdateDate\x18\x05 \x01(\x05R\x0eLastUpdateDate\x12.\n" +
+	"\x12LastLoginTimestamp\x18\x06 \x01(\x03R\x12LastLoginTimestamp\x120\n" +
+	"\x13LastLogoutTimestamp\x18\a \x01(\x03R\x13LastLogoutTimestamp\x12.\n" +
+	"\x12TotalOnlineSeconds\x18\b \x01(\x05R\x12TotalOnlineSeconds\x12*\n" +
+	"\x10ReconnectSession\x18\t \x01(\tR\x10ReconnectSession\x12(\n" +
+	"\x0fCreateTimestamp\x18\n" +
+	" \x01(\x03R\x0fCreateTimestamp\"\x84\x03\n" +
 	"\vBagSaveData\x12A\n" +
 	"\tCountItem\x18\x01 \x03(\v2#.gserver.BagSaveData.CountItemEntryR\tCountItem\x12D\n" +
 	"\n" +
@@ -745,8 +755,8 @@ const file_player_proto_rawDesc = "" +
 	"\x03key\x18\x01 \x01(\x03R\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\fR\x05value:\x028\x01\"\x85\x02\n" +
 	"\rQuestSaveData\x12@\n" +
-	"\bfinished\x18\x01 \x03(\v2$.gserver.QuestSaveData.FinishedEntryR\bfinished\x12:\n" +
-	"\x06quests\x18\x02 \x03(\v2\".gserver.QuestSaveData.QuestsEntryR\x06quests\x1a;\n" +
+	"\bFinished\x18\x01 \x03(\v2$.gserver.QuestSaveData.FinishedEntryR\bFinished\x12:\n" +
+	"\x06Quests\x18\x02 \x03(\v2\".gserver.QuestSaveData.QuestsEntryR\x06Quests\x1a;\n" +
 	"\rFinishedEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\x05R\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\fR\x05value:\x028\x01\x1a9\n" +
@@ -754,15 +764,15 @@ const file_player_proto_rawDesc = "" +
 	"\x03key\x18\x01 \x01(\x05R\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\fR\x05value:\x028\x01\"]\n" +
 	"\tQuestData\x12\x14\n" +
-	"\x05cfgId\x18\x01 \x01(\x05R\x05cfgId\x12\x1a\n" +
-	"\bprogress\x18\x02 \x01(\x05R\bprogress\x12\x1e\n" +
+	"\x05CfgId\x18\x01 \x01(\x05R\x05CfgId\x12\x1a\n" +
+	"\bProgress\x18\x02 \x01(\x05R\bProgress\x12\x1e\n" +
 	"\n" +
-	"activityId\x18\x03 \x01(\x05R\n" +
-	"activityId\"1\n" +
+	"ActivityId\x18\x03 \x01(\x05R\n" +
+	"ActivityId\"1\n" +
 	"\x11FinishedQuestData\x12\x1c\n" +
-	"\ttimestamp\x18\x01 \x01(\x05R\ttimestamp\"+\n" +
+	"\tTimestamp\x18\x01 \x01(\x05R\tTimestamp\"+\n" +
 	"\x0fPlayerGuildData\x12\x18\n" +
-	"\aguildId\x18\x01 \x01(\x03R\aguildId\"\xba\x05\n" +
+	"\aGuildId\x18\x01 \x01(\x03R\aGuildId\"\xba\x05\n" +
 	"\n" +
 	"PlayerData\x12\x0f\n" +
 	"\x03_id\x18\x01 \x01(\x03R\x02Id\x12\x12\n" +
@@ -796,12 +806,12 @@ const file_player_proto_rawDesc = "" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\x05R\x05value:\x028\x01\"\xa8\x01\n" +
 	"\x0ePendingMessage\x12\x1c\n" +
-	"\tmessageId\x18\x01 \x01(\x03R\tmessageId\x12$\n" +
-	"\rpacketCommand\x18\x02 \x01(\x05R\rpacketCommand\x124\n" +
+	"\tMessageId\x18\x01 \x01(\x03R\tMessageId\x12$\n" +
+	"\rPacketCommand\x18\x02 \x01(\x05R\rPacketCommand\x124\n" +
 	"\n" +
-	"packetData\x18\x03 \x01(\v2\x14.google.protobuf.AnyR\n" +
-	"packetData\x12\x1c\n" +
-	"\ttimestamp\x18\x04 \x01(\x05R\ttimestamp\"Z\n" +
+	"PacketData\x18\x03 \x01(\v2\x14.google.protobuf.AnyR\n" +
+	"PacketData\x12\x1c\n" +
+	"\tTimestamp\x18\x04 \x01(\x05R\tTimestamp\"Z\n" +
 	"\x0eExchangeRecord\x12\x14\n" +
 	"\x05CfgId\x18\x01 \x01(\x05R\x05CfgId\x12\x14\n" +
 	"\x05Count\x18\x02 \x01(\x05R\x05Count\x12\x1c\n" +
@@ -846,8 +856,8 @@ var file_player_proto_depIdxs = []int32{
 	10, // 0: gserver.BagSaveData.CountItem:type_name -> gserver.BagSaveData.CountItemEntry
 	11, // 1: gserver.BagSaveData.UniqueItem:type_name -> gserver.BagSaveData.UniqueItemEntry
 	12, // 2: gserver.BagSaveData.Equip:type_name -> gserver.BagSaveData.EquipEntry
-	13, // 3: gserver.QuestSaveData.finished:type_name -> gserver.QuestSaveData.FinishedEntry
-	14, // 4: gserver.QuestSaveData.quests:type_name -> gserver.QuestSaveData.QuestsEntry
+	13, // 3: gserver.QuestSaveData.Finished:type_name -> gserver.QuestSaveData.FinishedEntry
+	14, // 4: gserver.QuestSaveData.Quests:type_name -> gserver.QuestSaveData.QuestsEntry
 	0,  // 5: gserver.PlayerData.BaseInfo:type_name -> gserver.BaseInfo
 	1,  // 6: gserver.PlayerData.Bags:type_name -> gserver.BagSaveData
 	2,  // 7: gserver.PlayerData.Quest:type_name -> gserver.QuestSaveData
@@ -856,7 +866,7 @@ var file_player_proto_depIdxs = []int32{
 	16, // 10: gserver.PlayerData.Activities:type_name -> gserver.PlayerData.ActivitiesEntry
 	17, // 11: gserver.PlayerData.Exchange:type_name -> gserver.PlayerData.ExchangeEntry
 	18, // 12: gserver.ActivityDefaultBaseData.PropertiesInt32:type_name -> gserver.ActivityDefaultBaseData.PropertiesInt32Entry
-	19, // 13: gserver.PendingMessage.packetData:type_name -> google.protobuf.Any
+	19, // 13: gserver.PendingMessage.PacketData:type_name -> google.protobuf.Any
 	14, // [14:14] is the sub-list for method output_type
 	14, // [14:14] is the sub-list for method input_type
 	14, // [14:14] is the sub-list for extension type_name

@@ -1,11 +1,12 @@
 package game
 
 import (
+	"log/slog"
+	"math"
+
 	"github.com/fish-tennis/gentity"
-	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 	"google.golang.org/protobuf/types/known/anypb"
-	"math"
 )
 
 // 有数量的容器(如常见的道具背包,每个格子只需要记录一个配置id和数量即可)
@@ -50,13 +51,13 @@ func (b *CountContainer) AddElem(arg *pb.AddElemArg, containerUpdate *pb.ElemCon
 		}
 	} else {
 		if len(b.Data) >= int(b.GetCapacity()) {
-			logger.Debug("BagFull cfgId:%v addCount:%v", arg.GetCfgId(), addCount)
+			slog.Debug("CountContainer.AddElem: bag full", "cfgId", arg.GetCfgId(), "addCount", addCount)
 			return 0
 		}
 		curCount = addCount
 	}
 	b.Set(arg.GetCfgId(), curCount)
-	logger.Debug("AddElem cfgId:%v curCount:%v addCount:%v", arg.GetCfgId(), curCount, addCount)
+	slog.Debug("CountContainer.AddElem", "cfgId", arg.GetCfgId(), "curCount", curCount, "addCount", addCount)
 	if containerUpdate != nil && addCount > 0 {
 		itemOp := &pb.ElemOp{
 			ContainerType: b.containerType,
@@ -83,11 +84,11 @@ func (b *CountContainer) DelElem(arg *pb.DelElemArg, bagUpdate *pb.ElemContainer
 	realDelCount := delCount
 	if delCount >= curCount {
 		b.Delete(arg.GetCfgId())
-		logger.Debug("DelElem cfgId:%v delCount:%v/%v", arg.GetCfgId(), curCount, delCount)
+		slog.Debug("CountContainer.DelElem", "cfgId", arg.GetCfgId(), "delCount", delCount, "curCount", curCount)
 		realDelCount = curCount
 	} else {
 		b.Set(arg.GetCfgId(), curCount-delCount)
-		logger.Debug("DelElem cfgId:%v delCount:%v", arg.GetCfgId(), delCount)
+		slog.Debug("CountContainer.DelElem", "cfgId", arg.GetCfgId(), "delCount", delCount)
 	}
 	if bagUpdate != nil {
 		itemOp := &pb.ElemOp{

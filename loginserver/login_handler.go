@@ -1,20 +1,36 @@
 package loginserver
 
 import (
+	"log/slog"
+	"math/rand"
+
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
 	"github.com/fish-tennis/gserver/db"
 	"github.com/fish-tennis/gserver/internal"
-	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/network"
 	"github.com/fish-tennis/gserver/pb"
-	"math/rand"
 )
 
 // 客户端账号登录
+// 含DB查询(MongoDB账号查询 + Redis session),投递到DB协程池异步执行,避免阻塞收包goroutine
 func onLoginReq(connection Connection, packet Packet) {
-	logger.Debug("onLoginReq:%v", packet.Message())
 	req := packet.Message().(*pb.LoginReq)
+	accountName := req.GetAccountName()
+	if !internal.SubmitDbTaskByName(accountName, func() {
+		processLoginReq(connection, packet, req)
+	}) {
+		// 协程池队列满,返回TryLater让客户端延迟重试
+		network.SendPacketAdaptWithError(connection, packet, &pb.LoginRes{
+			AccountName: accountName,
+		}, int32(pb.ErrorCode_ErrorCode_TryLater))
+		slog.Warn("DbWorkerPool full for onLoginReq", "accountName", accountName)
+	}
+}
+
+// processLoginReq 登录请求的实际处理逻辑,在DB协程池中执行
+func processLoginReq(connection Connection, packet Packet, req *pb.LoginReq) {
+	slog.Debug("onLoginReq", "message", req)
 	var errorCode pb.ErrorCode
 	loginRes := &pb.LoginRes{
 		AccountName: req.GetAccountName(),
@@ -22,8 +38,13 @@ func onLoginReq(connection Connection, packet Packet) {
 	account := &pb.Account{}
 	defer func() {
 		network.SendPacketAdaptWithError(connection, packet, loginRes, int32(errorCode))
-		logger.Debug("%v(%v) -> %v err:%v", loginRes.AccountName, account.GetXId(), loginRes.GameServer, errorCode)
+		slog.Debug("loginRes", "accountName", loginRes.AccountName, "accountId", account.GetXId(), "gameServer", loginRes.GameServer, "error", errorCode)
 	}()
+	// DB协程池中执行,connection跨协程:连接已断开则直接返回,避免无意义的DB查询
+	if !connection.IsConnected() {
+		slog.Debug("processLoginReq connection closed", "accountName", req.GetAccountName())
+		return
+	}
 	err := _loginServer.getAccountData(req.GetAccountName(), account)
 	if err != nil {
 		errorCode = pb.ErrorCode_ErrorCode_DbErr
@@ -32,6 +53,8 @@ func onLoginReq(connection Connection, packet Packet) {
 		if account.XId == 0 {
 			errorCode = pb.ErrorCode_ErrorCode_NotReg
 			return
+			// 密码安全说明:客户端在传输前已完成加密(如RSA+AES混合加密),传到服务器的并非明文
+			// 服务器存储和比较的都是加密后的值,因此这里用 != 直接比较是安全的
 		} else if req.GetPassword() != account.GetPassword() {
 			errorCode = pb.ErrorCode_ErrorCode_PasswordError
 			return
@@ -39,27 +62,34 @@ func onLoginReq(connection Connection, packet Packet) {
 	}
 	loginRes.AccountId = account.XId
 	loginRes.LoginSession = cache.NewLoginSession(account)
+	if loginRes.LoginSession == "" {
+		errorCode = pb.ErrorCode_ErrorCode_DbErr
+		return
+	}
 	onlinePlayerId, gameServerId := cache.GetOnlineAccount(account.GetXId())
 	if onlinePlayerId > 0 {
 		// 如果该账号还在游戏中,则需要先将其清理下线
-		logger.Error("exist online account:%v playerId:%v gameServerId:%v",
-			account.GetXId(), onlinePlayerId, gameServerId)
+		slog.Error("exist online account", "accountId", account.GetXId(), "playerId", onlinePlayerId, "gameServerId", gameServerId)
 		if gameServerId > 0 {
-			//// 有可能那台游戏服宕机了,就直接清理缓存,防止"卡号"
-			//if _loginServer.GetServerList().GetServerInfo(gameServerId) == nil {
-			//	cache.RemoveOnlinePlayer(onlinePlayerId, gameServerId)
-			//	cache.RemoveOnlineAccount(account.GetId())
-			//	LogError("RemoveOnlinePlayer account:%v playerId:%v gameServerId:%v",
-			//		account.GetId(), onlinePlayerId, gameServerId)
-			//}
-			cmd := network.GetCommandByProto(new(pb.KickPlayerReq))
-			internal.GetServerList().Send(gameServerId, PacketCommand(cmd), &pb.KickPlayerReq{
-				AccountId: account.GetXId(),
-				PlayerId:  onlinePlayerId,
-			})
+			if _loginServer.GetServerList().GetServerInfo(gameServerId) == nil {
+				// 目标游戏服已宕机(不在服务器列表中),直接清理 Redis 缓存,防止玩家永久"卡号"
+				cache.RemoveOnlinePlayer(onlinePlayerId, gameServerId)
+				cache.RemoveOnlineAccount(account.GetXId())
+				slog.Error("RemoveOnlinePlayer for crashed server", "accountId", account.GetXId(), "playerId", onlinePlayerId, "gameServerId", gameServerId)
+			} else {
+				// 游戏服在线,异步通知踢人
+				// 不能用同步 Rpc:此处运行在 gate 连接的收包协程中,Rpc 会阻塞整个收包协程,
+				// 导致同一网关上所有其他玩家的消息投递被阻塞
+				// 踢人完成后客户端通过 PlayerEntryGameReq 登录,若踢人尚未完成则 AddOnlineAccount 失败返回 TryLater,客户端重试即可
+				cmd := network.GetCommandByProto(new(pb.KickPlayerReq))
+				internal.GetServerList().Send(gameServerId, PacketCommand(cmd), &pb.KickPlayerReq{
+					AccountId: account.GetXId(),
+					PlayerId:  onlinePlayerId,
+				})
+			}
 		}
 	}
-	// 分配一个游戏服给客户端连接
+	// 没有在线记录或目标服不可达,随机分配一个游戏服
 	gameServerInfo := selectGameServer(account)
 	if gameServerInfo == nil {
 		errorCode = pb.ErrorCode_ErrorCode_TryLater
@@ -84,21 +114,41 @@ func selectGameServer(account *pb.Account) *pb.ServerInfo {
 }
 
 // 注册账号
+// 含DB操作(MongoDB KV自增ID + Insert),投递到DB协程池异步执行,避免阻塞收包goroutine
 func onAccountReg(connection Connection, packet Packet) {
-	logger.Debug("onAccountReg:%v", packet.Message())
-	var errorCode pb.ErrorCode
 	req := packet.Message().(*pb.AccountReg)
+	accountName := req.GetAccountName()
+	if !internal.SubmitDbTaskByName(accountName, func() {
+		processAccountReg(connection, packet, req)
+	}) {
+		// 协程池队列满,返回TryLater让客户端延迟重试
+		network.SendPacketAdaptWithError(connection, packet, &pb.AccountRes{
+			AccountName: accountName,
+		}, int32(pb.ErrorCode_ErrorCode_TryLater))
+		slog.Warn("DbWorkerPool full for onAccountReg", "accountName", accountName)
+	}
+}
+
+// processAccountReg 注册账号的实际处理逻辑,在DB协程池中执行
+func processAccountReg(connection Connection, packet Packet, req *pb.AccountReg) {
+	slog.Debug("onAccountReg", "message", req)
+	var errorCode pb.ErrorCode
 	res := &pb.AccountRes{
 		AccountName: req.GetAccountName(),
 	}
 	defer func() {
 		network.SendPacketAdaptWithError(connection, packet, res, int32(errorCode))
 	}()
+	// DB协程池中执行,connection跨协程:连接已断开则直接返回,避免无意义的DB操作
+	if !connection.IsConnected() {
+		slog.Debug("processAccountReg connection closed", "accountName", req.GetAccountName())
+		return
+	}
 	result := ""
 	newAccountIdValue, err := db.GetKvDb().Inc(db.AccountIdKeyName, int64(1), true)
 	if err != nil {
 		errorCode = pb.ErrorCode_ErrorCode_DbErr
-		logger.Error("onAccountReg err:%v", err)
+		slog.Error("onAccountReg error", "error", err)
 		return
 	}
 	var newAccountId int64
@@ -111,18 +161,19 @@ func onAccountReg(connection Connection, packet Packet) {
 		newAccountId = int64(idVal)
 	default:
 		errorCode = pb.ErrorCode_ErrorCode_DbErr
-		logger.Error("onAccountReg invalid accountId type:%T val:%v", newAccountIdValue, newAccountIdValue)
+		slog.Error("onAccountReg invalid accountId type", "type", newAccountIdValue, "val", newAccountIdValue)
 		return
 	}
 	account := &pb.Account{
-		XId:      newAccountId,
-		Name:     req.GetAccountName(),
+		XId:  newAccountId,
+		Name: req.GetAccountName(),
+		// 存储的是客户端加密后的值,非明文密码(加密由客户端负责)
 		Password: req.GetPassword(),
 	}
 	accountMapData := map[string]any{
 		db.UniqueIdName: account.XId, // mongodb _id特殊处理
 		"Name":          account.Name,
-		"Password":      account.Password,
+		"Password":      account.Password, // 客户端加密后的值,非明文
 	}
 	err, isDuplicateKey := _loginServer.GetAccountDb().InsertEntity(account.XId, accountMapData)
 	if err != nil {
@@ -134,7 +185,7 @@ func onAccountReg(connection Connection, packet Packet) {
 			result = "DbError"
 			errorCode = pb.ErrorCode_ErrorCode_DbErr
 		}
-		logger.Error("onAccountReg account:%v result:%v err:%v", account.Name, result, err.Error())
+		slog.Error("onAccountReg error", "account", account.Name, "result", result, "error", err.Error())
 		return
 	}
 	res.AccountId = account.XId

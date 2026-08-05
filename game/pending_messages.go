@@ -1,12 +1,13 @@
 package game
 
 import (
+	"log/slog"
+
 	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gentity/util"
 	"github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/db"
 	"github.com/fish-tennis/gserver/internal"
-	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 )
 
@@ -53,19 +54,19 @@ func (this *PendingMessages) TriggerPlayerEntryGame(event *internal.EventPlayerE
 		req := this.Messages[msgId]
 		message, err := req.PacketData.UnmarshalNew()
 		if err != nil {
-			logger.Error("UnmarshalNew %v err:%v", this.GetPlayerId(), err)
+			slog.Error("UnmarshalNew error", "playerId", this.GetPlayerId(), "error", err)
 			continue
 		}
 		this.GetPlayer().processMessage(gnet.NewProtoPacket(gnet.PacketCommand(req.PacketCommand), message))
 		// 处理过的消息,删除内存和数据库
 		delete(this.Messages, msgId)
 		db.GetPlayerDb().DeleteComponentField(this.GetPlayerId(), this.GetName(), util.Itoa(req.MessageId))
-		logger.Debug("%v delete pending message:%v", this.GetPlayerId(), req.MessageId)
+		slog.Debug("delete pending message", "playerId", this.GetPlayerId(), "messageId", req.MessageId)
 	}
 }
 
 // 删除1个待处理消息(线程安全)
 func DeletePendingMessage(playerId, messageId int64) {
 	db.GetPlayerDb().DeleteComponentField(playerId, ComponentNamePendingMessages, util.Itoa(messageId))
-	logger.Debug("%v delete pending message:%v", playerId, messageId)
+	slog.Debug("delete pending message", "playerId", playerId, "messageId", messageId)
 }

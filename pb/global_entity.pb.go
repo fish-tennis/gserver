@@ -24,9 +24,9 @@ const (
 // 进程统计信息
 type ProcessStatInfo struct {
 	state                 protoimpl.MessageState `protogen:"open.v1"`
-	LastStartupTimestamp  int64                  `protobuf:"varint,1,opt,name=lastStartupTimestamp,proto3" json:"lastStartupTimestamp,omitempty"`   // 最近一次进程启动时间戳
-	LastShutdownTimestamp int64                  `protobuf:"varint,2,opt,name=lastShutdownTimestamp,proto3" json:"lastShutdownTimestamp,omitempty"` // 最近一次进程关闭时间戳
-	LastUpdateDate        int32                  `protobuf:"varint,3,opt,name=lastUpdateDate,proto3" json:"lastUpdateDate,omitempty"`               // 上次刷新日期,格式:yyyymmdd
+	LastStartupTimestamp  int64                  `protobuf:"varint,1,opt,name=LastStartupTimestamp,proto3" json:"LastStartupTimestamp,omitempty"`   // 最近一次进程启动时间戳
+	LastShutdownTimestamp int64                  `protobuf:"varint,2,opt,name=LastShutdownTimestamp,proto3" json:"LastShutdownTimestamp,omitempty"` // 最近一次进程关闭时间戳
+	LastUpdateDate        int32                  `protobuf:"varint,3,opt,name=LastUpdateDate,proto3" json:"LastUpdateDate,omitempty"`               // 上次刷新日期,格式:yyyymmdd
 	unknownFields         protoimpl.UnknownFields
 	sizeCache             protoimpl.SizeCache
 }
@@ -86,8 +86,8 @@ func (x *ProcessStatInfo) GetLastUpdateDate() int32 {
 // 用于一次性把数据加载进来
 type GlobalEntityData struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
-	Key             string                 `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
-	ProcessStatInfo *ProcessStatInfo       `protobuf:"bytes,2,opt,name=processStatInfo,proto3" json:"processStatInfo,omitempty"`
+	Key             string                 `protobuf:"bytes,1,opt,name=Key,proto3" json:"Key,omitempty"`
+	ProcessStatInfo *ProcessStatInfo       `protobuf:"bytes,2,opt,name=ProcessStatInfo,proto3" json:"ProcessStatInfo,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -138,7 +138,7 @@ func (x *GlobalEntityData) GetProcessStatInfo() *ProcessStatInfo {
 
 type StartupReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Timestamp     int64                  `protobuf:"varint,1,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	Timestamp     int64                  `protobuf:"varint,1,opt,name=Timestamp,proto3" json:"Timestamp,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -182,7 +182,7 @@ func (x *StartupReq) GetTimestamp() int64 {
 
 type ShutdownReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Timestamp     int64                  `protobuf:"varint,1,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	Timestamp     int64                  `protobuf:"varint,1,opt,name=Timestamp,proto3" json:"Timestamp,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -230,17 +230,17 @@ const file_global_entity_proto_rawDesc = "" +
 	"\n" +
 	"\x13global_entity.proto\x12\agserver\"\xa3\x01\n" +
 	"\x0fProcessStatInfo\x122\n" +
-	"\x14lastStartupTimestamp\x18\x01 \x01(\x03R\x14lastStartupTimestamp\x124\n" +
-	"\x15lastShutdownTimestamp\x18\x02 \x01(\x03R\x15lastShutdownTimestamp\x12&\n" +
-	"\x0elastUpdateDate\x18\x03 \x01(\x05R\x0elastUpdateDate\"h\n" +
+	"\x14LastStartupTimestamp\x18\x01 \x01(\x03R\x14LastStartupTimestamp\x124\n" +
+	"\x15LastShutdownTimestamp\x18\x02 \x01(\x03R\x15LastShutdownTimestamp\x12&\n" +
+	"\x0eLastUpdateDate\x18\x03 \x01(\x05R\x0eLastUpdateDate\"h\n" +
 	"\x10GlobalEntityData\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12B\n" +
-	"\x0fprocessStatInfo\x18\x02 \x01(\v2\x18.gserver.ProcessStatInfoR\x0fprocessStatInfo\"*\n" +
+	"\x03Key\x18\x01 \x01(\tR\x03Key\x12B\n" +
+	"\x0fProcessStatInfo\x18\x02 \x01(\v2\x18.gserver.ProcessStatInfoR\x0fProcessStatInfo\"*\n" +
 	"\n" +
 	"StartupReq\x12\x1c\n" +
-	"\ttimestamp\x18\x01 \x01(\x03R\ttimestamp\"+\n" +
+	"\tTimestamp\x18\x01 \x01(\x03R\tTimestamp\"+\n" +
 	"\vShutdownReq\x12\x1c\n" +
-	"\ttimestamp\x18\x01 \x01(\x03R\ttimestampB\x06Z\x04./pbb\x06proto3"
+	"\tTimestamp\x18\x01 \x01(\x03R\tTimestampB\x06Z\x04./pbb\x06proto3"
 
 var (
 	file_global_entity_proto_rawDescOnce sync.Once
@@ -262,7 +262,7 @@ var file_global_entity_proto_goTypes = []any{
 	(*ShutdownReq)(nil),      // 3: gserver.ShutdownReq
 }
 var file_global_entity_proto_depIdxs = []int32{
-	0, // 0: gserver.GlobalEntityData.processStatInfo:type_name -> gserver.ProcessStatInfo
+	0, // 0: gserver.GlobalEntityData.ProcessStatInfo:type_name -> gserver.ProcessStatInfo
 	1, // [1:1] is the sub-list for method output_type
 	1, // [1:1] is the sub-list for method input_type
 	1, // [1:1] is the sub-list for extension type_name

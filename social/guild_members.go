@@ -1,8 +1,9 @@
 package social
 
 import (
+	"log/slog"
+
 	"github.com/fish-tennis/gentity"
-	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 )
 
@@ -40,11 +41,11 @@ func (this *GuildMembers) Get(playerId int64) *pb.GuildMemberData {
 func (this *GuildMembers) Add(member *pb.GuildMemberData) {
 	this.Set(member.Id, member)
 	this.GetGuild().GetBaseInfo().SetMemberCount(int32(len(this.Data)))
-	logger.Debug("Add member:%v", member)
+	slog.Debug("Add member", "member", member)
 }
 
 func (this *GuildMembers) Remove(playerId int64) {
 	this.Delete(playerId)
 	this.GetGuild().GetBaseInfo().SetMemberCount(int32(len(this.Data)))
-	logger.Debug("Remove member:%v", playerId)
+	slog.Debug("Remove member", "playerId", playerId)
 }

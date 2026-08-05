@@ -8,24 +8,36 @@ package gserver;
 
 // 路由转发相关proto
 
-// 路由转发给玩家的消息
-// server -> otherserver -> player
+// [其他服或其他协程]发给[game服]再路由转发给玩家的消息
+// otherserver -> game -> player
 message RoutePlayerMessage {
-  string error = 1; // 错误码
-  int64 toPlayerId = 2; // 玩家id
-  int32 packetCommand = 3; // 消息号
-  bool directSendClient = 4; // 是否直接转发给客户端
-  int64 pendingMessageId = 5; // 待处理消息id
-  google.protobuf.Any packetData = 6; // 转发的消息
+  string Error = 1; // 错误码
+  int64 ToPlayerId = 2; // 玩家id
+  int32 PacketCommand = 3; // 消息号
+  bool DirectSendClient = 4; // 是否直接转发给客户端
+  int64 PendingMessageId = 5; // 待处理消息id
+  google.protobuf.Any PacketData = 6; // 转发的消息
 }
 
-// 路由转发玩家的公会请求消息
-// server -> otherserver -> guild
+// [game服]发给[其他服或其他协程]再路由到玩家所在的公会请求消息
+// game -> otherserver -> guild
 message GuildRoutePlayerMessageReq {
-  int64 fromPlayerId = 1; // 玩家id
-  int64 fromGuildId = 2;  // 玩家公会id
-  int32 fromServerId = 3; // 玩家当前所在服务器id
-  string fromPlayerName = 4; // 玩家名
-  int32 packetCommand = 5; // 消息号
-  google.protobuf.Any packetData = 6; // 消息内容
+  int64 FromPlayerId = 1; // 玩家id
+  int64 FromGuildId = 2;  // 玩家公会id
+  int32 FromServerId = 3; // 玩家当前所在服务器id
+  string FromPlayerName = 4; // 玩家名
+  int32 PacketCommand = 5; // 消息号
+  google.protobuf.Any PacketData = 6; // 消息内容
+}
+
+// [game服]发给[其他服]的玩家请求消息
+// game -> otherserver(如fight)
+message RoutePlayerMessageReq {
+  int64 FromPlayerId = 1; // 玩家id
+  int64 FromGuildId = 2;  // 玩家公会id
+  int32 FromServerId = 3; // 玩家当前所在服务器id
+  string FromPlayerName = 4; // 玩家名
+  int32 PacketCommand = 5; // 消息号
+  google.protobuf.Any PacketData = 6; // 消息内容
+  int64 TargetEntityId = 7; // 需要路由到的目标实体Id(如公会id,场景id等)
 }

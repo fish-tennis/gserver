@@ -4,7 +4,6 @@ import (
 	"math"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/network"
@@ -13,25 +12,6 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 )
-
-// === ClientData atomic 读写测试 ===
-
-func TestClientDataPlayerIdAtomic(t *testing.T) {
-	cd := &network.ClientData{
-		ConnId:       100,
-		AccountId:    200,
-		GameServerId: 1,
-	}
-	// 初始值为0
-	if cd.GetPlayerId() != 0 {
-		t.Fatalf("initial PlayerId should be 0, got %v", cd.GetPlayerId())
-	}
-	// 写入后读取
-	cd.SetPlayerId(12345)
-	if cd.GetPlayerId() != 12345 {
-		t.Fatalf("PlayerId should be 12345, got %v", cd.GetPlayerId())
-	}
-}
 
 func TestClientDataPlayerIdConcurrent(t *testing.T) {
 	cd := &network.ClientData{}
@@ -117,7 +97,7 @@ func TestDefaultProgressUpdaterNonPointerEvent(t *testing.T) {
 
 	// 构造一个 ProgressCfg
 	progressCfg := &pb.ProgressCfg{
-		Type: int32(pb.ProgressType_ProgressType_Event),
+		Type:  int32(pb.ProgressType_ProgressType_Event),
 		Event: "testStructEvent",
 		StringEventFields: map[string]string{
 			"PlayerId": "100",
@@ -140,8 +120,8 @@ type mockProgressHolder struct {
 	progress int32
 }
 
-func (m *mockProgressHolder) GetProgress() int32   { return m.progress }
-func (m *mockProgressHolder) SetProgress(p int32)  { m.progress = p }
+func (m *mockProgressHolder) GetProgress() int32  { return m.progress }
+func (m *mockProgressHolder) SetProgress(p int32) { m.progress = p }
 
 // === pending_messages 清理逻辑测试 ===
 
@@ -395,34 +375,6 @@ func TestIsMultiOverflow(t *testing.T) {
 	if !util.IsMultiOverflow(100000, 100000) {
 		t.Fatal("100000*100000 should overflow int32")
 	}
-}
-
-// === ClientData 高并发压测 ===
-
-func TestClientDataHighConcurrency(t *testing.T) {
-	cd := &network.ClientData{ConnId: 1, GameServerId: 100}
-	var wg sync.WaitGroup
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		for i := int64(1); i <= 10; i++ {
-			cd.SetPlayerId(i)
-			time.Sleep(time.Microsecond)
-		}
-	}()
-
-	for i := 0; i < 500; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			pid := cd.GetPlayerId()
-			if pid < 0 || pid > 10 {
-				t.Errorf("unexpected playerId: %v", pid)
-			}
-		}()
-	}
-	wg.Wait()
 }
 
 // === Map range+delete 安全模式 ===

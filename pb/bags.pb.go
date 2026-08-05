@@ -179,7 +179,7 @@ type ElemOp struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ContainerType ContainerType          `protobuf:"varint,1,opt,name=ContainerType,proto3,enum=gserver.ContainerType" json:"ContainerType,omitempty"`
 	OpType        ElemOpType             `protobuf:"varint,2,opt,name=OpType,proto3,enum=gserver.ElemOpType" json:"OpType,omitempty"`
-	ElemData      *anypb.Any             `protobuf:"bytes,3,opt,name=elemData,proto3" json:"elemData,omitempty"` // 元素数据
+	ElemData      *anypb.Any             `protobuf:"bytes,3,opt,name=ElemData,proto3" json:"ElemData,omitempty"` // 元素数据
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -406,7 +406,7 @@ const file_bags_proto_rawDesc = "" +
 	"\x06ElemOp\x12<\n" +
 	"\rContainerType\x18\x01 \x01(\x0e2\x16.gserver.ContainerTypeR\rContainerType\x12+\n" +
 	"\x06OpType\x18\x02 \x01(\x0e2\x13.gserver.ElemOpTypeR\x06OpType\x120\n" +
-	"\belemData\x18\x03 \x01(\v2\x14.google.protobuf.AnyR\belemData\"\x1a\n" +
+	"\bElemData\x18\x03 \x01(\v2\x14.google.protobuf.AnyR\bElemData\"\x1a\n" +
 	"\bUniqueId\x12\x0e\n" +
 	"\x02Id\x18\x01 \x01(\x03R\x02Id\"1\n" +
 	"\aElemNum\x12\x14\n" +
@@ -473,7 +473,7 @@ var file_bags_proto_depIdxs = []int32{
 	3,  // 0: gserver.ElemContainerUpdate.ElemOps:type_name -> gserver.ElemOp
 	0,  // 1: gserver.ElemOp.ContainerType:type_name -> gserver.ContainerType
 	1,  // 2: gserver.ElemOp.OpType:type_name -> gserver.ElemOpType
-	10, // 3: gserver.ElemOp.elemData:type_name -> google.protobuf.Any
+	10, // 3: gserver.ElemOp.ElemData:type_name -> google.protobuf.Any
 	7,  // 4: gserver.BagsSync.CountItem:type_name -> gserver.BagsSync.CountItemEntry
 	8,  // 5: gserver.BagsSync.UniqueItem:type_name -> gserver.BagsSync.UniqueItemEntry
 	9,  // 6: gserver.BagsSync.Equip:type_name -> gserver.BagsSync.EquipEntry

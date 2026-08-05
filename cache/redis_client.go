@@ -23,7 +23,7 @@ func GetRedis() redis.Cmdable {
 	return _redisClient
 }
 
-func NewRedis(addrs []string, userName, password string, isCluster bool) redis.Cmdable {
+func NewRedis(addrs []string, userName, password string, isCluster bool, db int) redis.Cmdable {
 	if len(addrs) == 0 {
 		panic("NewRedis: addrs is empty")
 	}
@@ -31,7 +31,7 @@ func NewRedis(addrs []string, userName, password string, isCluster bool) redis.C
 	if isCluster {
 		redisCmdable = NewRedisClient(addrs, userName, password)
 	} else {
-		redisCmdable = NewRedisSingleClient(addrs[0], userName, password)
+		redisCmdable = NewRedisSingleClient(addrs[0], userName, password, db)
 	}
 	_redisCache = gentity.NewRedisCache(redisCmdable)
 	return redisCmdable
@@ -49,11 +49,12 @@ func NewRedisClient(addrs []string, userName, password string) redis.Cmdable {
 }
 
 // 单机模式的redis
-func NewRedisSingleClient(addr string, userName, password string) redis.Cmdable {
+func NewRedisSingleClient(addr string, userName, password string, db int) redis.Cmdable {
 	_redisClient = redis.NewClient(&redis.Options{
 		Addr:     addr,
 		Username: userName,
 		Password: password,
+		DB:       db,
 	})
 	return _redisClient
 }

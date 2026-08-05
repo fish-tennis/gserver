@@ -24,8 +24,8 @@ const (
 // 可数的普通物品(可叠加的)
 type CountItem struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	CfgId         int32                  `protobuf:"varint,1,opt,name=cfgId,proto3" json:"cfgId,omitempty"` // 物品配置id
-	Count         int32                  `protobuf:"varint,2,opt,name=count,proto3" json:"count,omitempty"` // 物品数量
+	CfgId         int32                  `protobuf:"varint,1,opt,name=CfgId,proto3" json:"CfgId,omitempty"` // 物品配置id
+	Count         int32                  `protobuf:"varint,2,opt,name=Count,proto3" json:"Count,omitempty"` // 物品数量
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -77,9 +77,9 @@ func (x *CountItem) GetCount() int32 {
 // 不可叠加的普通物品(比如普通物品加了限时属性,就是不可叠加的了)
 type UniqueCountItem struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	UniqueId      int64                  `protobuf:"varint,1,opt,name=uniqueId,proto3" json:"uniqueId,omitempty"` // 唯一id
-	CfgId         int32                  `protobuf:"varint,2,opt,name=cfgId,proto3" json:"cfgId,omitempty"`       // 物品配置id
-	Timeout       int32                  `protobuf:"varint,3,opt,name=timeout,proto3" json:"timeout,omitempty"`   // 超时时间戳(秒)
+	UniqueId      int64                  `protobuf:"varint,1,opt,name=UniqueId,proto3" json:"UniqueId,omitempty"` // 唯一id
+	CfgId         int32                  `protobuf:"varint,2,opt,name=CfgId,proto3" json:"CfgId,omitempty"`       // 物品配置id
+	Timeout       int32                  `protobuf:"varint,3,opt,name=Timeout,proto3" json:"Timeout,omitempty"`   // 超时时间戳(秒)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -138,9 +138,9 @@ func (x *UniqueCountItem) GetTimeout() int32 {
 // 装备(不可叠加的)
 type Equip struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	UniqueId      int64                  `protobuf:"varint,1,opt,name=uniqueId,proto3" json:"uniqueId,omitempty"` // 唯一id
-	CfgId         int32                  `protobuf:"varint,2,opt,name=cfgId,proto3" json:"cfgId,omitempty"`       // 物品配置id
-	Timeout       int32                  `protobuf:"varint,3,opt,name=timeout,proto3" json:"timeout,omitempty"`   // 超时时间戳(秒)
+	UniqueId      int64                  `protobuf:"varint,1,opt,name=UniqueId,proto3" json:"UniqueId,omitempty"` // 唯一id
+	CfgId         int32                  `protobuf:"varint,2,opt,name=CfgId,proto3" json:"CfgId,omitempty"`       // 装备配置id，引用 EquipCfg.CfgId
+	Timeout       int32                  `protobuf:"varint,3,opt,name=Timeout,proto3" json:"Timeout,omitempty"`   // 超时时间戳(秒)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -199,8 +199,8 @@ func (x *Equip) GetTimeout() int32 {
 // 使用道具请求
 type ItemUseReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	CfgId         int32                  `protobuf:"varint,1,opt,name=cfgId,proto3" json:"cfgId,omitempty"`       // 物品配置id
-	UniqueId      int64                  `protobuf:"varint,2,opt,name=uniqueId,proto3" json:"uniqueId,omitempty"` // 唯一id
+	CfgId         int32                  `protobuf:"varint,1,opt,name=CfgId,proto3" json:"CfgId,omitempty"`       // 物品配置id
+	UniqueId      int64                  `protobuf:"varint,2,opt,name=UniqueId,proto3" json:"UniqueId,omitempty"` // 唯一id
 	Num           int32                  `protobuf:"varint,3,opt,name=Num,proto3" json:"Num,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -260,8 +260,8 @@ func (x *ItemUseReq) GetNum() int32 {
 // 使用道具结果
 type ItemUseRes struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	CfgId         int32                  `protobuf:"varint,1,opt,name=cfgId,proto3" json:"cfgId,omitempty"`       // 物品配置id
-	UniqueId      int64                  `protobuf:"varint,2,opt,name=uniqueId,proto3" json:"uniqueId,omitempty"` // 唯一id
+	CfgId         int32                  `protobuf:"varint,1,opt,name=CfgId,proto3" json:"CfgId,omitempty"`       // 物品配置id
+	UniqueId      int64                  `protobuf:"varint,2,opt,name=UniqueId,proto3" json:"UniqueId,omitempty"` // 唯一id
 	Num           int32                  `protobuf:"varint,3,opt,name=Num,proto3" json:"Num,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -325,25 +325,25 @@ const file_item_proto_rawDesc = "" +
 	"\n" +
 	"item.proto\x12\agserver\"7\n" +
 	"\tCountItem\x12\x14\n" +
-	"\x05cfgId\x18\x01 \x01(\x05R\x05cfgId\x12\x14\n" +
-	"\x05count\x18\x02 \x01(\x05R\x05count\"]\n" +
+	"\x05CfgId\x18\x01 \x01(\x05R\x05CfgId\x12\x14\n" +
+	"\x05Count\x18\x02 \x01(\x05R\x05Count\"]\n" +
 	"\x0fUniqueCountItem\x12\x1a\n" +
-	"\buniqueId\x18\x01 \x01(\x03R\buniqueId\x12\x14\n" +
-	"\x05cfgId\x18\x02 \x01(\x05R\x05cfgId\x12\x18\n" +
-	"\atimeout\x18\x03 \x01(\x05R\atimeout\"S\n" +
+	"\bUniqueId\x18\x01 \x01(\x03R\bUniqueId\x12\x14\n" +
+	"\x05CfgId\x18\x02 \x01(\x05R\x05CfgId\x12\x18\n" +
+	"\aTimeout\x18\x03 \x01(\x05R\aTimeout\"S\n" +
 	"\x05Equip\x12\x1a\n" +
-	"\buniqueId\x18\x01 \x01(\x03R\buniqueId\x12\x14\n" +
-	"\x05cfgId\x18\x02 \x01(\x05R\x05cfgId\x12\x18\n" +
-	"\atimeout\x18\x03 \x01(\x05R\atimeout\"P\n" +
+	"\bUniqueId\x18\x01 \x01(\x03R\bUniqueId\x12\x14\n" +
+	"\x05CfgId\x18\x02 \x01(\x05R\x05CfgId\x12\x18\n" +
+	"\aTimeout\x18\x03 \x01(\x05R\aTimeout\"P\n" +
 	"\n" +
 	"ItemUseReq\x12\x14\n" +
-	"\x05cfgId\x18\x01 \x01(\x05R\x05cfgId\x12\x1a\n" +
-	"\buniqueId\x18\x02 \x01(\x03R\buniqueId\x12\x10\n" +
+	"\x05CfgId\x18\x01 \x01(\x05R\x05CfgId\x12\x1a\n" +
+	"\bUniqueId\x18\x02 \x01(\x03R\bUniqueId\x12\x10\n" +
 	"\x03Num\x18\x03 \x01(\x05R\x03Num\"P\n" +
 	"\n" +
 	"ItemUseRes\x12\x14\n" +
-	"\x05cfgId\x18\x01 \x01(\x05R\x05cfgId\x12\x1a\n" +
-	"\buniqueId\x18\x02 \x01(\x03R\buniqueId\x12\x10\n" +
+	"\x05CfgId\x18\x01 \x01(\x05R\x05CfgId\x12\x1a\n" +
+	"\bUniqueId\x18\x02 \x01(\x03R\bUniqueId\x12\x10\n" +
 	"\x03Num\x18\x03 \x01(\x05R\x03NumB\x06Z\x04./pbb\x06proto3"
 
 var (

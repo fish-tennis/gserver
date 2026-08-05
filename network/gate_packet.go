@@ -130,9 +130,11 @@ func SendPacketAdapt(connection Connection, reqPacket Packet, sendMessage proto.
 func SendPacketAdaptWithError(connection Connection, reqPacket Packet, sendMessage proto.Message, errorCode int32) bool {
 	cmd := GetCommandByProto(sendMessage)
 	if gatePacket, ok := reqPacket.(*GatePacket); ok {
-		return connection.SendPacket(NewGatePacket(gatePacket.PlayerId(), PacketCommand(cmd), sendMessage).SetErrorCode(uint32(errorCode)))
+		// 从请求包拷贝 rpcCallId,使响应能原样带回客户端的 rpcCallId(loginserver 的 Res 走此路径)
+		// WithRpc 接受 Packet,内部读取其 RpcCallId;rpcCallId==0 时 codec 不写标记位,字节与改动前一致
+		return connection.SendPacket(NewGatePacket(gatePacket.PlayerId(), PacketCommand(cmd), sendMessage).SetErrorCode(uint32(errorCode)).WithRpc(reqPacket))
 	} else {
-		packet := NewProtoPacket(PacketCommand(cmd), sendMessage).SetErrorCode(uint32(errorCode))
+		packet := NewProtoPacket(PacketCommand(cmd), sendMessage).SetErrorCode(uint32(errorCode)).WithRpc(reqPacket.RpcCallId())
 		return connection.SendPacket(packet)
 	}
 }

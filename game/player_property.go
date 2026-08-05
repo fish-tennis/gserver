@@ -1,7 +1,8 @@
 package game
 
 import (
-	"github.com/fish-tennis/gserver/logger"
+	"log/slog"
+
 	"github.com/fish-tennis/gserver/pb"
 )
 
@@ -31,6 +32,6 @@ func (p *Player) GetPropertyInt32(propertyName string, conditionCfg *pb.Conditio
 	if getter, ok := _playerPropertyGetterMap[propertyName]; ok {
 		return getter(p, propertyName, conditionCfg)
 	}
-	logger.Error("Not support property %v %v", p.GetId(), propertyName)
+	slog.Error("Not support property", "playerId", p.GetId(), "propertyName", propertyName)
 	return 0
 }

@@ -24,7 +24,7 @@ const (
 // 心跳包请求
 type HeartBeatReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Timestamp     int64                  `protobuf:"varint,1,opt,name=timestamp,proto3" json:"timestamp,omitempty"` // 请求方的时间戳(毫秒)
+	Timestamp     int64                  `protobuf:"varint,1,opt,name=Timestamp,proto3" json:"Timestamp,omitempty"` // 请求方的时间戳(毫秒)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -69,8 +69,8 @@ func (x *HeartBeatReq) GetTimestamp() int64 {
 // 心跳包回复
 type HeartBeatRes struct {
 	state             protoimpl.MessageState `protogen:"open.v1"`
-	RequestTimestamp  int64                  `protobuf:"varint,1,opt,name=requestTimestamp,proto3" json:"requestTimestamp,omitempty"`   // 请求方的时间戳(毫秒)
-	ResponseTimestamp int64                  `protobuf:"varint,2,opt,name=responseTimestamp,proto3" json:"responseTimestamp,omitempty"` // 回复方的时间戳(毫秒)
+	RequestTimestamp  int64                  `protobuf:"varint,1,opt,name=RequestTimestamp,proto3" json:"RequestTimestamp,omitempty"`   // 请求方的时间戳(毫秒)
+	ResponseTimestamp int64                  `protobuf:"varint,2,opt,name=ResponseTimestamp,proto3" json:"ResponseTimestamp,omitempty"` // 回复方的时间戳(毫秒)
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -122,9 +122,9 @@ func (x *HeartBeatRes) GetResponseTimestamp() int64 {
 // 通用的错误返回消息
 type ErrorRes struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Command       int32                  `protobuf:"varint,1,opt,name=command,proto3" json:"command,omitempty"`    // 消息号
-	ResultId      int32                  `protobuf:"varint,2,opt,name=resultId,proto3" json:"resultId,omitempty"`  // 错误信息id
-	ResultStr     string                 `protobuf:"bytes,3,opt,name=resultStr,proto3" json:"resultStr,omitempty"` // 错误信息内容
+	Command       int32                  `protobuf:"varint,1,opt,name=Command,proto3" json:"Command,omitempty"`    // 消息号
+	ResultId      int32                  `protobuf:"varint,2,opt,name=ResultId,proto3" json:"ResultId,omitempty"`  // 错误信息id
+	ResultStr     string                 `protobuf:"bytes,3,opt,name=ResultStr,proto3" json:"ResultStr,omitempty"` // 错误信息内容
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -183,10 +183,10 @@ func (x *ErrorRes) GetResultStr() string {
 // 网关转发客户端消息到其他服务器,发生错误
 type GateRouteClientPacketError struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	PlayerId      int64                  `protobuf:"varint,1,opt,name=playerId,proto3" json:"playerId,omitempty"`
-	Command       int32                  `protobuf:"varint,2,opt,name=command,proto3" json:"command,omitempty"`    // 消息号
-	ResultId      int32                  `protobuf:"varint,3,opt,name=resultId,proto3" json:"resultId,omitempty"`  // 错误信息id
-	ResultStr     string                 `protobuf:"bytes,4,opt,name=resultStr,proto3" json:"resultStr,omitempty"` // 错误信息内容
+	PlayerId      int64                  `protobuf:"varint,1,opt,name=PlayerId,proto3" json:"PlayerId,omitempty"`
+	Command       int32                  `protobuf:"varint,2,opt,name=Command,proto3" json:"Command,omitempty"`    // 消息号
+	ResultId      int32                  `protobuf:"varint,3,opt,name=ResultId,proto3" json:"ResultId,omitempty"`  // 错误信息id
+	ResultStr     string                 `protobuf:"bytes,4,opt,name=ResultStr,proto3" json:"ResultStr,omitempty"` // 错误信息内容
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -255,19 +255,19 @@ const file_client_base_proto_rawDesc = "" +
 	"\n" +
 	"\x11client_base.proto\x12\agserver\",\n" +
 	"\fHeartBeatReq\x12\x1c\n" +
-	"\ttimestamp\x18\x01 \x01(\x03R\ttimestamp\"h\n" +
+	"\tTimestamp\x18\x01 \x01(\x03R\tTimestamp\"h\n" +
 	"\fHeartBeatRes\x12*\n" +
-	"\x10requestTimestamp\x18\x01 \x01(\x03R\x10requestTimestamp\x12,\n" +
-	"\x11responseTimestamp\x18\x02 \x01(\x03R\x11responseTimestamp\"^\n" +
+	"\x10RequestTimestamp\x18\x01 \x01(\x03R\x10RequestTimestamp\x12,\n" +
+	"\x11ResponseTimestamp\x18\x02 \x01(\x03R\x11ResponseTimestamp\"^\n" +
 	"\bErrorRes\x12\x18\n" +
-	"\acommand\x18\x01 \x01(\x05R\acommand\x12\x1a\n" +
-	"\bresultId\x18\x02 \x01(\x05R\bresultId\x12\x1c\n" +
-	"\tresultStr\x18\x03 \x01(\tR\tresultStr\"\x8c\x01\n" +
+	"\aCommand\x18\x01 \x01(\x05R\aCommand\x12\x1a\n" +
+	"\bResultId\x18\x02 \x01(\x05R\bResultId\x12\x1c\n" +
+	"\tResultStr\x18\x03 \x01(\tR\tResultStr\"\x8c\x01\n" +
 	"\x1aGateRouteClientPacketError\x12\x1a\n" +
-	"\bplayerId\x18\x01 \x01(\x03R\bplayerId\x12\x18\n" +
-	"\acommand\x18\x02 \x01(\x05R\acommand\x12\x1a\n" +
-	"\bresultId\x18\x03 \x01(\x05R\bresultId\x12\x1c\n" +
-	"\tresultStr\x18\x04 \x01(\tR\tresultStrB\x06Z\x04./pbb\x06proto3"
+	"\bPlayerId\x18\x01 \x01(\x03R\bPlayerId\x12\x18\n" +
+	"\aCommand\x18\x02 \x01(\x05R\aCommand\x12\x1a\n" +
+	"\bResultId\x18\x03 \x01(\x05R\bResultId\x12\x1c\n" +
+	"\tResultStr\x18\x04 \x01(\tR\tResultStrB\x06Z\x04./pbb\x06proto3"
 
 var (
 	file_client_base_proto_rawDescOnce sync.Once

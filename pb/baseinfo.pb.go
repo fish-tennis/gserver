@@ -24,7 +24,7 @@ const (
 // 玩家进游戏服成功,非客户端消息
 type PlayerEntryGameOk struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	IsReconnect   bool                   `protobuf:"varint,1,opt,name=isReconnect,proto3" json:"isReconnect,omitempty"`
+	IsReconnect   bool                   `protobuf:"varint,1,opt,name=IsReconnect,proto3" json:"IsReconnect,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -68,7 +68,7 @@ func (x *PlayerEntryGameOk) GetIsReconnect() bool {
 
 type BaseInfoSync struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Data          *BaseInfo              `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
+	Data          *BaseInfo              `protobuf:"bytes,1,opt,name=Data,proto3" json:"Data,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -116,9 +116,9 @@ const file_baseinfo_proto_rawDesc = "" +
 	"\n" +
 	"\x0ebaseinfo.proto\x12\agserver\x1a\fplayer.proto\"5\n" +
 	"\x11PlayerEntryGameOk\x12 \n" +
-	"\visReconnect\x18\x01 \x01(\bR\visReconnect\"5\n" +
+	"\vIsReconnect\x18\x01 \x01(\bR\vIsReconnect\"5\n" +
 	"\fBaseInfoSync\x12%\n" +
-	"\x04data\x18\x01 \x01(\v2\x11.gserver.BaseInfoR\x04dataB\x06Z\x04./pbb\x06proto3"
+	"\x04Data\x18\x01 \x01(\v2\x11.gserver.BaseInfoR\x04DataB\x06Z\x04./pbb\x06proto3"
 
 var (
 	file_baseinfo_proto_rawDescOnce sync.Once
@@ -139,7 +139,7 @@ var file_baseinfo_proto_goTypes = []any{
 	(*BaseInfo)(nil),          // 2: gserver.BaseInfo
 }
 var file_baseinfo_proto_depIdxs = []int32{
-	2, // 0: gserver.BaseInfoSync.data:type_name -> gserver.BaseInfo
+	2, // 0: gserver.BaseInfoSync.Data:type_name -> gserver.BaseInfo
 	1, // [1:1] is the sub-list for method output_type
 	1, // [1:1] is the sub-list for method input_type
 	1, // [1:1] is the sub-list for extension type_name

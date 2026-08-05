@@ -3,17 +3,17 @@ package internal
 import (
 	"context"
 	"fmt"
-	"github.com/fish-tennis/gentity"
-	"github.com/fish-tennis/gentity/util"
-	"github.com/fish-tennis/gnet"
-	"github.com/fish-tennis/gserver/logger"
-	"github.com/fish-tennis/gserver/network"
-	"github.com/fish-tennis/gserver/pb"
-	"google.golang.org/protobuf/proto"
 	"log/slog"
 	"slices"
 	"sort"
 	"sync"
+
+	"github.com/fish-tennis/gentity"
+	"github.com/fish-tennis/gentity/util"
+	"github.com/fish-tennis/gnet"
+	"github.com/fish-tennis/gserver/network"
+	"github.com/fish-tennis/gserver/pb"
+	"google.golang.org/protobuf/proto"
 	"sync/atomic"
 )
 
@@ -100,7 +100,11 @@ func (this *ServerList) initDefaultServerConnectorConfig() {
 	}
 	handler := gnet.NewDefaultConnectionHandler(codec)
 	handler.SetOnConnectedFunc(func(connection gnet.Connection, success bool) {
-		slog.Info("OnConnectedServer", "RemoteAddr", connection.RemoteAddr().String(), "success", success)
+		remoteAddr := ""
+		if connection.RemoteAddr() != nil {
+			remoteAddr = connection.RemoteAddr().String()
+		}
+		slog.Info("OnConnectedServer", "RemoteAddr", remoteAddr, "success", success)
 		if !success {
 			return
 		}
@@ -189,7 +193,7 @@ func (this *ServerList) FindAndConnectServers(ctx context.Context) {
 		serverInfos := make(map[int32]*pb.ServerInfo)
 		err := this.cache.GetMap(fmt.Sprintf("servers:%v", serverType), serverInfos)
 		if gentity.IsRedisError(err) {
-			logger.Error("get %v info err:%v", serverType, err)
+			slog.Error("get server info error", "serverType", serverType, "error", err)
 			continue
 		}
 		for _, serverInfo := range serverInfos {
@@ -286,15 +290,17 @@ func (this *ServerList) ConnectServer(ctx context.Context, info *pb.ServerInfo) 
 		// double-check:避免在 NewConnector 期间已有连接被添加
 		if _, ok := this.connectedServers[info.GetServerId()]; !ok {
 			this.connectedServers[info.GetServerId()] = serverConn
-			logger.Info("ConnectServer %v, %v", info.GetServerId(), info.GetServerType())
+			slog.Info("ConnectServer", "serverId", info.GetServerId(), "serverType", info.GetServerType())
 		} else if info.GetServerId() != this.localServerInfo.GetServerId() {
 			// 已有连接,关闭新建的多余连接
 			// 注意:自连场景(连接自己)会产生connector和accept两条连接,不能关闭
 			serverConn.Close()
+			slog.Info("ConnectServer closed", "serverId", info.GetServerId(), "serverType", info.GetServerType())
 		}
 		this.connectedServersMutex.Unlock()
+		
 	} else {
-		logger.Info("ConnectServerError %v, %v", info.GetServerId(), info.GetServerType())
+		slog.Info("ConnectServerError", "serverId", info.GetServerId(), "serverType", info.GetServerType())
 	}
 }
 
@@ -325,7 +331,7 @@ func (this *ServerList) OnServerConnectorDisconnect(serverId int32) {
 	this.connectedServersMutex.Lock()
 	delete(this.connectedServers, serverId)
 	this.connectedServersMutex.Unlock()
-	logger.Debug("DisconnectServer %v", serverId)
+	slog.Debug("DisconnectServer", "serverId", serverId)
 }
 
 // 其他服务器连接上,我方作为listener
@@ -341,20 +347,20 @@ func (this *ServerList) OnServerConnected(serverId int32, connection gnet.Connec
 	this.connectedServersMutex.Lock()
 	this.connectedServers[serverId] = connection
 	this.connectedServersMutex.Unlock()
-	logger.Debug("OnServerConnected %v", serverId)
+	slog.Debug("OnServerConnected", "serverId", serverId)
 }
 
 // 设置要获取的服务器类型
 func (this *ServerList) SetFetchServerTypes(serverTypes ...string) {
 	this.fetchServerTypes = append(this.fetchServerTypes, serverTypes...)
-	logger.Debug("fetch:%v", serverTypes)
+	slog.Debug("fetch", "serverTypes", serverTypes)
 }
 
 // 设置要获取并连接的服务器类型
 func (this *ServerList) SetFetchAndConnectServerTypes(serverTypes ...string) {
 	this.fetchServerTypes = append(this.fetchServerTypes, serverTypes...)
 	this.connectServerTypes = append(this.connectServerTypes, serverTypes...)
-	logger.Info("fetch connect:%v", serverTypes)
+	slog.Info("fetch connect", "serverTypes", serverTypes)
 }
 
 // 获取某类服务器的信息列表

@@ -8,15 +8,16 @@ package gserver;
 
 // 玩家基础信息
 message BaseInfo {
-  int32 gender = 1; // 性别
-  int32 level = 2; // 等级
-  int32 exp = 3; // 经验值
-  int32 totalPay = 4; // 累充总额
-  int32 lastUpdateDate = 5; // 上次刷新日期,格式:yyyymmdd
-  int64 lastLoginTimestamp = 6; // 最近一次登录时间戳
-  int64 lastLogoutTimestamp = 7; // 最近一次退出时间戳
-  int32 totalOnlineSeconds = 8; // 总在线时长(秒)
+  int32 Gender = 1; // 性别
+  int32 Level = 2; // 等级
+  int32 Exp = 3; // 经验值
+  int32 TotalPay = 4; // 累充总额
+  int32 LastUpdateDate = 5; // 上次刷新日期,格式:yyyymmdd
+  int64 LastLoginTimestamp = 6; // 最近一次登录时间戳
+  int64 LastLogoutTimestamp = 7; // 最近一次退出时间戳
+  int32 TotalOnlineSeconds = 8; // 总在线时长(秒)
   string ReconnectSession = 9; // 重连验证session
+  int64 CreateTimestamp = 10; // 创建角色时间戳(秒)
 }
 
 // 背包模块数据
@@ -28,25 +29,25 @@ message BagSaveData {
 
 // 任务模块数据
 message QuestSaveData {
-  map<int32,bytes> finished = 1; // 已完成的任务
-  map<int32,bytes> quests = 2; // 进行中的任务
+  map<int32,bytes> Finished = 1; // 已完成的任务
+  map<int32,bytes> Quests = 2; // 进行中的任务
 }
 
 // 任务数据
 message QuestData {
-  int32 cfgId = 1; // 配置id
-  int32 progress = 2; // 进度
-  int32 activityId = 3; // 活动id,只有活动子任务才会有值
+  int32 CfgId = 1; // 配置id
+  int32 Progress = 2; // 进度
+  int32 ActivityId = 3; // 活动id,只有活动子任务才会有值
 }
 
 // 已完成的任务
 message FinishedQuestData {
-  int32 timestamp = 1; // 完成时间戳(秒)
+  int32 Timestamp = 1; // 完成时间戳(秒)
 }
 
 // 玩家身上的公会数据
 message PlayerGuildData {
-  int64 guildId = 1; // 公会id
+  int64 GuildId = 1; // 公会id
 }
 
 // 玩家在mongo中的保存格式
@@ -75,10 +76,10 @@ message ActivityDefaultBaseData {
 
 // 待处理消息
 message PendingMessage {
-  int64 messageId = 1; // 唯一id
-  int32 packetCommand = 2; // 消息号
-  google.protobuf.Any packetData = 3; // 消息内容
-  int32 timestamp = 4; // 时间戳
+  int64 MessageId = 1; // 唯一id
+  int32 PacketCommand = 2; // 消息号
+  google.protobuf.Any PacketData = 3; // 消息内容
+  int32 Timestamp = 4; // 时间戳
 }
 
 // 兑换记录

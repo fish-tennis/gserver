@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
+
 	"github.com/fish-tennis/gentity"
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
@@ -13,7 +15,6 @@ import (
 	"github.com/fish-tennis/gserver/pb"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
-	"log/slog"
 )
 
 var (
@@ -53,6 +54,8 @@ func (this *LoginServer) Init(ctx context.Context, configFile string) bool {
 	this.initDb()
 	this.initCache()
 	this.initNetwork()
+	// 初始化DB操作协程池,将登录/注册等含DB查询的请求从收包goroutine卸载
+	InitDbWorkerPool()
 	slog.Info("LoginServer.Init")
 	return true
 }
@@ -66,6 +69,8 @@ func (this *LoginServer) Run(ctx context.Context) {
 // 退出
 func (this *LoginServer) Exit() {
 	this.BaseServer.Exit()
+	// 关闭DB操作协程池(在BaseServer.Exit之后,确保不再有新的收包请求)
+	ShutdownDbWorkerPool()
 	slog.Info("LoginServer.Exit")
 	if db.GetDbMgr() != nil {
 		db.GetDbMgr().(*gentity.MongoDb).Disconnect()
@@ -90,10 +95,10 @@ func (this *LoginServer) initDb() {
 
 // 初始化redis缓存
 func (this *LoginServer) initCache() {
-	cache.NewRedis(this.GetConfig().Redis.Uri, this.GetConfig().Redis.UserName, this.GetConfig().Redis.Password, this.GetConfig().Redis.Cluster)
+	cache.NewRedis(this.GetConfig().Redis.Uri, this.GetConfig().Redis.UserName, this.GetConfig().Redis.Password, this.GetConfig().Redis.Cluster, this.GetConfig().Redis.DB)
 	pong, err := cache.GetRedis().Ping(context.Background()).Result()
 	if err != nil || pong == "" {
-		panic("redis connect error")
+		panic(fmt.Sprintf("redis connect error,uri:%v err:%v pong:%v", this.GetConfig().Redis.Uri, err, pong))
 	}
 }
 
@@ -142,9 +147,29 @@ func (this *LoginServer) getAccountData(accountName string, accountData *pb.Acco
 
 // 注册客户端消息回调
 func (this *LoginServer) registerClientPacket(clientHandler *DefaultConnectionHandler) {
-	network.RegisterPacketHandler(clientHandler, new(pb.LoginReq), onLoginReq)
-	network.RegisterPacketHandler(clientHandler, new(pb.AccountReg), onAccountReg)
-
+	// 状态检查包装器:非Running状态时拒绝客户端请求
+	// 服务器正在退出时返回ServerClosing,其他非运行状态(如初始化中)返回TryLater
+	checkRunning := func(handler PacketHandler) PacketHandler {
+		return func(connection Connection, packet Packet) {
+			if this.IsRunning() {
+				handler(connection, packet)
+				return
+			}
+			status := this.GetStatus()
+			var errCode pb.ErrorCode
+			if status == ServerStatus_Exit {
+				errCode = pb.ErrorCode_ErrorCode_ServerClosing
+			} else {
+				errCode = pb.ErrorCode_ErrorCode_TryLater
+			}
+			network.SendPacketAdaptWithError(connection, packet, &pb.ErrorRes{
+				Command:  int32(packet.Command()),
+				ResultId: int32(errCode),
+			}, int32(errCode))
+		}
+	}
+	network.RegisterPacketHandler(clientHandler, new(pb.LoginReq), checkRunning(onLoginReq))
+	network.RegisterPacketHandler(clientHandler, new(pb.AccountReg), checkRunning(onAccountReg))
 }
 
 // 注册服务器消息回调

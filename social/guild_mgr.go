@@ -1,15 +1,17 @@
 package social
 
 import (
+	"log/slog"
+	"reflect"
+	"time"
+
 	"github.com/fish-tennis/gentity"
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
 	"github.com/fish-tennis/gserver/db"
 	"github.com/fish-tennis/gserver/game"
 	. "github.com/fish-tennis/gserver/internal"
-	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
-	"time"
 )
 
 // 公会功能演示:
@@ -38,7 +40,7 @@ func (g *GuildHelper) LoadEntity(entityId int64) gentity.RoutineEntity {
 func (g *GuildHelper) CreateEntity(entityData interface{}) gentity.RoutineEntity {
 	data, ok := entityData.(*pb.GuildLoadData)
 	if !ok {
-		logger.Error("CreateEntity type assert failed: %T", entityData)
+		slog.Error("CreateEntity type assert failed", "entityData", reflect.TypeOf(entityData))
 		return nil
 	}
 	return NewGuild(data)
@@ -53,7 +55,7 @@ func (g *GuildHelper) RouteServerId(entityId int64) int32 {
 func (g *GuildHelper) PacketToRoutePacket(from gentity.Entity, packet Packet, toEntityId int64) Packet {
 	fromPlayer, ok := from.(*game.Player)
 	if !ok {
-		logger.Error("PacketToRoutePacket type assert failed: %T", from)
+		slog.Error("PacketToRoutePacket type assert failed", "from", reflect.TypeOf(from))
 		return nil
 	}
 	return PacketToGuildRoutePacket(fromPlayer.GetId(), fromPlayer.GetName(), packet, toEntityId)
@@ -63,12 +65,12 @@ func (g *GuildHelper) PacketToRoutePacket(from gentity.Entity, packet Packet, to
 func (g *GuildHelper) RoutePacketToRoutineMessage(connection Connection, packet Packet, toEntityId int64) interface{} {
 	req, ok := packet.Message().(*pb.GuildRoutePlayerMessageReq)
 	if !ok {
-		logger.Error("RoutePacketToRoutineMessage type assert failed: %T", packet.Message())
+		slog.Error("RoutePacketToRoutineMessage type assert failed", "packet.Message", reflect.TypeOf(packet.Message()))
 		return nil
 	}
 	message, err := req.PacketData.UnmarshalNew()
 	if err != nil {
-		logger.Error("UnmarshalNew %v err: %v", req.FromGuildId, err)
+		slog.Error("UnmarshalNewErr", "FromGuildId", req.FromGuildId, "err", err)
 		return nil
 	}
 	return &GuildMessage{
@@ -87,12 +89,12 @@ func initGuildMgr() {
 		ProcessMessageFunc: func(routineEntity gentity.RoutineEntity, routineMessage any) {
 			guildMessage, ok := routineMessage.(*GuildMessage)
 			if !ok {
-				logger.Error("ProcessMessage type assert failed: %T", routineMessage)
+				slog.Error("ProcessMessage type assert failed", "routineMessage", reflect.TypeOf(routineMessage))
 				return
 			}
 			guild, ok := routineEntity.(*Guild)
 			if !ok {
-				logger.Error("ProcessMessage routineEntity type assert failed: %T", routineEntity)
+				slog.Error("ProcessMessage routineEntity type assert failed", "routineEntity", reflect.TypeOf(routineEntity))
 				return
 			}
 			guild.processMessage(guildMessage)

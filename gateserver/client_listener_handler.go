@@ -1,8 +1,9 @@
 package gateserver
 
 import (
+	"log/slog"
+
 	. "github.com/fish-tennis/gnet"
-	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/network"
 	"github.com/fish-tennis/gserver/pb"
 )
@@ -24,12 +25,14 @@ func (this *ClientListerHandler) OnConnectionDisconnect(listener Listener, conne
 		playerId := clientData.GetPlayerId()
 		if playerId > 0 {
 			// 持锁后校验当前映射确实属于本连接的 clientData,避免重连后旧连接误删新连接的映射
+			var gameServerId int32
 			_gateServer.clientsMutex.Lock()
 			if current, exists := _gateServer.clients[playerId]; exists && current == clientData {
+				gameServerId = current.GetGameServerId()
 				delete(_gateServer.clients, playerId)
 				_gateServer.clientsMutex.Unlock()
 				// 通知GameServer,玩家掉线了
-				_gateServer.GetServerList().SendPacket(clientData.GameServerId, network.NewGatePacket(
+				_gateServer.GetServerList().SendPacket(gameServerId, network.NewGatePacket(
 					playerId, 0, &pb.ClientDisconnect{
 						ClientConnId: connection.GetConnectionId(),
 					}))
@@ -38,6 +41,6 @@ func (this *ClientListerHandler) OnConnectionDisconnect(listener Listener, conne
 				_gateServer.clientsMutex.Unlock()
 			}
 		}
-		logger.Debug("ClientDisconnect connId:%v playerId:%v", connection.GetConnectionId(), playerId)
+		slog.Debug("ClientDisconnect", "connId", connection.GetConnectionId(), "playerId", playerId)
 	}
 }

@@ -24,19 +24,22 @@ const (
 type ErrorCode int32
 
 const (
-	ErrorCode_ErrorCode_OK                    ErrorCode = 0
-	ErrorCode_ErrorCode_NotReg                ErrorCode = 11 // 未注册
-	ErrorCode_ErrorCode_PasswordError         ErrorCode = 12 // 密码错误
-	ErrorCode_ErrorCode_DbErr                 ErrorCode = 13 // 数据库错误
-	ErrorCode_ErrorCode_NameDuplicate         ErrorCode = 14 // 重名
-	ErrorCode_ErrorCode_HasLogin              ErrorCode = 15
-	ErrorCode_ErrorCode_SessionError          ErrorCode = 16
-	ErrorCode_ErrorCode_NoPlayer              ErrorCode = 17
-	ErrorCode_ErrorCode_TryLater              ErrorCode = 18
-	ErrorCode_ErrorCode_VersionTooLow         ErrorCode = 19 // 客户端版本号过低
-	ErrorCode_ErrorCode_ReconnectSessionError ErrorCode = 20 // 重连session校验失败
-	ErrorCode_ErrorCode_ServerClosing         ErrorCode = 21 // 服务器正在关闭
-	ErrorCode_ErrorCode_ReconnectNeedRelogin  ErrorCode = 22 // 重连失败需要重新登录
+	ErrorCode_ErrorCode_OK                     ErrorCode = 0
+	ErrorCode_ErrorCode_NotReg                 ErrorCode = 11 // 账号未注册
+	ErrorCode_ErrorCode_PasswordError          ErrorCode = 12 // 密码错误
+	ErrorCode_ErrorCode_DbErr                  ErrorCode = 13 // 数据库错误
+	ErrorCode_ErrorCode_NameDuplicate          ErrorCode = 14 // 重名
+	ErrorCode_ErrorCode_HasLogin               ErrorCode = 15 // 该连接已经登录过(客户端需要退回登录界面)
+	ErrorCode_ErrorCode_SessionError           ErrorCode = 16 // 进游戏服的验证码错误
+	ErrorCode_ErrorCode_NoPlayer               ErrorCode = 17 // 还没创建角色
+	ErrorCode_ErrorCode_TryLater               ErrorCode = 18 // 稍后重试
+	ErrorCode_ErrorCode_VersionTooLow          ErrorCode = 19 // 客户端版本号过低
+	ErrorCode_ErrorCode_ReconnectSessionError  ErrorCode = 20 // 重连session校验失败(客户端需要退回登录界面)
+	ErrorCode_ErrorCode_ServerClosing          ErrorCode = 21 // 服务器正在关闭
+	ErrorCode_ErrorCode_ReconnectNeedRelogin   ErrorCode = 22 // 重连失败需要重新登录(客户端需要退回登录界面)
+	ErrorCode_ErrorCode_RouteClientPacketError ErrorCode = 23 // 网关转发消息失败(客户端需要退回登录界面)
+	ErrorCode_ErrorCode_RouteClientPacketLoss  ErrorCode = 24 // 网关转发消息丢失,可能目标服务器暂时繁忙
+	ErrorCode_ErrorCode_PushClientPacketLoss   ErrorCode = 25 // 游戏服收到客户端消息丢失,玩家chan已满
 )
 
 // Enum value maps for ErrorCode.
@@ -55,21 +58,27 @@ var (
 		20: "ErrorCode_ReconnectSessionError",
 		21: "ErrorCode_ServerClosing",
 		22: "ErrorCode_ReconnectNeedRelogin",
+		23: "ErrorCode_RouteClientPacketError",
+		24: "ErrorCode_RouteClientPacketLoss",
+		25: "ErrorCode_PushClientPacketLoss",
 	}
 	ErrorCode_value = map[string]int32{
-		"ErrorCode_OK":                    0,
-		"ErrorCode_NotReg":                11,
-		"ErrorCode_PasswordError":         12,
-		"ErrorCode_DbErr":                 13,
-		"ErrorCode_NameDuplicate":         14,
-		"ErrorCode_HasLogin":              15,
-		"ErrorCode_SessionError":          16,
-		"ErrorCode_NoPlayer":              17,
-		"ErrorCode_TryLater":              18,
-		"ErrorCode_VersionTooLow":         19,
-		"ErrorCode_ReconnectSessionError": 20,
-		"ErrorCode_ServerClosing":         21,
-		"ErrorCode_ReconnectNeedRelogin":  22,
+		"ErrorCode_OK":                     0,
+		"ErrorCode_NotReg":                 11,
+		"ErrorCode_PasswordError":          12,
+		"ErrorCode_DbErr":                  13,
+		"ErrorCode_NameDuplicate":          14,
+		"ErrorCode_HasLogin":               15,
+		"ErrorCode_SessionError":           16,
+		"ErrorCode_NoPlayer":               17,
+		"ErrorCode_TryLater":               18,
+		"ErrorCode_VersionTooLow":          19,
+		"ErrorCode_ReconnectSessionError":  20,
+		"ErrorCode_ServerClosing":          21,
+		"ErrorCode_ReconnectNeedRelogin":   22,
+		"ErrorCode_RouteClientPacketError": 23,
+		"ErrorCode_RouteClientPacketLoss":  24,
+		"ErrorCode_PushClientPacketLoss":   25,
 	}
 )
 
@@ -104,7 +113,7 @@ var File_error_code_proto protoreflect.FileDescriptor
 
 const file_error_code_proto_rawDesc = "" +
 	"\n" +
-	"\x10error_code.proto\x12\agserver*\xe9\x02\n" +
+	"\x10error_code.proto\x12\agserver*\xd8\x03\n" +
 	"\tErrorCode\x12\x10\n" +
 	"\fErrorCode_OK\x10\x00\x12\x14\n" +
 	"\x10ErrorCode_NotReg\x10\v\x12\x1b\n" +
@@ -118,7 +127,10 @@ const file_error_code_proto_rawDesc = "" +
 	"\x17ErrorCode_VersionTooLow\x10\x13\x12#\n" +
 	"\x1fErrorCode_ReconnectSessionError\x10\x14\x12\x1b\n" +
 	"\x17ErrorCode_ServerClosing\x10\x15\x12\"\n" +
-	"\x1eErrorCode_ReconnectNeedRelogin\x10\x16B\x06Z\x04./pbb\x06proto3"
+	"\x1eErrorCode_ReconnectNeedRelogin\x10\x16\x12$\n" +
+	" ErrorCode_RouteClientPacketError\x10\x17\x12#\n" +
+	"\x1fErrorCode_RouteClientPacketLoss\x10\x18\x12\"\n" +
+	"\x1eErrorCode_PushClientPacketLoss\x10\x19B\x06Z\x04./pbb\x06proto3"
 
 var (
 	file_error_code_proto_rawDescOnce sync.Once

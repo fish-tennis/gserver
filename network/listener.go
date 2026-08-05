@@ -1,6 +1,10 @@
 package network
 
 import (
+	"log/slog"
+	"net/http"
+	"strings"
+
 	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gentity/util"
 	"github.com/fish-tennis/gnet"
@@ -22,13 +26,13 @@ var (
 		SendBufferSize:     8 * 1024,  // 8K
 		RecvBufferSize:     8 * 1024,  // 8K
 		MaxPacketSize:      16 * 1024, // 16K
-		RecvTimeout:        20,        // 20s
+		RecvTimeout:        30,        // 30s
 		WriteTimeout:       10,        // 10s
 		Path:               "/ws",
 	}
 
 	GateConnectionConfig = gnet.ConnectionConfig{
-		SendPacketCacheCap: 512,
+		SendPacketCacheCap: 10240,
 		SendBufferSize:     512 * 1024,  // 512K
 		RecvBufferSize:     512 * 1024,  // 512K
 		MaxPacketSize:      1024 * 1024, // 1M
@@ -38,7 +42,7 @@ var (
 	}
 
 	ServerConnectionConfig = gnet.ConnectionConfig{
-		SendPacketCacheCap: 512,
+		SendPacketCacheCap: 10240,
 		SendBufferSize:     512 * 1024,  // 512K
 		RecvBufferSize:     512 * 1024,  // 512K
 		MaxPacketSize:      1024 * 1024, // 1M
@@ -89,6 +93,21 @@ func ListenWebSocketClient(listenAddr string, listenerHandler gnet.ListenerHandl
 	packetRegister(handler)
 	listenerConfig := &gnet.ListenerConfig{
 		AcceptConfig: WebSocketClientConnectionConfig,
+		CheckOrigin: func(r *http.Request) bool {
+			origin := r.Header["Origin"]
+			if len(origin) == 0 {
+				return true
+			}
+			if strings.Index(origin[0], "packages:") >= 0 {
+				return true
+			}
+			//_, err := url.Parse(origin[0])
+			//if err != nil {
+			//	return false
+			//}
+			slog.Debug("CheckOrigin", "origin", origin)
+			return true
+		},
 	}
 	listenerConfig.AcceptConfig.Codec = codec
 	listenerConfig.AcceptConfig.Handler = handler

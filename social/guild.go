@@ -1,16 +1,16 @@
 package social
 
 import (
+	"log/slog"
+	"reflect"
+
 	"github.com/fish-tennis/gentity"
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/game"
 	"github.com/fish-tennis/gserver/internal"
-	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/network"
 	"github.com/fish-tennis/gserver/pb"
 	"google.golang.org/protobuf/proto"
-	"log/slog"
-	"reflect"
 )
 
 var (
@@ -60,8 +60,9 @@ func NewGuild(guildLoadData *pb.GuildLoadData) *Guild {
 func (this *Guild) processMessage(guildMessage *GuildMessage) {
 	defer func() {
 		if err := recover(); err != nil {
-			logger.Error("recover:%v", err)
-			logger.LogStack()
+			slog.Error("recover", "error", err)
+			LogStack()
+			internal.SendAlert(err)
 		}
 	}()
 	// 调用注册的组件回调接口

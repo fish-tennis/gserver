@@ -1,25 +1,24 @@
 package game
 
 import (
-	"fmt"
+	"log/slog"
+	"reflect"
+	"time"
+
 	"github.com/fish-tennis/gentity"
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
 	"github.com/fish-tennis/gserver/db"
 	"github.com/fish-tennis/gserver/internal"
-	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/network"
 	"github.com/fish-tennis/gserver/pb"
 	"google.golang.org/protobuf/proto"
-	"log/slog"
-	"reflect"
-	"time"
 )
 
 const (
 	// Player在redis里的前缀
 	PlayerCachePrefix = "p"
-	// 断线后保留玩家的等待时间(秒),在此期间玩家可重连
+	// ReconnectWaitSeconds 玩家掉线后的保留期(秒),期间等待客户端重连,超时则正式下线
 	ReconnectWaitSeconds = 60
 )
 
@@ -79,12 +78,15 @@ func (p *Player) SaveCache(kvCache gentity.KvCache) error {
 }
 
 // 设置关联的连接,支持客户端直连模式和网关模式
+// 仅在新玩家创建(RunRoutine之前)或玩家协程事件处理中调用,无并发竞争
 func (p *Player) SetConnection(connection Connection, useGate bool) {
 	p.useGate = useGate
 	if !useGate {
-		// 取消之前的连接和该玩家的关联
+		// 顶号场景:关闭旧连接,释放其底层资源,避免连接泄漏
+		// 仅清除 tag 不够:旧连接会保持打开状态,直到客户端超时或 TCP keepalive 探测失败
 		if p.connection != nil && p.connection != connection {
 			p.connection.SetTag(nil)
+			p.connection.Close()
 		}
 		// 客户端直连模式,设置连接和玩家的关联
 		if connection != nil {
@@ -140,9 +142,11 @@ func (p *Player) DirectSendClient(cmd PacketCommand, message proto.Message) {
 	p.PushMessage(&playerDirectSendMessage{cmd: cmd, message: message})
 }
 
-// CheckConnectionAndRecvPacket 由网络协程调用,投递到玩家协程内验证连接归属后处理消息
-func (p *Player) CheckConnectionAndRecvPacket(connection Connection, packet *ProtoPacket) {
-	p.PushMessage(&playerCheckConnectionMessage{connection: connection, packet: packet})
+// CheckConnectionAndRecvClientPacket 由网络协程调用,投递到玩家协程内验证连接归属后处理消息
+// 使用 TryPushMessage 非阻塞投递:玩家 channel 满时返回 false,调用方负责返回错误给客户端
+// 防止某个慢玩家阻塞 gate 连接的收包 goroutine,影响所有其他客户端
+func (p *Player) CheckConnectionAndRecvClientPacket(connection Connection, packet *ProtoPacket) bool {
+	return p.TryPushMessage(&playerCheckConnectionMessage{connection: connection, packet: packet})
 }
 
 // playerReconnectMessage 重连内部消息,由网络协程投递,在玩家协程内消费
@@ -154,19 +158,41 @@ type playerReconnectMessage struct {
 	packet     Packet
 }
 
+// playerEntryReconnectMessage 通过 PlayerEntryGameReq 触发的隐式重连消息
+// 由收包协程投递,在玩家协程内消费
+// 与 playerReconnectMessage 的区别:无需 ReconnectSession 校验(已通过 LoginSession 验证)
+// 响应发送也在协程内完成,消除 GetPlayer 与 RemovePlayer 的 check-then-act 竞态
+type playerEntryReconnectMessage struct {
+	connection Connection
+	useGate    bool
+	req        *pb.PlayerEntryGameReq
+	packet     Packet
+}
+
 // OnDisconnect 由网络协程(gnet读/写协程)回调,不能在此直接读写 p.connection
 // 投递到玩家自己的协程中处理
 func (p *Player) OnDisconnect(connection Connection) {
 	p.PushMessage(&playerDisconnectMessage{connection: connection})
 }
 
-// OnReconnect 由网络协程(收包协程)调用,把重连校验逻辑投递到玩家协程
-// 重连的响应发送和后续逻辑都在玩家协程内的 onReconnect 中处理
-func (p *Player) OnReconnect(connection Connection, useGate bool, session string, packet Packet) {
-	p.PushMessage(&playerReconnectMessage{
+// OnReconnect 由DB协程池调用,把重连校验逻辑投递到玩家协程
+// 使用 TryPushMessage:玩家 channel 满时返回 false,调用方返回 TryLater 给客户端
+func (p *Player) OnReconnect(connection Connection, useGate bool, session string, packet Packet) bool {
+	return p.TryPushMessage(&playerReconnectMessage{
 		connection: connection,
 		useGate:    useGate,
 		session:    session,
+		packet:     packet,
+	})
+}
+
+// OnEntryReconnect 玩家通过 PlayerEntryGameReq 隐式重连(已通过 LoginSession 验证)
+// 使用 TryPushMessage:玩家 channel 满时返回 false,调用方返回 TryLater 给客户端
+func (p *Player) OnEntryReconnect(connection Connection, useGate bool, req *pb.PlayerEntryGameReq, packet Packet) bool {
+	return p.TryPushMessage(&playerEntryReconnectMessage{
+		connection: connection,
+		useGate:    useGate,
+		req:        req,
 		packet:     packet,
 	})
 }
@@ -189,7 +215,7 @@ func (p *Player) onDisconnect(connection Connection) {
 				return 0
 			}
 			p.Stop()
-			logger.Debug("player %v exit", p.GetId())
+			slog.Debug("player exit", "pid", p.GetId())
 			return 0
 		})
 	}
@@ -208,25 +234,52 @@ func (p *Player) onReconnect(msg *playerReconnectMessage) {
 	}
 	// 校验 ReconnectSession
 	if !p.GetBaseInfo().VerifyReconnectSession(msg.session) {
-		network.SendPacketAdaptWithError(msg.connection, msg.packet, res, int32(pb.ErrorCode_ErrorCode_SessionError))
-		logger.Debug("onReconnect session error:%v", p.GetId())
+		network.SendPacketAdaptWithError(msg.connection, msg.packet, res, int32(pb.ErrorCode_ErrorCode_ReconnectSessionError))
+		slog.Debug("onReconnect session error", "pid", p.GetId())
 		return
 	}
 	// 校验通过,绑定新连接
 	p.SetConnection(msg.connection, msg.useGate)
 	// 取消断线保留期定时器
 	p.CancelReconnectWait()
-	// 立即轮换 ReconnectSession,防止旧 session 被重复使用(一次性凭证)
-	p.GetBaseInfo().GenerateReconnectSession()
 	// 发送重连成功响应
 	res.GameServerId = gentity.GetApplication().GetId()
 	network.SendPacketAdaptWithError(msg.connection, msg.packet, res, 0)
 	// 处理重连后的逻辑(与正常登录走相同的 PlayerEntryGameOk 流程)
+	// ReconnectSession 的轮换在 HandlePlayerEntryGameOk 中统一处理,避免重复调用
 	cmd := network.GetCommandByProto(new(pb.PlayerEntryGameOk))
 	p.processMessage(NewProtoPacket(PacketCommand(cmd), &pb.PlayerEntryGameOk{
 		IsReconnect: true,
 	}))
-	logger.Debug("onReconnect success:%v", res)
+	slog.Debug("onReconnect success", "pid", p.GetId(), "res", res)
+}
+
+// onEntryReconnect 隐式重连的实际处理逻辑,在玩家协程内调用
+// 与 onReconnect 的区别:跳过 ReconnectSession 校验(LoginSession 已在收包协程验证通过)
+// 响应在协程内发送,消除 GetPlayer 与 RemovePlayer 的 check-then-act 竞态:
+// 即使投递消息时玩家协程已停止,PushMessage 不会阻塞,消息被丢弃,但收包协程不会误发成功响应
+func (p *Player) onEntryReconnect(msg *playerEntryReconnectMessage) {
+	res := &pb.PlayerEntryGameRes{
+		AccountId: msg.req.AccountId,
+		RegionId:  msg.req.RegionId,
+	}
+	// 绑定新连接(与玩家协程的ResetConnection/Send串行,无竞态)
+	p.SetConnection(msg.connection, msg.useGate)
+	// 取消断线保留期定时器:进游成功后玩家已恢复在线
+	p.CancelReconnectWait()
+	// 填充响应
+	res.PlayerId = p.GetId()
+	res.PlayerName = p.GetName()
+	res.GameServerId = int32(gentity.GetApplication().GetId())
+	// 发送进游成功响应(在协程内发送,确保只在协程存活时才响应)
+	network.SendPacketAdaptWithError(msg.connection, msg.packet, res, 0)
+	// 投递进游消息:生成新ReconnectSession并同步各模块数据给客户端
+	// IsReconnect=false:隐式重连对客户端而言是全新登录(杀进程后重启),不是断线恢复
+	cmd := network.GetCommandByProto(new(pb.PlayerEntryGameOk))
+	p.processMessage(NewProtoPacket(PacketCommand(cmd), &pb.PlayerEntryGameOk{
+		IsReconnect: false,
+	}))
+	slog.Debug("onEntryReconnect success", "pid", p.GetId(), "res", res)
 }
 
 // 发包(protobuf)
@@ -289,6 +342,37 @@ func (p *Player) SendErrorRes(errorReqCmd PacketCommand, errorMsg string, opts .
 	}, opts...)
 }
 
+// 带 rpcCallId 发送响应(框架自动透传用,业务层无需关心)
+// rpcCallId==0 时退化为不写标记位,与改动前字节完全一致
+func (p *Player) SendWithCommandAndRpc(cmd PacketCommand, message proto.Message, rpcCallId uint32, opts ...SendOption) bool {
+	conn := p.connection
+	useGate := p.useGate
+	if conn == nil {
+		return false
+	}
+	// 在业务协程中序列化proto,防止message在gnet的网络协程中序列化时,业务层如果继续修改该message可能有并发问题
+	bytes, err := proto.Marshal(message)
+	if err != nil {
+		p.Log.Error("SendWithCommandAndRpcErr", "msg", proto.MessageName(message).Name(), "err", err)
+		return false
+	}
+	if useGate {
+		// 网关模式:用 GatePacket 携带 rpcCallId,codec 仅在 rpcCallId>0 时写入字节
+		return conn.SendPacket(network.NewGatePacketWithData(p.GetId(), cmd, bytes).WithRpc(rpcCallId), opts...)
+	}
+	// 直连模式:用 ProtoPacket 携带 rpcCallId
+	return conn.SendPacket(NewProtoPacketWithData(cmd, bytes).WithRpc(rpcCallId), opts...)
+}
+
+// 通用的错误返回消息(带 rpcCallId)
+func (p *Player) SendErrorResWithRpc(errorReqCmd PacketCommand, errorMsg string, rpcCallId uint32, opts ...SendOption) bool {
+	cmd := network.GetCommandByProto(new(pb.ErrorRes))
+	return p.SendWithCommandAndRpc(PacketCommand(cmd), &pb.ErrorRes{
+		Command:   int32(errorReqCmd),
+		ResultStr: errorMsg,
+	}, rpcCallId, opts...)
+}
+
 // 分发事件
 func (p *Player) FireEvent(event any) {
 	slog.Debug("FireEvent", "pid", p.GetId(), "event", event)
@@ -326,14 +410,14 @@ func (p *Player) FireEvent(event any) {
 
 // 分发条件相关事件
 func (p *Player) FireConditionEvent(event interface{}) {
-	logger.Debug("%v FireConditionEvent:%v", p.GetId(), event)
+	slog.Debug("FireConditionEvent", "playerId", p.GetId(), "event", event)
 	// 进度更新
 	p.progressEventMapping.OnTriggerEvent(event)
 }
 
 // 分发事件,但是延后执行
 func (p *Player) PostEvent(event any) {
-	logger.Debug("%v PostEvent:%v", p.GetId(), event)
+	slog.Debug("PostEvent", "playerId", p.GetId(), "event", event)
 	// 先保存起来,再延后执行
 	p.postEvents = append(p.postEvents, event)
 }
@@ -359,7 +443,7 @@ func (p *Player) GetLevel() int32 {
 // 每个玩家一个独立的消息处理协程
 // 除了登录消息,其他消息都在玩家自己的协程里处理,因此这里对本玩家的操作不需要加锁
 func (p *Player) RunRoutine() bool {
-	logger.Debug("player RunRoutine %v", p.GetId())
+	slog.Debug("player RunRoutine", "playerId", p.GetId())
 	ok := p.RunProcessRoutine(p, &gentity.RoutineEntityRoutineArgs{
 		EndFunc: func(routineEntity gentity.RoutineEntity) {
 			// 分发事件:玩家退出游戏
@@ -376,6 +460,9 @@ func (p *Player) RunRoutine() bool {
 				p.onDisconnect(msg.connection)
 			case *playerReconnectMessage:
 				p.onReconnect(msg)
+			case *playerEntryReconnectMessage:
+				// 隐式重连:已通过LoginSession验证,直接绑定新连接
+				p.onEntryReconnect(msg)
 			case *playerKickMessage:
 				p.ResetConnection()
 				p.Stop()
@@ -386,7 +473,7 @@ func (p *Player) RunRoutine() bool {
 					p.processMessage(msg.packet)
 				}
 			default:
-				logger.Error("processMessage unknown message type: %T", message)
+				slog.Error("ProcessMessageFunc: unknown message type", "type", reflect.TypeOf(message))
 			}
 		},
 		AfterTimerExecuteFunc: func(routineEntity gentity.RoutineEntity, t time.Time) {
@@ -414,8 +501,9 @@ func (p *Player) RunRoutine() bool {
 func (p *Player) processMessage(message *ProtoPacket) {
 	defer func() {
 		if err := recover(); err != nil {
-			logger.Error("recover:%v", err)
-			logger.LogStack()
+			slog.Error("recover", "error", err)
+			LogStack()
+			internal.SendAlert(err)
 		}
 	}()
 	p.Log.Debug("processMessage", "msg", proto.MessageName(message.Message()).Name())
@@ -432,10 +520,22 @@ func (p *Player) processMessage(message *ProtoPacket) {
 		}
 		// 返回消息给客户端
 		// NOTE:这里加了超时时间,防止Send阻塞导致玩家协程阻塞
-		if resErr != nil {
-			p.SendErrorRes(handlerInfo.ResCmd, resErr.Error(), Timeout(time.Second))
+		// 框架代发的标准 Req/Res 响应自动透传请求包的 rpcCallId,业务 handler 无需感知
+		// rpcCallId==0 时走原逻辑,保证与改动前字节完全一致
+		rpcCallId := message.RpcCallId()
+		if rpcCallId > 0 {
+			if resErr != nil {
+				p.SendErrorResWithRpc(handlerInfo.ResCmd, resErr.Error(), rpcCallId, Timeout(time.Second))
+			} else {
+				p.SendWithCommandAndRpc(handlerInfo.ResCmd, resProto, rpcCallId, Timeout(time.Second))
+			}
 		} else {
-			p.Send(resProto, Timeout(time.Second))
+			if resErr != nil {
+				p.SendErrorRes(handlerInfo.ResCmd, resErr.Error(), Timeout(time.Second))
+				p.Log.Error("processMessageError", "msg", proto.MessageName(message.Message()).Name(), "err", resErr.Error())
+			} else {
+				p.Send(resProto, Timeout(time.Second))
+			}
 		}
 	}) {
 		p.firePostedEvents()
@@ -455,6 +555,9 @@ func (p *Player) OnRecvPacket(packet *ProtoPacket) {
 // 玩家进入游戏服
 func (p *Player) HandlePlayerEntryGameOk(msg *pb.PlayerEntryGameOk) {
 	p.Log.Debug("HandlePlayerEntryGameOk", "msg", msg)
+	// 进游时(无论是首次进游还是重连)生成新的重连校验session,供下次重连验证
+	// 必须在SyncDataToClient之前生成,这样BaseInfoSync能把最新的ReconnectSession同步给客户端
+	p.GetBaseInfo().GenerateReconnectSession()
 	// 同步各模块的数据给客户端
 	p.RangeComponent(func(component gentity.Component) bool {
 		if dataSyncer, ok := component.(DataSyncer); ok {
@@ -471,8 +574,6 @@ func (p *Player) HandlePlayerEntryGameOk(msg *pb.PlayerEntryGameOk) {
 	}
 	b.Data.LastLoginTimestamp = now
 	b.SetDirty()
-	// 进游戏服成功后生成 ReconnectSession,供后续断线重连校验
-	p.GetBaseInfo().GenerateReconnectSession()
 	// 分发事件:玩家进游戏服
 	p.FireEvent(&internal.EventPlayerEntryGame{
 		IsReconnect:    msg.IsReconnect,
@@ -485,7 +586,7 @@ func CreatePlayer(playerId int64, playerName string, accountId int64, regionId i
 		name:              playerName,
 		accountId:         accountId,
 		regionId:          regionId,
-		BaseRoutineEntity: *gentity.NewRoutineEntity(32),
+		BaseRoutineEntity: *gentity.NewRoutineEntity(512),
 		Log:               slog.With("pid", playerId),
 	}
 	player.Id = playerId
@@ -504,8 +605,9 @@ func CreatePlayerFromData(playerData *pb.PlayerData) *Player {
 	defer func() {
 		if err := recover(); err != nil {
 			player = nil
-			slog.Error("CreatePlayerFromDataErr", "pid", playerData.XId, "err", fmt.Sprintf("%v", err))
+			slog.Error("CreatePlayerFromDataErr", "pid", playerData.XId, "err", err)
 			LogStack()
+			internal.SendAlert(err)
 		}
 	}()
 	player = CreatePlayer(playerData.XId, playerData.Name, playerData.AccountId, playerData.RegionId)

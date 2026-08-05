@@ -22,16 +22,16 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// 路由转发给玩家的消息
-// server -> otherserver -> player
+// [其他服或其他协程]发给[game服]再路由转发给玩家的消息
+// otherserver -> game -> player
 type RoutePlayerMessage struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
-	Error            string                 `protobuf:"bytes,1,opt,name=error,proto3" json:"error,omitempty"`                        // 错误码
-	ToPlayerId       int64                  `protobuf:"varint,2,opt,name=toPlayerId,proto3" json:"toPlayerId,omitempty"`             // 玩家id
-	PacketCommand    int32                  `protobuf:"varint,3,opt,name=packetCommand,proto3" json:"packetCommand,omitempty"`       // 消息号
-	DirectSendClient bool                   `protobuf:"varint,4,opt,name=directSendClient,proto3" json:"directSendClient,omitempty"` // 是否直接转发给客户端
-	PendingMessageId int64                  `protobuf:"varint,5,opt,name=pendingMessageId,proto3" json:"pendingMessageId,omitempty"` // 待处理消息id
-	PacketData       *anypb.Any             `protobuf:"bytes,6,opt,name=packetData,proto3" json:"packetData,omitempty"`              // 转发的消息
+	Error            string                 `protobuf:"bytes,1,opt,name=Error,proto3" json:"Error,omitempty"`                        // 错误码
+	ToPlayerId       int64                  `protobuf:"varint,2,opt,name=ToPlayerId,proto3" json:"ToPlayerId,omitempty"`             // 玩家id
+	PacketCommand    int32                  `protobuf:"varint,3,opt,name=PacketCommand,proto3" json:"PacketCommand,omitempty"`       // 消息号
+	DirectSendClient bool                   `protobuf:"varint,4,opt,name=DirectSendClient,proto3" json:"DirectSendClient,omitempty"` // 是否直接转发给客户端
+	PendingMessageId int64                  `protobuf:"varint,5,opt,name=PendingMessageId,proto3" json:"PendingMessageId,omitempty"` // 待处理消息id
+	PacketData       *anypb.Any             `protobuf:"bytes,6,opt,name=PacketData,proto3" json:"PacketData,omitempty"`              // 转发的消息
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -108,16 +108,16 @@ func (x *RoutePlayerMessage) GetPacketData() *anypb.Any {
 	return nil
 }
 
-// 路由转发玩家的公会请求消息
-// server -> otherserver -> guild
+// [game服]发给[其他服或其他协程]再路由到玩家所在的公会请求消息
+// game -> otherserver -> guild
 type GuildRoutePlayerMessageReq struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
-	FromPlayerId   int64                  `protobuf:"varint,1,opt,name=fromPlayerId,proto3" json:"fromPlayerId,omitempty"`    // 玩家id
-	FromGuildId    int64                  `protobuf:"varint,2,opt,name=fromGuildId,proto3" json:"fromGuildId,omitempty"`      // 玩家公会id
-	FromServerId   int32                  `protobuf:"varint,3,opt,name=fromServerId,proto3" json:"fromServerId,omitempty"`    // 玩家当前所在服务器id
-	FromPlayerName string                 `protobuf:"bytes,4,opt,name=fromPlayerName,proto3" json:"fromPlayerName,omitempty"` // 玩家名
-	PacketCommand  int32                  `protobuf:"varint,5,opt,name=packetCommand,proto3" json:"packetCommand,omitempty"`  // 消息号
-	PacketData     *anypb.Any             `protobuf:"bytes,6,opt,name=packetData,proto3" json:"packetData,omitempty"`         // 消息内容
+	FromPlayerId   int64                  `protobuf:"varint,1,opt,name=FromPlayerId,proto3" json:"FromPlayerId,omitempty"`    // 玩家id
+	FromGuildId    int64                  `protobuf:"varint,2,opt,name=FromGuildId,proto3" json:"FromGuildId,omitempty"`      // 玩家公会id
+	FromServerId   int32                  `protobuf:"varint,3,opt,name=FromServerId,proto3" json:"FromServerId,omitempty"`    // 玩家当前所在服务器id
+	FromPlayerName string                 `protobuf:"bytes,4,opt,name=FromPlayerName,proto3" json:"FromPlayerName,omitempty"` // 玩家名
+	PacketCommand  int32                  `protobuf:"varint,5,opt,name=PacketCommand,proto3" json:"PacketCommand,omitempty"`  // 消息号
+	PacketData     *anypb.Any             `protobuf:"bytes,6,opt,name=PacketData,proto3" json:"PacketData,omitempty"`         // 消息内容
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -194,31 +194,135 @@ func (x *GuildRoutePlayerMessageReq) GetPacketData() *anypb.Any {
 	return nil
 }
 
+// [game服]发给[其他服]的玩家请求消息
+// game -> otherserver(如fight)
+type RoutePlayerMessageReq struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	FromPlayerId   int64                  `protobuf:"varint,1,opt,name=FromPlayerId,proto3" json:"FromPlayerId,omitempty"`     // 玩家id
+	FromGuildId    int64                  `protobuf:"varint,2,opt,name=FromGuildId,proto3" json:"FromGuildId,omitempty"`       // 玩家公会id
+	FromServerId   int32                  `protobuf:"varint,3,opt,name=FromServerId,proto3" json:"FromServerId,omitempty"`     // 玩家当前所在服务器id
+	FromPlayerName string                 `protobuf:"bytes,4,opt,name=FromPlayerName,proto3" json:"FromPlayerName,omitempty"`  // 玩家名
+	PacketCommand  int32                  `protobuf:"varint,5,opt,name=PacketCommand,proto3" json:"PacketCommand,omitempty"`   // 消息号
+	PacketData     *anypb.Any             `protobuf:"bytes,6,opt,name=PacketData,proto3" json:"PacketData,omitempty"`          // 消息内容
+	TargetEntityId int64                  `protobuf:"varint,7,opt,name=TargetEntityId,proto3" json:"TargetEntityId,omitempty"` // 需要路由到的目标实体Id(如公会id,场景id等)
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *RoutePlayerMessageReq) Reset() {
+	*x = RoutePlayerMessageReq{}
+	mi := &file_route_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RoutePlayerMessageReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RoutePlayerMessageReq) ProtoMessage() {}
+
+func (x *RoutePlayerMessageReq) ProtoReflect() protoreflect.Message {
+	mi := &file_route_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RoutePlayerMessageReq.ProtoReflect.Descriptor instead.
+func (*RoutePlayerMessageReq) Descriptor() ([]byte, []int) {
+	return file_route_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *RoutePlayerMessageReq) GetFromPlayerId() int64 {
+	if x != nil {
+		return x.FromPlayerId
+	}
+	return 0
+}
+
+func (x *RoutePlayerMessageReq) GetFromGuildId() int64 {
+	if x != nil {
+		return x.FromGuildId
+	}
+	return 0
+}
+
+func (x *RoutePlayerMessageReq) GetFromServerId() int32 {
+	if x != nil {
+		return x.FromServerId
+	}
+	return 0
+}
+
+func (x *RoutePlayerMessageReq) GetFromPlayerName() string {
+	if x != nil {
+		return x.FromPlayerName
+	}
+	return ""
+}
+
+func (x *RoutePlayerMessageReq) GetPacketCommand() int32 {
+	if x != nil {
+		return x.PacketCommand
+	}
+	return 0
+}
+
+func (x *RoutePlayerMessageReq) GetPacketData() *anypb.Any {
+	if x != nil {
+		return x.PacketData
+	}
+	return nil
+}
+
+func (x *RoutePlayerMessageReq) GetTargetEntityId() int64 {
+	if x != nil {
+		return x.TargetEntityId
+	}
+	return 0
+}
+
 var File_route_proto protoreflect.FileDescriptor
 
 const file_route_proto_rawDesc = "" +
 	"\n" +
 	"\vroute.proto\x12\agserver\x1a\x19google/protobuf/any.proto\"\xfe\x01\n" +
 	"\x12RoutePlayerMessage\x12\x14\n" +
-	"\x05error\x18\x01 \x01(\tR\x05error\x12\x1e\n" +
+	"\x05Error\x18\x01 \x01(\tR\x05Error\x12\x1e\n" +
 	"\n" +
-	"toPlayerId\x18\x02 \x01(\x03R\n" +
-	"toPlayerId\x12$\n" +
-	"\rpacketCommand\x18\x03 \x01(\x05R\rpacketCommand\x12*\n" +
-	"\x10directSendClient\x18\x04 \x01(\bR\x10directSendClient\x12*\n" +
-	"\x10pendingMessageId\x18\x05 \x01(\x03R\x10pendingMessageId\x124\n" +
+	"ToPlayerId\x18\x02 \x01(\x03R\n" +
+	"ToPlayerId\x12$\n" +
+	"\rPacketCommand\x18\x03 \x01(\x05R\rPacketCommand\x12*\n" +
+	"\x10DirectSendClient\x18\x04 \x01(\bR\x10DirectSendClient\x12*\n" +
+	"\x10PendingMessageId\x18\x05 \x01(\x03R\x10PendingMessageId\x124\n" +
 	"\n" +
-	"packetData\x18\x06 \x01(\v2\x14.google.protobuf.AnyR\n" +
-	"packetData\"\x8a\x02\n" +
+	"PacketData\x18\x06 \x01(\v2\x14.google.protobuf.AnyR\n" +
+	"PacketData\"\x8a\x02\n" +
 	"\x1aGuildRoutePlayerMessageReq\x12\"\n" +
-	"\ffromPlayerId\x18\x01 \x01(\x03R\ffromPlayerId\x12 \n" +
-	"\vfromGuildId\x18\x02 \x01(\x03R\vfromGuildId\x12\"\n" +
-	"\ffromServerId\x18\x03 \x01(\x05R\ffromServerId\x12&\n" +
-	"\x0efromPlayerName\x18\x04 \x01(\tR\x0efromPlayerName\x12$\n" +
-	"\rpacketCommand\x18\x05 \x01(\x05R\rpacketCommand\x124\n" +
+	"\fFromPlayerId\x18\x01 \x01(\x03R\fFromPlayerId\x12 \n" +
+	"\vFromGuildId\x18\x02 \x01(\x03R\vFromGuildId\x12\"\n" +
+	"\fFromServerId\x18\x03 \x01(\x05R\fFromServerId\x12&\n" +
+	"\x0eFromPlayerName\x18\x04 \x01(\tR\x0eFromPlayerName\x12$\n" +
+	"\rPacketCommand\x18\x05 \x01(\x05R\rPacketCommand\x124\n" +
 	"\n" +
-	"packetData\x18\x06 \x01(\v2\x14.google.protobuf.AnyR\n" +
-	"packetDataB\x06Z\x04./pbb\x06proto3"
+	"PacketData\x18\x06 \x01(\v2\x14.google.protobuf.AnyR\n" +
+	"PacketData\"\xad\x02\n" +
+	"\x15RoutePlayerMessageReq\x12\"\n" +
+	"\fFromPlayerId\x18\x01 \x01(\x03R\fFromPlayerId\x12 \n" +
+	"\vFromGuildId\x18\x02 \x01(\x03R\vFromGuildId\x12\"\n" +
+	"\fFromServerId\x18\x03 \x01(\x05R\fFromServerId\x12&\n" +
+	"\x0eFromPlayerName\x18\x04 \x01(\tR\x0eFromPlayerName\x12$\n" +
+	"\rPacketCommand\x18\x05 \x01(\x05R\rPacketCommand\x124\n" +
+	"\n" +
+	"PacketData\x18\x06 \x01(\v2\x14.google.protobuf.AnyR\n" +
+	"PacketData\x12&\n" +
+	"\x0eTargetEntityId\x18\a \x01(\x03R\x0eTargetEntityIdB\x06Z\x04./pbb\x06proto3"
 
 var (
 	file_route_proto_rawDescOnce sync.Once
@@ -232,20 +336,22 @@ func file_route_proto_rawDescGZIP() []byte {
 	return file_route_proto_rawDescData
 }
 
-var file_route_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_route_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_route_proto_goTypes = []any{
 	(*RoutePlayerMessage)(nil),         // 0: gserver.RoutePlayerMessage
 	(*GuildRoutePlayerMessageReq)(nil), // 1: gserver.GuildRoutePlayerMessageReq
-	(*anypb.Any)(nil),                  // 2: google.protobuf.Any
+	(*RoutePlayerMessageReq)(nil),      // 2: gserver.RoutePlayerMessageReq
+	(*anypb.Any)(nil),                  // 3: google.protobuf.Any
 }
 var file_route_proto_depIdxs = []int32{
-	2, // 0: gserver.RoutePlayerMessage.packetData:type_name -> google.protobuf.Any
-	2, // 1: gserver.GuildRoutePlayerMessageReq.packetData:type_name -> google.protobuf.Any
-	2, // [2:2] is the sub-list for method output_type
-	2, // [2:2] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	3, // 0: gserver.RoutePlayerMessage.PacketData:type_name -> google.protobuf.Any
+	3, // 1: gserver.GuildRoutePlayerMessageReq.PacketData:type_name -> google.protobuf.Any
+	3, // 2: gserver.RoutePlayerMessageReq.PacketData:type_name -> google.protobuf.Any
+	3, // [3:3] is the sub-list for method output_type
+	3, // [3:3] is the sub-list for method input_type
+	3, // [3:3] is the sub-list for extension type_name
+	3, // [3:3] is the sub-list for extension extendee
+	0, // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_route_proto_init() }
@@ -259,7 +365,7 @@ func file_route_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_route_proto_rawDesc), len(file_route_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

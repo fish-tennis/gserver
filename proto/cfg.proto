@@ -269,7 +269,7 @@ message LevelExp {
 
 // 商店配置
 message ShopCfg {
-  int32 CfgId = 1; // 商店id
+  int32 CfgId = 1; // 配置id
   string Name = 2; // 商店名
   repeated int32 ExchangeIds = 3; // 商店的每1个格子就是1个兑换礼包
   map<string,string> Properties = 8; // 扩展属性

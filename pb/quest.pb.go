@@ -24,8 +24,8 @@ const (
 // 同步任务数据给客户端
 type QuestSync struct {
 	state         protoimpl.MessageState       `protogen:"open.v1"`
-	Finished      map[int32]*FinishedQuestData `protobuf:"bytes,1,rep,name=finished,proto3" json:"finished,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // 已完成的任务
-	Quests        map[int32]*QuestData         `protobuf:"bytes,2,rep,name=quests,proto3" json:"quests,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`     // 进行中的任务
+	Finished      map[int32]*FinishedQuestData `protobuf:"bytes,1,rep,name=Finished,proto3" json:"Finished,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // 已完成的任务
+	Quests        map[int32]*QuestData         `protobuf:"bytes,2,rep,name=Quests,proto3" json:"Quests,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`     // 进行中的任务
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -77,8 +77,8 @@ func (x *QuestSync) GetQuests() map[int32]*QuestData {
 // 任务数据更新
 type QuestUpdate struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	QuestCfgId    int32                  `protobuf:"varint,1,opt,name=questCfgId,proto3" json:"questCfgId,omitempty"` // 任务id
-	Data          *QuestData             `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
+	QuestCfgId    int32                  `protobuf:"varint,1,opt,name=QuestCfgId,proto3" json:"QuestCfgId,omitempty"` // 任务id
+	Data          *QuestData             `protobuf:"bytes,2,opt,name=Data,proto3" json:"Data,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -130,7 +130,7 @@ func (x *QuestUpdate) GetData() *QuestData {
 // 删除一个任务
 type QuestRemoveRes struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	QuestCfgId    int32                  `protobuf:"varint,1,opt,name=questCfgId,proto3" json:"questCfgId,omitempty"` // 任务id
+	QuestCfgId    int32                  `protobuf:"varint,1,opt,name=QuestCfgId,proto3" json:"QuestCfgId,omitempty"` // 任务id
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -175,7 +175,7 @@ func (x *QuestRemoveRes) GetQuestCfgId() int32 {
 // 完成任务
 type FinishQuestReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	QuestCfgIds   []int32                `protobuf:"varint,1,rep,packed,name=questCfgIds,proto3" json:"questCfgIds,omitempty"` // 任务id
+	QuestCfgIds   []int32                `protobuf:"varint,1,rep,packed,name=QuestCfgIds,proto3" json:"QuestCfgIds,omitempty"` // 任务id
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -220,8 +220,8 @@ func (x *FinishQuestReq) GetQuestCfgIds() []int32 {
 // 完成任务的返回结果
 type FinishQuestRes struct {
 	state              protoimpl.MessageState `protogen:"open.v1"`
-	QuestCfgIds        []int32                `protobuf:"varint,1,rep,packed,name=questCfgIds,proto3" json:"questCfgIds,omitempty"`       // 任务id
-	FinishedQuestDatas []*FinishedQuestData   `protobuf:"bytes,2,rep,name=finishedQuestDatas,proto3" json:"finishedQuestDatas,omitempty"` // 完成任务的数据
+	QuestCfgIds        []int32                `protobuf:"varint,1,rep,packed,name=QuestCfgIds,proto3" json:"QuestCfgIds,omitempty"`       // 任务id
+	FinishedQuestDatas []*FinishedQuestData   `protobuf:"bytes,2,rep,name=FinishedQuestDatas,proto3" json:"FinishedQuestDatas,omitempty"` // 完成任务的数据
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -276,8 +276,8 @@ const file_quest_proto_rawDesc = "" +
 	"\n" +
 	"\vquest.proto\x12\agserver\x1a\fplayer.proto\"\xa9\x02\n" +
 	"\tQuestSync\x12<\n" +
-	"\bfinished\x18\x01 \x03(\v2 .gserver.QuestSync.FinishedEntryR\bfinished\x126\n" +
-	"\x06quests\x18\x02 \x03(\v2\x1e.gserver.QuestSync.QuestsEntryR\x06quests\x1aW\n" +
+	"\bFinished\x18\x01 \x03(\v2 .gserver.QuestSync.FinishedEntryR\bFinished\x126\n" +
+	"\x06Quests\x18\x02 \x03(\v2\x1e.gserver.QuestSync.QuestsEntryR\x06Quests\x1aW\n" +
 	"\rFinishedEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\x05R\x03key\x120\n" +
 	"\x05value\x18\x02 \x01(\v2\x1a.gserver.FinishedQuestDataR\x05value:\x028\x01\x1aM\n" +
@@ -286,18 +286,18 @@ const file_quest_proto_rawDesc = "" +
 	"\x05value\x18\x02 \x01(\v2\x12.gserver.QuestDataR\x05value:\x028\x01\"U\n" +
 	"\vQuestUpdate\x12\x1e\n" +
 	"\n" +
-	"questCfgId\x18\x01 \x01(\x05R\n" +
-	"questCfgId\x12&\n" +
-	"\x04data\x18\x02 \x01(\v2\x12.gserver.QuestDataR\x04data\"0\n" +
+	"QuestCfgId\x18\x01 \x01(\x05R\n" +
+	"QuestCfgId\x12&\n" +
+	"\x04Data\x18\x02 \x01(\v2\x12.gserver.QuestDataR\x04Data\"0\n" +
 	"\x0eQuestRemoveRes\x12\x1e\n" +
 	"\n" +
-	"questCfgId\x18\x01 \x01(\x05R\n" +
-	"questCfgId\"2\n" +
+	"QuestCfgId\x18\x01 \x01(\x05R\n" +
+	"QuestCfgId\"2\n" +
 	"\x0eFinishQuestReq\x12 \n" +
-	"\vquestCfgIds\x18\x01 \x03(\x05R\vquestCfgIds\"~\n" +
+	"\vQuestCfgIds\x18\x01 \x03(\x05R\vQuestCfgIds\"~\n" +
 	"\x0eFinishQuestRes\x12 \n" +
-	"\vquestCfgIds\x18\x01 \x03(\x05R\vquestCfgIds\x12J\n" +
-	"\x12finishedQuestDatas\x18\x02 \x03(\v2\x1a.gserver.FinishedQuestDataR\x12finishedQuestDatasB\x06Z\x04./pbb\x06proto3"
+	"\vQuestCfgIds\x18\x01 \x03(\x05R\vQuestCfgIds\x12J\n" +
+	"\x12FinishedQuestDatas\x18\x02 \x03(\v2\x1a.gserver.FinishedQuestDataR\x12FinishedQuestDatasB\x06Z\x04./pbb\x06proto3"
 
 var (
 	file_quest_proto_rawDescOnce sync.Once
@@ -324,10 +324,10 @@ var file_quest_proto_goTypes = []any{
 	(*FinishedQuestData)(nil), // 8: gserver.FinishedQuestData
 }
 var file_quest_proto_depIdxs = []int32{
-	5, // 0: gserver.QuestSync.finished:type_name -> gserver.QuestSync.FinishedEntry
-	6, // 1: gserver.QuestSync.quests:type_name -> gserver.QuestSync.QuestsEntry
-	7, // 2: gserver.QuestUpdate.data:type_name -> gserver.QuestData
-	8, // 3: gserver.FinishQuestRes.finishedQuestDatas:type_name -> gserver.FinishedQuestData
+	5, // 0: gserver.QuestSync.Finished:type_name -> gserver.QuestSync.FinishedEntry
+	6, // 1: gserver.QuestSync.Quests:type_name -> gserver.QuestSync.QuestsEntry
+	7, // 2: gserver.QuestUpdate.Data:type_name -> gserver.QuestData
+	8, // 3: gserver.FinishQuestRes.FinishedQuestDatas:type_name -> gserver.FinishedQuestData
 	8, // 4: gserver.QuestSync.FinishedEntry.value:type_name -> gserver.FinishedQuestData
 	7, // 5: gserver.QuestSync.QuestsEntry.value:type_name -> gserver.QuestData
 	6, // [6:6] is the sub-list for method output_type

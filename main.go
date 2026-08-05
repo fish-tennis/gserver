@@ -28,6 +28,7 @@ import (
 func main() {
 	defer func() {
 		if err := recover(); err != nil {
+			internal.SendAlert(err)
 			panic(err)
 		}
 	}()
@@ -77,9 +78,9 @@ func main() {
 			for {
 				lineBytes, _, _ := consoleReader.ReadLine()
 				line := strings.ToLower(string(lineBytes))
-				logger.Info("line:%v", line)
+				slog.Info("line", "line", line)
 				if line == "close" || line == "exit" {
-					logger.Info("kill by console input")
+					slog.Info("kill by console input")
 					// 模拟一个kill信号,以方便测试服务器退出流程
 					signalKillNotify <- os.Kill
 					return
@@ -88,10 +89,10 @@ func main() {
 		}()
 	}
 	// 阻塞等待系统关闭信号
-	logger.Info("wait for kill signal")
+	slog.Info("wait for kill signal")
 	select {
 	case <-signalKillNotify:
-		logger.Info("signalKillNotify, cancel ctx")
+		slog.Info("signalKillNotify, cancel ctx")
 		// 通知所有协程关闭,所有监听<-ctx.Done()的地方会收到通知
 		cancel()
 		break
@@ -171,5 +172,5 @@ func createServer(ctx context.Context, serverType, configFile, cfgDir string) ge
 	case strings.ToLower(internal.ServerType_Game):
 		return gameserver.NewGameServer(ctx, configFile, cfgDir)
 	}
-	panic("err server type")
+	panic(fmt.Sprintf("err server type: %v configFile: %v cfgDir: %v", serverType, configFile, cfgDir))
 }

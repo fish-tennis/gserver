@@ -2,6 +2,11 @@ package social
 
 import (
 	"fmt"
+	"log/slog"
+	"reflect"
+	"strings"
+	"time"
+
 	"github.com/fish-tennis/gentity"
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/game"
@@ -9,10 +14,6 @@ import (
 	"github.com/fish-tennis/gserver/network"
 	"github.com/fish-tennis/gserver/pb"
 	"google.golang.org/protobuf/proto"
-	"log/slog"
-	"reflect"
-	"strings"
-	"time"
 )
 
 // 公会消息回调接口注册
@@ -125,7 +126,7 @@ func ParseRoutePacket(mgr *gentity.DistributedEntityMgr, connection Connection, 
 	log := slog.Default().With("toEntityId", toEntityId, "packet", packet)
 	// 再验证一次是否属于本服务器管理
 	if _guildHelper.RouteServerId(toEntityId) != gentity.GetApplication().GetId() {
-		log.Warn("route err")
+		log.Warn("route err", "toEntityId", toEntityId, "packet", packet)
 		return gentity.ErrRouteServerId
 	}
 	toEntity := mgr.GetEntity(toEntityId)
@@ -135,13 +136,13 @@ func ParseRoutePacket(mgr *gentity.DistributedEntityMgr, connection Connection, 
 		//}
 		toEntity = _guildHelper.LoadEntity(toEntityId)
 		if toEntity == nil {
-			log.Debug("ParseRoutePacket entity==nil")
+			log.Debug("ParseRoutePacket entity==nil", "toEntityId", toEntityId, "packet", packet)
 			return gentity.ErrEntityNotExists
 		}
 	}
 	message := _guildHelper.RoutePacketToRoutineMessage(connection, packet, toEntityId)
 	if message == nil {
-		log.Debug("ParseRoutePacket convert err")
+		log.Debug("ParseRoutePacket convert err", "toEntityId", toEntityId, "packet", packet)
 		return gentity.ErrConvertRoutineMessage
 	}
 	// 跨协程投递用 PushMessageTimeout(1秒),兼顾:
@@ -149,7 +150,7 @@ func ParseRoutePacket(mgr *gentity.DistributedEntityMgr, connection Connection, 
 	// 2. 公会协程长时间卡住时1秒后放弃,避免阻塞网络回调协程导致雪崩
 	if routineEntity, ok := toEntity.(*Guild); ok {
 		if !routineEntity.PushMessageTimeout(message, time.Second) {
-			log.Warn("ParseRoutePacket PushMessageTimeout failed")
+			log.Warn("ParseRoutePacket PushMessageTimeout failed", "toEntityId", toEntityId, "packet", packet)
 			return gentity.ErrConvertRoutineMessage
 		}
 	} else {

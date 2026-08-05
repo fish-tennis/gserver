@@ -23,16 +23,17 @@ const (
 
 // 服务器信息
 type ServerInfo struct {
-	state            protoimpl.MessageState `protogen:"open.v1"`
-	ServerId         int32                  `protobuf:"varint,1,opt,name=serverId,proto3" json:"serverId,omitempty"`                // 服务器id
-	ServerType       string                 `protobuf:"bytes,2,opt,name=serverType,proto3" json:"serverType,omitempty"`             // 服务器类型
-	ServerListenAddr string                 `protobuf:"bytes,3,opt,name=serverListenAddr,proto3" json:"serverListenAddr,omitempty"` // 监听服务器地址
-	ClientListenAddr string                 `protobuf:"bytes,4,opt,name=clientListenAddr,proto3" json:"clientListenAddr,omitempty"` // 监听客户端地址
-	GateListenAddr   string                 `protobuf:"bytes,5,opt,name=gateListenAddr,proto3" json:"gateListenAddr,omitempty"`     // 监听网关地址
-	LastActiveTime   int64                  `protobuf:"varint,6,opt,name=lastActiveTime,proto3" json:"lastActiveTime,omitempty"`    // 最近上传信息的时间戳(毫秒)
-	Ping             int32                  `protobuf:"varint,7,opt,name=ping,proto3" json:"ping,omitempty"`                        // ping值(毫秒)
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	ServerId           int32                  `protobuf:"varint,1,opt,name=ServerId,proto3" json:"ServerId,omitempty"`                    // 服务器id
+	ServerType         string                 `protobuf:"bytes,2,opt,name=ServerType,proto3" json:"ServerType,omitempty"`                 // 服务器类型
+	ServerListenAddr   string                 `protobuf:"bytes,3,opt,name=ServerListenAddr,proto3" json:"ServerListenAddr,omitempty"`     // 监听服务器地址
+	ClientListenAddr   string                 `protobuf:"bytes,4,opt,name=ClientListenAddr,proto3" json:"ClientListenAddr,omitempty"`     // 监听Tcp客户端地址
+	WsClientListenAddr string                 `protobuf:"bytes,5,opt,name=WsClientListenAddr,proto3" json:"WsClientListenAddr,omitempty"` // 监听WebSocket客户端地址
+	GateListenAddr     string                 `protobuf:"bytes,6,opt,name=GateListenAddr,proto3" json:"GateListenAddr,omitempty"`         // 监听网关地址
+	LastActiveTime     int64                  `protobuf:"varint,7,opt,name=LastActiveTime,proto3" json:"LastActiveTime,omitempty"`        // 最近上传信息的时间戳(毫秒)
+	Ping               int32                  `protobuf:"varint,8,opt,name=Ping,proto3" json:"Ping,omitempty"`                            // ping值(毫秒)
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *ServerInfo) Reset() {
@@ -93,6 +94,13 @@ func (x *ServerInfo) GetClientListenAddr() string {
 	return ""
 }
 
+func (x *ServerInfo) GetWsClientListenAddr() string {
+	if x != nil {
+		return x.WsClientListenAddr
+	}
+	return ""
+}
+
 func (x *ServerInfo) GetGateListenAddr() string {
 	if x != nil {
 		return x.GateListenAddr
@@ -117,8 +125,8 @@ func (x *ServerInfo) GetPing() int32 {
 // 踢玩家下线req
 type KickPlayerReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	AccountId     int64                  `protobuf:"varint,1,opt,name=accountId,proto3" json:"accountId,omitempty"` // 账号id
-	PlayerId      int64                  `protobuf:"varint,2,opt,name=playerId,proto3" json:"playerId,omitempty"`   // 玩家id
+	AccountId     int64                  `protobuf:"varint,1,opt,name=AccountId,proto3" json:"AccountId,omitempty"` // 账号id
+	PlayerId      int64                  `protobuf:"varint,2,opt,name=PlayerId,proto3" json:"PlayerId,omitempty"`   // 玩家id
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -170,9 +178,9 @@ func (x *KickPlayerReq) GetPlayerId() int64 {
 // 踢玩家下线res
 type KickPlayerRes struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Error         string                 `protobuf:"bytes,1,opt,name=error,proto3" json:"error,omitempty"`
-	AccountId     int64                  `protobuf:"varint,2,opt,name=accountId,proto3" json:"accountId,omitempty"` // 账号id
-	PlayerId      int64                  `protobuf:"varint,3,opt,name=playerId,proto3" json:"playerId,omitempty"`   // 玩家id
+	Error         string                 `protobuf:"bytes,1,opt,name=Error,proto3" json:"Error,omitempty"`
+	AccountId     int64                  `protobuf:"varint,2,opt,name=AccountId,proto3" json:"AccountId,omitempty"` // 账号id
+	PlayerId      int64                  `protobuf:"varint,3,opt,name=PlayerId,proto3" json:"PlayerId,omitempty"`   // 玩家id
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -231,7 +239,7 @@ func (x *KickPlayerRes) GetPlayerId() int64 {
 // 客户端掉线
 type ClientDisconnect struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	ClientConnId  uint32                 `protobuf:"varint,1,opt,name=clientConnId,proto3" json:"clientConnId,omitempty"`
+	ClientConnId  uint32                 `protobuf:"varint,1,opt,name=ClientConnId,proto3" json:"ClientConnId,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -276,8 +284,8 @@ func (x *ClientDisconnect) GetClientConnId() uint32 {
 // 服务器连接上其他服务器时,发的初始化信息
 type ServerHello struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	ServerId      int32                  `protobuf:"varint,1,opt,name=serverId,proto3" json:"serverId,omitempty"`    // 服务器id
-	ServerType    string                 `protobuf:"bytes,2,opt,name=serverType,proto3" json:"serverType,omitempty"` // 服务器类型
+	ServerId      int32                  `protobuf:"varint,1,opt,name=ServerId,proto3" json:"ServerId,omitempty"`    // 服务器id
+	ServerType    string                 `protobuf:"bytes,2,opt,name=ServerType,proto3" json:"ServerType,omitempty"` // 服务器类型
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -330,32 +338,33 @@ var File_server_base_proto protoreflect.FileDescriptor
 
 const file_server_base_proto_rawDesc = "" +
 	"\n" +
-	"\x11server_base.proto\x12\agserver\"\x84\x02\n" +
+	"\x11server_base.proto\x12\agserver\"\xb4\x02\n" +
 	"\n" +
 	"ServerInfo\x12\x1a\n" +
-	"\bserverId\x18\x01 \x01(\x05R\bserverId\x12\x1e\n" +
+	"\bServerId\x18\x01 \x01(\x05R\bServerId\x12\x1e\n" +
 	"\n" +
-	"serverType\x18\x02 \x01(\tR\n" +
-	"serverType\x12*\n" +
-	"\x10serverListenAddr\x18\x03 \x01(\tR\x10serverListenAddr\x12*\n" +
-	"\x10clientListenAddr\x18\x04 \x01(\tR\x10clientListenAddr\x12&\n" +
-	"\x0egateListenAddr\x18\x05 \x01(\tR\x0egateListenAddr\x12&\n" +
-	"\x0elastActiveTime\x18\x06 \x01(\x03R\x0elastActiveTime\x12\x12\n" +
-	"\x04ping\x18\a \x01(\x05R\x04ping\"I\n" +
+	"ServerType\x18\x02 \x01(\tR\n" +
+	"ServerType\x12*\n" +
+	"\x10ServerListenAddr\x18\x03 \x01(\tR\x10ServerListenAddr\x12*\n" +
+	"\x10ClientListenAddr\x18\x04 \x01(\tR\x10ClientListenAddr\x12.\n" +
+	"\x12WsClientListenAddr\x18\x05 \x01(\tR\x12WsClientListenAddr\x12&\n" +
+	"\x0eGateListenAddr\x18\x06 \x01(\tR\x0eGateListenAddr\x12&\n" +
+	"\x0eLastActiveTime\x18\a \x01(\x03R\x0eLastActiveTime\x12\x12\n" +
+	"\x04Ping\x18\b \x01(\x05R\x04Ping\"I\n" +
 	"\rKickPlayerReq\x12\x1c\n" +
-	"\taccountId\x18\x01 \x01(\x03R\taccountId\x12\x1a\n" +
-	"\bplayerId\x18\x02 \x01(\x03R\bplayerId\"_\n" +
+	"\tAccountId\x18\x01 \x01(\x03R\tAccountId\x12\x1a\n" +
+	"\bPlayerId\x18\x02 \x01(\x03R\bPlayerId\"_\n" +
 	"\rKickPlayerRes\x12\x14\n" +
-	"\x05error\x18\x01 \x01(\tR\x05error\x12\x1c\n" +
-	"\taccountId\x18\x02 \x01(\x03R\taccountId\x12\x1a\n" +
-	"\bplayerId\x18\x03 \x01(\x03R\bplayerId\"6\n" +
+	"\x05Error\x18\x01 \x01(\tR\x05Error\x12\x1c\n" +
+	"\tAccountId\x18\x02 \x01(\x03R\tAccountId\x12\x1a\n" +
+	"\bPlayerId\x18\x03 \x01(\x03R\bPlayerId\"6\n" +
 	"\x10ClientDisconnect\x12\"\n" +
-	"\fclientConnId\x18\x01 \x01(\rR\fclientConnId\"I\n" +
+	"\fClientConnId\x18\x01 \x01(\rR\fClientConnId\"I\n" +
 	"\vServerHello\x12\x1a\n" +
-	"\bserverId\x18\x01 \x01(\x05R\bserverId\x12\x1e\n" +
+	"\bServerId\x18\x01 \x01(\x05R\bServerId\x12\x1e\n" +
 	"\n" +
-	"serverType\x18\x02 \x01(\tR\n" +
-	"serverTypeB\x06Z\x04./pbb\x06proto3"
+	"ServerType\x18\x02 \x01(\tR\n" +
+	"ServerTypeB\x06Z\x04./pbb\x06proto3"
 
 var (
 	file_server_base_proto_rawDescOnce sync.Once

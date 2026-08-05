@@ -3,22 +3,21 @@ package game
 import (
 	"context"
 	"errors"
+	"log/slog"
+	"math"
+
 	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/db"
 	"github.com/fish-tennis/gserver/internal"
-	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/network"
 	"github.com/fish-tennis/gserver/pb"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 	"google.golang.org/protobuf/proto"
-	"log/slog"
-	"math"
 )
 
 const (
-	// 组件名
 	ComponentNameGuild = "Guild"
 )
 
@@ -58,23 +57,23 @@ func (g *Guild) SyncDataToClient() {
 func (g *Guild) SetGuildId(guildId int64) {
 	g.Data.GuildId = guildId
 	g.SetDirty()
-	logger.Debug("%v SetGuildId %v", g.GetPlayerId(), guildId)
+	slog.Debug("Guild.SetGuildId", "playerId", g.GetPlayerId(), "guildId", guildId)
 }
 
 // 查询公会列表
 func (g *Guild) OnGuildListReq(req *pb.GuildListReq) (*pb.GuildListRes, error) {
-	logger.Debug("OnGuildListReq")
+	slog.Debug("Guild.OnGuildListReq")
 	guildDb := db.GetGuildDb()
 	col := guildDb.(*gentity.MongoCollection).GetCollection()
 	pageSize := int64(10)
 	count, err := col.CountDocuments(context.Background(), bson.D{}, nil)
 	if err != nil {
-		logger.Error("db err:%v", err)
+		slog.Error("Guild.OnGuildListReq: db error", "error", err)
 		return nil, errors.New("DbError")
 	}
 	cursor, dbErr := col.Find(context.Background(), bson.D{}, options.Find().SetSkip(pageSize*int64(req.PageIndex)).SetLimit(pageSize))
 	if dbErr != nil {
-		logger.Error("db err:%v", dbErr)
+		slog.Error("Guild.OnGuildListReq: db error", "error", dbErr)
 		return nil, errors.New("DbError")
 	}
 	type guildBaseInfo struct {
@@ -83,7 +82,7 @@ func (g *Guild) OnGuildListReq(req *pb.GuildListReq) (*pb.GuildListRes, error) {
 	var guildInfos []*guildBaseInfo
 	err = cursor.All(context.Background(), &guildInfos)
 	if err != nil {
-		logger.Error("db err:%v", err)
+		slog.Error("Guild.OnGuildListReq: db error", "error", err)
 		return nil, errors.New("DbError")
 	}
 	res := &pb.GuildListRes{
@@ -99,7 +98,7 @@ func (g *Guild) OnGuildListReq(req *pb.GuildListReq) (*pb.GuildListRes, error) {
 
 // 创建公会
 func (g *Guild) OnGuildCreateReq(req *pb.GuildCreateReq) (*pb.GuildCreateRes, error) {
-	slog.Debug("OnGuildCreateReq")
+	slog.Debug("Guild.OnGuildCreateReq")
 	player := g.GetPlayer()
 	if g.Data.GuildId > 0 {
 		return nil, errors.New("AlreadyHaveGuild")
@@ -109,7 +108,7 @@ func (g *Guild) OnGuildCreateReq(req *pb.GuildCreateReq) (*pb.GuildCreateRes, er
 	// 利用mongodb加一个类似原子锁的操作
 	newGuildIdValue, err := db.GetKvDb().Inc(db.GuildIdKeyName, int64(1), true)
 	if err != nil {
-		logger.Error("OnGuildCreateReq err:%v", err)
+		slog.Error("Guild.OnGuildCreateReq: id error", "error", err)
 		return nil, errors.New("IdError")
 	}
 	// BSON数值可能是int32/int64/float64等类型,用安全转换
@@ -122,11 +121,11 @@ func (g *Guild) OnGuildCreateReq(req *pb.GuildCreateReq) (*pb.GuildCreateRes, er
 	case float64:
 		newGuildId = int64(idVal)
 	default:
-		logger.Error("OnGuildCreateReq invalid guildId type:%T val:%v", newGuildIdValue, newGuildIdValue)
+		slog.Error("OnGuildCreateReq invalid guildId type", "newGuildIdValue", newGuildIdValue)
 		return nil, errors.New("IdError")
 	}
 	if newGuildId <= 0 {
-		logger.Error("OnGuildCreateReq invalid guildId val:%v", newGuildId)
+		slog.Error("OnGuildCreateReq invalid guildId", "newGuildIdValue", newGuildIdValue)
 		return nil, errors.New("IdError")
 	}
 	newGuildData := &pb.GuildData{
@@ -153,7 +152,7 @@ func (g *Guild) OnGuildCreateReq(req *pb.GuildCreateReq) (*pb.GuildCreateRes, er
 	}
 	dbErr, isDuplicateName := guildDb.InsertEntity(newGuildData.Id, saveData)
 	if dbErr != nil {
-		logger.Error("OnGuildCreateReq dbErr:%v", dbErr)
+		slog.Error("Guild.OnGuildCreateReq: db error", "error", dbErr)
 		return nil, errors.New("DbError")
 	}
 	if isDuplicateName {
@@ -165,7 +164,7 @@ func (g *Guild) OnGuildCreateReq(req *pb.GuildCreateReq) (*pb.GuildCreateRes, er
 		return nil, errors.New("ConcurrentError")
 	}
 	g.SetGuildId(newGuildData.Id)
-	logger.Debug("create guild:%v %v", newGuildData.Id, newGuildData.BaseInfo.Name)
+	slog.Debug("Guild.OnGuildCreateReq: created", "guildId", newGuildData.Id, "name", newGuildData.BaseInfo.Name)
 	return &pb.GuildCreateRes{
 		Id:   newGuildData.Id,
 		Name: newGuildData.BaseInfo.Name,
@@ -198,7 +197,7 @@ func (g *Guild) OnGuildJoinAgreeReq(req *pb.GuildJoinAgreeReq) (*pb.GuildJoinAgr
 //
 //	这种格式写的函数可以自动注册非客户端的消息回调
 func (g *Guild) HandleGuildJoinReqOpResult(msg *pb.GuildJoinReqOpResult) {
-	logger.Debug("HandleGuildJoinReqOpResult:%v", msg)
+	slog.Debug("Guild.HandleGuildJoinReqOpResult", "msg", msg)
 	if msg.Error == "" && msg.IsAgree {
 		// 利用mongodb的原子操作,来防止该玩家同时加入多个公会
 		if !AtomicSetGuildId(g.GetPlayerId(), msg.GuildId, 0) {
@@ -213,7 +212,7 @@ func (g *Guild) HandleGuildJoinReqOpResult(msg *pb.GuildJoinReqOpResult) {
 
 // 公会成员的客户端的请求消息路由到自己的公会所在服务器
 func (g *Guild) RoutePacketToGuild(cmd gnet.PacketCommand, message proto.Message) bool {
-	slog.Debug("RoutePacketToGuild", "cmd", cmd, "playerId", g.GetPlayerId(), "guildId", g.Data.GuildId)
+	slog.Debug("Guild.RoutePacketToGuild", "cmd", cmd, "playerId", g.GetPlayerId(), "guildId", g.Data.GuildId)
 	// 转换成给公会服务的路由消息,附带上玩家信息
 	routePacket := internal.PacketToGuildRoutePacket(g.GetPlayer().GetId(), g.GetPlayer().GetName(),
 		gnet.NewProtoPacketEx(cmd, message), g.Data.GuildId)
@@ -226,20 +225,20 @@ func (g *Guild) RouteRpcToTargetGuild(targetGuildId int64, message proto.Message
 	routePacket := internal.PacketToGuildRoutePacket(g.GetPlayer().GetId(), g.GetPlayer().GetName(),
 		network.NewPacket(message), targetGuildId)
 	toServerId := internal.RouteGuildServerId(targetGuildId)
-	slog.Debug("RouteRpcToTargetGuild", "playerId", g.GetPlayerId(), "guildId", targetGuildId, "toServerId", toServerId, "req", proto.MessageName(message))
+	slog.Debug("Guild.RouteRpcToTargetGuild", "playerId", g.GetPlayerId(), "guildId", targetGuildId, "toServerId", toServerId, "req", proto.MessageName(message))
 	routePlayerMessage := new(pb.RoutePlayerMessage)
 	err := internal.GetServerList().Rpc(toServerId, routePacket, routePlayerMessage)
 	if err != nil {
-		slog.Error("RouteRpcToTargetGuildErr", "toServerId", toServerId, "err", err)
+		slog.Error("Guild.RouteRpcToTargetGuild error", "toServerId", toServerId, "error", err)
 	}
 	if err == nil {
 		if routePlayerMessage.Error != "" {
-			slog.Error("RouteRpcToTargetGuildErr", "toServerId", toServerId, "err", routePlayerMessage.Error)
+			slog.Error("Guild.RouteRpcToTargetGuild error", "toServerId", toServerId, "error", routePlayerMessage.Error)
 			return errors.New(routePlayerMessage.Error)
 		}
 		err = routePlayerMessage.PacketData.UnmarshalTo(reply)
 		if err != nil {
-			slog.Error("ParseReplyErr", "err", err, "reply", reply,
+			slog.Error("Guild.RouteRpcToTargetGuild: parse reply error", "error", err, "reply", reply,
 				"res", string(routePlayerMessage.PacketData.MessageName().Name()))
 		}
 	}
@@ -248,7 +247,7 @@ func (g *Guild) RouteRpcToTargetGuild(targetGuildId int64, message proto.Message
 
 // 公会成员的客户端的请求消息路由到自己的公会所在服务器,并阻塞等待返回结果
 func (g *Guild) RouteRpcToSelfGuild(message proto.Message, reply proto.Message) error {
-	slog.Debug("RouteRpcToSelfGuild", "playerId", g.GetPlayerId(), "guildId", g.Data.GuildId, "req", proto.MessageName(message))
+	slog.Debug("Guild.RouteRpcToSelfGuild", "playerId", g.GetPlayerId(), "guildId", g.Data.GuildId, "req", proto.MessageName(message))
 	return g.RouteRpcToTargetGuild(g.Data.GuildId, message, reply)
 }
 
@@ -268,7 +267,7 @@ func (g *Guild) OnGuildDataViewReq(req *pb.GuildDataViewReq) (*pb.GuildDataViewR
 //	step1:玩家向公会A,B发送入会申请
 //	step2:公会A,B的管理员同时操作,同意入会申请,如果没有原子化保证,玩家将同时加入到A,B公会
 func AtomicSetGuildId(playerId int64, guildId int64, oldGuildId int64) bool {
-	col := db.GetPlayerDb().(*gentity.MongoCollectionPlayer)
+	col := db.GetDbMgr().GetEntityDb(db.PlayerDbName).(*gentity.MongoCollection)
 	// NOTE: 明文保存的proto字段,字段名会被mongodb自动转为小写 Q:有办法解决吗?
 	// 所以这里的guildid用全小写
 	fieldKey := "Guild.guildid"

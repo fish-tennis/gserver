@@ -46,6 +46,7 @@ func (p *Player) OnTestCmd(req *pb.TestCmd) {
 			return
 		}
 		p.GetBaseInfo().IncExp(value)
+		slog.Info("AddExp success", "value", value)
 
 	case strings.ToLower("AddItem"):
 		// 加物品
@@ -76,6 +77,7 @@ func (p *Player) OnTestCmd(req *pb.TestCmd) {
 			return
 		}
 		p.GetBags().AddItems([]*pb.AddElemArg{addItemArg})
+		slog.Info("AddItem success", "cfgId", itemCfgId, "num", addItemArg.Num)
 
 	case strings.ToLower("FinishQuest"), strings.ToLower("FinishQuests"):
 		if len(cmdArgs) < 1 {

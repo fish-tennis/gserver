@@ -25,8 +25,8 @@ const (
 type Account struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	XId           int64                  `protobuf:"varint,1,opt,name=_id,json=Id,proto3" json:"_id,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Password      string                 `protobuf:"bytes,3,opt,name=password,proto3" json:"password,omitempty"`
+	Name          string                 `protobuf:"bytes,2,opt,name=Name,proto3" json:"Name,omitempty"`
+	Password      string                 `protobuf:"bytes,3,opt,name=Password,proto3" json:"Password,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -89,8 +89,8 @@ const file_account_proto_rawDesc = "" +
 	"\raccount.proto\x12\agserver\"J\n" +
 	"\aAccount\x12\x0f\n" +
 	"\x03_id\x18\x01 \x01(\x03R\x02Id\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1a\n" +
-	"\bpassword\x18\x03 \x01(\tR\bpasswordB\x06Z\x04./pbb\x06proto3"
+	"\x04Name\x18\x02 \x01(\tR\x04Name\x12\x1a\n" +
+	"\bPassword\x18\x03 \x01(\tR\bPasswordB\x06Z\x04./pbb\x06proto3"
 
 var (
 	file_account_proto_rawDescOnce sync.Once

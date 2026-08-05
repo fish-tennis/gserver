@@ -2,10 +2,11 @@ package network
 
 import (
 	"encoding/binary"
-	. "github.com/fish-tennis/gnet"
-	"github.com/fish-tennis/gserver/logger"
-	"google.golang.org/protobuf/proto"
+	"log/slog"
 	"reflect"
+
+	. "github.com/fish-tennis/gnet"
+	"google.golang.org/protobuf/proto"
 )
 
 // gate和其他服务器之间的编解码
@@ -69,7 +70,6 @@ func (this *GateCodec) EncodePacket(connection Connection, packet Packet) ([][]b
 		rpcCallIdBytes = make([]byte, 4)
 		binary.LittleEndian.PutUint32(rpcCallIdBytes, rpcCallId)
 		headerFlags |= RpcCall
-		//logger.Debug("write rpcCallId:%v", rpcCallId)
 	}
 	var errorCodeBytes []byte
 	if packet.ErrorCode() != 0 {
@@ -82,7 +82,7 @@ func (this *GateCodec) EncodePacket(connection Connection, packet Packet) ([][]b
 		var err error
 		messageBytes, err = proto.Marshal(protoMessage)
 		if err != nil {
-			logger.Error("proto encode err:%v cmd:%v", err, packet.Command())
+			slog.Error("GateCodec.EncodePacket: proto encode error", "error", err, "cmd", packet.Command())
 			return nil, 0
 		}
 	} else {
@@ -134,7 +134,7 @@ func (this *GateCodec) DecodePacket(connection Connection, packetHeader PacketHe
 			newProtoMessage := reflect.New(protoMessageType).Interface().(proto.Message)
 			err := proto.Unmarshal(decodedPacketData, newProtoMessage)
 			if err != nil {
-				logger.Error("proto decode err:%v cmd:%v", err, command)
+				slog.Error("GateCodec.DecodePacket: proto decode error", "error", err, "cmd", command)
 				return nil
 			}
 			return &GatePacket{

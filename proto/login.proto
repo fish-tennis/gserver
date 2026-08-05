@@ -8,50 +8,50 @@ package gserver;
 
 // 账号登录请求
 message LoginReq {
-  string accountName = 1;
-  string password = 2;
+  string AccountName = 1;
+  string Password = 2;
   string Version = 3; // 客户端版本号,如0.0.0.1
 }
 
 // 账号登录回复
 message LoginRes {
-  string accountName = 1;
-  int64 accountId = 2;
-  string loginSession = 3; // 账号验证成功后的缓存session
-  GameServerInfo gameServer = 4; // 游戏服信息
+  string AccountName = 1;
+  int64 AccountId = 2;
+  string LoginSession = 3; // 账号验证成功后的缓存session
+  GameServerInfo GameServer = 4; // 游戏服信息
 }
 
 // 注册账号
 message AccountReg {
-  string accountName = 1;
-  string password = 2;
+  string AccountName = 1;
+  string Password = 2;
 }
 
 // 注册账号回复
 message AccountRes {
-  string accountName = 1;
-  int64 accountId = 2;
+  string AccountName = 1;
+  int64 AccountId = 2;
 }
 
 // 游戏服务器信息
 message GameServerInfo {
-  int32 serverId = 1; // 服务器编号
-  string clientListenAddr = 2; // 游戏服监听客户端地址
+  int32 ServerId = 1; // 服务器编号
+  string ClientListenAddr = 2; // 游戏服监听客户端地址
 }
 
 // 玩家登录游戏服
 message PlayerEntryGameReq {
-  int64 accountId = 1;
-  string loginSession = 2; // 账号验证成功后的缓存session
-  int32 regionId = 3; // 区服id
+  int64 AccountId = 1;
+  string LoginSession = 2; // 账号验证成功后的缓存session
+  int32 RegionId = 3; // 区服id
 }
 
 // 玩家登录游戏服回复
 message PlayerEntryGameRes {
-  int64 accountId = 1;
-  int64 playerId = 2;
-  int32 regionId = 3; // 区服id
-  string playerName = 4;
+  int64 AccountId = 1;
+  int64 PlayerId = 2;
+  int32 RegionId = 3; // 区服id
+  string PlayerName = 4;
   int32 GameServerId = 5; // game服Id,客户端重连时需要带上
 }
 
@@ -71,23 +71,29 @@ message PlayerReconnectGameRes {
   int32 GameServerId = 3; // game服Id
 }
 
+
 // 创建角色
 message CreatePlayerReq {
-  int64 accountId = 1;
-  string loginSession = 2; // 账号验证成功后的缓存session
-  int32 regionId = 3; // 区服id
-  string name = 4; // 玩家名
-  int32 gender = 5; // 性别
+  int64 AccountId = 1;
+  string LoginSession = 2; // 账号验证成功后的缓存session
+  int32 RegionId = 3; // 区服id
+  string Name = 4; // 玩家名
+  int32 Gender = 5; // 性别
 }
 
 // 创建角色
 message CreatePlayerRes {
-  int64 accountId = 1;
-  int32 regionId = 2; // 区服id
-  string name = 3; // 玩家名
+  int64 AccountId = 1;
+  int32 RegionId = 2; // 区服id
+  string Name = 3; // 玩家名
 }
 
 // 测试命令
 message TestCmd {
-  string cmd = 1;
+  string Cmd = 1;
+}
+
+// 测试命令响应
+message TestRes {
+  string Result = 1;
 }

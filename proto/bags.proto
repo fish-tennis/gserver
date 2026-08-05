@@ -35,7 +35,7 @@ enum ElemOpType {
 message ElemOp {
   ContainerType ContainerType = 1;
   ElemOpType OpType = 2;
-  google.protobuf.Any elemData = 3; // 元素数据
+  google.protobuf.Any ElemData = 3; // 元素数据
 }
 
 // int64封装成message,用于序列化成google.protobuf.Any

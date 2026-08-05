@@ -32,7 +32,7 @@ var (
 )
 
 func initRedis() {
-	cache.NewRedis(_redisAddrs, _redisUsername, _redisPassword, _isRedisCluster)
+	cache.NewRedis(_redisAddrs, _redisUsername, _redisPassword, _isRedisCluster, 0)
 }
 
 func initLog(logFileName string, useStdOutput bool) {

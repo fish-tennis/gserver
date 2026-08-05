@@ -2,8 +2,9 @@ package social
 
 import (
 	"errors"
+	"log/slog"
+
 	"github.com/fish-tennis/gentity"
-	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 )
 
@@ -45,9 +46,9 @@ func (this *GuildBaseInfo) SetMemberCount(memberCount int32) {
 
 func (this *GuildBaseInfo) HandleGuildDataViewReq(guildMessage *GuildMessage, req *pb.GuildDataViewReq) (*pb.GuildDataViewRes, error) {
 	g := this.GetGuild()
-	logger.Debug("HandleGuildDataViewReq %v %v", g.GetId(), guildMessage.fromPlayerId)
+	slog.Debug("HandleGuildDataViewReq", "gid", g.GetId(), "pid", guildMessage.fromPlayerId)
 	if g.GetMember(guildMessage.fromPlayerId) == nil {
-		logger.Debug("HandleGuildDataViewReq not a member %v %v", g.GetId(), guildMessage.fromPlayerId)
+		slog.Debug("HandleGuildDataViewReq not a member", "gid", g.GetId(), "pid", guildMessage.fromPlayerId)
 		return nil, errors.New("not a member")
 	}
 	return &pb.GuildDataViewRes{

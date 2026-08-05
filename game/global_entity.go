@@ -2,16 +2,16 @@ package game
 
 import (
 	"fmt"
+	"log/slog"
+	"time"
+
 	"github.com/fish-tennis/gentity"
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
 	"github.com/fish-tennis/gserver/db"
 	"github.com/fish-tennis/gserver/internal"
-	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/pb"
 	"google.golang.org/protobuf/proto"
-	"log/slog"
-	"time"
 )
 
 const (
@@ -71,16 +71,16 @@ func (this *GlobalEntity) checkDataDirty() {
 }
 
 func (this *GlobalEntity) RunRoutine() bool {
-	logger.Debug("GlobalEntity RunRoutine %v", this.key)
+	slog.Debug("GlobalEntity.RunRoutine", "key", this.key)
 	ok := this.RunProcessRoutine(this, &gentity.RoutineEntityRoutineArgs{
 		EndFunc: func(routineEntity gentity.RoutineEntity) {
-			logger.Debug("GlobalEntity Routine End %v", this.key)
+			slog.Debug("GlobalEntity.RoutineEnd", "key", this.key)
 		},
 		ProcessMessageFunc: func(routineEntity gentity.RoutineEntity, message any) {
 			if packet, ok := message.(*ProtoPacket); ok {
 				this.processMessage(packet)
 			} else {
-				logger.Error("GlobalEntity ProcessMessage invalid type:%T", message)
+				slog.Error(fmt.Sprintf("GlobalEntity ProcessMessage invalid type: %T", message))
 			}
 			this.checkDataDirty()
 		},
@@ -94,16 +94,17 @@ func (this *GlobalEntity) RunRoutine() bool {
 func (this *GlobalEntity) processMessage(message *ProtoPacket) {
 	defer func() {
 		if err := recover(); err != nil {
-			logger.Error("recover:%v", err)
-			logger.LogStack()
+			slog.Error("GlobalEntity.processMessage recover", "error", err)
+			LogStack()
+			internal.SendAlert(err)
 		}
 	}()
-	logger.Debug("processMessage %v", proto.MessageName(message.Message()).Name())
+	slog.Debug("GlobalEntity.processMessage", "message", proto.MessageName(message.Message()).Name())
 	// 先找注册的消息回调接口
 	if _globalEntityPacketHandlerMgr.Invoke(this, message, nil) {
 		return
 	}
-	logger.Error("unhandle message:%v", message.Command())
+	slog.Error("GlobalEntity.processMessage: unhandled message", "command", message.Command())
 }
 
 // 从数据库加载的数据构造出GlobalEntity对象
@@ -118,7 +119,7 @@ func CreateGlobalEntityFromDb() *GlobalEntity {
 		newData[db.GlobalDbKeyName] = globalEntity.key
 		gentity.GetEntitySaveData(globalEntity, newData)
 		if insertErr, _ := globalEntity.globalDb.InsertEntity(globalEntity.key, newData); insertErr != nil {
-			logger.Error("GlobalEntity InsertEntity err:%v key:%v", insertErr, globalEntity.key)
+			slog.Error("GlobalEntity InsertEntity err", "err", insertErr, "key", globalEntity.key)
 		}
 	}
 	return globalEntity
@@ -141,7 +142,7 @@ func createGlobalEntityFromData(globalEntity *GlobalEntity, globalEntityData *pb
 		globalEntity.RangeComponent(func(component gentity.Component) bool {
 			if dataLoader, ok := component.(internal.DataLoader); ok {
 				dataLoader.OnDataLoad()
-				slog.Debug("OnDataLoad", "gid", globalEntity.GetId(), "component", component.GetName())
+				slog.Debug("GlobalEntity.OnDataLoad", "gid", globalEntity.GetId(), "component", component.GetName())
 			}
 			return true
 		})
