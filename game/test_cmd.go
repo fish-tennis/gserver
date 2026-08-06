@@ -144,6 +144,10 @@ func (p *Player) OnTestCmd(req *pb.TestCmd) {
 		} else {
 			activityId := int32(util.Atoi(arg))
 			activityCfg := cfg.ActivityCfgs.GetCfg(activityId)
+			if activityCfg == nil {
+				p.SendErrorRes(cmd, "AddActivity invalid activityId")
+				return
+			}
 			// 如果已有该活动,则重置
 			p.GetActivities().AddNewActivity(activityCfg, p.GetTimerEntries().Now())
 		}

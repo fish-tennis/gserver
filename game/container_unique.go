@@ -104,10 +104,11 @@ func (b *UniqueContainer[E]) AddElem(arg *pb.AddElemArg, bagUpdate *pb.ElemConta
 	if itemCfg == nil {
 		return 0
 	}
+	realAdded := int32(0)
 	for i := 0; i < int(addCount); i++ {
 		if len(b.Data) >= int(b.GetCapacity()) {
-			slog.Debug("BagFull", "cfgId", arg.GetCfgId(), "addCount", addCount, "realAddCount", i)
-			return int32(i)
+			slog.Debug("BagFull", "cfgId", arg.GetCfgId(), "addCount", addCount, "realAddCount", realAdded)
+			return realAdded
 		}
 		uniqueItem := b.ElemCtor(arg)
 		// 限时道具
@@ -125,28 +126,37 @@ func (b *UniqueContainer[E]) AddElem(arg *pb.AddElemArg, bagUpdate *pb.ElemConta
 			if timeoutField.IsValid() && timeoutField.CanSet() {
 				timeoutField.SetInt(int64(timeout))
 			} else {
-				slog.Error("AddElemErr TimeoutFieldNotFound", "containerType", b.containerType, "itemType", reflect.TypeOf(uniqueItem))
+				// 反射设置失败,物品仍会添加但 Timeout 为 0,限时道具将变成永久道具
+				// 这是编程错误(物品结构体缺少 Timeout 字段),需要修复物品定义
+				slog.Error("AddElemErr TimeoutFieldNotFound: timed item added as permanent, fix struct definition",
+					"containerType", b.containerType,
+					"itemType", reflect.TypeOf(uniqueItem),
+					"cfgId", arg.GetCfgId(),
+					"expectedTimeout", timeout)
 			}
 		}
 		newUniqueId := b.AddUniqueItem(uniqueItem)
-		if bagUpdate != nil && newUniqueId > 0 {
-			itemOp := &pb.ElemOp{
-				ContainerType: b.containerType,
-				OpType:        pb.ElemOpType_ElemOpType_Add,
-			}
-			switch realItem := any(uniqueItem).(type) {
-			case proto.Message:
-				itemOp.ElemData, _ = anypb.New(realItem)
-			default:
-				// TODO: 使用类似ItemCtor的方式,传一个自定义的序列化接口进来
-				slog.Error("AddItemErr", "containerType", b.containerType, "itemType", reflect.TypeOf(uniqueItem))
-			}
-			if itemOp.ElemData != nil {
-				bagUpdate.ElemOps = append(bagUpdate.ElemOps, itemOp)
+		if newUniqueId > 0 {
+			realAdded++
+			if bagUpdate != nil {
+				itemOp := &pb.ElemOp{
+					ContainerType: b.containerType,
+					OpType:        pb.ElemOpType_ElemOpType_Add,
+				}
+				switch realItem := any(uniqueItem).(type) {
+				case proto.Message:
+					itemOp.ElemData, _ = anypb.New(realItem)
+				default:
+					// TODO: 使用类似ItemCtor的方式,传一个自定义的序列化接口进来
+					slog.Error("AddItemErr", "containerType", b.containerType, "itemType", reflect.TypeOf(uniqueItem))
+				}
+				if itemOp.ElemData != nil {
+					bagUpdate.ElemOps = append(bagUpdate.ElemOps, itemOp)
+				}
 			}
 		}
 	}
-	return addCount
+	return realAdded
 }
 
 func (b *UniqueContainer[E]) DelElem(arg *pb.DelElemArg, bagUpdate *pb.ElemContainerUpdate) int32 {
@@ -196,23 +206,21 @@ func (b *UniqueContainer[E]) initTimeoutList() {
 	})
 }
 
-// 加到限时检测列表
+// 加到限时检测列表(已按 timeout 降序排列,用二分查找插入位置)
 func (b *UniqueContainer[E]) addToTimeoutList(uniqueId int64, timeout int32) {
-	b.timeoutCheckList = append(b.timeoutCheckList, &timeoutCheckData{
+	entry := &timeoutCheckData{
 		uniqueId: uniqueId,
 		timeout:  timeout,
-	})
-	// 从大到小排序
-	slices.SortFunc(b.timeoutCheckList, func(a, b *timeoutCheckData) int {
-		if a.timeout < b.timeout {
-			return 1
+	}
+	// 二分查找插入位置:列表按 timeout 降序,找到第一个 timeout <= entry 的位置
+	insertIdx, _ := slices.BinarySearchFunc(b.timeoutCheckList, entry, func(a, c *timeoutCheckData) int {
+		if a.timeout > c.timeout {
+			return -1 // a 应在 c 前面
 		}
-		if a.timeout > b.timeout {
-			return -1
-		}
-		return 0
+		return 1 // a 应在 c 后面(或相等)
 	})
-	slog.Debug("addToTimeoutList", "uniqueId", uniqueId, "timeout", timeout, "list", b.timeoutCheckList)
+	b.timeoutCheckList = slices.Insert(b.timeoutCheckList, insertIdx, entry)
+	slog.Debug("addToTimeoutList", "uniqueId", uniqueId, "timeout", timeout, "insertIdx", insertIdx)
 }
 
 // 移出限时检测列表
@@ -228,19 +236,45 @@ func (b *UniqueContainer[E]) removeFromTimeoutList(uniqueId int64) {
 }
 
 // 检查限时物品超时
+// 列表按 timeout 降序排列(大→小),尾部是最早过期的
+// 从尾部向前收集所有过期项,统一截断列表,再逐个从 Data 中删除
+// 避免每次 DelUniqueItem 都触发 removeFromTimeoutList 的 O(n) 扫描,总复杂度从 O(n²) 降为 O(n)
 func (b *UniqueContainer[E]) checkTimeout(now int32, bagUpdate *pb.ElemContainerUpdate) {
+	if len(b.timeoutCheckList) == 0 {
+		return
+	}
+	// 从尾部向前找第一个未过期的位置
+	expiredEnd := len(b.timeoutCheckList)
 	for i := len(b.timeoutCheckList) - 1; i >= 0; i-- {
 		if b.timeoutCheckList[i].timeout > now {
-			// 最后一个还没过期,直接返回,因为排过序了
-			return
+			break
 		}
-		uniqueId := b.timeoutCheckList[i].uniqueId
-		slog.Debug("checkTimeout", "uniqueId", uniqueId, "i", i, "v", b.timeoutCheckList[i])
-		if b.DelUniqueItem(uniqueId, bagUpdate) == 0 {
-			b.timeoutCheckList = append(b.timeoutCheckList[:i], b.timeoutCheckList[i+1:]...)
-			slog.Error("timeoutErr", "uniqueId", uniqueId, "len", len(b.timeoutCheckList))
-			continue
+		expiredEnd = i
+	}
+	if expiredEnd >= len(b.timeoutCheckList) {
+		return // 没有过期项
+	}
+	// 收集过期项并统一截断列表
+	expiredItems := b.timeoutCheckList[expiredEnd:]
+	b.timeoutCheckList = b.timeoutCheckList[:expiredEnd]
+	for _, item := range expiredItems {
+		uniqueId := item.uniqueId
+		// 直接从 Data 中删除,不再调用 removeFromTimeoutList(列表已截断)
+		if e, ok := b.Data[uniqueId]; ok {
+			b.Delete(uniqueId)
+			slog.Debug("checkTimeout", "uniqueId", uniqueId)
+			if bagUpdate != nil {
+				itemOp := &pb.ElemOp{
+					ContainerType: b.containerType,
+					OpType:        pb.ElemOpType_ElemOpType_Delete,
+				}
+				itemOp.ElemData, _ = anypb.New(&pb.UniqueId{
+					Id: e.GetUniqueId(),
+				})
+				bagUpdate.ElemOps = append(bagUpdate.ElemOps, itemOp)
+			}
+		} else {
+			slog.Error("checkTimeout item not in Data", "uniqueId", uniqueId)
 		}
-		slog.Debug("timeout", "uniqueId", uniqueId, "len", len(b.timeoutCheckList))
 	}
 }

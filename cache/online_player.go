@@ -74,6 +74,13 @@ func ResetOnlinePlayer(gameServerId int32,repairFunc func(playerId,accountId int
 		for _, v := range playerIds {
 			playerId := util.Atoi64(v)
 			accountId, _ := GetOnlinePlayer(playerId)
+			if accountId <= 0 {
+				// accountId 无效(Redis 故障或数据损坏),仅清理 playerId key,不删除 account key 以免误删
+				slog.Warn("ResetOnlinePlayer invalid accountId, skipping account cleanup",
+					"playerId", playerId, "gameServerId", gameServerId)
+				GetRedis().Del(context.Background(), keyOnlinePlayer(playerId))
+				continue
+			}
 			if repairFunc != nil {
 				repairFunc(playerId, accountId)
 			}

@@ -2,6 +2,7 @@ package game
 
 import (
 	"errors"
+	"math"
 
 	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/pb"
@@ -37,8 +38,12 @@ func UseItem_Exp(player *Player, itemCfg *pb.ItemCfg, useArgs *ItemUseArgs) erro
 	if addExp <= 0 {
 		return errors.New("ArgError")
 	}
-	// 按使用数量成倍加经验
-	player.GetBaseInfo().IncExp(addExp * useArgs.Num)
-	player.Log.Debug("UseItem_Exp", "addExp", addExp*useArgs.Num, "num", useArgs.Num)
+	// 按使用数量成倍加经验,使用 int64 乘法防溢出
+	totalExp := int64(addExp) * int64(useArgs.Num)
+	if totalExp > math.MaxInt32 {
+		totalExp = math.MaxInt32
+	}
+	player.GetBaseInfo().IncExp(int32(totalExp))
+	player.Log.Debug("UseItem_Exp", "addExp", totalExp, "num", useArgs.Num)
 	return nil
 }

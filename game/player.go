@@ -130,6 +130,12 @@ type playerDirectSendMessage struct {
 	message proto.Message
 }
 
+// PlayerDirectSendMessage 是 playerDirectSendMessage 的导出版本,供跨包构造
+type PlayerDirectSendMessage struct {
+	Cmd     PacketCommand
+	Message proto.Message
+}
+
 // playerCheckConnectionMessage 验证连接归属并投递消息,由网络协程投递,在玩家协程内消费
 // 避免在网络协程中直接读 p.connection 与玩家协程的 ResetConnection/SetConnection 竞争
 type playerCheckConnectionMessage struct {
@@ -433,6 +439,14 @@ func (p *Player) firePostedEvents() {
 			p.FireEvent(event) // 执行过程中有可能又触发了p.PostEvent
 		}
 	}
+	// 超过嵌套上限仍有未处理事件,告警(可能存在事件循环死锁或链路过深)
+	if len(p.postEvents) > 0 {
+		slog.Error("firePostedEvents dropped: event loop limit exceeded",
+			"pid", p.GetId(),
+			"limit", internal.SameEventLoopLimit,
+			"droppedCount", len(p.postEvents))
+		p.postEvents = nil
+	}
 }
 
 func (p *Player) GetLevel() int32 {
@@ -446,11 +460,12 @@ func (p *Player) RunRoutine() bool {
 	slog.Debug("player RunRoutine", "playerId", p.GetId())
 	ok := p.RunProcessRoutine(p, &gentity.RoutineEntityRoutineArgs{
 		EndFunc: func(routineEntity gentity.RoutineEntity) {
+			// defer 确保 RemovePlayer 总是执行,即使 FireEvent/firePostedEvents panic
+			// 否则 playerWg.Done() 不会被调用,Exit() 中的 playerWg.Wait() 会永久阻塞
+			defer GetPlayerMgr().RemovePlayer(p)
 			// 分发事件:玩家退出游戏
 			p.FireEvent(&internal.EventPlayerExit{})
 			p.firePostedEvents()
-			// 协程结束的时候,移除玩家
-			GetPlayerMgr().RemovePlayer(p)
 		},
 		ProcessMessageFunc: func(routineEntity gentity.RoutineEntity, message any) {
 			switch msg := message.(type) {
@@ -468,6 +483,8 @@ func (p *Player) RunRoutine() bool {
 				p.Stop()
 			case *playerDirectSendMessage:
 				p.SendWithCommand(msg.cmd, msg.message)
+			case *PlayerDirectSendMessage:
+				p.SendWithCommand(msg.Cmd, msg.Message)
 			case *playerCheckConnectionMessage:
 				if p.GetConnection() == msg.connection {
 					p.processMessage(msg.packet)

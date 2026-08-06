@@ -33,4 +33,8 @@ func (h *Hook) OnApplicationInit(initArg interface{}) {
 
 // 服务器关闭回调
 func (h *Hook) OnApplicationExit() {
+	// 停止 GlobalEntity 协程,确保其 EndFunc(含 SaveDb)在基础设施关闭前完成
+	if _globalEntity != nil {
+		_globalEntity.Stop()
+	}
 }

@@ -168,6 +168,7 @@ func (e *Exchange) Exchange(exchangeCfgId, exchangeCount int32) error {
 		slog.Debug("Exchange ConsumeItems notEnough", "pid", e.GetPlayer().GetId(), "exchangeCfgId", exchangeCfgId)
 		return errors.New("ConsumeItemsNotEnough")
 	}
+	// 当前顺序为: 记录次数→扣除消耗→发放奖励,任一步失败无回滚,设计如此,非bug,游戏防刷需要
 	e.addExchangeCount(exchangeCfgId, exchangeCount)          // 先记录兑换次数
 	e.GetPlayer().GetBags().DelItemsByItemNums(totalConsumes) // 消耗
 	e.GetPlayer().GetBags().AddItems(totalRewards)            // 最后给奖励

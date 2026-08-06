@@ -68,9 +68,11 @@ func (this *LoginServer) Run(ctx context.Context) {
 
 // 退出
 func (this *LoginServer) Exit() {
-	this.BaseServer.Exit()
-	// 关闭DB操作协程池(在BaseServer.Exit之后,确保不再有新的收包请求)
+	this.SetStatus(ServerStatus_Exit)
+	// 先关闭DB操作协程池,等待在途登录请求(会访问Redis)全部完成
 	ShutdownDbWorkerPool()
+	// 再关闭网络、Redis 等基础设施
+	this.BaseServer.Exit()
 	slog.Info("LoginServer.Exit")
 	if db.GetDbMgr() != nil {
 		db.GetDbMgr().(*gentity.MongoDb).Disconnect()

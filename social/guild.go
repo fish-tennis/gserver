@@ -45,6 +45,8 @@ func NewGuild(guildLoadData *pb.GuildLoadData) *Guild {
 		err := gentity.LoadEntityData(guild, guildLoadData)
 		if err != nil {
 			slog.Error("Guild LoadEntityDataErr", "id", guild.Id, "err", err)
+			// 加载失败返回 nil,避免在损坏数据上执行后续操作并写回 DB 造成永久数据损坏
+			return nil
 		}
 		guild.RangeComponent(func(component gentity.Component) bool {
 			if dataLoader, ok := component.(internal.DataLoader); ok {

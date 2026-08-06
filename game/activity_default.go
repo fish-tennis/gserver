@@ -7,6 +7,7 @@ import (
 	"github.com/fish-tennis/gserver/pb"
 	"github.com/fish-tennis/gserver/util"
 	"log/slog"
+	"math"
 	"reflect"
 	"time"
 )
@@ -210,7 +211,15 @@ func (a *ActivityDefault) IncPropertyInt32(propertyName string, incValue int32) 
 	if a.Base.PropertiesInt32 == nil {
 		a.Base.PropertiesInt32 = make(map[string]int32)
 	}
-	a.Base.PropertiesInt32[propertyName] += incValue
+	// int64 运算防溢出,钳制到 MaxInt32
+	newVal := int64(a.Base.PropertiesInt32[propertyName]) + int64(incValue)
+	if newVal > math.MaxInt32 {
+		newVal = math.MaxInt32
+	}
+	if newVal < 0 {
+		newVal = 0
+	}
+	a.Base.PropertiesInt32[propertyName] = int32(newVal)
 	a.SetDirty()
 	slog.Debug("IncPropertyInt32", "pid", a.Activities.GetPlayer().GetId(),
 		"activityId", a.GetId(), "propertyName", propertyName, "incValue", incValue)

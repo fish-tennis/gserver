@@ -86,6 +86,17 @@ func (s *GateServer) initNetwork() {
 	// 连接其他服务器
 	s.registerServerPacket(s.GetServerList().GetServerConnectionHandler())
 	s.GetServerList().SetFetchAndConnectServerTypes(ServerType_Login, ServerType_Game)
+	// GameServer 断开时,清理受影响玩家的 GameServerId,防止消息路由到死连接形成消息黑洞
+	s.GetServerList().AddOnServerDisconnectHook(func(serverId int32) {
+		s.clientsMutex.Lock()
+		for _, cd := range s.clients {
+			if cd.GetGameServerId() == serverId {
+				cd.SetGameServerId(0)
+			}
+		}
+		s.clientsMutex.Unlock()
+		slog.Info("GameServer disconnected, cleared GameServerId for affected clients", "serverId", serverId)
+	})
 }
 
 // 注册客户端消息回调
@@ -288,6 +299,9 @@ func (s *GateServer) routeToGameServer(connection Connection, packet Packet) {
 			return
 		}
 		slog.Debug("routeToGameServer", "clientConn", connection.GetConnectionId(), "playerId", clientData.GetPlayerId(), "cmd", packet.Command(), "serverId", clientData.GetGameServerId(), "message", proto.MessageName(message))
+	} else {
+		// 连接未绑定 ClientData(如未完成登录握手),回错误响应避免客户端等超时
+		s.sendRouteErrorRes(connection, packet.Command(), packet.RpcCallId(), pb.ErrorCode_ErrorCode_SessionError, "SessionNotBound")
 	}
 }
 
@@ -352,7 +366,11 @@ func (s *GateServer) onLoginRes(connection Connection, packet Packet) {
 
 func (s *GateServer) onPlayerEntryGameRes(connection Connection, packet Packet) {
 	res := packet.Message().(*pb.PlayerEntryGameRes)
-	gatePacket, _ := packet.(*network.GatePacket)
+	gatePacket, ok := packet.(*network.GatePacket)
+	if !ok || gatePacket == nil {
+		slog.Error("onPlayerEntryGameRes: packet is not GatePacket")
+		return
+	}
 	clientConnId := uint32(gatePacket.PlayerId())
 	clientConn := s.getClientConnectionByConnId(clientConnId)
 	if clientConn == nil {
@@ -365,6 +383,19 @@ func (s *GateServer) onPlayerEntryGameRes(connection Connection, packet Packet) 
 			// SetPlayerId 和 map 插入在同一个锁临界区内执行
 			// 确保其他协程(如 OnConnectionDisconnect)看到 playerId > 0 时,map 必然已就绪
 			s.clientsMutex.Lock()
+			// IsConnected 检查必须在锁内,消除与 OnConnectionDisconnect 的 TOCTOU 竞态
+			// 如果连接在响应到达前断开,OnConnectionDisconnect 因 playerId=0 跳过了清理
+			// 此时绑定 playerId 会造成 GameServer 幽灵玩家(协程永久运行,无法收到断线通知)
+			if !clientConn.IsConnected() {
+				s.clientsMutex.Unlock()
+				slog.Debug("onPlayerEntryGameRes conn closed before bind", "connId", clientConnId, "playerId", res.PlayerId)
+				// 补发断线通知,让 GameServer 走正常的 onDisconnect→重连保留期流程,避免幽灵玩家
+				if gameServerId := clientData.GetGameServerId(); gameServerId > 0 && res.PlayerId > 0 {
+					s.GetServerList().SendPacket(gameServerId, network.NewGatePacket(
+						res.PlayerId, 0, &pb.ClientDisconnect{ClientConnId: clientConnId}))
+				}
+				return
+			}
 			// 纵深防御:如果同一 playerId 已绑定旧连接(竞态导致的重复登录成功),
 			// 清除旧连接的 tag 并关闭它,防止旧连接继续注入消息
 			if oldClientData, ok := s.clients[res.PlayerId]; ok {
@@ -411,6 +442,18 @@ func (s *GateServer) onPlayerReconnectGameRes(connection Connection, packet Pack
 		clientData.SetPlayerId(res.PlayerId)
 		clientData.SetConnection(clientConn)
 		s.clientsMutex.Lock()
+		// IsConnected 检查必须在锁内,防止响应到达前连接已断开导致幽灵玩家
+		// 与 onPlayerEntryGameRes 同理:连接断开时 tag 尚未设置,OnConnectionDisconnect 会跳过清理
+		if !clientConn.IsConnected() {
+			s.clientsMutex.Unlock()
+			slog.Debug("onPlayerReconnectGameRes conn closed before bind", "connId", clientConnId, "playerId", res.PlayerId)
+			// 补发断线通知,让 GameServer 走正常的 onDisconnect→重连保留期流程
+			if res.GameServerId > 0 && res.PlayerId > 0 {
+				s.GetServerList().SendPacket(res.GameServerId, network.NewGatePacket(
+					res.PlayerId, 0, &pb.ClientDisconnect{ClientConnId: clientConnId}))
+			}
+			return
+		}
 		// 先清理可能残留的旧连接绑定:旧连接可能因为网络"假死"还未触发OnConnectionDisconnect
 		// 清除旧连接的tag后,旧连接延迟断开时OnConnectionDisconnect会直接return(GetTag()==nil)
 		// 不会误删新连接的s.clients映射,也不会发送虚假的ClientDisconnect通知
@@ -433,7 +476,11 @@ func (s *GateServer) onPlayerReconnectGameRes(connection Connection, packet Pack
 }
 
 func (s *GateServer) routeToClient(connection Connection, packet Packet) {
-	gatePacket, _ := packet.(*network.GatePacket)
+	gatePacket, ok := packet.(*network.GatePacket)
+	if !ok || gatePacket == nil {
+		slog.Error("routeToClient: packet is not GatePacket")
+		return
+	}
 	// 持锁期间只拷贝必要数据,释放锁后再发送,避免慢客户端阻塞写锁
 	// 直接从 ClientData 获取 connection 引用,省去 getClientConnectionByConnId 的二次查找
 	s.clientsMutex.RLock()
@@ -476,7 +523,11 @@ func (s *GateServer) getClientConnectionByConnId(clientConnId uint32) Connection
 //     让客户端能识别是哪个请求失败;errorCode 用 NoPlayer,客户端可按 header errorCode 统一判断
 //  3. 原样透传 rpcCallId,保证 Req/Res 配对
 func (s *GateServer) onGateRouteClientPacketError(connection Connection, packet Packet) {
-	gatePacket, _ := packet.(*network.GatePacket)
+	gatePacket, ok := packet.(*network.GatePacket)
+	if !ok || gatePacket == nil {
+		slog.Error("onGateRouteClientPacketError: packet is not GatePacket")
+		return
+	}
 	errorMsg := packet.Message().(*pb.GateRouteClientPacketError)
 	// 清理 GameServerId 需要写锁:GameServer 报告玩家不在本服,后续消息不应继续转发到已失效的服务器
 	s.clientsMutex.Lock()

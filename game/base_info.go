@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"log/slog"
+	"math"
 	"time"
 
 	"github.com/fish-tennis/gentity"
@@ -56,10 +57,13 @@ func (b *BaseInfo) SyncDataToClient() {
 
 func (b *BaseInfo) IncExp(incExp int32) {
 	oldLevel := b.Data.Level
-	// 防溢出:incExp 为负数时不允许低于 0
+	// 防溢出:incExp 为负数时不允许低于 0;上限钳制到 MaxInt32 防止 int32 截断为负数
 	newExp := int64(b.Data.Exp) + int64(incExp)
 	if newExp < 0 {
 		newExp = 0
+	}
+	if newExp > math.MaxInt32 {
+		newExp = math.MaxInt32
 	}
 	b.Data.Exp = int32(newExp)
 	for {

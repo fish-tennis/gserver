@@ -62,7 +62,7 @@ func (this *ClientCodec) EncodePacket(connection Connection, packet Packet) ([][
 	if rpcCallId > 0 {
 		rpcCallIdBytes = make([]byte, 4)
 		binary.LittleEndian.PutUint32(rpcCallIdBytes, rpcCallId)
-		headerFlags = RpcCall
+		headerFlags |= RpcCall
 	}
 	var errorCodeBytes []byte
 	if packet.ErrorCode() != 0 {
@@ -143,7 +143,10 @@ func (this *ClientCodec) DecodePacket(connection Connection, packetHeader Packet
 	}
 	// 其他消息,gate直接转发,附加上playerId
 	if clientData, ok := connection.GetTag().(*ClientData); ok {
-		newPacket := NewGatePacketWithData(clientData.GetPlayerId(), PacketCommand(command), decodedPacketData)
+		// decodedPacketData 可能引用环形缓冲区内部数组,异步转发时会被覆盖,必须拷贝
+		copiedData := make([]byte, len(decodedPacketData))
+		copy(copiedData, decodedPacketData)
+		newPacket := NewGatePacketWithData(clientData.GetPlayerId(), PacketCommand(command), copiedData)
 		newPacket.SetRpcCallId(rpcCallId)
 		newPacket.SetErrorCode(errorCode)
 		return newPacket

@@ -54,7 +54,10 @@ func (this *PendingMessages) TriggerPlayerEntryGame(event *internal.EventPlayerE
 		req := this.Messages[msgId]
 		message, err := req.PacketData.UnmarshalNew()
 		if err != nil {
-			slog.Error("UnmarshalNew error", "playerId", this.GetPlayerId(), "error", err)
+			slog.Error("UnmarshalNew error, deleting corrupt message", "playerId", this.GetPlayerId(), "messageId", req.MessageId, "error", err)
+			// 删除损坏的消息,避免每次上线重复失败刷日志
+			delete(this.Messages, msgId)
+			db.GetPlayerDb().DeleteComponentField(this.GetPlayerId(), this.GetName(), util.Itoa(req.MessageId))
 			continue
 		}
 		this.GetPlayer().processMessage(gnet.NewProtoPacket(gnet.PacketCommand(req.PacketCommand), message))

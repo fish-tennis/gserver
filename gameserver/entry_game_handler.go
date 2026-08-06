@@ -169,6 +169,10 @@ func processPlayerEntryGameReq(connection Connection, packet Packet, req *pb.Pla
 	entryPlayer.SetConnection(connection, network.IsGatePacket(packet))
 	// 开启玩家独立线程
 	if !entryPlayer.RunRoutine() {
+		// 清理连接 tag,防止残留 playerId 导致后续消息路由异常
+		if !network.IsGatePacket(packet) {
+			connection.SetTag(nil)
+		}
 		game.GetPlayerMgr().RemovePlayer(entryPlayer)
 		cache.RemoveOnlineAccount(accountId)
 		errorCode = pb.ErrorCode_ErrorCode_TryLater

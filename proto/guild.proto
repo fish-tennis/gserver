@@ -17,99 +17,99 @@ enum GuildPosition {
 // 公会在mongo中的保存格式
 // 用于一次性把公会数据加载进来
 message GuildLoadData {
-  int64 id = 1; // 公会唯一id
-  GuildInfo baseInfo = 2;
-  map<int64,GuildMemberData> members = 3; // 公会成员(明文)
-  map<int64,bytes> joinRequests = 4; // 申请加入公会的请求信息(proto序列化)
+  int64 Id = 1; // 公会唯一id
+  GuildInfo BaseInfo = 2;
+  map<int64,GuildMemberData> Members = 3; // 公会成员(明文)
+  map<int64,bytes> JoinRequests = 4; // 申请加入公会的请求信息(proto序列化)
 }
 
 // 公会数据
 message GuildData {
-  int64 id = 1; // 公会唯一id
-  GuildInfo baseInfo = 2;
-  map<int64,GuildMemberData> members = 3; // 公会成员
-  map<int64,GuildJoinRequest> joinRequests = 4; // 申请加入公会的请求信息
+  int64 Id = 1; // 公会唯一id
+  GuildInfo BaseInfo = 2;
+  map<int64,GuildMemberData> Members = 3; // 公会成员
+  map<int64,GuildJoinRequest> JoinRequests = 4; // 申请加入公会的请求信息
 }
 
 // 公会成员数据
 message GuildMemberData {
-  int64 id = 1; // 玩家id
-  string name = 2; // 玩家名称
-  int32 position = 3; // 职位
+  int64 Id = 1; // 玩家id
+  string Name = 2; // 玩家名称
+  int32 Position = 3; // 职位
 }
 
 // 公会信息
 message GuildInfo {
-  int64 id = 1; // 公会id
-  string name = 2; // 名称
-  string intro = 3; // 介绍
-  int32 memberCount = 4; // 成员数
+  int64 Id = 1; // 公会id
+  string Name = 2; // 名称
+  string Intro = 3; // 介绍
+  int32 MemberCount = 4; // 成员数
 }
 
 message GuildSync {
-  PlayerGuildData data = 1;
+  PlayerGuildData Data = 1;
 }
 
 // 申请加入公会的请求信息
 message GuildJoinRequest {
-  int64 playerId = 1; // 申请加入公会的玩家id
-  string playerName = 2;
-  int32 timestampSec = 3; // 时间戳(秒)
+  int64 PlayerId = 1; // 申请加入公会的玩家id
+  string PlayerName = 2;
+  int32 TimestampSec = 3; // 时间戳(秒)
 }
 
 // 查看公会列表
 message GuildListReq {
-  int32 pageIndex = 1; // 分页索引
+  int32 PageIndex = 1; // 分页索引
 }
 
 // 查看公会列表返回结果
 // @Player
 message GuildListRes {
-  int32 pageIndex = 1; // 分页索引
-  int32 pageCount = 2; // 总页数
-  repeated GuildInfo guildInfos = 3; // 公会列表
+  int32 PageIndex = 1; // 分页索引
+  int32 PageCount = 2; // 总页数
+  repeated GuildInfo GuildInfos = 3; // 公会列表
 }
 
 // 创建公会请求
 message GuildCreateReq {
-  string name = 1; // 名称
-  string intro = 2; // 介绍
+  string Name = 1; // 名称
+  string Intro = 2; // 介绍
 }
 
 // 创建公会请求返回结果
 // @Player
 message GuildCreateRes {
-  string error = 1;
-  int64 id = 2; // 公会id
-  string name = 3; // 名称
+  string Error = 1;
+  int64 Id = 2; // 公会id
+  string Name = 3; // 名称
 }
 
 // 加入公会请求
 message GuildJoinReq {
-  int64 id = 1; // 公会id
+  int64 Id = 1; // 公会id
 }
 
 // 加入公会请求返回结果
 // @Player
 message GuildJoinRes {
-  string error = 1;
-  int64 id = 2; // 公会id
+  string Error = 1;
+  int64 Id = 2; // 公会id
 }
 
 // 管理员同意请求者加入公会
 message GuildJoinAgreeReq {
-  int64 joinPlayerId = 1; // 申请加入公会的玩家id
-  bool isAgree = 2; // 是否同意加入
+  int64 JoinPlayerId = 1; // 申请加入公会的玩家id
+  bool IsAgree = 2; // 是否同意加入
 }
 
 // 同意加入公会返回结果
 // @Player
 message GuildJoinAgreeRes {
-  string error = 1;
-  int64 guildId = 2;
-  int64 managerPlayerId = 3; // 管理员id
-  int64 joinPlayerId = 4; // 申请加入公会的玩家id
-  bool isAgree = 5; // 是否同意加入
+  string Error = 1;
+  int64 GuildId = 2;
+  int64 ManagerPlayerId = 3; // 管理员id
+  int64 JoinPlayerId = 4; // 申请加入公会的玩家id
+  bool IsAgree = 5; // 是否同意加入
 }
 
 // 查看自己公会的数据
@@ -119,20 +119,20 @@ message GuildDataViewReq {
 // 查看公会数据返回结果
 // @Player
 message GuildDataViewRes {
-  GuildData guildData = 1;
+  GuildData GuildData = 1;
 }
 
 // 提示有人申请加入本公会
 message GuildJoinReqTip {
-   int64 playerId = 1; // 玩家id
-   string playerName = 2; // 玩家名
+   int64 PlayerId = 1; // 玩家id
+   string PlayerName = 2; // 玩家名
 }
 
 // 自己的入会申请的操作结果
 message GuildJoinReqOpResult {
-  string error = 1;
-  int64 guildId = 2;
-  int64 managerPlayerId = 3; // 管理员id
-  int64 joinPlayerId = 4; // 申请加入公会的玩家id
-  bool isAgree = 5; // 是否同意加入
+  string Error = 1;
+  int64 GuildId = 2;
+  int64 ManagerPlayerId = 3; // 管理员id
+  int64 JoinPlayerId = 4; // 申请加入公会的玩家id
+  bool IsAgree = 5; // 是否同意加入
 }

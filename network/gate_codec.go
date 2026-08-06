@@ -147,21 +147,27 @@ func (this *GateCodec) DecodePacket(connection Connection, packetHeader PacketHe
 		} else {
 			// 支持只注册了消息号,没注册proto结构体的用法
 			// support Register(command, nil), return the direct stream data to application layer
+			// decodedPacketData 可能引用环形缓冲区内部数组,异步消费时会被覆盖,必须拷贝
+			copiedData := make([]byte, len(decodedPacketData))
+			copy(copiedData, decodedPacketData)
 			return &GatePacket{
 				command:   PacketCommand(command),
 				playerId:  playerId,
 				rpcCallId: rpcCallId,
 				errorCode: errorCode,
-				data:      decodedPacketData,
+				data:      copiedData,
 			}
 		}
 	}
 	// 允许消息不注册,留给业务层解析
+	// decodedPacketData 可能引用环形缓冲区内部数组,异步消费时会被覆盖,必须拷贝
+	copiedData := make([]byte, len(decodedPacketData))
+	copy(copiedData, decodedPacketData)
 	return &GatePacket{
 		command:   PacketCommand(command),
 		playerId:  playerId,
 		rpcCallId: rpcCallId,
 		errorCode: errorCode,
-		data:      decodedPacketData,
+		data:      copiedData,
 	}
 }

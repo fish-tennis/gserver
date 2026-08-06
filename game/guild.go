@@ -13,6 +13,7 @@ import (
 	"github.com/fish-tennis/gserver/network"
 	"github.com/fish-tennis/gserver/pb"
 	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 	"google.golang.org/protobuf/proto"
 )
@@ -76,6 +77,7 @@ func (g *Guild) OnGuildListReq(req *pb.GuildListReq) (*pb.GuildListRes, error) {
 		slog.Error("Guild.OnGuildListReq: db error", "error", dbErr)
 		return nil, errors.New("DbError")
 	}
+	defer cursor.Close(context.Background())
 	type guildBaseInfo struct {
 		BaseInfo *pb.GuildInfo `json:"baseinfo"`
 	}
@@ -199,12 +201,8 @@ func (g *Guild) OnGuildJoinAgreeReq(req *pb.GuildJoinAgreeReq) (*pb.GuildJoinAgr
 func (g *Guild) HandleGuildJoinReqOpResult(msg *pb.GuildJoinReqOpResult) {
 	slog.Debug("Guild.HandleGuildJoinReqOpResult", "msg", msg)
 	if msg.Error == "" && msg.IsAgree {
-		// 利用mongodb的原子操作,来防止该玩家同时加入多个公会
-		if !AtomicSetGuildId(g.GetPlayerId(), msg.GuildId, 0) {
-			msg.Error = "ConcurrentError"
-			g.GetPlayer().Send(msg)
-			return
-		}
+		// 公会服务器已通过 AtomicSetGuildId 原子写入 DB,玩家端只需更新本地内存状态
+		// 不再重复调用 AtomicSetGuildId,否则会因 DB 中 guildId 已设置而 filter(old==0) 不匹配导致失败
 		g.SetGuildId(msg.GuildId)
 	}
 	g.GetPlayer().Send(msg)
@@ -272,9 +270,8 @@ func AtomicSetGuildId(playerId int64, guildId int64, oldGuildId int64) bool {
 	// 所以这里的guildid用全小写
 	fieldKey := "Guild.guildid"
 	// 构建filter:玩家id + 当前guildId必须匹配oldGuildId(或为0表示新加入)
-	filterGuildIds := []any{oldGuildId}
+	var filterGuildIds []any
 	if oldGuildId != 0 {
-		// 兼容旧调用方传0的情况:oldGuildId=0时只检查guildId本身
 		filterGuildIds = []any{oldGuildId}
 	} else {
 		// oldGuildId=0 表示新加入,检查当前guildId必须为0(未加入任何公会)
@@ -287,6 +284,16 @@ func AtomicSetGuildId(playerId int64, guildId int64, oldGuildId int64) bool {
 	result := col.GetCollection().FindOneAndUpdate(context.Background(),
 		filter,
 		bson.D{{"$set", bson.D{{fieldKey, guildId}}}})
-	slog.Debug("AtomicSetGuildId", "playerId", playerId, "guildId", guildId, "oldGuildId", oldGuildId, "err", result.Err())
-	return result.Err() == nil
+	err := result.Err()
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			// filter 不匹配:真正的并发冲突
+			slog.Debug("AtomicSetGuildId concurrent", "playerId", playerId, "guildId", guildId, "oldGuildId", oldGuildId)
+			return false
+		}
+		// DB 异常(网络分区、超时等),不应误判为并发冲突
+		slog.Error("AtomicSetGuildId db error", "playerId", playerId, "guildId", guildId, "err", err)
+		return false
+	}
+	return true
 }

@@ -125,6 +125,16 @@ func (b *CfgContainer[E]) DelElem(arg *pb.DelElemArg, bagUpdate *pb.ElemContaine
 	}
 	if b.Contains(arg.GetCfgId()) {
 		b.Delete(arg.GetCfgId())
+		if bagUpdate != nil {
+			itemOp := &pb.ElemOp{
+				ContainerType: b.containerType,
+				OpType:        pb.ElemOpType_ElemOpType_Delete,
+			}
+			itemOp.ElemData, _ = anypb.New(&pb.UniqueId{
+				Id: int64(arg.GetCfgId()),
+			})
+			bagUpdate.ElemOps = append(bagUpdate.ElemOps, itemOp)
+		}
 		return 1
 	}
 	return 0

@@ -184,11 +184,6 @@ func RoutePlayerPackets(playerIds []int64, packet Packet, opts ...RouteOption) {
 	for _, opt := range opts {
 		opt.apply(routeOpts)
 	}
-	// 1次MGET批量查询所有玩家所在的服务器
-	serverMap := cache.GetOnlinePlayers(playerIds)
-	if len(serverMap) == 0 {
-		return
-	}
 	// 消息只序列化1次
 	var anyPacket *anypb.Any
 	if packet.Message() != nil {
@@ -204,10 +199,32 @@ func RoutePlayerPackets(playerIds []int64, packet Packet, opts ...RouteOption) {
 		errStr = routeOpts.Error.Error()
 	}
 	cmd := int32(packet.Command())
+	// 1次MGET批量查询所有玩家所在的服务器
+	serverMap := cache.GetOnlinePlayers(playerIds)
 	// 按服务器分组发送
 	for _, playerId := range playerIds {
 		toServerId, ok := serverMap[playerId]
 		if !ok {
+			// 玩家不在线:如果启用了 SaveDb,保存 PendingMessage 待下次上线处理
+			if routeOpts.SaveDb && anyPacket != nil {
+				pendingMessageId := util.GenUniqueId()
+				pendingMessage := &pb.PendingMessage{
+					MessageId:     pendingMessageId,
+					PacketCommand: cmd,
+					PacketData:    anyPacket,
+					Timestamp:     int32(time.Now().Unix()),
+				}
+				pendingMessageBytes, err := proto.Marshal(pendingMessage)
+				if err != nil {
+					slog.Error("RoutePlayerPackets marshal err", "playerId", playerId, "err", err)
+					continue
+				}
+				err = db.GetPlayerDb().SaveComponentField(playerId, ComponentNamePendingMessages,
+					util.Itoa(pendingMessage.MessageId), pendingMessageBytes)
+				if err != nil {
+					slog.Error("RoutePlayerPackets save pending err", "playerId", playerId, "err", err)
+				}
+			}
 			continue
 		}
 		conn := internal.GetServerList().GetServerConnection(toServerId)
