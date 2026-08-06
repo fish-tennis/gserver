@@ -42,6 +42,11 @@ func (p *ProgressEventMapping) RemoveProgress(progressCfg *pb.ProgressCfg, cfgId
 	if progressCfg == nil {
 		return
 	}
+	// mapping 是 lazy 初始化的,未调用过 AddProgress 时为 nil
+	// 写入 nil map 会 panic,这里直接返回
+	if p.mapping == nil {
+		return
+	}
 	key := p.getKey(progressCfg)
 	progressSlice, _ := p.mapping[key]
 	// 删除所有匹配的 cfgId(理论上只有一个,防御性删除全部以防重复添加导致幽灵进度)

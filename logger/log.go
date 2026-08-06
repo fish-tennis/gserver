@@ -80,5 +80,6 @@ func Error(format string, args ...interface{}) {
 
 func LogStack() {
 	buf := make([]byte, 1<<12)
-	Error(string(buf[:runtime.Stack(buf, false)]))
+	// 用 "%s" 避免堆栈文本中的 % 字符被 fmt.Sprintf 当作格式动词解析
+	Error("%s", string(buf[:runtime.Stack(buf, false)]))
 }
