@@ -83,10 +83,11 @@ type BaseServer struct {
 	// 告警webhook地址
 	alertWebhook string
 	// 服务器运行状态
-	status atomic.Int32
-	ctx          context.Context
-	wg           sync.WaitGroup
-	serverHooks  []gentity.ApplicationHook
+	status     atomic.Int32
+	ctx        context.Context
+	ctxCancel  context.CancelFunc
+	wg         sync.WaitGroup
+	serverHooks []gentity.ApplicationHook
 }
 
 func NewBaseServer(ctx context.Context, serverType string, configFile string, cfgDir string) *BaseServer {
@@ -103,6 +104,8 @@ func NewBaseServer(ctx context.Context, serverType string, configFile string, cf
 			ServerType: serverType,
 		},
 	}
+	// 创建可取消的 context,确保 Exit() 能主动触发 updateLoop 退出
+	s.ctx, s.ctxCancel = context.WithCancel(ctx)
 	// 初始状态为 Init
 	s.status.Store(int32(ServerStatus_Init))
 	return s
@@ -213,10 +216,12 @@ func (this *BaseServer) Run(ctx context.Context) {
 	this.status.Store(int32(ServerStatus_Running))
 	slog.Info("BaseServer.Run")
 	this.wg.Add(1)
-	go func(ctx context.Context) {
+	go func() {
 		defer this.wg.Done()
-		this.updateLoop(ctx)
-	}(ctx)
+		// 使用 this.ctx(可取消的子 context),确保 Exit() 的 ctxCancel 能触发 updateLoop 退出
+		// 不能用外部传入的 ctx(父 context),否则 Exit 单独调用时无法取消 updateLoop
+		this.updateLoop(this.ctx)
+	}()
 }
 
 func (this *BaseServer) OnUpdate(ctx context.Context, updateCount int64) {
@@ -229,6 +234,10 @@ func (this *BaseServer) OnUpdate(ctx context.Context, updateCount int64) {
 func (this *BaseServer) Exit() {
 	this.status.Store(int32(ServerStatus_Exit))
 	slog.Info("BaseServer.Exit")
+	// 取消 context,确保 updateLoop 协程退出,不再依赖外部调用方取消 context
+	if this.ctxCancel != nil {
+		this.ctxCancel()
+	}
 	for _, hook := range this.serverHooks {
 		hook.OnApplicationExit()
 	}

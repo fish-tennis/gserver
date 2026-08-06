@@ -356,7 +356,7 @@ func (this *GameServer) onKickPlayer(connection Connection, packet Packet) {
 	}).WithRpc(packet))
 }
 
-// 转发玩家消息
+// 转发玩家消息 NOTE:在服务器之间的网络协程中调用,需要避免阻塞服务器间收包协程
 // otherServer -> thisServer -> player
 func (this *GameServer) onRoutePlayerMessage(connection Connection, packet Packet) {
 	req := packet.Message().(*pb.RoutePlayerMessage)
@@ -376,15 +376,27 @@ func (this *GameServer) onRoutePlayerMessage(connection Connection, packet Packe
 		slog.Error("UnmarshalNew error", "playerId", req.ToPlayerId, "cmd", req.PacketCommand, "error", err)
 		return
 	}
+	pushed := true
 	if req.DirectSendClient {
 		// 不需要player处理的消息,投递到玩家协程内转发给客户端,避免跨协程读 p.connection
-		player.DirectSendClient(PacketCommand(uint16(req.PacketCommand)), message)
+		// 使用 TryPushMessage 非阻塞投递:channel 满时丢弃并告警,防止阻塞服务器间收包协程
+		pushed = player.TryPushMessage(&game.PlayerDirectSendMessage{Cmd: PacketCommand(uint16(req.PacketCommand)), Message: message})
+		if !pushed {
+			slog.Warn("onRoutePlayerMessage player channel full, dropping DirectSendClient",
+				"playerId", req.ToPlayerId, "cmd", req.PacketCommand, "message", message)
+		}
 	} else {
 		// 需要player处理的消息,放进player的消息队列,在玩家的逻辑协程中处理
-		player.OnRecvPacket(NewProtoPacket(PacketCommand(req.PacketCommand), message))
+		// 这是使用 TryPushMessage 非阻塞投递:channel 满时丢弃并告警,防止阻塞服务器间收包协程
+		// 如果是重要的不能丢弃的消息,应该设置PendingMessageId,留待玩家下次上线重试
+		pushed = player.TryPushMessage(NewProtoPacket(PacketCommand(req.PacketCommand), message))
+		if !pushed {
+			slog.Warn("onRoutePlayerMessage player channel full, dropping message",
+				"playerId", req.ToPlayerId, "cmd", req.PacketCommand, "message", message)
+		}
 	}
-	if req.PendingMessageId > 0 {
-		// 消息保存到db了,处理完需要删除
+	if pushed && req.PendingMessageId > 0 {
+		// 投递成功才删除待发消息;投递失败时保留,留待玩家下次上线重试
 		game.DeletePendingMessage(req.ToPlayerId, req.PendingMessageId)
 	}
 }
