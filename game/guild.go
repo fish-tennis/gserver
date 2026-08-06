@@ -64,6 +64,10 @@ func (g *Guild) SetGuildId(guildId int64) {
 // 查询公会列表
 func (g *Guild) OnGuildListReq(req *pb.GuildListReq) (*pb.GuildListRes, error) {
 	slog.Debug("Guild.OnGuildListReq")
+	// 校验 PageIndex,防止负值产生负 skip
+	if req.PageIndex < 0 {
+		return nil, errors.New("PageIndexError")
+	}
 	guildDb := db.GetGuildDb()
 	col := guildDb.(*gentity.MongoCollection).GetCollection()
 	pageSize := int64(10)

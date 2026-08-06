@@ -309,12 +309,15 @@ func (this *GameServer) AddPlayer(player IPlayer) {
 
 // 删除一个在线玩家
 func (this *GameServer) RemovePlayer(player IPlayer) {
+	// defer 保证 playerWg.Done 一定执行,即使 SaveDb 或 cache 清理 panic 也不会导致 Exit 的 playerWg.Wait 永久阻塞
+	defer this.playerWg.Done()
 	// 先保存数据库 再移除cache
-	player.(*game.Player).SaveDb(true)
+	if err := player.(*game.Player).SaveDb(true); err != nil {
+		slog.Error("RemovePlayer SaveDb error", "playerId", player.GetId(), "error", err)
+	}
 	this.playerMap.Delete(player.GetId())
 	cache.RemoveOnlineAccount(player.GetAccountId())
 	cache.RemoveOnlinePlayer(player.GetId(), this.GetId())
-	this.playerWg.Done()
 }
 
 // 获取一个在线玩家

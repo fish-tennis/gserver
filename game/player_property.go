@@ -22,6 +22,10 @@ func init() {
 		"OnlineMinute": func(p *Player, propertyName string, _ *pb.ConditionCfg) int32 {
 			return p.GetBaseInfo().GetTotalOnlineSeconds() / 60
 		},
+		// 建号天数: 用于按开服/创角天数触发的活动条件判断
+		"CreateDayCount": func(p *Player, _ string, _ *pb.ConditionCfg) int32 {
+			return p.GetBaseInfo().GetCreateDayCount()
+		},
 	}
 }
 
