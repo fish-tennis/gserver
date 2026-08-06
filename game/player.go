@@ -18,6 +18,8 @@ import (
 const (
 	// Player在redis里的前缀
 	PlayerCachePrefix = "p"
+	// 玩家协程channel 长度
+	PlayerChanLen = 512
 	// ReconnectWaitSeconds 玩家掉线后的保留期(秒),期间等待客户端重连,超时则正式下线
 	ReconnectWaitSeconds = 60
 )
@@ -118,9 +120,14 @@ type playerDisconnectMessage struct {
 // playerKickMessage 踢人内部消息,由网络协程投递,在玩家协程内消费
 type playerKickMessage struct{}
 
-// Kick 踢玩家下线,由网络协程调用,投递到玩家协程内执行实际的 ResetConnection + Stop
+// Kick 踢玩家下线,由网络协程调用
+// 使用 TryPushMessage 非阻塞投递,防止玩家 channel 满时阻塞服务器间收包协程
+// channel 满说明玩家协程已严重积压,直接 Stop 强制清理(跳过 ResetConnection,但 Stop→EndFunc→RemovePlayer 仍会完成清理)
 func (p *Player) Kick() {
-	p.PushMessage(&playerKickMessage{})
+	if !p.TryPushMessage(&playerKickMessage{}) {
+		slog.Warn("Kick channel full, force Stop", "playerId", p.GetId())
+		p.Stop()
+	}
 }
 
 // PlayerDirectSendMessage 直接转发给客户端的消息,由网络协程投递,在玩家协程内消费
@@ -170,9 +177,13 @@ type playerEntryReconnectMessage struct {
 }
 
 // OnDisconnect 由网络协程(gnet读/写协程)回调,不能在此直接读写 p.connection
-// 投递到玩家自己的协程中处理
+// 使用 TryPushMessage 非阻塞投递,防止玩家 channel 满时阻塞网关收包协程影响所有其他玩家
+// channel 满说明玩家协程已严重积压,直接 Stop 强制清理(跳过重连保留期,玩家需重新登录)
 func (p *Player) OnDisconnect(connection Connection) {
-	p.PushMessage(&playerDisconnectMessage{connection: connection})
+	if !p.TryPushMessage(&playerDisconnectMessage{connection: connection}) {
+		slog.Warn("OnDisconnect channel full, force Stop", "playerId", p.GetId())
+		p.Stop()
+	}
 }
 
 // OnReconnect 由DB协程池调用,把重连校验逻辑投递到玩家协程
@@ -595,7 +606,7 @@ func CreatePlayer(playerId int64, playerName string, accountId int64, regionId i
 		name:              playerName,
 		accountId:         accountId,
 		regionId:          regionId,
-		BaseRoutineEntity: *gentity.NewRoutineEntity(512),
+		BaseRoutineEntity: *gentity.NewRoutineEntity(PlayerChanLen),
 		Log:               slog.With("pid", playerId),
 	}
 	player.Id = playerId
