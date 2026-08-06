@@ -123,17 +123,23 @@ func (b *CfgContainer[E]) DelElem(arg *pb.DelElemArg, bagUpdate *pb.ElemContaine
 	if arg.GetNum() <= 0 {
 		return 0
 	}
-	if b.Contains(arg.GetCfgId()) {
+	if e, ok := b.Data[arg.GetCfgId()]; ok {
 		b.Delete(arg.GetCfgId())
 		if bagUpdate != nil {
 			itemOp := &pb.ElemOp{
 				ContainerType: b.containerType,
 				OpType:        pb.ElemOpType_ElemOpType_Delete,
 			}
-			itemOp.ElemData, _ = anypb.New(&pb.UniqueId{
-				Id: int64(arg.GetCfgId()),
-			})
-			bagUpdate.ElemOps = append(bagUpdate.ElemOps, itemOp)
+			// 发送完整的元素信息,与 AddElem/UpdateElem 保持一致
+			switch realItem := any(e).(type) {
+			case proto.Message:
+				itemOp.ElemData, _ = anypb.New(realItem)
+			default:
+				slog.Error("DelElemErr", "containerType", b.containerType, "itemType", reflect.TypeOf(e))
+			}
+			if itemOp.ElemData != nil {
+				bagUpdate.ElemOps = append(bagUpdate.ElemOps, itemOp)
+			}
 		}
 		return 1
 	}

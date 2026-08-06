@@ -26,6 +26,14 @@ import (
 )
 
 func main() {
+	// 设置全局时区,所有 time 标准库调用(time.Now/time.Date/t.Date 等)自动使用此时区
+	// 优先使用系统时区数据(支持 DST 等),不可用时回退到固定 UTC+8
+	if loc, err := time.LoadLocation("Asia/Shanghai"); err == nil {
+		time.Local = loc
+	} else {
+		time.Local = time.FixedZone("CST", 8*3600)
+	}
+
 	defer func() {
 		if err := recover(); err != nil {
 			internal.SendAlert(err)

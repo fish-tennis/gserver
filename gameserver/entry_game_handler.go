@@ -2,7 +2,6 @@ package gameserver
 
 import (
 	"log/slog"
-
 	"time"
 
 	"github.com/fish-tennis/gentity"
@@ -293,7 +292,7 @@ func processCreatePlayerReq(connection Connection, packet Packet, req *pb.Create
 	newPlayer := game.CreatePlayerFromData(playerData)
 	if newPlayer == nil {
 		errorCode = pb.ErrorCode_ErrorCode_DbErr
-		slog.Error("CreatePlayerFromDataErr")
+		slog.Error("CreatePlayerFromDataErr", "accountId", req.AccountId, "playerData", playerData)
 		return
 	}
 	newPlayerSaveData := make(map[string]interface{})
