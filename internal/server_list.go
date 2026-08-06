@@ -66,6 +66,8 @@ type ServerList struct {
 	// 已连接的服务器
 	connectedServers      map[int32]gnet.Connection // serverId-Connection
 	connectedServersMutex sync.RWMutex
+	// 服务器连接断开回调,供外部(如GateServer)清理关联状态
+	onServerDisconnectHooks []func(serverId int32)
 	// 服务器连接创建函数,供外部扩展
 	listUpdateHooks []func(serverList map[string][]*pb.ServerInfo, oldServerList map[string][]*pb.ServerInfo)
 }
@@ -226,6 +228,12 @@ func (this *ServerList) FindAndConnectServers(ctx context.Context) {
 			infoSlice = append(infoSlice, info)
 			serverInfoTypeMap[info.GetServerType()] = infoSlice
 		}
+		// 预排序:避免 GetServersByType 每次调用都排序
+		for _, infoSlice := range serverInfoTypeMap {
+			sort.Slice(infoSlice, func(i, j int) bool {
+				return infoSlice[i].GetServerId() < infoSlice[j].GetServerId()
+			})
+		}
 		var oldList map[string][]*pb.ServerInfo
 		this.serverInfoTypeMapMutex.Lock()
 		oldList = this.serverInfoTypeMap
@@ -272,11 +280,12 @@ func (this *ServerList) ConnectServer(ctx context.Context, info *pb.ServerInfo) 
 	if info == nil {
 		return
 	}
-	// 快速检查:已连接则跳过(仅优化,真正防止重复的是写入时的double-check)
+	// 快速检查:已连接且仍活跃则跳过
+	// 仅优化,真正防止重复的是写入时的double-check
 	this.connectedServersMutex.RLock()
-	_, ok := this.connectedServers[info.GetServerId()]
+	conn, ok := this.connectedServers[info.GetServerId()]
 	this.connectedServersMutex.RUnlock()
-	if ok {
+	if ok && conn.IsConnected() {
 		return
 	}
 	targetAddr := info.GetServerListenAddr()
@@ -330,8 +339,20 @@ func (this *ServerList) GetLocalServerInfo() *pb.ServerInfo {
 func (this *ServerList) OnServerConnectorDisconnect(serverId int32) {
 	this.connectedServersMutex.Lock()
 	delete(this.connectedServers, serverId)
+	hooks := this.onServerDisconnectHooks
 	this.connectedServersMutex.Unlock()
 	slog.Debug("DisconnectServer", "serverId", serverId)
+	// 通知外部回调(如GateServer清理受影响玩家的GameServerId)
+	for _, hook := range hooks {
+		hook(serverId)
+	}
+}
+
+// AddOnServerDisconnectHook 注册服务器连接断开回调
+func (this *ServerList) AddOnServerDisconnectHook(hook func(serverId int32)) {
+	this.connectedServersMutex.Lock()
+	this.onServerDisconnectHooks = append(this.onServerDisconnectHooks, hook)
+	this.connectedServersMutex.Unlock()
 }
 
 // 其他服务器连接上,我方作为listener
@@ -363,19 +384,15 @@ func (this *ServerList) SetFetchAndConnectServerTypes(serverTypes ...string) {
 	slog.Info("fetch connect", "serverTypes", serverTypes)
 }
 
-// 获取某类服务器的信息列表
+// 获取某类服务器的信息列表(已预排序,仅做浅拷贝)
 func (this *ServerList) GetServersByType(serverType string) []*pb.ServerInfo {
 	this.serverInfoTypeMapMutex.RLock()
 	defer this.serverInfoTypeMapMutex.RUnlock()
 	if infoList, ok := this.serverInfoTypeMap[serverType]; ok {
-		copyInfoList := make([]*pb.ServerInfo, len(infoList), len(infoList))
-		for idx, info := range infoList {
-			copyInfoList[idx] = info
-		}
-		sort.Slice(copyInfoList, func(i, j int) bool {
-			return copyInfoList[i].GetServerId() < copyInfoList[j].GetServerId()
-		})
-		return copyInfoList
+		// 返回浅拷贝,防止调用方修改内部 slice
+		result := make([]*pb.ServerInfo, len(infoList))
+		copy(result, infoList)
+		return result
 	}
 	return nil
 }

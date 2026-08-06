@@ -4,6 +4,7 @@ import (
 	"hash/fnv"
 	"log/slog"
 	"sync"
+	"sync/atomic"
 )
 
 const (
@@ -26,6 +27,7 @@ var dbWorkerPool *DbWorkerPool
 type DbWorkerPool struct {
 	workers []chan func()
 	wg      sync.WaitGroup
+	closed  atomic.Bool
 }
 
 // NewDbWorkerPool 创建并启动协程池
@@ -62,7 +64,16 @@ func (p *DbWorkerPool) workerLoop(idx int) {
 // Submit 按 hashKey 选择worker,非阻塞投递任务
 // hashKey 通常是 accountId,保证同一账号的请求串行执行
 // 返回false表示对应worker队列已满,调用方应返回TryLater给客户端
-func (p *DbWorkerPool) Submit(hashKey int64, f func()) bool {
+func (p *DbWorkerPool) Submit(hashKey int64, f func()) (result bool) {
+	if p.closed.Load() {
+		return false
+	}
+	// recover 防 TOCTOU: closed 检查与 channel send 之间,Shutdown 可能已 close channel
+	defer func() {
+		if err := recover(); err != nil {
+			result = false
+		}
+	}()
 	workerIdx := int(uint64(hashKey) % DbWorkerCount)
 	select {
 	case p.workers[workerIdx] <- f:
@@ -83,6 +94,7 @@ func (p *DbWorkerPool) SubmitByName(name string, f func()) bool {
 
 // Shutdown 关闭协程池,等待所有worker退出
 func (p *DbWorkerPool) Shutdown() {
+	p.closed.Store(true) // 先标记关闭,阻止新的Submit
 	for i := range p.workers {
 		close(p.workers[i])
 	}

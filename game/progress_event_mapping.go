@@ -44,14 +44,15 @@ func (p *ProgressEventMapping) RemoveProgress(progressCfg *pb.ProgressCfg, cfgId
 	}
 	key := p.getKey(progressCfg)
 	progressSlice, _ := p.mapping[key]
-	for i := 0; i < len(progressSlice); i++ {
-		if progressSlice[i].GetCfgId() == cfgId {
-			progressSlice = append(progressSlice[:i], progressSlice[i+1:]...)
-			p.mapping[key] = progressSlice
-			slog.Debug("RemoveProgress", "event", key, "cfgId", cfgId)
-			break
+	// 删除所有匹配的 cfgId(理论上只有一个,防御性删除全部以防重复添加导致幽灵进度)
+	filtered := progressSlice[:0]
+	for _, item := range progressSlice {
+		if item.GetCfgId() != cfgId {
+			filtered = append(filtered, item)
 		}
 	}
+	p.mapping[key] = filtered
+	slog.Debug("RemoveProgress", "event", key, "cfgId", cfgId)
 }
 
 func (p *ProgressEventMapping) UpdateProgress(event any, progress internal.CfgData) bool {

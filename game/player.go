@@ -123,14 +123,8 @@ func (p *Player) Kick() {
 	p.PushMessage(&playerKickMessage{})
 }
 
-// playerDirectSendMessage 直接转发给客户端的消息,由网络协程投递,在玩家协程内消费
+// PlayerDirectSendMessage 直接转发给客户端的消息,由网络协程投递,在玩家协程内消费
 // 避免 DirectSendClient 路径在网络协程中直接读 p.connection,与玩家协程的 ResetConnection 竞争
-type playerDirectSendMessage struct {
-	cmd     PacketCommand
-	message proto.Message
-}
-
-// PlayerDirectSendMessage 是 playerDirectSendMessage 的导出版本,供跨包构造
 type PlayerDirectSendMessage struct {
 	Cmd     PacketCommand
 	Message proto.Message
@@ -145,7 +139,7 @@ type playerCheckConnectionMessage struct {
 
 // DirectSendClient 由网络协程调用,投递到玩家协程内执行 SendWithCommand
 func (p *Player) DirectSendClient(cmd PacketCommand, message proto.Message) {
-	p.PushMessage(&playerDirectSendMessage{cmd: cmd, message: message})
+	p.PushMessage(&PlayerDirectSendMessage{Cmd: cmd, Message: message})
 }
 
 // CheckConnectionAndRecvClientPacket 由网络协程调用,投递到玩家协程内验证连接归属后处理消息
@@ -481,8 +475,6 @@ func (p *Player) RunRoutine() bool {
 			case *playerKickMessage:
 				p.ResetConnection()
 				p.Stop()
-			case *playerDirectSendMessage:
-				p.SendWithCommand(msg.cmd, msg.message)
 			case *PlayerDirectSendMessage:
 				p.SendWithCommand(msg.Cmd, msg.Message)
 			case *playerCheckConnectionMessage:
