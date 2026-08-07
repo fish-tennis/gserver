@@ -8,6 +8,10 @@ import (
 	"github.com/fish-tennis/gserver/pb"
 )
 
+const (
+	ErrItemArgsError = "ItemArgsError"
+)
+
 type ItemUseArgs struct {
 	CfgId int32             // 物品配置id
 	Item  internal.Uniquely // 物品对象(唯一物品才有)
@@ -32,11 +36,11 @@ func init() {
 // 加经验的道具
 func UseItem_Exp(player *Player, itemCfg *pb.ItemCfg, useArgs *ItemUseArgs) error {
 	if len(itemCfg.GetArgs()) == 0 {
-		return errors.New("ArgsError")
+		return errors.New(ErrItemArgsError)
 	}
 	addExp := itemCfg.GetArgs()[0]
 	if addExp <= 0 {
-		return errors.New("ArgError")
+		return errors.New(ErrItemArgsError)
 	}
 	// 按使用数量成倍加经验,使用 int64 乘法防溢出
 	totalExp := int64(addExp) * int64(useArgs.Num)
@@ -44,6 +48,6 @@ func UseItem_Exp(player *Player, itemCfg *pb.ItemCfg, useArgs *ItemUseArgs) erro
 		totalExp = math.MaxInt32
 	}
 	player.GetBaseInfo().IncExp(int32(totalExp))
-	player.Log.Debug("UseItem_Exp", "addExp", totalExp, "num", useArgs.Num)
+	player.Log.Debug("UseItem_Exp", "addExp", totalExp)
 	return nil
 }

@@ -2,13 +2,15 @@ package game
 
 import (
 	"errors"
-	"github.com/fish-tennis/gentity"
-	"github.com/fish-tennis/gserver/cfg"
-	"github.com/fish-tennis/gserver/internal"
-	"github.com/fish-tennis/gserver/pb"
 	"log/slog"
 	"math"
 	"time"
+
+	"github.com/fish-tennis/gentity"
+	"github.com/fish-tennis/gserver/cfg"
+	"github.com/fish-tennis/gserver/internal"
+	"github.com/fish-tennis/gserver/logger"
+	"github.com/fish-tennis/gserver/pb"
 )
 
 const (
@@ -265,15 +267,52 @@ func (b *Bags) OnItemUseReq(req *pb.ItemUseReq) (*pb.ItemUseRes, error) {
 		Num:   useNum,
 	}
 	oldLog := b.GetPlayer().Log
-	b.GetPlayer().Log = oldLog.With("itemCfgId", itemCfg.GetCfgId())
 	if req.GetUniqueId() > 0 {
-		b.GetPlayer().Log = b.GetPlayer().Log.With("uniqueId", req.GetUniqueId())
+		b.GetPlayer().Log = b.GetPlayer().Log.With("itemCfgId", itemCfg.GetCfgId(), "uniqueId", req.GetUniqueId(), "num", useNum)
+	} else {
+		b.GetPlayer().Log = b.GetPlayer().Log.With("itemCfgId", itemCfg.GetCfgId(), "num", useNum)
 	}
 	// 确保 panic 时 Log 也能恢复,避免上层 recover 吞掉 panic 后 Log 字段被永久污染
 	defer func() {
 		b.GetPlayer().Log = oldLog
 	}()
-	// 先扣除物品,再使用(先扣后发原则)
+	// 先使用再扣除,避免物品使用失败导致玩家物品丢失
+	// 但 useError!=ErrItemArgsError 时必须扣除,这是防刷机制:
+	// useFunc 可能执行了一部分代码后失败(如加经验成功但后续逻辑报错)或 panic,
+	// 如果不扣除,玩家可反复使用触发副作用导致"刷数据"
+	var useError error
+	var panicked bool
+	func() {
+		defer func() {
+			if err := recover(); err != nil {
+				panicked = true
+				b.GetPlayer().Log.Error("UseItemPanicForceDeduct", "err", err)
+				logger.LogStack()
+				internal.SendAlert(err)
+			}
+		}()
+		useError = useFunc(b.GetPlayer(), itemCfg, useArgs)
+	}()
+	// panic 或 非 args 错误:useFunc 可能已执行部分逻辑,必须扣除物品防刷
+	if panicked || (useError != nil && useError.Error() != ErrItemArgsError) {
+		if useError != nil && !panicked {
+			b.GetPlayer().Log.Error("UseItemErrorForceDeduct", "useError", useError)
+		}
+		b.DelItems([]*pb.DelElemArg{
+			{
+				CfgId:    itemCfg.GetCfgId(),
+				UniqueId: req.GetUniqueId(),
+				Num:      useNum,
+			},
+		})
+		return nil, errors.New("UseItemError")
+	}
+	if useError != nil {
+		// ErrItemArgsError:useFunc 未执行任何业务逻辑,安全跳过扣除
+		b.GetPlayer().Log.Error("UseItemArgsError", "useError", useError)
+		return nil, useError
+	}
+	// 使用成功,扣除物品
 	b.DelItems([]*pb.DelElemArg{
 		{
 			CfgId:    itemCfg.GetCfgId(),
@@ -281,11 +320,6 @@ func (b *Bags) OnItemUseReq(req *pb.ItemUseReq) (*pb.ItemUseRes, error) {
 			Num:      useNum,
 		},
 	})
-	useError := useFunc(b.GetPlayer(), itemCfg, useArgs)
-	if useError != nil {
-		b.GetPlayer().Log.Error("UseItemError", "useError", useError)
-		return nil, useError
-	}
 	res := &pb.ItemUseRes{
 		CfgId:    itemCfg.GetCfgId(),
 		UniqueId: req.GetUniqueId(),
