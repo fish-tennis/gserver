@@ -37,8 +37,10 @@ func NewBagUnique[E internal.Uniquely](bags *Bags, bagType pb.ContainerType, ele
 	}
 }
 
+// 容量
+// 不可叠加物品的容量,实际项目可改为读取配置或扩展背包变量
 func (b *UniqueContainer[E]) GetCapacity() int32 {
-	return 100
+	return internal.DefaultContainerCapacity
 }
 
 func (b *UniqueContainer[E]) GetElemCount(itemCfgId int32) int32 {

@@ -17,6 +17,9 @@ type ElemContainer interface {
 	DelElem(arg *pb.DelElemArg, containerUpdate *pb.ElemContainerUpdate) int32
 }
 
+// 默认容器容量,实际项目应根据配置或变量动态调整(如扩展背包)
+const DefaultContainerCapacity int32 = 10000
+
 // 有唯一id的对象
 type Uniquely interface {
 	// 配置id

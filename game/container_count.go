@@ -5,6 +5,7 @@ import (
 	"math"
 
 	"github.com/fish-tennis/gentity"
+	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/pb"
 	"google.golang.org/protobuf/types/known/anypb"
 )
@@ -27,8 +28,8 @@ func NewBagCountItem(bags *Bags) *CountContainer {
 
 // 容量
 func (b *CountContainer) GetCapacity() int32 {
-	// 实际项目读取配置或者是个变量,比如可以扩展背包容量
-	return 100
+	// 可叠加物品的容量,实际项目可改为读取配置或扩展背包变量
+	return internal.DefaultContainerCapacity
 }
 
 func (b *CountContainer) GetElemCount(itemCfgId int32) int32 {

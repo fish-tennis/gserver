@@ -29,8 +29,10 @@ func NewCfgContainer[E internal.CfgData](bags *Bags, bagType pb.ContainerType, e
 	}
 }
 
+// 容量
+// 以配置id为key的不可叠加容器,实际项目可改为读取配置或扩展背包变量
 func (b *CfgContainer[E]) GetCapacity() int32 {
-	return 100
+	return internal.DefaultContainerCapacity
 }
 
 func (b *CfgContainer[E]) GetElemCount(itemCfgId int32) int32 {
