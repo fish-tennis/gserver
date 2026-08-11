@@ -36,9 +36,6 @@ func initRedis() {
 }
 
 func initLog(logFileName string, useStdOutput bool) {
-	gnet.SetLogger(logger.GetLogger(), gnet.DebugLevel)
-	gentity.SetLogger(logger.GetLogger(), gnet.DebugLevel)
-
 	os.Mkdir("./../log", 0750)
 	// 日志轮转与切割
 	fileLogger := &lumberjack.Logger{
@@ -64,6 +61,9 @@ func initLog(logFileName string, useStdOutput bool) {
 			return a
 		},
 	}, useStdOutput)))
+	// 让 gnet/gentity 使用配置好的 slog.Default()
+	gnet.SetLogger(slog.Default())
+	gentity.SetLogger(slog.Default())
 }
 
 func initTestEnv(t *testing.T) {

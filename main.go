@@ -122,15 +122,11 @@ func daemon() {
 	}
 	cmd := exec.Command(os.Args[0], args...)
 	cmd.Start()
-	fmt.Println(fmt.Sprintf("%v %v", os.Args[0], args))
-	fmt.Println("[PID]", cmd.Process.Pid)
+	slog.Info("daemon", "cmd", os.Args[0], "args", args, "pid", cmd.Process.Pid)
 	//os.Exit(0)
 }
 
 func initLog(logFileName string, useStdOutput bool) {
-	gnet.SetLogger(logger.GetLogger(), gnet.DebugLevel)
-	gentity.SetLogger(logger.GetLogger(), gnet.DebugLevel)
-
 	os.Mkdir("log", 0750)
 	// 日志轮转与切割
 	fileLogger := &lumberjack.Logger{
@@ -156,6 +152,9 @@ func initLog(logFileName string, useStdOutput bool) {
 			return a
 		},
 	}, useStdOutput)))
+	// 让 gnet/gentity 使用配置好的 slog.Default()
+	gnet.SetLogger(slog.Default())
+	gentity.SetLogger(slog.Default())
 	slog.Info("initLog", "logFileName", logFileName, "useStdOutput", useStdOutput)
 }
 
