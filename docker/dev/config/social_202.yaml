@@ -1,0 +1,17 @@
+#服务器进程唯一id
+ServerId: 202
+#social服务器,承载公会等跨玩家协程实体
+#监听其他服务器
+Server:
+  Addr: :20203
+#数据库
+Mongo:
+  Uri: mongodb://127.0.0.1:27017
+  Db: testdb
+#缓存
+Redis:
+  Uri:
+    - 127.0.0.1:6379
+  UserName:
+  Password:
+  Cluster: false

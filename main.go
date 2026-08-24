@@ -12,6 +12,7 @@ import (
 	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/logger"
 	"github.com/fish-tennis/gserver/loginserver"
+	"github.com/fish-tennis/gserver/socialserver"
 	"gopkg.in/natefinch/lumberjack.v2"
 	"log/slog"
 	"math/rand"
@@ -178,6 +179,8 @@ func createServer(ctx context.Context, serverType, configFile, cfgDir string) ge
 		return loginserver.NewLoginServer(ctx, configFile, cfgDir)
 	case strings.ToLower(internal.ServerType_Game):
 		return gameserver.NewGameServer(ctx, configFile, cfgDir)
+	case strings.ToLower(internal.ServerType_Social):
+		return socialserver.NewSocialServer(ctx, configFile, cfgDir)
 	}
 	panic(fmt.Sprintf("err server type: %v configFile: %v cfgDir: %v", serverType, configFile, cfgDir))
 }

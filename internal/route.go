@@ -25,8 +25,9 @@ type RouteSourcePacket struct {
 }
 
 // 根据公会id查找对应的服务器
+// 公会实体由social服务器承载,路由到social服务器
 func RouteGuildServerId(guildId int64) int32 {
-	servers := GetServerList().GetServersByType(ServerType_Game)
+	servers := GetServerList().GetServersByType(ServerType_Social)
 	if len(servers) == 0 {
 		return 0
 	}

@@ -15,7 +15,6 @@ import (
 	. "github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/network"
 	"github.com/fish-tennis/gserver/pb"
-	"github.com/fish-tennis/gserver/social"
 )
 
 var (
@@ -52,7 +51,8 @@ func (this *GameServer) Init(ctx context.Context, configFile string) bool {
 
 	game.InitPlayerStructAndHandler()
 	// 其他模块初始化接口
-	this.AddServerHook(&game.Hook{}, &social.Hook{})
+	// 公会等跨玩家协程实体已迁移至独立的social服务器进程
+	this.AddServerHook(&game.Hook{})
 
 	this.initDb()
 	this.initCache()
@@ -166,7 +166,7 @@ func (this *GameServer) initNetwork() {
 			hook.OnRegisterServerHandler(serverHandler)
 		}
 	}
-	this.GetServerList().SetFetchAndConnectServerTypes(ServerType_Game)
+	this.GetServerList().SetFetchAndConnectServerTypes(ServerType_Game, ServerType_Social)
 	// 通用的服务器间的监听
 	if this.GetServerList().StartListen(this.GetContext(), this.GetConfig().Server.Addr) == nil {
 		panic("listen server failed")

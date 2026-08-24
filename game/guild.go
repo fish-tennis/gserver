@@ -269,7 +269,18 @@ func (g *Guild) OnGuildDataViewReq(req *pb.GuildDataViewReq) (*pb.GuildDataViewR
 //	step1:玩家向公会A,B发送入会申请
 //	step2:公会A,B的管理员同时操作,同意入会申请,如果没有原子化保证,玩家将同时加入到A,B公会
 func AtomicSetGuildId(playerId int64, guildId int64, oldGuildId int64) bool {
-	col := db.GetDbMgr().GetEntityDb(db.PlayerDbName).(*gentity.MongoCollection)
+	// player库通过RegisterPlayerDb注册后,GetEntityDb返回的是*gentity.MongoCollectionPlayer(内嵌MongoCollection)
+	// 直接断言*gentity.MongoCollection会panic,这里兼容两种类型
+	var col *gentity.MongoCollection
+	switch entityDb := db.GetDbMgr().GetEntityDb(db.PlayerDbName).(type) {
+	case *gentity.MongoCollectionPlayer:
+		col = &entityDb.MongoCollection
+	case *gentity.MongoCollection:
+		col = entityDb
+	default:
+		slog.Error("AtomicSetGuildId: unsupported player db type", "playerId", playerId, "guildId", guildId)
+		return false
+	}
 	// NOTE: 明文保存的proto字段,字段名会被mongodb自动转为小写 Q:有办法解决吗?
 	// 所以这里的guildid用全小写
 	fieldKey := "Guild.guildid"

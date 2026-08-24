@@ -37,6 +37,18 @@
                 "-conf",
                 "./config/game_101.yaml"
             ]
+        },
+        {
+            "name": "social1",
+            "type": "go",
+            "request": "launch",
+            "mode": "exec",
+            "program": "${workspaceFolder}/debug_bin.exe",
+            "cwd": "${workspaceFolder}",
+            "args": [
+                "-conf",
+                "./config/social_201.yaml"
+            ]
         }
     ],
     "compounds": [
@@ -45,7 +57,8 @@
             "configurations": [
                 "gate",
                 "login",
-                "game1"
+                "game1",
+                "social1"
             ],
             "preLaunchTask": "build" // 复合启动前统一编译一次
         }

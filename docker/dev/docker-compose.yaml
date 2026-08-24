@@ -1,5 +1,5 @@
 version: '3.8'
-#快速构建一个测试环境,包含1个gate,1个login,2个game
+#快速构建一个测试环境,包含1个gate,1个login,2个game,2个social
 
 services:
   gate:
@@ -64,6 +64,36 @@ services:
       - redis
       - mongodb
     command: ["-conf=./config/game_102.yaml"]
+
+  social1:
+    build:
+      context: ../../
+      dockerfile: Dockerfile
+    image: gserver:latest
+    #container_name: dev_social1
+    volumes:
+      - ./config/social_201.yaml:/app/config/social_201.yaml
+    network_mode: host
+    restart: unless-stopped
+    depends_on:
+      - redis
+      - mongodb
+    command: ["-conf=./config/social_201.yaml"]
+
+  social2:
+    build:
+      context: ../../
+      dockerfile: Dockerfile
+    image: gserver:latest
+    #container_name: dev_social2
+    volumes:
+      - ./config/social_202.yaml:/app/config/social_202.yaml
+    network_mode: host
+    restart: unless-stopped
+    depends_on:
+      - redis
+      - mongodb
+    command: ["-conf=./config/social_202.yaml"]
 
   # --- Redis 服务 ---
   redis:
