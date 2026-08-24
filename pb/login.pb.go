@@ -26,7 +26,8 @@ type LoginReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	AccountName   string                 `protobuf:"bytes,1,opt,name=AccountName,proto3" json:"AccountName,omitempty"`
 	Password      string                 `protobuf:"bytes,2,opt,name=Password,proto3" json:"Password,omitempty"`
-	Version       string                 `protobuf:"bytes,3,opt,name=Version,proto3" json:"Version,omitempty"` // 客户端版本号,如0.0.0.1
+	Version       string                 `protobuf:"bytes,3,opt,name=Version,proto3" json:"Version,omitempty"`   // 客户端版本号,如0.0.0.1
+	ClientIp      string                 `protobuf:"bytes,4,opt,name=ClientIp,proto3" json:"ClientIp,omitempty"` // 客户端Ip,网关模式在转发消息时需要传入客户端Ip
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -78,6 +79,13 @@ func (x *LoginReq) GetPassword() string {
 func (x *LoginReq) GetVersion() string {
 	if x != nil {
 		return x.Version
+	}
+	return ""
+}
+
+func (x *LoginReq) GetClientIp() string {
+	if x != nil {
+		return x.ClientIp
 	}
 	return ""
 }
@@ -316,6 +324,8 @@ type PlayerEntryGameReq struct {
 	AccountId     int64                  `protobuf:"varint,1,opt,name=AccountId,proto3" json:"AccountId,omitempty"`
 	LoginSession  string                 `protobuf:"bytes,2,opt,name=LoginSession,proto3" json:"LoginSession,omitempty"` // 账号验证成功后的缓存session
 	RegionId      int32                  `protobuf:"varint,3,opt,name=RegionId,proto3" json:"RegionId,omitempty"`        // 区服id
+	Version       string                 `protobuf:"bytes,4,opt,name=Version,proto3" json:"Version,omitempty"`           // 客户端版本号,如0.0.0.1
+	ClientIp      string                 `protobuf:"bytes,5,opt,name=ClientIp,proto3" json:"ClientIp,omitempty"`         // 客户端Ip,网关模式在转发消息时需要传入客户端Ip
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -369,6 +379,20 @@ func (x *PlayerEntryGameReq) GetRegionId() int32 {
 		return x.RegionId
 	}
 	return 0
+}
+
+func (x *PlayerEntryGameReq) GetVersion() string {
+	if x != nil {
+		return x.Version
+	}
+	return ""
+}
+
+func (x *PlayerEntryGameReq) GetClientIp() string {
+	if x != nil {
+		return x.ClientIp
+	}
+	return ""
 }
 
 // 玩家登录游戏服回复
@@ -456,6 +480,7 @@ type PlayerReconnectGameReq struct {
 	ReconnectSession string                 `protobuf:"bytes,3,opt,name=ReconnectSession,proto3" json:"ReconnectSession,omitempty"` // 重连验证session
 	Version          string                 `protobuf:"bytes,4,opt,name=Version,proto3" json:"Version,omitempty"`                   // 客户端版本号,如0.0.0.1
 	GameServerId     int32                  `protobuf:"varint,5,opt,name=GameServerId,proto3" json:"GameServerId,omitempty"`        // game服Id
+	ClientIp         string                 `protobuf:"bytes,6,opt,name=ClientIp,proto3" json:"ClientIp,omitempty"`                 // 客户端Ip,网关模式在转发消息时需要传入客户端Ip
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -523,6 +548,13 @@ func (x *PlayerReconnectGameReq) GetGameServerId() int32 {
 		return x.GameServerId
 	}
 	return 0
+}
+
+func (x *PlayerReconnectGameReq) GetClientIp() string {
+	if x != nil {
+		return x.ClientIp
+	}
+	return ""
 }
 
 // 玩家重连游戏服
@@ -594,6 +626,8 @@ type CreatePlayerReq struct {
 	RegionId      int32                  `protobuf:"varint,3,opt,name=RegionId,proto3" json:"RegionId,omitempty"`        // 区服id
 	Name          string                 `protobuf:"bytes,4,opt,name=Name,proto3" json:"Name,omitempty"`                 // 玩家名
 	Gender        int32                  `protobuf:"varint,5,opt,name=Gender,proto3" json:"Gender,omitempty"`            // 性别
+	Version       string                 `protobuf:"bytes,6,opt,name=Version,proto3" json:"Version,omitempty"`           // 客户端版本号,如0.0.0.1
+	ClientIp      string                 `protobuf:"bytes,7,opt,name=ClientIp,proto3" json:"ClientIp,omitempty"`         // 客户端Ip,网关模式在转发消息时需要传入客户端Ip
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -661,6 +695,20 @@ func (x *CreatePlayerReq) GetGender() int32 {
 		return x.Gender
 	}
 	return 0
+}
+
+func (x *CreatePlayerReq) GetVersion() string {
+	if x != nil {
+		return x.Version
+	}
+	return ""
+}
+
+func (x *CreatePlayerReq) GetClientIp() string {
+	if x != nil {
+		return x.ClientIp
+	}
+	return ""
 }
 
 // 创建角色
@@ -818,11 +866,12 @@ var File_login_proto protoreflect.FileDescriptor
 
 const file_login_proto_rawDesc = "" +
 	"\n" +
-	"\vlogin.proto\x12\agserver\x1a\fplayer.proto\"b\n" +
+	"\vlogin.proto\x12\agserver\x1a\fplayer.proto\"~\n" +
 	"\bLoginReq\x12 \n" +
 	"\vAccountName\x18\x01 \x01(\tR\vAccountName\x12\x1a\n" +
 	"\bPassword\x18\x02 \x01(\tR\bPassword\x12\x18\n" +
-	"\aVersion\x18\x03 \x01(\tR\aVersion\"\xa7\x01\n" +
+	"\aVersion\x18\x03 \x01(\tR\aVersion\x12\x1a\n" +
+	"\bClientIp\x18\x04 \x01(\tR\bClientIp\"\xa7\x01\n" +
 	"\bLoginRes\x12 \n" +
 	"\vAccountName\x18\x01 \x01(\tR\vAccountName\x12\x1c\n" +
 	"\tAccountId\x18\x02 \x01(\x03R\tAccountId\x12\"\n" +
@@ -840,11 +889,13 @@ const file_login_proto_rawDesc = "" +
 	"\tAccountId\x18\x02 \x01(\x03R\tAccountId\"X\n" +
 	"\x0eGameServerInfo\x12\x1a\n" +
 	"\bServerId\x18\x01 \x01(\x05R\bServerId\x12*\n" +
-	"\x10ClientListenAddr\x18\x02 \x01(\tR\x10ClientListenAddr\"r\n" +
+	"\x10ClientListenAddr\x18\x02 \x01(\tR\x10ClientListenAddr\"\xa8\x01\n" +
 	"\x12PlayerEntryGameReq\x12\x1c\n" +
 	"\tAccountId\x18\x01 \x01(\x03R\tAccountId\x12\"\n" +
 	"\fLoginSession\x18\x02 \x01(\tR\fLoginSession\x12\x1a\n" +
-	"\bRegionId\x18\x03 \x01(\x05R\bRegionId\"\xae\x01\n" +
+	"\bRegionId\x18\x03 \x01(\x05R\bRegionId\x12\x18\n" +
+	"\aVersion\x18\x04 \x01(\tR\aVersion\x12\x1a\n" +
+	"\bClientIp\x18\x05 \x01(\tR\bClientIp\"\xae\x01\n" +
 	"\x12PlayerEntryGameRes\x12\x1c\n" +
 	"\tAccountId\x18\x01 \x01(\x03R\tAccountId\x12\x1a\n" +
 	"\bPlayerId\x18\x02 \x01(\x03R\bPlayerId\x12\x1a\n" +
@@ -852,23 +903,26 @@ const file_login_proto_rawDesc = "" +
 	"\n" +
 	"PlayerName\x18\x04 \x01(\tR\n" +
 	"PlayerName\x12\"\n" +
-	"\fGameServerId\x18\x05 \x01(\x05R\fGameServerId\"\xbc\x01\n" +
+	"\fGameServerId\x18\x05 \x01(\x05R\fGameServerId\"\xd8\x01\n" +
 	"\x16PlayerReconnectGameReq\x12\x1c\n" +
 	"\tAccountId\x18\x01 \x01(\x03R\tAccountId\x12\x1a\n" +
 	"\bPlayerId\x18\x02 \x01(\x03R\bPlayerId\x12*\n" +
 	"\x10ReconnectSession\x18\x03 \x01(\tR\x10ReconnectSession\x12\x18\n" +
 	"\aVersion\x18\x04 \x01(\tR\aVersion\x12\"\n" +
-	"\fGameServerId\x18\x05 \x01(\x05R\fGameServerId\"v\n" +
+	"\fGameServerId\x18\x05 \x01(\x05R\fGameServerId\x12\x1a\n" +
+	"\bClientIp\x18\x06 \x01(\tR\bClientIp\"v\n" +
 	"\x16PlayerReconnectGameRes\x12\x1c\n" +
 	"\tAccountId\x18\x01 \x01(\x03R\tAccountId\x12\x1a\n" +
 	"\bPlayerId\x18\x02 \x01(\x03R\bPlayerId\x12\"\n" +
-	"\fGameServerId\x18\x03 \x01(\x05R\fGameServerId\"\x9b\x01\n" +
+	"\fGameServerId\x18\x03 \x01(\x05R\fGameServerId\"\xd1\x01\n" +
 	"\x0fCreatePlayerReq\x12\x1c\n" +
 	"\tAccountId\x18\x01 \x01(\x03R\tAccountId\x12\"\n" +
 	"\fLoginSession\x18\x02 \x01(\tR\fLoginSession\x12\x1a\n" +
 	"\bRegionId\x18\x03 \x01(\x05R\bRegionId\x12\x12\n" +
 	"\x04Name\x18\x04 \x01(\tR\x04Name\x12\x16\n" +
-	"\x06Gender\x18\x05 \x01(\x05R\x06Gender\"_\n" +
+	"\x06Gender\x18\x05 \x01(\x05R\x06Gender\x12\x18\n" +
+	"\aVersion\x18\x06 \x01(\tR\aVersion\x12\x1a\n" +
+	"\bClientIp\x18\a \x01(\tR\bClientIp\"_\n" +
 	"\x0fCreatePlayerRes\x12\x1c\n" +
 	"\tAccountId\x18\x01 \x01(\x03R\tAccountId\x12\x1a\n" +
 	"\bRegionId\x18\x02 \x01(\x05R\bRegionId\x12\x12\n" +

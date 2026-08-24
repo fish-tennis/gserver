@@ -4,12 +4,13 @@ import (
 	"errors"
 	"math"
 
+	"log/slog"
+
 	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gserver/cfg"
 	. "github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/pb"
 	"github.com/fish-tennis/gserver/util"
-	"log/slog"
 )
 
 const (
@@ -42,6 +43,29 @@ func (p *Player) GetExchange() *Exchange {
 }
 
 func (e *Exchange) OnDataLoad() {
+}
+
+// OnEvent 处理跨日事件:清除玩家已有的非活动每日刷新礼包的兑换记录,使玩家次日可再次兑换
+// 活动礼包不在此处处理,由活动模块(ActivityDefault)按活动自身的刷新类型进行重置,
+// 避免活动礼包(如以活动开启周期为刷新依据的)在活动期间被误清
+func (e *Exchange) OnEvent(event interface{}) {
+	switch event.(type) {
+	case *EventDateChange:
+		// 只遍历玩家身上已有的兑换记录,避免每天全量扫描配置表;
+		// 没有记录的礼包本身就没有兑换次数,无需处理
+		e.Records.Range(func(exchangeCfgId int32, _ *pb.ExchangeRecord) bool {
+			// 属于活动的礼包跳过,交由活动模块按活动刷新周期统一重置
+			if cfg.GetActivityIdByExchangeId(exchangeCfgId) > 0 {
+				return true
+			}
+			exchangeCfg := cfg.ExchangeCfgs.GetCfg(exchangeCfgId)
+			if exchangeCfg != nil && exchangeCfg.GetRefreshType() == int32(pb.RefreshType_RefreshType_Day) {
+				// Go遍历map时删除当前或未遍历到的key是安全的
+				e.RemoveRecord(exchangeCfgId)
+			}
+			return true
+		})
+	}
 }
 
 func (e *Exchange) SyncDataToClient() {
@@ -106,6 +130,14 @@ func (e *Exchange) Exchange(exchangeCfgId, exchangeCount int32) error {
 	if exchangeCfg == nil {
 		slog.Debug("Exchange exchangeCfg nil", "pid", e.GetPlayer().GetId(), "exchangeCfgId", exchangeCfgId)
 		return errors.New("exchangeCfg nil")
+	}
+	// 运行期安全兜底: 拦截"免费且不限次数且非充值项"的漏洞配置
+	// 这种配置下CountLimit检查形同虚设,玩家可无限次/大Count白嫖奖励(如单次Count=1000直接放大1000倍);
+	// 配置加载时已对这类配置打Error告警,但热更场景下不能阻断加载,故此处必须再兜底拦截
+	if cfg.IsUnsafeFreeExchange(exchangeCfg) {
+		slog.Error("Exchange unsafeExchangeCfg",
+			"pid", e.GetPlayer().GetId(), "exchangeCfgId", exchangeCfgId, "exchangeCount", exchangeCount)
+		return errors.New("unsafeExchangeCfg")
 	}
 	curExchangeCount := e.GetCount(exchangeCfgId)
 	if exchangeCfg.CountLimit > 0 && int64(curExchangeCount)+int64(exchangeCount) > int64(exchangeCfg.CountLimit) {
@@ -177,6 +209,13 @@ func (e *Exchange) Exchange(exchangeCfgId, exchangeCount int32) error {
 
 // 响应客户端的兑换请求(购买物品,兑换礼包,领取奖励等)
 func (e *Exchange) OnExchangeReq(req *pb.ExchangeReq) (*pb.ExchangeRes, error) {
+	// 拦截: RechargeCfgId > 0的兑换项是充值项,只能由充值回调触发,玩家无法手动领取
+	for _, idCount := range req.GetIdCounts() {
+		exchangeCfg := cfg.ExchangeCfgs.GetCfg(idCount.GetId())
+		if exchangeCfg != nil && exchangeCfg.RechargeCfgId > 0 {
+			return nil, errors.New("该物品需要通过充值获取")
+		}
+	}
 	res := &pb.ExchangeRes{}
 	for _, idCount := range req.GetIdCounts() {
 		err := e.Exchange(idCount.GetId(), idCount.GetCount())
@@ -187,4 +226,69 @@ func (e *Exchange) OnExchangeReq(req *pb.ExchangeReq) (*pb.ExchangeRes, error) {
 		res.Records = append(res.Records, e.GetRecordsByIds(idCount.GetId())...)
 	}
 	return res, nil
+}
+
+// ExchangeForRecharge 充值回调专用兑换入口
+//
+//	与Exchange()的区别: 不拦截RechargeCfgId > 0的配置(因为是充值回调触发,而非玩家手动调用)
+//	内部逻辑与Exchange()完全一致: CountLimit检查→条件检查→记录次数→发放奖励
+//	充值项的次数限制、刷新规则、首充条件等全部复用ExchangeCfg现有机制
+func (e *Exchange) ExchangeForRecharge(exchangeCfgId, exchangeCount int32) (rewards []*pb.AddElemArg, err error) {
+	if exchangeCount <= 0 {
+		return nil, errors.New("exchangeCount <= 0")
+	}
+	exchangeCfg := cfg.ExchangeCfgs.GetCfg(exchangeCfgId)
+	if exchangeCfg == nil {
+		slog.Debug("ExchangeForRecharge exchangeCfg nil",
+			"pid", e.GetPlayer().GetId(), "exchangeCfgId", exchangeCfgId)
+		return nil, errors.New("exchangeCfg nil")
+	}
+	// 充值项必须是RechargeCfgId > 0的配置
+	if exchangeCfg.RechargeCfgId <= 0 {
+		return nil, errors.New("not a recharge exchange cfg")
+	}
+	curExchangeCount := e.GetCount(exchangeCfgId)
+	if exchangeCfg.CountLimit > 0 && int64(curExchangeCount)+int64(exchangeCount) > int64(exchangeCfg.CountLimit) {
+		slog.Debug("ExchangeForRecharge CountLimit",
+			"pid", e.GetPlayer().GetId(), "exchangeCfgId", exchangeCfgId,
+			"exchangeCount", exchangeCount)
+		return nil, errors.New("exchangeCountLimit")
+	}
+	// 检查兑换条件(如首充条件等)
+	var obj any
+	activityId := cfg.GetActivityIdByExchangeId(exchangeCfgId)
+	if activityId > 0 {
+		obj = e.GetPlayer().GetActivities().GetActivity(activityId)
+	}
+	if obj == nil {
+		obj = e.GetPlayer()
+	}
+	if !CheckConditions(obj, exchangeCfg.Conditions) {
+		slog.Debug("ExchangeForRecharge conditions err",
+			"pid", e.GetPlayer().GetId(), "exchangeCfgId", exchangeCfgId)
+		return nil, errors.New("conditions err")
+	}
+	var totalRewards []*pb.AddElemArg
+	if exchangeCount > 1 {
+		totalRewards = make([]*pb.AddElemArg, len(exchangeCfg.Rewards))
+		for i, reward := range exchangeCfg.Rewards {
+			if util.IsMultiOverflow(reward.Num, exchangeCount) {
+				return nil, errors.New("RewardsItemsOverflow")
+			}
+			totalRewards[i] = &pb.AddElemArg{
+				CfgId:      reward.CfgId,
+				Num:        reward.Num * exchangeCount,
+				TimeType:   reward.TimeType,
+				Timeout:    reward.Timeout,
+				Source:     reward.Source,
+				Properties: reward.Properties,
+			}
+		}
+	} else {
+		totalRewards = exchangeCfg.Rewards
+	}
+	// 记录次数→发放奖励(顺序与Exchange一致)
+	e.addExchangeCount(exchangeCfgId, exchangeCount)
+	e.GetPlayer().GetBags().AddItems(totalRewards)
+	return totalRewards, nil
 }

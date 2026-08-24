@@ -1784,9 +1784,10 @@ type ExchangeCfg struct {
 	CountLimit         int32                  `protobuf:"varint,5,opt,name=CountLimit,proto3" json:"CountLimit,omitempty"`                                                                          // 兑换次数限制(0表示无次数限制)
 	RefreshType        int32                  `protobuf:"varint,6,opt,name=RefreshType,proto3" json:"RefreshType,omitempty"`                                                                        // 刷新机制(enum RefreshType)
 	Category           int32                  `protobuf:"varint,7,opt,name=Category,proto3" json:"Category,omitempty"`                                                                              // 兑换分类(enum ExchangeCategory)
-	Properties         map[string]string      `protobuf:"bytes,8,rep,name=Properties,proto3" json:"Properties,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // 扩展属性
-	Detail             string                 `protobuf:"bytes,9,opt,name=Detail,proto3" json:"Detail,omitempty"`
-	Icon               string                 `protobuf:"bytes,10,opt,name=Icon,proto3" json:"Icon,omitempty"`                             // 图标(客户端使用)
+	RechargeCfgId      int32                  `protobuf:"varint,8,opt,name=RechargeCfgId,proto3" json:"RechargeCfgId,omitempty"`                                                                    // 关联的充值配置ID(>0表示该兑换项由充值回调触发,玩家无法手动领取)
+	Properties         map[string]string      `protobuf:"bytes,9,rep,name=Properties,proto3" json:"Properties,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // 扩展属性
+	Detail             string                 `protobuf:"bytes,10,opt,name=Detail,proto3" json:"Detail,omitempty"`
+	Icon               string                 `protobuf:"bytes,11,opt,name=Icon,proto3" json:"Icon,omitempty"`                             // 图标(客户端使用)
 	ConditionTemplates []*CfgArgOptions       `protobuf:"bytes,21,rep,name=ConditionTemplates,proto3" json:"ConditionTemplates,omitempty"` // 关联的配置模板id和参数,简化配置表用,业务代码不要调用
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
@@ -1871,6 +1872,13 @@ func (x *ExchangeCfg) GetCategory() int32 {
 	return 0
 }
 
+func (x *ExchangeCfg) GetRechargeCfgId() int32 {
+	if x != nil {
+		return x.RechargeCfgId
+	}
+	return 0
+}
+
 func (x *ExchangeCfg) GetProperties() map[string]string {
 	if x != nil {
 		return x.Properties
@@ -1899,6 +1907,99 @@ func (x *ExchangeCfg) GetConditionTemplates() []*CfgArgOptions {
 	return nil
 }
 
+// 充值配置(独立配置表,存放价格等商务属性)
+type RechargeCfg struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	CfgId         int32                  `protobuf:"varint,1,opt,name=CfgId,proto3" json:"CfgId,omitempty"`
+	Price         int32                  `protobuf:"varint,2,opt,name=Price,proto3" json:"Price,omitempty"`        // 价格(分),如6800=68元
+	Currency      string                 `protobuf:"bytes,3,opt,name=Currency,proto3" json:"Currency,omitempty"`   // 货币类型(CNY/USD)
+	ProductId     string                 `protobuf:"bytes,4,opt,name=ProductId,proto3" json:"ProductId,omitempty"` // 平台商品ID(iOS/Android商店的productId)
+	Name          string                 `protobuf:"bytes,5,opt,name=Name,proto3" json:"Name,omitempty"`           // 商品名称
+	Icon          string                 `protobuf:"bytes,6,opt,name=Icon,proto3" json:"Icon,omitempty"`           // 商品图标
+	Detail        string                 `protobuf:"bytes,7,opt,name=Detail,proto3" json:"Detail,omitempty"`       // 商品描述
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RechargeCfg) Reset() {
+	*x = RechargeCfg{}
+	mi := &file_cfg_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RechargeCfg) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RechargeCfg) ProtoMessage() {}
+
+func (x *RechargeCfg) ProtoReflect() protoreflect.Message {
+	mi := &file_cfg_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RechargeCfg.ProtoReflect.Descriptor instead.
+func (*RechargeCfg) Descriptor() ([]byte, []int) {
+	return file_cfg_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *RechargeCfg) GetCfgId() int32 {
+	if x != nil {
+		return x.CfgId
+	}
+	return 0
+}
+
+func (x *RechargeCfg) GetPrice() int32 {
+	if x != nil {
+		return x.Price
+	}
+	return 0
+}
+
+func (x *RechargeCfg) GetCurrency() string {
+	if x != nil {
+		return x.Currency
+	}
+	return ""
+}
+
+func (x *RechargeCfg) GetProductId() string {
+	if x != nil {
+		return x.ProductId
+	}
+	return ""
+}
+
+func (x *RechargeCfg) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *RechargeCfg) GetIcon() string {
+	if x != nil {
+		return x.Icon
+	}
+	return ""
+}
+
+func (x *RechargeCfg) GetDetail() string {
+	if x != nil {
+		return x.Detail
+	}
+	return ""
+}
+
 // 活动基础配置
 type ActivityCfg struct {
 	state             protoimpl.MessageState `protogen:"open.v1"`
@@ -1924,7 +2025,7 @@ type ActivityCfg struct {
 
 func (x *ActivityCfg) Reset() {
 	*x = ActivityCfg{}
-	mi := &file_cfg_proto_msgTypes[16]
+	mi := &file_cfg_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1936,7 +2037,7 @@ func (x *ActivityCfg) String() string {
 func (*ActivityCfg) ProtoMessage() {}
 
 func (x *ActivityCfg) ProtoReflect() protoreflect.Message {
-	mi := &file_cfg_proto_msgTypes[16]
+	mi := &file_cfg_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1949,7 +2050,7 @@ func (x *ActivityCfg) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ActivityCfg.ProtoReflect.Descriptor instead.
 func (*ActivityCfg) Descriptor() ([]byte, []int) {
-	return file_cfg_proto_rawDescGZIP(), []int{16}
+	return file_cfg_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *ActivityCfg) GetCfgId() int32 {
@@ -2075,7 +2176,7 @@ type LevelExp struct {
 
 func (x *LevelExp) Reset() {
 	*x = LevelExp{}
-	mi := &file_cfg_proto_msgTypes[17]
+	mi := &file_cfg_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2087,7 +2188,7 @@ func (x *LevelExp) String() string {
 func (*LevelExp) ProtoMessage() {}
 
 func (x *LevelExp) ProtoReflect() protoreflect.Message {
-	mi := &file_cfg_proto_msgTypes[17]
+	mi := &file_cfg_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2100,7 +2201,7 @@ func (x *LevelExp) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LevelExp.ProtoReflect.Descriptor instead.
 func (*LevelExp) Descriptor() ([]byte, []int) {
-	return file_cfg_proto_rawDescGZIP(), []int{17}
+	return file_cfg_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *LevelExp) GetLevel() int32 {
@@ -2130,7 +2231,7 @@ type ShopCfg struct {
 
 func (x *ShopCfg) Reset() {
 	*x = ShopCfg{}
-	mi := &file_cfg_proto_msgTypes[18]
+	mi := &file_cfg_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2142,7 +2243,7 @@ func (x *ShopCfg) String() string {
 func (*ShopCfg) ProtoMessage() {}
 
 func (x *ShopCfg) ProtoReflect() protoreflect.Message {
-	mi := &file_cfg_proto_msgTypes[18]
+	mi := &file_cfg_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2155,7 +2256,7 @@ func (x *ShopCfg) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ShopCfg.ProtoReflect.Descriptor instead.
 func (*ShopCfg) Descriptor() ([]byte, []int) {
-	return file_cfg_proto_rawDescGZIP(), []int{18}
+	return file_cfg_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *ShopCfg) GetCfgId() int32 {
@@ -2348,7 +2449,7 @@ const file_cfg_proto_rawDesc = "" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a=\n" +
 	"\x0fPropertiesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x8e\x04\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xb4\x04\n" +
 	"\vExchangeCfg\x12\x14\n" +
 	"\x05CfgId\x18\x01 \x01(\x05R\x05CfgId\x125\n" +
 	"\n" +
@@ -2360,17 +2461,26 @@ const file_cfg_proto_rawDesc = "" +
 	"CountLimit\x18\x05 \x01(\x05R\n" +
 	"CountLimit\x12 \n" +
 	"\vRefreshType\x18\x06 \x01(\x05R\vRefreshType\x12\x1a\n" +
-	"\bCategory\x18\a \x01(\x05R\bCategory\x12D\n" +
+	"\bCategory\x18\a \x01(\x05R\bCategory\x12$\n" +
+	"\rRechargeCfgId\x18\b \x01(\x05R\rRechargeCfgId\x12D\n" +
 	"\n" +
-	"Properties\x18\b \x03(\v2$.gserver.ExchangeCfg.PropertiesEntryR\n" +
+	"Properties\x18\t \x03(\v2$.gserver.ExchangeCfg.PropertiesEntryR\n" +
 	"Properties\x12\x16\n" +
-	"\x06Detail\x18\t \x01(\tR\x06Detail\x12\x12\n" +
-	"\x04Icon\x18\n" +
-	" \x01(\tR\x04Icon\x12F\n" +
+	"\x06Detail\x18\n" +
+	" \x01(\tR\x06Detail\x12\x12\n" +
+	"\x04Icon\x18\v \x01(\tR\x04Icon\x12F\n" +
 	"\x12ConditionTemplates\x18\x15 \x03(\v2\x16.gserver.CfgArgOptionsR\x12ConditionTemplates\x1a=\n" +
 	"\x0fPropertiesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xd6\x04\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xb3\x01\n" +
+	"\vRechargeCfg\x12\x14\n" +
+	"\x05CfgId\x18\x01 \x01(\x05R\x05CfgId\x12\x14\n" +
+	"\x05Price\x18\x02 \x01(\x05R\x05Price\x12\x1a\n" +
+	"\bCurrency\x18\x03 \x01(\tR\bCurrency\x12\x1c\n" +
+	"\tProductId\x18\x04 \x01(\tR\tProductId\x12\x12\n" +
+	"\x04Name\x18\x05 \x01(\tR\x04Name\x12\x12\n" +
+	"\x04Icon\x18\x06 \x01(\tR\x04Icon\x12\x16\n" +
+	"\x06Detail\x18\a \x01(\tR\x06Detail\"\xd6\x04\n" +
 	"\vActivityCfg\x12\x14\n" +
 	"\x05CfgId\x18\x01 \x01(\x05R\x05CfgId\x12\x12\n" +
 	"\x04Name\x18\x02 \x01(\tR\x04Name\x12\x16\n" +
@@ -2463,7 +2573,7 @@ func file_cfg_proto_rawDescGZIP() []byte {
 }
 
 var file_cfg_proto_enumTypes = make([]protoimpl.EnumInfo, 11)
-var file_cfg_proto_msgTypes = make([]protoimpl.MessageInfo, 34)
+var file_cfg_proto_msgTypes = make([]protoimpl.MessageInfo, 35)
 var file_cfg_proto_goTypes = []any{
 	(Color)(0),                   // 0: gserver.Color
 	(RefreshType)(0),             // 1: gserver.RefreshType
@@ -2492,51 +2602,52 @@ var file_cfg_proto_goTypes = []any{
 	(*ProgressCfg)(nil),          // 24: gserver.ProgressCfg
 	(*ProgressTemplateCfg)(nil),  // 25: gserver.ProgressTemplateCfg
 	(*ExchangeCfg)(nil),          // 26: gserver.ExchangeCfg
-	(*ActivityCfg)(nil),          // 27: gserver.ActivityCfg
-	(*LevelExp)(nil),             // 28: gserver.LevelExp
-	(*ShopCfg)(nil),              // 29: gserver.ShopCfg
-	nil,                          // 30: gserver.ItemCfg.PropertiesEntry
-	nil,                          // 31: gserver.AddElemArg.PropertiesEntry
-	nil,                          // 32: gserver.DelElemArg.PropertiesEntry
-	nil,                          // 33: gserver.QuestCfg.PropertiesEntry
-	nil,                          // 34: gserver.ConditionCfg.PropertiesEntry
-	nil,                          // 35: gserver.ConditionTemplateCfg.PropertiesEntry
-	nil,                          // 36: gserver.ProgressCfg.IntEventFieldsEntry
-	nil,                          // 37: gserver.ProgressCfg.StringEventFieldsEntry
-	nil,                          // 38: gserver.ProgressCfg.PropertiesEntry
-	nil,                          // 39: gserver.ProgressTemplateCfg.IntEventFieldsEntry
-	nil,                          // 40: gserver.ProgressTemplateCfg.StringEventFieldsEntry
-	nil,                          // 41: gserver.ProgressTemplateCfg.PropertiesEntry
-	nil,                          // 42: gserver.ExchangeCfg.PropertiesEntry
-	nil,                          // 43: gserver.ActivityCfg.PropertiesEntry
-	nil,                          // 44: gserver.ShopCfg.PropertiesEntry
+	(*RechargeCfg)(nil),          // 27: gserver.RechargeCfg
+	(*ActivityCfg)(nil),          // 28: gserver.ActivityCfg
+	(*LevelExp)(nil),             // 29: gserver.LevelExp
+	(*ShopCfg)(nil),              // 30: gserver.ShopCfg
+	nil,                          // 31: gserver.ItemCfg.PropertiesEntry
+	nil,                          // 32: gserver.AddElemArg.PropertiesEntry
+	nil,                          // 33: gserver.DelElemArg.PropertiesEntry
+	nil,                          // 34: gserver.QuestCfg.PropertiesEntry
+	nil,                          // 35: gserver.ConditionCfg.PropertiesEntry
+	nil,                          // 36: gserver.ConditionTemplateCfg.PropertiesEntry
+	nil,                          // 37: gserver.ProgressCfg.IntEventFieldsEntry
+	nil,                          // 38: gserver.ProgressCfg.StringEventFieldsEntry
+	nil,                          // 39: gserver.ProgressCfg.PropertiesEntry
+	nil,                          // 40: gserver.ProgressTemplateCfg.IntEventFieldsEntry
+	nil,                          // 41: gserver.ProgressTemplateCfg.StringEventFieldsEntry
+	nil,                          // 42: gserver.ProgressTemplateCfg.PropertiesEntry
+	nil,                          // 43: gserver.ExchangeCfg.PropertiesEntry
+	nil,                          // 44: gserver.ActivityCfg.PropertiesEntry
+	nil,                          // 45: gserver.ShopCfg.PropertiesEntry
 }
 var file_cfg_proto_depIdxs = []int32{
-	30, // 0: gserver.ItemCfg.Properties:type_name -> gserver.ItemCfg.PropertiesEntry
-	31, // 1: gserver.AddElemArg.Properties:type_name -> gserver.AddElemArg.PropertiesEntry
-	32, // 2: gserver.DelElemArg.Properties:type_name -> gserver.DelElemArg.PropertiesEntry
+	31, // 0: gserver.ItemCfg.Properties:type_name -> gserver.ItemCfg.PropertiesEntry
+	32, // 1: gserver.AddElemArg.Properties:type_name -> gserver.AddElemArg.PropertiesEntry
+	33, // 2: gserver.DelElemArg.Properties:type_name -> gserver.DelElemArg.PropertiesEntry
 	14, // 3: gserver.QuestCfg.Rewards:type_name -> gserver.AddElemArg
 	22, // 4: gserver.QuestCfg.Conditions:type_name -> gserver.ConditionCfg
 	24, // 5: gserver.QuestCfg.Progress:type_name -> gserver.ProgressCfg
-	33, // 6: gserver.QuestCfg.Properties:type_name -> gserver.QuestCfg.PropertiesEntry
+	34, // 6: gserver.QuestCfg.Properties:type_name -> gserver.QuestCfg.PropertiesEntry
 	11, // 7: gserver.QuestCfg.Collects:type_name -> gserver.ItemNum
 	18, // 8: gserver.QuestCfg.ConditionTemplates:type_name -> gserver.CfgArgOptions
 	16, // 9: gserver.QuestCfg.ProgressTemplate:type_name -> gserver.CfgArg
-	34, // 10: gserver.ConditionCfg.Properties:type_name -> gserver.ConditionCfg.PropertiesEntry
-	35, // 11: gserver.ConditionTemplateCfg.Properties:type_name -> gserver.ConditionTemplateCfg.PropertiesEntry
-	36, // 12: gserver.ProgressCfg.IntEventFields:type_name -> gserver.ProgressCfg.IntEventFieldsEntry
-	37, // 13: gserver.ProgressCfg.StringEventFields:type_name -> gserver.ProgressCfg.StringEventFieldsEntry
-	38, // 14: gserver.ProgressCfg.Properties:type_name -> gserver.ProgressCfg.PropertiesEntry
-	39, // 15: gserver.ProgressTemplateCfg.IntEventFields:type_name -> gserver.ProgressTemplateCfg.IntEventFieldsEntry
-	40, // 16: gserver.ProgressTemplateCfg.StringEventFields:type_name -> gserver.ProgressTemplateCfg.StringEventFieldsEntry
-	41, // 17: gserver.ProgressTemplateCfg.Properties:type_name -> gserver.ProgressTemplateCfg.PropertiesEntry
+	35, // 10: gserver.ConditionCfg.Properties:type_name -> gserver.ConditionCfg.PropertiesEntry
+	36, // 11: gserver.ConditionTemplateCfg.Properties:type_name -> gserver.ConditionTemplateCfg.PropertiesEntry
+	37, // 12: gserver.ProgressCfg.IntEventFields:type_name -> gserver.ProgressCfg.IntEventFieldsEntry
+	38, // 13: gserver.ProgressCfg.StringEventFields:type_name -> gserver.ProgressCfg.StringEventFieldsEntry
+	39, // 14: gserver.ProgressCfg.Properties:type_name -> gserver.ProgressCfg.PropertiesEntry
+	40, // 15: gserver.ProgressTemplateCfg.IntEventFields:type_name -> gserver.ProgressTemplateCfg.IntEventFieldsEntry
+	41, // 16: gserver.ProgressTemplateCfg.StringEventFields:type_name -> gserver.ProgressTemplateCfg.StringEventFieldsEntry
+	42, // 17: gserver.ProgressTemplateCfg.Properties:type_name -> gserver.ProgressTemplateCfg.PropertiesEntry
 	22, // 18: gserver.ExchangeCfg.Conditions:type_name -> gserver.ConditionCfg
 	11, // 19: gserver.ExchangeCfg.Consumes:type_name -> gserver.ItemNum
 	14, // 20: gserver.ExchangeCfg.Rewards:type_name -> gserver.AddElemArg
-	42, // 21: gserver.ExchangeCfg.Properties:type_name -> gserver.ExchangeCfg.PropertiesEntry
+	43, // 21: gserver.ExchangeCfg.Properties:type_name -> gserver.ExchangeCfg.PropertiesEntry
 	18, // 22: gserver.ExchangeCfg.ConditionTemplates:type_name -> gserver.CfgArgOptions
-	43, // 23: gserver.ActivityCfg.Properties:type_name -> gserver.ActivityCfg.PropertiesEntry
-	44, // 24: gserver.ShopCfg.Properties:type_name -> gserver.ShopCfg.PropertiesEntry
+	44, // 23: gserver.ActivityCfg.Properties:type_name -> gserver.ActivityCfg.PropertiesEntry
+	45, // 24: gserver.ShopCfg.Properties:type_name -> gserver.ShopCfg.PropertiesEntry
 	21, // 25: gserver.ProgressCfg.IntEventFieldsEntry.value:type_name -> gserver.ValueCompareCfg
 	21, // 26: gserver.ProgressTemplateCfg.IntEventFieldsEntry.value:type_name -> gserver.ValueCompareCfg
 	27, // [27:27] is the sub-list for method output_type
@@ -2557,7 +2668,7 @@ func file_cfg_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_cfg_proto_rawDesc), len(file_cfg_proto_rawDesc)),
 			NumEnums:      11,
-			NumMessages:   34,
+			NumMessages:   35,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

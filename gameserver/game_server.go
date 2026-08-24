@@ -108,6 +108,8 @@ func (this *GameServer) loadCfgs() {
 	if err != nil {
 		panic(fmt.Sprintf("loadCfgs:%v", err))
 	}
+	// 启动加载成功后建立md5快照,首次热更即走增量路径(见cfg/reload.go)
+	cfg.InitMd5Snapshot(this.GetCfgDir())
 }
 
 // 初始化数据库
@@ -368,6 +370,12 @@ func (this *GameServer) onRoutePlayerMessage(connection Connection, packet Packe
 	if player == nil {
 		// NOTE: 由于是异步消息,这里的player有很低的概率可能不在线了,如果是重要的不能丢弃的消息,需要保存该消息,留待后续处理
 		slog.Error("player nil", "playerId", req.ToPlayerId, "cmd", req.PacketCommand)
+		// Rpc调用需要回复错误,避免调用方一直等待
+		if packet.RpcCallId() > 0 {
+			errReply := network.NewPacket(&pb.RoutePlayerMessage{Error: "player offline"})
+			errReply.SetRpcCallId(packet.RpcCallId())
+			connection.SendPacket(errReply)
+		}
 		return
 	}
 	if req.PacketData == nil {

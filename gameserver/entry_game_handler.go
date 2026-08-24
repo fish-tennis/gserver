@@ -3,6 +3,7 @@ package gameserver
 import (
 	"log/slog"
 	"time"
+	"strings"
 
 	"github.com/fish-tennis/gentity"
 	. "github.com/fish-tennis/gnet"
@@ -38,6 +39,10 @@ func processPlayerEntryGameReq(connection Connection, packet Packet, req *pb.Pla
 		AccountId: req.AccountId,
 		RegionId:  req.RegionId,
 	}
+	// 解析客户端真实IP:网关模式取请求体中由网关填充的ClientIp,直连模式从connection提取
+	// 后续将用于玩家行为记录与分析,当前阶段先输出到日志
+	clientIp := network.ResolveClientIp(connection, packet, req.GetClientIp())
+	slog.Info("processPlayerEntryGameReq clientIp", "accountId", req.GetAccountId(), "clientIp", clientIp)
 	var errorCode pb.ErrorCode
 	var entryPlayer *game.Player
 	// routedToRoutine 标记:内存命中的进游请求已投递到玩家协程处理,
@@ -232,9 +237,16 @@ func onCreatePlayerReq(connection Connection, packet Packet) {
 // processCreatePlayerReq 创角请求的实际处理逻辑,在DB协程池中执行
 func processCreatePlayerReq(connection Connection, packet Packet, req *pb.CreatePlayerReq) {
 	slog.Debug("onCreatePlayerReq", "message", req)
+	// 解析客户端真实IP:网关模式取请求体中由网关填充的ClientIp,直连模式从connection提取
+	// 后续将用于玩家行为记录与分析,当前阶段先输出到日志
+	clientIp := network.ResolveClientIp(connection, packet, req.GetClientIp())
+	slog.Info("processCreatePlayerReq clientIp", "accountId", req.GetAccountId(), "playerName", req.GetName(), "clientIp", clientIp)
+	// 角色名统一去首尾空格后再校验与存储:存储去空后名称,
+	// 避免首尾带空格的名称入库后与重名判断产生歧义("小明 "与"小明"视觉相同却被视为不同名称)
+	trimmed := strings.TrimSpace(req.GetName())
 	res := &pb.CreatePlayerRes{
 		AccountId: req.AccountId,
-		Name:      req.Name,
+		Name:      trimmed,
 		RegionId:  req.RegionId,
 	}
 	var errorCode pb.ErrorCode
@@ -278,7 +290,7 @@ func processCreatePlayerReq(connection Connection, packet Packet, req *pb.Create
 	}
 	playerData := &pb.PlayerData{
 		XId:       newPlayerId,
-		Name:      req.Name,
+		Name:      trimmed,
 		AccountId: req.AccountId,
 		RegionId:  req.RegionId,
 		BaseInfo: &pb.BaseInfo{

@@ -74,10 +74,10 @@ func (GuildPosition) EnumDescriptor() ([]byte, []int) {
 // 用于一次性把公会数据加载进来
 type GuildLoadData struct {
 	state         protoimpl.MessageState     `protogen:"open.v1"`
-	Id            int64                      `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"` // 公会唯一id
-	BaseInfo      *GuildInfo                 `protobuf:"bytes,2,opt,name=baseInfo,proto3" json:"baseInfo,omitempty"`
-	Members       map[int64]*GuildMemberData `protobuf:"bytes,3,rep,name=members,proto3" json:"members,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`           // 公会成员(明文)
-	JoinRequests  map[int64][]byte           `protobuf:"bytes,4,rep,name=joinRequests,proto3" json:"joinRequests,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // 申请加入公会的请求信息(proto序列化)
+	Id            int64                      `protobuf:"varint,1,opt,name=Id,proto3" json:"Id,omitempty"` // 公会唯一id
+	BaseInfo      *GuildInfo                 `protobuf:"bytes,2,opt,name=BaseInfo,proto3" json:"BaseInfo,omitempty"`
+	Members       map[int64]*GuildMemberData `protobuf:"bytes,3,rep,name=Members,proto3" json:"Members,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`           // 公会成员(明文)
+	JoinRequests  map[int64][]byte           `protobuf:"bytes,4,rep,name=JoinRequests,proto3" json:"JoinRequests,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // 申请加入公会的请求信息(proto序列化)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -143,10 +143,10 @@ func (x *GuildLoadData) GetJoinRequests() map[int64][]byte {
 // 公会数据
 type GuildData struct {
 	state         protoimpl.MessageState      `protogen:"open.v1"`
-	Id            int64                       `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"` // 公会唯一id
-	BaseInfo      *GuildInfo                  `protobuf:"bytes,2,opt,name=baseInfo,proto3" json:"baseInfo,omitempty"`
-	Members       map[int64]*GuildMemberData  `protobuf:"bytes,3,rep,name=members,proto3" json:"members,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`           // 公会成员
-	JoinRequests  map[int64]*GuildJoinRequest `protobuf:"bytes,4,rep,name=joinRequests,proto3" json:"joinRequests,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // 申请加入公会的请求信息
+	Id            int64                       `protobuf:"varint,1,opt,name=Id,proto3" json:"Id,omitempty"` // 公会唯一id
+	BaseInfo      *GuildInfo                  `protobuf:"bytes,2,opt,name=BaseInfo,proto3" json:"BaseInfo,omitempty"`
+	Members       map[int64]*GuildMemberData  `protobuf:"bytes,3,rep,name=Members,proto3" json:"Members,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`           // 公会成员
+	JoinRequests  map[int64]*GuildJoinRequest `protobuf:"bytes,4,rep,name=JoinRequests,proto3" json:"JoinRequests,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // 申请加入公会的请求信息
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -212,9 +212,9 @@ func (x *GuildData) GetJoinRequests() map[int64]*GuildJoinRequest {
 // 公会成员数据
 type GuildMemberData struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`             // 玩家id
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`          // 玩家名称
-	Position      int32                  `protobuf:"varint,3,opt,name=position,proto3" json:"position,omitempty"` // 职位
+	Id            int64                  `protobuf:"varint,1,opt,name=Id,proto3" json:"Id,omitempty"`             // 玩家id
+	Name          string                 `protobuf:"bytes,2,opt,name=Name,proto3" json:"Name,omitempty"`          // 玩家名称
+	Position      int32                  `protobuf:"varint,3,opt,name=Position,proto3" json:"Position,omitempty"` // 职位
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -273,10 +273,10 @@ func (x *GuildMemberData) GetPosition() int32 {
 // 公会信息
 type GuildInfo struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`                   // 公会id
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`                // 名称
-	Intro         string                 `protobuf:"bytes,3,opt,name=intro,proto3" json:"intro,omitempty"`              // 介绍
-	MemberCount   int32                  `protobuf:"varint,4,opt,name=memberCount,proto3" json:"memberCount,omitempty"` // 成员数
+	Id            int64                  `protobuf:"varint,1,opt,name=Id,proto3" json:"Id,omitempty"`                   // 公会id
+	Name          string                 `protobuf:"bytes,2,opt,name=Name,proto3" json:"Name,omitempty"`                // 名称
+	Intro         string                 `protobuf:"bytes,3,opt,name=Intro,proto3" json:"Intro,omitempty"`              // 介绍
+	MemberCount   int32                  `protobuf:"varint,4,opt,name=MemberCount,proto3" json:"MemberCount,omitempty"` // 成员数
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -341,7 +341,7 @@ func (x *GuildInfo) GetMemberCount() int32 {
 
 type GuildSync struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Data          *PlayerGuildData       `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
+	Data          *PlayerGuildData       `protobuf:"bytes,1,opt,name=Data,proto3" json:"Data,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -386,9 +386,9 @@ func (x *GuildSync) GetData() *PlayerGuildData {
 // 申请加入公会的请求信息
 type GuildJoinRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	PlayerId      int64                  `protobuf:"varint,1,opt,name=playerId,proto3" json:"playerId,omitempty"` // 申请加入公会的玩家id
-	PlayerName    string                 `protobuf:"bytes,2,opt,name=playerName,proto3" json:"playerName,omitempty"`
-	TimestampSec  int32                  `protobuf:"varint,3,opt,name=timestampSec,proto3" json:"timestampSec,omitempty"` // 时间戳(秒)
+	PlayerId      int64                  `protobuf:"varint,1,opt,name=PlayerId,proto3" json:"PlayerId,omitempty"` // 申请加入公会的玩家id
+	PlayerName    string                 `protobuf:"bytes,2,opt,name=PlayerName,proto3" json:"PlayerName,omitempty"`
+	TimestampSec  int32                  `protobuf:"varint,3,opt,name=TimestampSec,proto3" json:"TimestampSec,omitempty"` // 时间戳(秒)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -447,7 +447,7 @@ func (x *GuildJoinRequest) GetTimestampSec() int32 {
 // 查看公会列表
 type GuildListReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	PageIndex     int32                  `protobuf:"varint,1,opt,name=pageIndex,proto3" json:"pageIndex,omitempty"` // 分页索引
+	PageIndex     int32                  `protobuf:"varint,1,opt,name=PageIndex,proto3" json:"PageIndex,omitempty"` // 分页索引
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -493,9 +493,9 @@ func (x *GuildListReq) GetPageIndex() int32 {
 // @Player
 type GuildListRes struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	PageIndex     int32                  `protobuf:"varint,1,opt,name=pageIndex,proto3" json:"pageIndex,omitempty"`  // 分页索引
-	PageCount     int32                  `protobuf:"varint,2,opt,name=pageCount,proto3" json:"pageCount,omitempty"`  // 总页数
-	GuildInfos    []*GuildInfo           `protobuf:"bytes,3,rep,name=guildInfos,proto3" json:"guildInfos,omitempty"` // 公会列表
+	PageIndex     int32                  `protobuf:"varint,1,opt,name=PageIndex,proto3" json:"PageIndex,omitempty"`  // 分页索引
+	PageCount     int32                  `protobuf:"varint,2,opt,name=PageCount,proto3" json:"PageCount,omitempty"`  // 总页数
+	GuildInfos    []*GuildInfo           `protobuf:"bytes,3,rep,name=GuildInfos,proto3" json:"GuildInfos,omitempty"` // 公会列表
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -554,8 +554,8 @@ func (x *GuildListRes) GetGuildInfos() []*GuildInfo {
 // 创建公会请求
 type GuildCreateReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`   // 名称
-	Intro         string                 `protobuf:"bytes,2,opt,name=intro,proto3" json:"intro,omitempty"` // 介绍
+	Name          string                 `protobuf:"bytes,1,opt,name=Name,proto3" json:"Name,omitempty"`   // 名称
+	Intro         string                 `protobuf:"bytes,2,opt,name=Intro,proto3" json:"Intro,omitempty"` // 介绍
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -608,9 +608,9 @@ func (x *GuildCreateReq) GetIntro() string {
 // @Player
 type GuildCreateRes struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Error         string                 `protobuf:"bytes,1,opt,name=error,proto3" json:"error,omitempty"`
-	Id            int64                  `protobuf:"varint,2,opt,name=id,proto3" json:"id,omitempty"`    // 公会id
-	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"` // 名称
+	Error         string                 `protobuf:"bytes,1,opt,name=Error,proto3" json:"Error,omitempty"`
+	Id            int64                  `protobuf:"varint,2,opt,name=Id,proto3" json:"Id,omitempty"`    // 公会id
+	Name          string                 `protobuf:"bytes,3,opt,name=Name,proto3" json:"Name,omitempty"` // 名称
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -669,7 +669,7 @@ func (x *GuildCreateRes) GetName() string {
 // 加入公会请求
 type GuildJoinReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"` // 公会id
+	Id            int64                  `protobuf:"varint,1,opt,name=Id,proto3" json:"Id,omitempty"` // 公会id
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -715,8 +715,8 @@ func (x *GuildJoinReq) GetId() int64 {
 // @Player
 type GuildJoinRes struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Error         string                 `protobuf:"bytes,1,opt,name=error,proto3" json:"error,omitempty"`
-	Id            int64                  `protobuf:"varint,2,opt,name=id,proto3" json:"id,omitempty"` // 公会id
+	Error         string                 `protobuf:"bytes,1,opt,name=Error,proto3" json:"Error,omitempty"`
+	Id            int64                  `protobuf:"varint,2,opt,name=Id,proto3" json:"Id,omitempty"` // 公会id
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -768,8 +768,8 @@ func (x *GuildJoinRes) GetId() int64 {
 // 管理员同意请求者加入公会
 type GuildJoinAgreeReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	JoinPlayerId  int64                  `protobuf:"varint,1,opt,name=joinPlayerId,proto3" json:"joinPlayerId,omitempty"` // 申请加入公会的玩家id
-	IsAgree       bool                   `protobuf:"varint,2,opt,name=isAgree,proto3" json:"isAgree,omitempty"`           // 是否同意加入
+	JoinPlayerId  int64                  `protobuf:"varint,1,opt,name=JoinPlayerId,proto3" json:"JoinPlayerId,omitempty"` // 申请加入公会的玩家id
+	IsAgree       bool                   `protobuf:"varint,2,opt,name=IsAgree,proto3" json:"IsAgree,omitempty"`           // 是否同意加入
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -822,11 +822,11 @@ func (x *GuildJoinAgreeReq) GetIsAgree() bool {
 // @Player
 type GuildJoinAgreeRes struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
-	Error           string                 `protobuf:"bytes,1,opt,name=error,proto3" json:"error,omitempty"`
-	GuildId         int64                  `protobuf:"varint,2,opt,name=guildId,proto3" json:"guildId,omitempty"`
-	ManagerPlayerId int64                  `protobuf:"varint,3,opt,name=managerPlayerId,proto3" json:"managerPlayerId,omitempty"` // 管理员id
-	JoinPlayerId    int64                  `protobuf:"varint,4,opt,name=joinPlayerId,proto3" json:"joinPlayerId,omitempty"`       // 申请加入公会的玩家id
-	IsAgree         bool                   `protobuf:"varint,5,opt,name=isAgree,proto3" json:"isAgree,omitempty"`                 // 是否同意加入
+	Error           string                 `protobuf:"bytes,1,opt,name=Error,proto3" json:"Error,omitempty"`
+	GuildId         int64                  `protobuf:"varint,2,opt,name=GuildId,proto3" json:"GuildId,omitempty"`
+	ManagerPlayerId int64                  `protobuf:"varint,3,opt,name=ManagerPlayerId,proto3" json:"ManagerPlayerId,omitempty"` // 管理员id
+	JoinPlayerId    int64                  `protobuf:"varint,4,opt,name=JoinPlayerId,proto3" json:"JoinPlayerId,omitempty"`       // 申请加入公会的玩家id
+	IsAgree         bool                   `protobuf:"varint,5,opt,name=IsAgree,proto3" json:"IsAgree,omitempty"`                 // 是否同意加入
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -937,7 +937,7 @@ func (*GuildDataViewReq) Descriptor() ([]byte, []int) {
 // @Player
 type GuildDataViewRes struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	GuildData     *GuildData             `protobuf:"bytes,1,opt,name=guildData,proto3" json:"guildData,omitempty"`
+	GuildData     *GuildData             `protobuf:"bytes,1,opt,name=GuildData,proto3" json:"GuildData,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -982,8 +982,8 @@ func (x *GuildDataViewRes) GetGuildData() *GuildData {
 // 提示有人申请加入本公会
 type GuildJoinReqTip struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	PlayerId      int64                  `protobuf:"varint,1,opt,name=playerId,proto3" json:"playerId,omitempty"`    // 玩家id
-	PlayerName    string                 `protobuf:"bytes,2,opt,name=playerName,proto3" json:"playerName,omitempty"` // 玩家名
+	PlayerId      int64                  `protobuf:"varint,1,opt,name=PlayerId,proto3" json:"PlayerId,omitempty"`    // 玩家id
+	PlayerName    string                 `protobuf:"bytes,2,opt,name=PlayerName,proto3" json:"PlayerName,omitempty"` // 玩家名
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1035,11 +1035,11 @@ func (x *GuildJoinReqTip) GetPlayerName() string {
 // 自己的入会申请的操作结果
 type GuildJoinReqOpResult struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
-	Error           string                 `protobuf:"bytes,1,opt,name=error,proto3" json:"error,omitempty"`
-	GuildId         int64                  `protobuf:"varint,2,opt,name=guildId,proto3" json:"guildId,omitempty"`
-	ManagerPlayerId int64                  `protobuf:"varint,3,opt,name=managerPlayerId,proto3" json:"managerPlayerId,omitempty"` // 管理员id
-	JoinPlayerId    int64                  `protobuf:"varint,4,opt,name=joinPlayerId,proto3" json:"joinPlayerId,omitempty"`       // 申请加入公会的玩家id
-	IsAgree         bool                   `protobuf:"varint,5,opt,name=isAgree,proto3" json:"isAgree,omitempty"`                 // 是否同意加入
+	Error           string                 `protobuf:"bytes,1,opt,name=Error,proto3" json:"Error,omitempty"`
+	GuildId         int64                  `protobuf:"varint,2,opt,name=GuildId,proto3" json:"GuildId,omitempty"`
+	ManagerPlayerId int64                  `protobuf:"varint,3,opt,name=ManagerPlayerId,proto3" json:"ManagerPlayerId,omitempty"` // 管理员id
+	JoinPlayerId    int64                  `protobuf:"varint,4,opt,name=JoinPlayerId,proto3" json:"JoinPlayerId,omitempty"`       // 申请加入公会的玩家id
+	IsAgree         bool                   `protobuf:"varint,5,opt,name=IsAgree,proto3" json:"IsAgree,omitempty"`                 // 是否同意加入
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -1115,10 +1115,10 @@ const file_guild_proto_rawDesc = "" +
 	"\n" +
 	"\vguild.proto\x12\agserver\x1a\fplayer.proto\"\xf3\x02\n" +
 	"\rGuildLoadData\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\x03R\x02id\x12.\n" +
-	"\bbaseInfo\x18\x02 \x01(\v2\x12.gserver.GuildInfoR\bbaseInfo\x12=\n" +
-	"\amembers\x18\x03 \x03(\v2#.gserver.GuildLoadData.MembersEntryR\amembers\x12L\n" +
-	"\fjoinRequests\x18\x04 \x03(\v2(.gserver.GuildLoadData.JoinRequestsEntryR\fjoinRequests\x1aT\n" +
+	"\x02Id\x18\x01 \x01(\x03R\x02Id\x12.\n" +
+	"\bBaseInfo\x18\x02 \x01(\v2\x12.gserver.GuildInfoR\bBaseInfo\x12=\n" +
+	"\aMembers\x18\x03 \x03(\v2#.gserver.GuildLoadData.MembersEntryR\aMembers\x12L\n" +
+	"\fJoinRequests\x18\x04 \x03(\v2(.gserver.GuildLoadData.JoinRequestsEntryR\fJoinRequests\x1aT\n" +
 	"\fMembersEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\x03R\x03key\x12.\n" +
 	"\x05value\x18\x02 \x01(\v2\x18.gserver.GuildMemberDataR\x05value:\x028\x01\x1a?\n" +
@@ -1126,10 +1126,10 @@ const file_guild_proto_rawDesc = "" +
 	"\x03key\x18\x01 \x01(\x03R\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\fR\x05value:\x028\x01\"\x82\x03\n" +
 	"\tGuildData\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\x03R\x02id\x12.\n" +
-	"\bbaseInfo\x18\x02 \x01(\v2\x12.gserver.GuildInfoR\bbaseInfo\x129\n" +
-	"\amembers\x18\x03 \x03(\v2\x1f.gserver.GuildData.MembersEntryR\amembers\x12H\n" +
-	"\fjoinRequests\x18\x04 \x03(\v2$.gserver.GuildData.JoinRequestsEntryR\fjoinRequests\x1aT\n" +
+	"\x02Id\x18\x01 \x01(\x03R\x02Id\x12.\n" +
+	"\bBaseInfo\x18\x02 \x01(\v2\x12.gserver.GuildInfoR\bBaseInfo\x129\n" +
+	"\aMembers\x18\x03 \x03(\v2\x1f.gserver.GuildData.MembersEntryR\aMembers\x12H\n" +
+	"\fJoinRequests\x18\x04 \x03(\v2$.gserver.GuildData.JoinRequestsEntryR\fJoinRequests\x1aT\n" +
 	"\fMembersEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\x03R\x03key\x12.\n" +
 	"\x05value\x18\x02 \x01(\v2\x18.gserver.GuildMemberDataR\x05value:\x028\x01\x1aZ\n" +
@@ -1137,65 +1137,65 @@ const file_guild_proto_rawDesc = "" +
 	"\x03key\x18\x01 \x01(\x03R\x03key\x12/\n" +
 	"\x05value\x18\x02 \x01(\v2\x19.gserver.GuildJoinRequestR\x05value:\x028\x01\"Q\n" +
 	"\x0fGuildMemberData\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1a\n" +
-	"\bposition\x18\x03 \x01(\x05R\bposition\"g\n" +
+	"\x02Id\x18\x01 \x01(\x03R\x02Id\x12\x12\n" +
+	"\x04Name\x18\x02 \x01(\tR\x04Name\x12\x1a\n" +
+	"\bPosition\x18\x03 \x01(\x05R\bPosition\"g\n" +
 	"\tGuildInfo\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\x12\x14\n" +
-	"\x05intro\x18\x03 \x01(\tR\x05intro\x12 \n" +
-	"\vmemberCount\x18\x04 \x01(\x05R\vmemberCount\"9\n" +
+	"\x02Id\x18\x01 \x01(\x03R\x02Id\x12\x12\n" +
+	"\x04Name\x18\x02 \x01(\tR\x04Name\x12\x14\n" +
+	"\x05Intro\x18\x03 \x01(\tR\x05Intro\x12 \n" +
+	"\vMemberCount\x18\x04 \x01(\x05R\vMemberCount\"9\n" +
 	"\tGuildSync\x12,\n" +
-	"\x04data\x18\x01 \x01(\v2\x18.gserver.PlayerGuildDataR\x04data\"r\n" +
+	"\x04Data\x18\x01 \x01(\v2\x18.gserver.PlayerGuildDataR\x04Data\"r\n" +
 	"\x10GuildJoinRequest\x12\x1a\n" +
-	"\bplayerId\x18\x01 \x01(\x03R\bplayerId\x12\x1e\n" +
+	"\bPlayerId\x18\x01 \x01(\x03R\bPlayerId\x12\x1e\n" +
 	"\n" +
-	"playerName\x18\x02 \x01(\tR\n" +
-	"playerName\x12\"\n" +
-	"\ftimestampSec\x18\x03 \x01(\x05R\ftimestampSec\",\n" +
+	"PlayerName\x18\x02 \x01(\tR\n" +
+	"PlayerName\x12\"\n" +
+	"\fTimestampSec\x18\x03 \x01(\x05R\fTimestampSec\",\n" +
 	"\fGuildListReq\x12\x1c\n" +
-	"\tpageIndex\x18\x01 \x01(\x05R\tpageIndex\"~\n" +
+	"\tPageIndex\x18\x01 \x01(\x05R\tPageIndex\"~\n" +
 	"\fGuildListRes\x12\x1c\n" +
-	"\tpageIndex\x18\x01 \x01(\x05R\tpageIndex\x12\x1c\n" +
-	"\tpageCount\x18\x02 \x01(\x05R\tpageCount\x122\n" +
+	"\tPageIndex\x18\x01 \x01(\x05R\tPageIndex\x12\x1c\n" +
+	"\tPageCount\x18\x02 \x01(\x05R\tPageCount\x122\n" +
 	"\n" +
-	"guildInfos\x18\x03 \x03(\v2\x12.gserver.GuildInfoR\n" +
-	"guildInfos\":\n" +
+	"GuildInfos\x18\x03 \x03(\v2\x12.gserver.GuildInfoR\n" +
+	"GuildInfos\":\n" +
 	"\x0eGuildCreateReq\x12\x12\n" +
-	"\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n" +
-	"\x05intro\x18\x02 \x01(\tR\x05intro\"J\n" +
+	"\x04Name\x18\x01 \x01(\tR\x04Name\x12\x14\n" +
+	"\x05Intro\x18\x02 \x01(\tR\x05Intro\"J\n" +
 	"\x0eGuildCreateRes\x12\x14\n" +
-	"\x05error\x18\x01 \x01(\tR\x05error\x12\x0e\n" +
-	"\x02id\x18\x02 \x01(\x03R\x02id\x12\x12\n" +
-	"\x04name\x18\x03 \x01(\tR\x04name\"\x1e\n" +
+	"\x05Error\x18\x01 \x01(\tR\x05Error\x12\x0e\n" +
+	"\x02Id\x18\x02 \x01(\x03R\x02Id\x12\x12\n" +
+	"\x04Name\x18\x03 \x01(\tR\x04Name\"\x1e\n" +
 	"\fGuildJoinReq\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\x03R\x02id\"4\n" +
+	"\x02Id\x18\x01 \x01(\x03R\x02Id\"4\n" +
 	"\fGuildJoinRes\x12\x14\n" +
-	"\x05error\x18\x01 \x01(\tR\x05error\x12\x0e\n" +
-	"\x02id\x18\x02 \x01(\x03R\x02id\"Q\n" +
+	"\x05Error\x18\x01 \x01(\tR\x05Error\x12\x0e\n" +
+	"\x02Id\x18\x02 \x01(\x03R\x02Id\"Q\n" +
 	"\x11GuildJoinAgreeReq\x12\"\n" +
-	"\fjoinPlayerId\x18\x01 \x01(\x03R\fjoinPlayerId\x12\x18\n" +
-	"\aisAgree\x18\x02 \x01(\bR\aisAgree\"\xab\x01\n" +
+	"\fJoinPlayerId\x18\x01 \x01(\x03R\fJoinPlayerId\x12\x18\n" +
+	"\aIsAgree\x18\x02 \x01(\bR\aIsAgree\"\xab\x01\n" +
 	"\x11GuildJoinAgreeRes\x12\x14\n" +
-	"\x05error\x18\x01 \x01(\tR\x05error\x12\x18\n" +
-	"\aguildId\x18\x02 \x01(\x03R\aguildId\x12(\n" +
-	"\x0fmanagerPlayerId\x18\x03 \x01(\x03R\x0fmanagerPlayerId\x12\"\n" +
-	"\fjoinPlayerId\x18\x04 \x01(\x03R\fjoinPlayerId\x12\x18\n" +
-	"\aisAgree\x18\x05 \x01(\bR\aisAgree\"\x12\n" +
+	"\x05Error\x18\x01 \x01(\tR\x05Error\x12\x18\n" +
+	"\aGuildId\x18\x02 \x01(\x03R\aGuildId\x12(\n" +
+	"\x0fManagerPlayerId\x18\x03 \x01(\x03R\x0fManagerPlayerId\x12\"\n" +
+	"\fJoinPlayerId\x18\x04 \x01(\x03R\fJoinPlayerId\x12\x18\n" +
+	"\aIsAgree\x18\x05 \x01(\bR\aIsAgree\"\x12\n" +
 	"\x10GuildDataViewReq\"D\n" +
 	"\x10GuildDataViewRes\x120\n" +
-	"\tguildData\x18\x01 \x01(\v2\x12.gserver.GuildDataR\tguildData\"M\n" +
+	"\tGuildData\x18\x01 \x01(\v2\x12.gserver.GuildDataR\tGuildData\"M\n" +
 	"\x0fGuildJoinReqTip\x12\x1a\n" +
-	"\bplayerId\x18\x01 \x01(\x03R\bplayerId\x12\x1e\n" +
+	"\bPlayerId\x18\x01 \x01(\x03R\bPlayerId\x12\x1e\n" +
 	"\n" +
-	"playerName\x18\x02 \x01(\tR\n" +
-	"playerName\"\xae\x01\n" +
+	"PlayerName\x18\x02 \x01(\tR\n" +
+	"PlayerName\"\xae\x01\n" +
 	"\x14GuildJoinReqOpResult\x12\x14\n" +
-	"\x05error\x18\x01 \x01(\tR\x05error\x12\x18\n" +
-	"\aguildId\x18\x02 \x01(\x03R\aguildId\x12(\n" +
-	"\x0fmanagerPlayerId\x18\x03 \x01(\x03R\x0fmanagerPlayerId\x12\"\n" +
-	"\fjoinPlayerId\x18\x04 \x01(\x03R\fjoinPlayerId\x12\x18\n" +
-	"\aisAgree\x18\x05 \x01(\bR\aisAgree*4\n" +
+	"\x05Error\x18\x01 \x01(\tR\x05Error\x12\x18\n" +
+	"\aGuildId\x18\x02 \x01(\x03R\aGuildId\x12(\n" +
+	"\x0fManagerPlayerId\x18\x03 \x01(\x03R\x0fManagerPlayerId\x12\"\n" +
+	"\fJoinPlayerId\x18\x04 \x01(\x03R\fJoinPlayerId\x12\x18\n" +
+	"\aIsAgree\x18\x05 \x01(\bR\aIsAgree*4\n" +
 	"\rGuildPosition\x12\n" +
 	"\n" +
 	"\x06Member\x10\x00\x12\v\n" +
@@ -1244,15 +1244,15 @@ var file_guild_proto_goTypes = []any{
 	(*PlayerGuildData)(nil),      // 23: gserver.PlayerGuildData
 }
 var file_guild_proto_depIdxs = []int32{
-	4,  // 0: gserver.GuildLoadData.baseInfo:type_name -> gserver.GuildInfo
-	19, // 1: gserver.GuildLoadData.members:type_name -> gserver.GuildLoadData.MembersEntry
-	20, // 2: gserver.GuildLoadData.joinRequests:type_name -> gserver.GuildLoadData.JoinRequestsEntry
-	4,  // 3: gserver.GuildData.baseInfo:type_name -> gserver.GuildInfo
-	21, // 4: gserver.GuildData.members:type_name -> gserver.GuildData.MembersEntry
-	22, // 5: gserver.GuildData.joinRequests:type_name -> gserver.GuildData.JoinRequestsEntry
-	23, // 6: gserver.GuildSync.data:type_name -> gserver.PlayerGuildData
-	4,  // 7: gserver.GuildListRes.guildInfos:type_name -> gserver.GuildInfo
-	2,  // 8: gserver.GuildDataViewRes.guildData:type_name -> gserver.GuildData
+	4,  // 0: gserver.GuildLoadData.BaseInfo:type_name -> gserver.GuildInfo
+	19, // 1: gserver.GuildLoadData.Members:type_name -> gserver.GuildLoadData.MembersEntry
+	20, // 2: gserver.GuildLoadData.JoinRequests:type_name -> gserver.GuildLoadData.JoinRequestsEntry
+	4,  // 3: gserver.GuildData.BaseInfo:type_name -> gserver.GuildInfo
+	21, // 4: gserver.GuildData.Members:type_name -> gserver.GuildData.MembersEntry
+	22, // 5: gserver.GuildData.JoinRequests:type_name -> gserver.GuildData.JoinRequestsEntry
+	23, // 6: gserver.GuildSync.Data:type_name -> gserver.PlayerGuildData
+	4,  // 7: gserver.GuildListRes.GuildInfos:type_name -> gserver.GuildInfo
+	2,  // 8: gserver.GuildDataViewRes.GuildData:type_name -> gserver.GuildData
 	3,  // 9: gserver.GuildLoadData.MembersEntry.value:type_name -> gserver.GuildMemberData
 	3,  // 10: gserver.GuildData.MembersEntry.value:type_name -> gserver.GuildMemberData
 	6,  // 11: gserver.GuildData.JoinRequestsEntry.value:type_name -> gserver.GuildJoinRequest

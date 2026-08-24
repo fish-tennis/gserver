@@ -234,11 +234,23 @@ message ExchangeCfg {
   int32 CountLimit = 5; // 兑换次数限制(0表示无次数限制)
   int32 RefreshType = 6; // 刷新机制(enum RefreshType)
   int32 Category = 7; // 兑换分类(enum ExchangeCategory)
-  map<string,string> Properties = 8; // 扩展属性
-  string Detail = 9;
-  string Icon = 10; // 图标(客户端使用)
-  
+  int32 RechargeCfgId = 8; // 关联的充值配置ID(>0表示该兑换项由充值回调触发,玩家无法手动领取)
+  map<string,string> Properties = 9; // 扩展属性
+  string Detail = 10;
+  string Icon = 11; // 图标(客户端使用)
+
   repeated CfgArgOptions ConditionTemplates = 21; // 关联的配置模板id和参数,简化配置表用,业务代码不要调用
+}
+
+// 充值配置(独立配置表,存放价格等商务属性)
+message RechargeCfg {
+  int32 CfgId = 1;
+  int32 Price = 2; // 价格(分),如6800=68元
+  string Currency = 3; // 货币类型(CNY/USD)
+  string ProductId = 4; // 平台商品ID(iOS/Android商店的productId)
+  string Name = 5; // 商品名称
+  string Icon = 6; // 商品图标
+  string Detail = 7; // 商品描述
 }
 
 // 活动基础配置

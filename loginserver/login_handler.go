@@ -31,6 +31,10 @@ func onLoginReq(connection Connection, packet Packet) {
 // processLoginReq 登录请求的实际处理逻辑,在DB协程池中执行
 func processLoginReq(connection Connection, packet Packet, req *pb.LoginReq) {
 	slog.Debug("onLoginReq", "message", req)
+	// 解析客户端真实IP:网关模式取请求体中由网关填充的ClientIp,直连模式从connection提取
+	// 后续将用于玩家行为记录与分析,当前阶段先输出到日志
+	clientIp := network.ResolveClientIp(connection, packet, req.GetClientIp())
+	slog.Info("processLoginReq clientIp", "accountName", req.GetAccountName(), "clientIp", clientIp)
 	var errorCode pb.ErrorCode
 	loginRes := &pb.LoginRes{
 		AccountName: req.GetAccountName(),
@@ -142,6 +146,12 @@ func processAccountReg(connection Connection, packet Packet, req *pb.AccountReg)
 	// DB协程池中执行,connection跨协程:连接已断开则直接返回,避免无意义的DB操作
 	if !connection.IsConnected() {
 		slog.Debug("processAccountReg connection closed", "accountName", req.GetAccountName())
+		return
+	}
+	// "账号名+空密码"直接登录该账号(登录分支的密码比较 ""=="" 形同虚设)
+	if req.GetPassword() == "" {
+		errorCode = pb.ErrorCode_ErrorCode_PasswordError
+		slog.Warn("processAccountReg empty password", "accountName", req.GetAccountName())
 		return
 	}
 	result := ""

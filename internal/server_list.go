@@ -7,6 +7,7 @@ import (
 	"slices"
 	"sort"
 	"sync"
+	"time"
 
 	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gentity/util"
@@ -431,6 +432,16 @@ func (this *ServerList) Rpc(serverId int32, request gnet.Packet, reply proto.Mes
 	connection := this.GetServerConnection(serverId)
 	if connection != nil && connection.IsConnected() {
 		return connection.Rpc(request, reply, opts...)
+	}
+	return gentity.ErrNotConnected
+}
+
+// RpcTimeout 与Rpc功能相同,但额外支持自定义等待回复的超时时间
+// replyTimeout<=0表示使用DefaultRpcTimeout
+func (this *ServerList) RpcTimeout(serverId int32, request gnet.Packet, reply proto.Message, replyTimeout time.Duration, opts ...gnet.SendOption) error {
+	connection := this.GetServerConnection(serverId)
+	if connection != nil && connection.IsConnected() {
+		return connection.RpcTimeout(request, reply, replyTimeout, opts...)
 	}
 	return gentity.ErrNotConnected
 }

@@ -45,9 +45,11 @@ func main() {
 	isDaemon := false
 	configFile := ""
 	cfgDir := ""
+	logLevel := ""
 	// 配置文件名格式: serverType_xxx.json
 	flag.StringVar(&configFile, "conf", "", "server's config file")
 	flag.StringVar(&cfgDir, "cfg", "cfgdata", "cfg dir")
+	flag.StringVar(&logLevel, "loglevel", "debug", "log level: debug|info|warn|error (use info/warn in stress tests to reduce log IO)")
 	flag.BoolVar(&isDaemon, "d", false, "daemon mode")
 	flag.Parse()
 
@@ -63,7 +65,7 @@ func main() {
 	baseFileName := filepath.Base(configFile)                                   // login_test.yaml
 	baseFileName = strings.TrimSuffix(baseFileName, filepath.Ext(baseFileName)) // login_test
 	serverType := getServerTypeFromConfigFile(configFile)                       // login
-	initLog(baseFileName, !isDaemon)
+	initLog(baseFileName, !isDaemon, logLevel)
 	cwd, _ := os.Getwd()
 	slog.Info("args", "conf", configFile, "cfgDir", cfgDir, "isDaemon", isDaemon, "cwd", cwd)
 	slog.Info("build", "BuildTime", internal.BuildTime, "BuildType", internal.BuildType, "GitVersion", internal.GitVersion)
@@ -127,7 +129,7 @@ func daemon() {
 	//os.Exit(0)
 }
 
-func initLog(logFileName string, useStdOutput bool) {
+func initLog(logFileName string, useStdOutput bool, logLevel string) {
 	os.Mkdir("log", 0750)
 	// 日志轮转与切割
 	fileLogger := &lumberjack.Logger{
@@ -139,11 +141,21 @@ func initLog(logFileName string, useStdOutput bool) {
 		LocalTime:  true,
 	}
 	// 建议使用slog
-	debugLevel := &slog.LevelVar{}
-	debugLevel.Set(slog.LevelDebug)
+	// 日志级别可由-loglevel参数控制:压测时用warn/info可大幅减少日志IO对CPU的挤占
+	levelVar := &slog.LevelVar{}
+	switch logLevel {
+	case "info":
+		levelVar.Set(slog.LevelInfo)
+	case "warn":
+		levelVar.Set(slog.LevelWarn)
+	case "error":
+		levelVar.Set(slog.LevelError)
+	default:
+		levelVar.Set(slog.LevelDebug)
+	}
 	slog.SetDefault(slog.New(logger.NewJsonHandlerWithStdOutput(fileLogger, &slog.HandlerOptions{
 		AddSource: true,
-		Level:     debugLevel,
+		Level:     levelVar,
 		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
 			if a.Key == slog.SourceKey {
 				source := a.Value.Any().(*slog.Source)
@@ -156,7 +168,7 @@ func initLog(logFileName string, useStdOutput bool) {
 	// 让 gnet/gentity 使用配置好的 slog.Default()
 	gnet.SetLogger(slog.Default())
 	gentity.SetLogger(slog.Default())
-	slog.Info("initLog", "logFileName", logFileName, "useStdOutput", useStdOutput)
+	slog.Info("initLog", "logFileName", logFileName, "useStdOutput", useStdOutput, "level", logLevel)
 }
 
 // 从配置文件名解析出服务器类型

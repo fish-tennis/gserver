@@ -11,6 +11,7 @@ message LoginReq {
   string AccountName = 1;
   string Password = 2;
   string Version = 3; // 客户端版本号,如0.0.0.1
+  string ClientIp = 4; // 客户端Ip,网关模式在转发消息时需要传入客户端Ip
 }
 
 // 账号登录回复
@@ -44,6 +45,8 @@ message PlayerEntryGameReq {
   int64 AccountId = 1;
   string LoginSession = 2; // 账号验证成功后的缓存session
   int32 RegionId = 3; // 区服id
+  string Version = 4; // 客户端版本号,如0.0.0.1
+  string ClientIp = 5; // 客户端Ip,网关模式在转发消息时需要传入客户端Ip
 }
 
 // 玩家登录游戏服回复
@@ -62,6 +65,7 @@ message PlayerReconnectGameReq {
   string ReconnectSession = 3; // 重连验证session
   string Version = 4; // 客户端版本号,如0.0.0.1
   int32 GameServerId = 5; // game服Id
+  string ClientIp = 6; // 客户端Ip,网关模式在转发消息时需要传入客户端Ip
 }
 
 // 玩家重连游戏服
@@ -79,6 +83,8 @@ message CreatePlayerReq {
   int32 RegionId = 3; // 区服id
   string Name = 4; // 玩家名
   int32 Gender = 5; // 性别
+  string Version = 6; // 客户端版本号,如0.0.0.1
+  string ClientIp = 7; // 客户端Ip,网关模式在转发消息时需要传入客户端Ip
 }
 
 // 创建角色

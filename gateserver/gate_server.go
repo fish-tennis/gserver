@@ -13,6 +13,7 @@ import (
 	. "github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/network"
 	"github.com/fish-tennis/gserver/pb"
+	"github.com/fish-tennis/gserver/util"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -151,12 +152,35 @@ func (s *GateServer) checkRunning(connection Connection, packet Packet) bool {
 	return true
 }
 
+// fillClientIp 在网关转发登录类请求前,把客户端真实 IP 写入请求体的 ClientIp 字段
+//
+// 网关模式下,后端服务器拿到的 connection 是网关与后端之间的连接,无法从中获取客户端真实 IP,
+// 因此必须由掌握客户端真实连接的网关在此写入请求体。仅对含 ClientIp 字段的四类登录消息生效,
+// AccountReg 等无该字段的消息类型不匹配即跳过,不影响原消息。
+func (s *GateServer) fillClientIp(connection Connection, message proto.Message) {
+	if message == nil {
+		return
+	}
+	switch msg := message.(type) {
+	case *pb.LoginReq:
+		msg.ClientIp = util.GetIpFromAddr(connection.RemoteAddr())
+	case *pb.PlayerEntryGameReq:
+		msg.ClientIp = util.GetIpFromAddr(connection.RemoteAddr())
+	case *pb.PlayerReconnectGameReq:
+		msg.ClientIp = util.GetIpFromAddr(connection.RemoteAddr())
+	case *pb.CreatePlayerReq:
+		msg.ClientIp = util.GetIpFromAddr(connection.RemoteAddr())
+	}
+}
+
 // client -> gateserver -> loginServer
 func (s *GateServer) routeToLoginServer(connection Connection, packet Packet) {
 	if s.checkRunning(connection, packet) {
 		return
 	}
 	message := packet.Message()
+	// 网关持有客户端真实连接,转发前把客户端IP写入请求体(仅对含ClientIp字段的消息生效)
+	s.fillClientIp(connection, message)
 	data := packet.GetStreamData()
 	var gatePacket *network.GatePacket
 	if message != nil {
@@ -202,6 +226,8 @@ func (s *GateServer) routeToGameServerWithConnId(connection Connection, packet P
 		return
 	}
 	message := packet.Message()
+	// 网关持有客户端真实连接,转发前把客户端IP写入请求体(仅对含ClientIp字段的消息生效)
+	s.fillClientIp(connection, message)
 	data := packet.GetStreamData()
 	var gatePacket *network.GatePacket
 	if message != nil {
@@ -252,6 +278,8 @@ func (s *GateServer) routeReconnectToGameServer(connection Connection, packet Pa
 	}
 	// 玩家在线且GameServerId一致,或玩家不在线(转发到req.GameServerId由游戏服加载DB)
 	message := packet.Message()
+	// 网关持有客户端真实连接,转发前把客户端IP写入请求体(仅对含ClientIp字段的消息生效)
+	s.fillClientIp(connection, message)
 	data := packet.GetStreamData()
 	var gatePacket *network.GatePacket
 	if message != nil {

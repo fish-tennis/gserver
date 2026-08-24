@@ -34,3 +34,9 @@ type TimeLimited interface {
 	GetTimeout() int32
 	//SetTimeout(timeout int32)
 }
+
+// 带数量的物品
+type CountItem interface {
+	// 数量
+	GetCount() int32
+}
