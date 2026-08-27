@@ -56,6 +56,14 @@ func (this *GameServer) Init(ctx context.Context, configFile string) bool {
 
 	this.initDb()
 	this.initCache()
+	// 订阅热更配置通知,收到通知后按md5快照diff选择性重载本进程配置表
+	cache.SubscribeReloadConfig(this.GetContext(), func() {
+		if err := cfg.Reload(this.GetCfgDir()); err != nil {
+			slog.Error("GameServer reload config failed", "error", err)
+		} else {
+			slog.Info("GameServer config reloaded")
+		}
+	})
 	this.initNetwork()
 	// 初始化DB操作协程池,将进游/创角等含DB查询的请求从收包goroutine卸载
 	InitDbWorkerPool()
@@ -300,12 +308,17 @@ func (this *GameServer) AddPlayer(player IPlayer) {
 	this.playerWg.Add(1)
 	this.playerMap.Store(player.GetId(), player)
 	if !cache.AddOnlinePlayer(player.GetId(), player.GetAccountId(), this.GetId()) {
-		// AddOnlinePlayer 失败说明 keyOnlinePlayer 已存在(可能是上次崩溃的残留数据)
-		// AddOnlineAccount 已保证账号独占性,这里清理残留后重新设置,保证内存与Redis状态一致
-		_, oldGameServerId := cache.GetOnlinePlayer(player.GetId())
-		slog.Error("AddOnlinePlayer stale record, cleaning", "playerId", player.GetId(), "accountId", player.GetAccountId(), "oldGameServerId", oldGameServerId)
-		cache.RemoveOnlinePlayer(player.GetId(), oldGameServerId)
-		cache.AddOnlinePlayer(player.GetId(), player.GetAccountId(), this.GetId())
+		// 占有失败说明记录被其他服务器持有
+		// 本服已通过 AddOnlineAccount 获得账号独占,记录持有者只可能是:
+		// 1) 已宕机服务器的崩溃残留 2) 正在下线的旧服务器的中间态记录
+		// 旧服务器的下线清理是条件释放(值匹配才删),不会误删这里的新记录,因此强制接管是安全的
+		// 原子接管(读取旧值+写入新值)消除了原先 Get->Remove->Add 三步之间的check-then-act竞态
+		// AddOnlinePlayer占有失败时不回滚SAdd,接管后记录与本服集合索引保持一致,
+		// 本服宕机重启后ResetOnlinePlayer可从集合索引找到该玩家并自修复
+		oldAccountId, oldGameServerId := cache.TakeOverOnlinePlayer(player.GetId(), player.GetAccountId(), this.GetId())
+		slog.Error("AddOnlinePlayer stale record, takeover",
+			"playerId", player.GetId(), "accountId", player.GetAccountId(),
+			"oldAccountId", oldAccountId, "oldGameServerId", oldGameServerId)
 	}
 }
 
@@ -318,7 +331,8 @@ func (this *GameServer) RemovePlayer(player IPlayer) {
 		slog.Error("RemovePlayer SaveDb error", "playerId", player.GetId(), "error", err)
 	}
 	this.playerMap.Delete(player.GetId())
-	cache.RemoveOnlineAccount(player.GetAccountId())
+	// 条件释放:仅当记录仍属于本服时才删除,防止误删新服务器已写入的新记录
+	cache.RemoveOnlineAccount(player.GetAccountId(), player.GetId(), this.GetId())
 	cache.RemoveOnlinePlayer(player.GetId(), this.GetId())
 }
 
@@ -342,7 +356,8 @@ func (this *GameServer) onKickPlayer(connection Connection, packet Packet) {
 	} else {
 		playerId, gameServerId := cache.GetOnlineAccount(req.AccountId)
 		if playerId == req.PlayerId && gameServerId == this.GetId() {
-			cache.RemoveOnlineAccount(req.AccountId)
+			// 条件释放:防止Get与删除之间记录被其他流程改写后误删
+			cache.RemoveOnlineAccount(req.AccountId, req.PlayerId, this.GetId())
 			// player==nil时也要清Redis online player key,防止残留导致无法登录
 			cache.RemoveOnlinePlayer(req.GetPlayerId(), this.GetId())
 			slog.Info("kick player2", "accountId", req.GetAccountId(), "playerId", req.GetPlayerId(), "gameServerId", this.GetId())

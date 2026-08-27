@@ -144,13 +144,13 @@ func processPlayerEntryGameReq(connection Connection, packet Packet, req *pb.Pla
 	playerData := &pb.PlayerData{}
 	hasData, err := db.GetPlayerDb().FindEntityById(playerId, playerData)
 	if err != nil {
-		cache.RemoveOnlineAccount(accountId)
+		cache.RemoveOnlineAccount(accountId, playerId, gentity.GetApplication().GetId())
 		errorCode = pb.ErrorCode_ErrorCode_DbErr
 		slog.Error("db error", "error", err)
 		return
 	}
 	if !hasData {
-		cache.RemoveOnlineAccount(accountId)
+		cache.RemoveOnlineAccount(accountId, playerId, gentity.GetApplication().GetId())
 		errorCode = pb.ErrorCode_ErrorCode_NoPlayer
 		return
 	}
@@ -164,7 +164,7 @@ func processPlayerEntryGameReq(connection Connection, packet Packet, req *pb.Pla
 	}
 	entryPlayer = game.CreatePlayerFromData(playerData)
 	if entryPlayer == nil {
-		cache.RemoveOnlineAccount(accountId)
+		cache.RemoveOnlineAccount(accountId, playerId, gentity.GetApplication().GetId())
 		errorCode = pb.ErrorCode_ErrorCode_NoPlayer
 		return
 	}
@@ -178,7 +178,7 @@ func processPlayerEntryGameReq(connection Connection, packet Packet, req *pb.Pla
 			connection.SetTag(nil)
 		}
 		game.GetPlayerMgr().RemovePlayer(entryPlayer)
-		cache.RemoveOnlineAccount(accountId)
+		cache.RemoveOnlineAccount(accountId, playerId, gentity.GetApplication().GetId())
 		errorCode = pb.ErrorCode_ErrorCode_TryLater
 		slog.Error("RunRoutine failed", "playerId", entryPlayer.GetId())
 		return

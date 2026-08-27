@@ -77,8 +77,9 @@ func processLoginReq(connection Connection, packet Packet, req *pb.LoginReq) {
 		if gameServerId > 0 {
 			if _loginServer.GetServerList().GetServerInfo(gameServerId) == nil {
 				// 目标游戏服已宕机(不在服务器列表中),直接清理 Redis 缓存,防止玩家永久"卡号"
+				// 条件释放:值匹配才删,防止清理瞬间该玩家恰好重新登录到其他服后误删新记录
 				cache.RemoveOnlinePlayer(onlinePlayerId, gameServerId)
-				cache.RemoveOnlineAccount(account.GetXId())
+				cache.RemoveOnlineAccount(account.GetXId(), onlinePlayerId, gameServerId)
 				slog.Error("RemoveOnlinePlayer for crashed server", "accountId", account.GetXId(), "playerId", onlinePlayerId, "gameServerId", gameServerId)
 			} else {
 				// 游戏服在线,异步通知踢人

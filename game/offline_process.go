@@ -22,7 +22,7 @@ func OfflinePlayerProcess(playerId int64, data interface{}, f func(offlinePlayer
 		slog.Debug("OfflinePlayerProcess AddOnlineAccount failed", "playerId", playerId, "accountId", accountId)
 		return false
 	}
-	defer cache.RemoveOnlineAccount(accountId)
+	defer cache.RemoveOnlineAccount(accountId, playerId, gentity.GetApplication().GetId())
 	if has, _ := db.GetPlayerDb().FindEntityById(playerId, data); has {
 		return f(playerId, data)
 	}

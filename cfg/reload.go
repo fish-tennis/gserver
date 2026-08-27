@@ -2,17 +2,27 @@ package cfg
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"sync/atomic"
 )
 
-// 导表工具(generate_excel.bat)每次导出时生成的md5清单文件名
-const md5FileName = "md5.json"
+// Md5ManifestName 根据配置数据文件格式(DataFileExt)返回导表工具生成的md5清单文件名:
+// json格式对应json_md5.json,pb格式对应pb_md5.json
+// (见excel/tool/exporter_server.yaml的Md5ExportPath,与ExportFormats一一对应);
+// 清单的key与Load实际加载的数据文件名严格一致(大小写敏感),
+// 因此热更diff必须用与当前加载格式配套的那份清单,否则key对不上会误判为全量变更
+func Md5ManifestName() string {
+	ext := strings.TrimPrefix(DataFileExt, ".")
+	if ext == "" {
+		ext = "json"
+	}
+	return ext + "_md5.json"
+}
 
 var (
 	// 上次成功加载的配置文件md5快照: map[文件名]md5
@@ -35,12 +45,12 @@ func IsHotReloading() bool {
 
 // InitMd5Snapshot 服务器启动时建立md5快照,在启动加载(cfg.Load)成功后调用
 // 建立快照后,首次热更即走真正的增量路径,全生命周期行为一致:
-// md5.json成为唯一的变更判定依据(与导表工具的产出严格对齐)
-// md5.json不可用时快照保持为空,首次热更自动退回全量加载(零风险),因此仅告警不报错
+// md5清单(按DataFileExt选json_md5.json或pb_md5.json)成为唯一的变更判定依据(与导表工具的产出严格对齐)
+// md5清单不可用时快照保持为空,首次热更自动退回全量加载(零风险),因此仅告警不报错
 func InitMd5Snapshot(dataDir string) {
 	md5s, err := loadMd5File(dataDir)
 	if err != nil {
-		slog.Warn("InitMd5Snapshot: md5.json不可用,首次热更将执行全量加载", "err", err)
+		slog.Warn("InitMd5Snapshot: md5清单不可用,首次热更将执行全量加载", "file", Md5ManifestName(), "err", err)
 		return
 	}
 	snapshotMu.Lock()
@@ -70,7 +80,7 @@ func Reload(dataDir string) error {
 	newMd5s, err := loadMd5File(dataDir)
 	if err != nil {
 		// md5清单不可用就无法diff,保守降级为全量加载
-		slog.Warn("Reload: md5.json不可用,降级为全量加载", "err", err)
+		slog.Warn("Reload: md5清单不可用,降级为全量加载", "file", Md5ManifestName(), "err", err)
 		return Load(dataDir, nil)
 	}
 
@@ -82,9 +92,13 @@ func Reload(dataDir string) error {
 	slog.Info("Reload: 检测到配置变更,只重载变更文件", "changedFiles", changed)
 
 	// filter返回true表示需要加载该文件,未变更的文件跳过解析
+	// 注意:pb部署下md5清单key是解析后的文件名(如ItemCfg.pb),而data_mgr.go注册的表名是json名(ItemCfg.json),
+	// 必须用ResolveDataFile归一化后再比较;否则changed永远匹配不上,所有表被filter跳过,
+	// Reload返回成功但新配置静默不生效,且快照被推进导致后续热更diff恒为空(只能重启恢复)
 	if err := Load(dataDir, func(fileName string) bool {
+		resolved := ResolveDataFile(fileName)
 		for _, f := range changed {
-			if f == fileName {
+			if f == fileName || f == resolved {
 				return true
 			}
 		}
@@ -100,19 +114,20 @@ func Reload(dataDir string) error {
 	return nil
 }
 
-// loadMd5File 读取导表工具生成的md5清单
+// loadMd5File 读取导表工具生成的md5清单(具体文件名由Md5ManifestName按DataFileExt决定)
 func loadMd5File(dataDir string) (map[string]string, error) {
-	path := filepath.ToSlash(filepath.Join(dataDir, md5FileName))
+	fileName := Md5ManifestName()
+	path := filepath.ToSlash(filepath.Join(dataDir, fileName))
 	fileData, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
 	md5s := make(map[string]string)
 	if err := json.Unmarshal(fileData, &md5s); err != nil {
-		return nil, fmt.Errorf("md5.json解析失败: %w", err)
+		return nil, fmt.Errorf("%s解析失败: %w", fileName, err)
 	}
 	if len(md5s) == 0 {
-		return nil, errors.New("md5.json内容为空")
+		return nil, fmt.Errorf("%s内容为空", fileName)
 	}
 	return md5s, nil
 }

@@ -1,6 +1,9 @@
 package cache
 
 import (
+	"context"
+	"log/slog"
+
 	"github.com/fish-tennis/gentity"
 	"github.com/redis/go-redis/v9"
 )
@@ -34,7 +37,21 @@ func NewRedis(addrs []string, userName, password string, isCluster bool, db int)
 		redisCmdable = NewRedisSingleClient(addrs[0], userName, password, db)
 	}
 	_redisCache = gentity.NewRedisCache(redisCmdable)
+	installRedisFunctions()
 	return redisCmdable
+}
+
+// installRedisFunctions 安装Redis Function库(gentity库+gserver库)
+// Redis 7.0+才支持FUNCTION;安装失败自动回退EVAL脚本,不影响功能
+// 集群模式会安装到所有master节点
+func installRedisFunctions() {
+	ctx := context.Background()
+	if rc, ok := _redisCache.(*gentity.RedisCache); ok {
+		if err := rc.InstallFunctions(ctx); err != nil {
+			slog.Warn("gentity redis functions unavailable, fallback to EVAL", "error", truncateError(err, 120))
+		}
+	}
+	initGserverFunctions()
 }
 
 // 初始化redis集群

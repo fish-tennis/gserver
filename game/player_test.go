@@ -21,18 +21,20 @@ import (
 )
 
 var (
-	_mongoUri       = "mongodb://localhost:27017"
+	_mongoUri       = "mongodb://127.0.0.1:27017"
 	_mongoDbName    = "test"
 	_collectionName = "player"
 	_redisAddrs     = []string{"127.0.0.1:6379"}
 	_redisUsername  = ""
 	_redisPassword  = ""
-	// 如果部署的是单机版redis,则需要修改为false
-	_isRedisCluster = true
+	// 本地部署的是单机版redis,使用DB:1与默认DB隔离
+	// (生产环境为redis cluster多节点部署,cluster模式不支持DB选择)
+	_isRedisCluster = false
+	_redisDb        = 1
 )
 
 func initRedis() {
-	cache.NewRedis(_redisAddrs, _redisUsername, _redisPassword, _isRedisCluster, 0)
+	cache.NewRedis(_redisAddrs, _redisUsername, _redisPassword, _isRedisCluster, _redisDb)
 }
 
 func initLog(logFileName string, useStdOutput bool) {

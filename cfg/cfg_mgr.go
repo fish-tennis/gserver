@@ -35,12 +35,12 @@ func NewDataMap[E internal.CfgData]() *DataMap[E] {
 	}
 }
 
-func (this *DataMap[E]) GetCfg(cfgId int32) E {
-	return this.Elems[cfgId]
+func (m *DataMap[E]) GetCfg(cfgId int32) E {
+	return m.Elems[cfgId]
 }
 
-func (this *DataMap[E]) Range(f func(e E) bool) {
-	for _, cfg := range this.Elems {
+func (m *DataMap[E]) Range(f func(e E) bool) {
+	for _, cfg := range m.Elems {
 		if !f(cfg) {
 			return
 		}
@@ -48,21 +48,21 @@ func (this *DataMap[E]) Range(f func(e E) bool) {
 }
 
 // 加载配置数据
-func (this *DataMap[E]) Load(fileName string) error {
-	if this.Elems == nil {
-		this.Elems = make(map[int32]E)
+func (m *DataMap[E]) Load(fileName string) error {
+	if m.Elems == nil {
+		m.Elems = make(map[int32]E)
 	}
 	if strings.HasSuffix(fileName, ".json") {
-		return this.LoadJson(fileName)
+		return m.LoadJson(fileName)
 	}
 	if strings.HasSuffix(fileName, ".pb") {
-		return this.LoadPb(fileName)
+		return m.LoadPb(fileName)
 	}
 	return errors.New("unsupported file type")
 }
 
 // 从json文件加载数据
-func (this *DataMap[E]) LoadJson(fileName string) error {
+func (m *DataMap[E]) LoadJson(fileName string) error {
 	fileData, err := os.ReadFile(fileName)
 	if err != nil {
 		slog.Error("LoadJsonErr", "fileName", fileName, "err", err)
@@ -74,15 +74,15 @@ func (this *DataMap[E]) LoadJson(fileName string) error {
 		slog.Error("LoadJsonErr", "fileName", fileName, "err", err)
 		return err
 	}
-	this.Elems = cfgMap
-	slog.Info("LoadJson", "fileName", fileName, "count", len(this.Elems))
+	m.Elems = cfgMap
+	slog.Info("LoadJson", "fileName", fileName, "count", len(m.Elems))
 	return nil
 }
 
 // 创建索引
-func (this *DataMap[E]) CreateIndexInt32(indexFn func(e E) int32) map[int32]*DataMap[E] {
+func (m *DataMap[E]) CreateIndexInt32(indexFn func(e E) int32) map[int32]*DataMap[E] {
 	indexMap := make(map[int32]*DataMap[E])
-	for _, e := range this.Elems {
+	for _, e := range m.Elems {
 		index := indexFn(e)
 		if indexMap[index] == nil {
 			indexMap[index] = NewDataMap[E]()
@@ -93,9 +93,9 @@ func (this *DataMap[E]) CreateIndexInt32(indexFn func(e E) int32) map[int32]*Dat
 }
 
 // 创建子集
-func (this *DataMap[E]) CreateSubset(filter func(e E) bool) *DataMap[E] {
+func (m *DataMap[E]) CreateSubset(filter func(e E) bool) *DataMap[E] {
 	subMap := NewDataMap[E]()
-	for _, e := range this.Elems {
+	for _, e := range m.Elems {
 		if filter(e) {
 			subMap.Elems[e.GetCfgId()] = e
 		}
@@ -104,9 +104,9 @@ func (this *DataMap[E]) CreateSubset(filter func(e E) bool) *DataMap[E] {
 }
 
 // 创建slice
-func (this *DataMap[E]) CreateSlice(filter func(e E) bool, cmpFn func(a, b E) int) []E {
+func (m *DataMap[E]) CreateSlice(filter func(e E) bool, cmpFn func(a, b E) int) []E {
 	var s []E
-	for _, e := range this.Elems {
+	for _, e := range m.Elems {
 		if filter(e) {
 			s = append(s, e)
 		}
@@ -231,16 +231,16 @@ type DataSlice[E any] struct {
 	Elems []E
 }
 
-func (this *DataSlice[E]) Len() int {
-	return len(this.Elems)
+func (s *DataSlice[E]) Len() int {
+	return len(s.Elems)
 }
 
-func (this *DataSlice[E]) GetCfg(index int) E {
-	return this.Elems[index]
+func (s *DataSlice[E]) GetCfg(index int) E {
+	return s.Elems[index]
 }
 
-func (this *DataSlice[E]) Range(f func(e E) bool) {
-	for _, cfg := range this.Elems {
+func (s *DataSlice[E]) Range(f func(e E) bool) {
+	for _, cfg := range s.Elems {
 		if !f(cfg) {
 			return
 		}
@@ -259,7 +259,7 @@ func (this *DataSlice[E]) Load(fileName string) error {
 }
 
 // 从json文件加载数据
-func (this *DataSlice[E]) LoadJson(fileName string) error {
+func (s *DataSlice[E]) LoadJson(fileName string) error {
 	fileData, err := os.ReadFile(fileName)
 	if err != nil {
 		slog.Error("LoadJsonErr", "fileName", fileName, "err", err)
@@ -271,9 +271,9 @@ func (this *DataSlice[E]) LoadJson(fileName string) error {
 		slog.Error("LoadJsonErr", "fileName", fileName, "err", err)
 		return err
 	}
-	this.Elems = cfgList
-	slog.Info("LoadJson", "fileName", fileName, "count", len(this.Elems))
-	this.checkDuplicateCfgId(fileName)
+	s.Elems = cfgList
+	slog.Info("LoadJson", "fileName", fileName, "count", len(s.Elems))
+	s.checkDuplicateCfgId(fileName)
 	return nil
 }
 
@@ -314,14 +314,14 @@ func (this *DataSlice[E]) LoadPb(fileName string) error {
 }
 
 // 如果配置项是CfgData,检查id是否重复
-func (this *DataSlice[E]) checkDuplicateCfgId(fileName string) {
-	for i := 0; i < len(this.Elems); i++ {
-		cfgDataI, ok := any(this.Elems[i]).(internal.CfgData)
+func (s *DataSlice[E]) checkDuplicateCfgId(fileName string) {
+	for i := 0; i < len(s.Elems); i++ {
+		cfgDataI, ok := any(s.Elems[i]).(internal.CfgData)
 		if !ok {
 			return
 		}
-		for j := i + 1; j < len(this.Elems); j++ {
-			cfgDataJ := any(this.Elems[j]).(internal.CfgData)
+		for j := i + 1; j < len(s.Elems); j++ {
+			cfgDataJ := any(s.Elems[j]).(internal.CfgData)
 			if cfgDataI.GetCfgId() == cfgDataJ.GetCfgId() {
 				slog.Error("duplicate id", "fileName", fileName, "id", cfgDataI.GetCfgId())
 			}
