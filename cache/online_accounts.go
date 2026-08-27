@@ -16,6 +16,9 @@ func keyOnlineAccount(accountId int64) string {
 // 条件释放在线账号记录:值等于 "playerId;gameServerId" 时才删除
 // 防止基于旧快照的清理误删其他流程已写入的新记录
 // (如:清理请求因网络延迟晚到时,该账号可能已在别的游戏服重新上线)
+// KEYS[1]: onlineaccount:{accountId} 账号独占记录(string)
+// ARGV[1]: 期望值,格式"playerId;gameServerId"(仅当前值等于它才删除)
+// 返回: 1=已删除 0=值不匹配未删除
 var luaReleaseOnlineAccountIfValue = redis.NewScript(`
 if redis.call('GET', KEYS[1]) == ARGV[1] then
 	return redis.call('DEL', KEYS[1])

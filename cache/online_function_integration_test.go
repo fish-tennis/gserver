@@ -23,10 +23,13 @@ func newRealOnlineTestRedis(t *testing.T) {
 	}
 	client.Close()
 	t.Cleanup(func() {
-		// 清理测试数据与函数库(下次NewRedis会重新安装)
+		// 模式删除测试残留(避免硬编码key列表遗漏),并删除函数库(下次NewRedis会重新安装)
 		c := GetRedis()
-		c.Del(context.Background(),
-			"onlineplayer:9001", "onlineplayer:9002", "onlineaccount:8001", "game:701", "game:702")
+		for _, pattern := range []string{"p.*", "onlineaccount:*", "onlineplayer:*", "game:*", "gtest:*"} {
+			if keys, err := c.Keys(context.Background(), pattern).Result(); err == nil && len(keys) > 0 {
+				c.Del(context.Background(), keys...)
+			}
+		}
 		if client, ok := c.(*redis.Client); ok {
 			client.FunctionDelete(context.Background(), "gserver")
 			client.FunctionDelete(context.Background(), "gentity")

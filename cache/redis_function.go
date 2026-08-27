@@ -19,13 +19,19 @@ import (
 //  3. 所有函数均只操作KEYS[1]单个key,天然满足集群的slot约束
 const gserverFunctionLibrarySource = `#!lua name=gserver
 
+-- 占有在线玩家记录:key不存在或记录属于本服(本服崩溃残留)时写入
+-- keys[1]: onlineplayer:{playerId} 玩家所在服务器的权威记录(string)
+-- args[1]: 新值,格式"accountId;gameServerId"
+-- args[2]: 本服gameServerId(十进制字符串,与记录值分号后的部分比较)
+-- 返回: 1=占有成功(含本服残留重入) 0=被其他服务器持有
 local function claim_online_player(keys, args)
 	local cur = redis.call('GET', keys[1])
 	if cur == false then
 		redis.call('SET', keys[1], args[1])
 		return 1
 	end
-	local gsid = string.match(cur, '^.-;(.+)$')
+	-- ';(.+)$': 取第一个分号后的全部内容,即记录值"accountId;gameServerId"中的gameServerId部分
+	local gsid = string.match(cur, ';(.+)$')
 	if gsid == args[2] then
 		redis.call('SET', keys[1], args[1])
 		return 1
@@ -33,12 +39,18 @@ local function claim_online_player(keys, args)
 	return 0
 end
 
+-- 条件释放在线玩家记录:记录的gameServerId等于本服时才删除
+-- 防止旧服务器延迟到达的下线清理误删新服务器已写入的新记录
+-- keys[1]: onlineplayer:{playerId}
+-- args[1]: 本服gameServerId(十进制字符串)
+-- 返回: 1=已删除(含记录本就不存在) 0=记录属于其他服务器未删除
 local function release_online_player(keys, args)
 	local cur = redis.call('GET', keys[1])
 	if cur == false then
 		return 1
 	end
-	local gsid = string.match(cur, '^.-;(.+)$')
+	-- ';(.+)$': 取第一个分号后的全部内容,即记录值"accountId;gameServerId"中的gameServerId部分
+	local gsid = string.match(cur, ';(.+)$')
 	if gsid == args[1] then
 		redis.call('DEL', keys[1])
 		return 1
@@ -46,6 +58,12 @@ local function release_online_player(keys, args)
 	return 0
 end
 
+-- 接管在线玩家记录:原子地读取旧值并写入新值
+-- 仅在已通过AddOnlineAccount获得账号独占后使用(记录持有者只可能是
+-- 已宕机服务器的残留或正在下线的旧服务器,旧服务器的下线清理是条件释放,不会误删新记录)
+-- keys[1]: onlineplayer:{playerId}
+-- args[1]: 新值,格式"accountId;gameServerId"
+-- 返回: 旧值字符串,格式"accountId;gameServerId"(记录不存在时返回空串)
 local function takeover_online_player(keys, args)
 	local cur = redis.call('GET', keys[1])
 	redis.call('SET', keys[1], args[1])
@@ -55,6 +73,12 @@ local function takeover_online_player(keys, args)
 	return cur
 end
 
+-- 条件释放在线账号记录:值等于"playerId;gameServerId"时才删除
+-- 防止基于旧快照的清理误删其他流程已写入的新记录
+-- (如:清理请求因网络延迟晚到时,该账号可能已在别的游戏服重新上线)
+-- keys[1]: onlineaccount:{accountId} 账号独占记录(string)
+-- args[1]: 期望值,格式"playerId;gameServerId"(仅当前值等于它才删除)
+-- 返回: 1=已删除 0=值不匹配未删除
 local function release_online_account(keys, args)
 	if redis.call('GET', keys[1]) == args[1] then
 		return redis.call('DEL', keys[1])

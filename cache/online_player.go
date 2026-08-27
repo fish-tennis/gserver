@@ -2,12 +2,12 @@ package cache
 
 import (
 	"context"
-	"github.com/redis/go-redis/v9"
 	"log/slog"
 	"strconv"
 	"strings"
 
 	"github.com/fish-tennis/gentity/util"
+	"github.com/redis/go-redis/v9"
 )
 
 func keyOnlinePlayer(playerId int64) string {
@@ -34,14 +34,19 @@ func keyGameServerPlayer(gameServerId int32) string {
 //     不会误删新服务器已写入的新记录,这是消除跨key竞态的关键
 
 var (
-	// 占有在线玩家记录:key不存在或记录属于本服(本服崩溃残留)时写入,返回1;被其他服务器持有时返回0
+	// 占有在线玩家记录:key不存在或记录属于本服(本服崩溃残留)时写入
+	// KEYS[1]: onlineplayer:{playerId} 玩家所在服务器的权威记录(string)
+	// ARGV[1]: 新值,格式"accountId;gameServerId"
+	// ARGV[2]: 本服gameServerId(十进制字符串,与记录值分号后的部分比较)
+	// 返回: 1=占有成功(含本服残留重入) 0=被其他服务器持有
 	luaClaimOnlinePlayer = redis.NewScript(`
 local cur = redis.call('GET', KEYS[1])
 if cur == false then
 	redis.call('SET', KEYS[1], ARGV[1])
 	return 1
 end
-local gsid = string.match(cur, '^.-;(.+)$')
+-- ';(.+)$': 取第一个分号后的全部内容,即记录值"accountId;gameServerId"中的gameServerId部分
+local gsid = string.match(cur, ';(.+)$')
 if gsid == ARGV[2] then
 	redis.call('SET', KEYS[1], ARGV[1])
 	return 1
@@ -50,13 +55,17 @@ return 0
 `)
 
 	// 条件释放在线玩家记录:记录的gameServerId等于本服时才删除
-	// 防止旧服务器延迟到达的清理误删新服务器的新记录
+	// 防止旧服务器延迟到达的下线清理误删新服务器已写入的新记录
+	// KEYS[1]: onlineplayer:{playerId}
+	// ARGV[1]: 本服gameServerId(十进制字符串)
+	// 返回: 1=已删除(含记录本就不存在) 0=记录属于其他服务器未删除
 	luaReleaseOnlinePlayerIfServer = redis.NewScript(`
 local cur = redis.call('GET', KEYS[1])
 if cur == false then
 	return 1
 end
-local gsid = string.match(cur, '^.-;(.+)$')
+-- ';(.+)$': 取第一个分号后的全部内容,即记录值"accountId;gameServerId"中的gameServerId部分
+local gsid = string.match(cur, ';(.+)$')
 if gsid == ARGV[1] then
 	redis.call('DEL', KEYS[1])
 	return 1
@@ -64,9 +73,12 @@ end
 return 0
 `)
 
-	// 接管在线玩家记录:原子地读取旧值并写入新值,返回旧值(不存在时返回空串)
+	// 接管在线玩家记录:原子地读取旧值并写入新值
 	// 用于清理宕机服务器的残留记录:调用方已通过AddOnlineAccount获得账号独占,
 	// 记录持有者只可能是已宕机服务器的残留或正在下线的旧服务器(其清理是条件释放,不会误删)
+	// KEYS[1]: onlineplayer:{playerId}
+	// ARGV[1]: 新值,格式"accountId;gameServerId"
+	// 返回: 旧值字符串,格式"accountId;gameServerId"(记录不存在时返回空串)
 	luaTakeOverOnlinePlayer = redis.NewScript(`
 local cur = redis.call('GET', KEYS[1])
 redis.call('SET', KEYS[1], ARGV[1])
