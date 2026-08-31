@@ -1,0 +1,57 @@
+# Redis Cluster测试环境:3主节点(无从节点,最简集群),单容器3进程形态
+# 定位:验证Redis Cluster模式下的数据层行为(分片路由/MOVED重定向/多key操作限制等)
+#
+#
+# 为什么用单容器3进程而不是3个容器+端口映射:
+# Redis Cluster节点会向客户端和其他节点广播自身地址(cluster announce),
+# NAT端口映射下广播容器内网IP会导致宿主机客户端拿到MOVED重定向后无法连接。
+# 单容器方案:3个redis-server共享容器网络命名空间,都显式announce 127.0.0.1:
+# - 节点间gossip走容器内127.0.0.1的bus端口(16379~16381),无需映射到宿主机
+# - 宿主机客户端收到MOVED 127.0.0.1:638x重定向后,经ports映射可达
+# - 不依赖宿主机局域网IP(比announce宿主机IP的多容器方案稳定,换网络不失效)
+#
+# 与 redis_single / db 目录互斥使用(端口冲突)
+#
+# 使用步骤:
+# 1. docker compose up -d
+# 2. 初始化集群(仅需一次,之后集群拓扑持久化在各节点的nodes.conf中):
+#    docker compose exec redis-cluster redis-cli --cluster create 127.0.0.1:6379 127.0.0.1:6380 127.0.0.1:6381 --cluster-replicas 0
+# 3. 验证(应看到cluster_state:ok和3个主节点):
+#    docker compose exec redis-cluster redis-cli -p 6379 cluster info
+#    docker compose exec redis-cluster redis-cli -p 6379 cluster nodes
+#
+# 客户端连接方式: 地址填 127.0.0.1:6379,127.0.0.1:6380,127.0.0.1:6381,配置 Cluster: true
+# (cluster模式客户端必须用smart routing,如go-redis的NewClusterClient)
+
+services:
+  # 每个节点的数据目录分开(/data/redis/n1~n3),避免AOF和nodes.conf互相覆盖
+  # cluster-announce-ip必须显式指定,否则节点广播容器自身内网IP,宿主机客户端无法据此发现集群其他节点
+
+  redis-cluster:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+      - "6380:6380"
+      - "6381:6381"
+    restart: unless-stopped
+    volumes:
+      - redis-data:/data/redis
+    # redis镜像entrypoint对sh命令会直接exec,3个redis-server后台启动后wait维持容器
+    command: >
+      sh -c "mkdir -p /data/redis/n1 /data/redis/n2 /data/redis/n3;
+      redis-server --port 6379 --appendonly yes --dir /data/redis/n1
+      --cluster-enabled yes --cluster-config-file /data/redis/n1/nodes.conf
+      --cluster-node-timeout 5000 --cluster-announce-ip 127.0.0.1
+      --cluster-announce-port 6379 --cluster-announce-bus-port 16379 &
+      redis-server --port 6380 --appendonly yes --dir /data/redis/n2
+      --cluster-enabled yes --cluster-config-file /data/redis/n2/nodes.conf
+      --cluster-node-timeout 5000 --cluster-announce-ip 127.0.0.1
+      --cluster-announce-port 6380 --cluster-announce-bus-port 16380 &
+      redis-server --port 6381 --appendonly yes --dir /data/redis/n3
+      --cluster-enabled yes --cluster-config-file /data/redis/n3/nodes.conf
+      --cluster-node-timeout 5000 --cluster-announce-ip 127.0.0.1
+      --cluster-announce-port 6381 --cluster-announce-bus-port 16381 &
+      wait"
+
+volumes:
+  redis-data:

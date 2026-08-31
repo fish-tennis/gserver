@@ -4,7 +4,7 @@ go 1.26
 
 require (
 	github.com/alicebob/miniredis/v2 v2.34.0
-	github.com/fish-tennis/gentity v1.5.6
+	github.com/fish-tennis/gentity v1.6.0
 	github.com/fish-tennis/gnet v1.5.5
 	github.com/redis/go-redis/v9 v9.12.0
 	go.mongodb.org/mongo-driver/v2 v2.5.0
@@ -29,5 +29,3 @@ require (
 	golang.org/x/sync v0.11.0 // indirect
 	golang.org/x/text v0.22.0 // indirect
 )
-
-replace github.com/fish-tennis/gentity => ../gentity

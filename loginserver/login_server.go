@@ -84,9 +84,9 @@ func (this *LoginServer) initDb() {
 	// 使用mongodb来演示
 	mongoDb := gentity.NewMongoDb(this.GetConfig().Mongo.Uri, this.GetConfig().Mongo.Db)
 	// 账号数据库
-	this.accountDb = mongoDb.RegisterEntityDb(db.AccountDbName, true, db.UniqueIdName)
-	// kv数据库
-	mongoDb.RegisterKvDb(db.GlobalDbName, true, db.GlobalDbKeyName, db.GlobalDbValueName)
+	this.accountDb = db.RegisterAccountDb(mongoDb)
+	// 全局对象数据库,同时也是kv数据库
+	db.RegisterGlobalDb(mongoDb)
 	if !mongoDb.Connect() {
 		panic(fmt.Sprintf("connect db error,uri:%v db:%v", this.GetConfig().Mongo.Uri, this.GetConfig().Mongo.Db))
 	}

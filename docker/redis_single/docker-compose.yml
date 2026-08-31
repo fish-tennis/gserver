@@ -1,0 +1,15 @@
+# 客户端连接方式: 127.0.0.1:6379,配置 Cluster: false
+
+services:
+  # redis7支持redis function
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    volumes:
+      - redis-data:/data/redis # 持久化数据
+    command: redis-server --appendonly yes --dir /data/redis
+
+volumes:
+  redis-data:

@@ -1,0 +1,58 @@
+# MongoDB副本集测试环境:3节点(1主2从,自动选举)
+# 定位:验证副本集形态下的数据层行为(故障转移、majority写关注、Key唯一索引等)
+#
+# 使用步骤:
+# 1. docker compose up -d
+# 2. 初始化副本集(仅需一次,配置会持久化在local库中)
+#    注意:PowerShell下外层用双引号、JS字符串用单引号;若外层用单引号,内层双引号会被docker.exe剥离导致mongosh语法错误
+#    docker compose exec mongo-1 mongosh --quiet --eval "rs.initiate({_id:'rs0',members:[{_id:0,host:'host.docker.internal:27017'},{_id:1,host:'host.docker.internal:27018'},{_id:2,host:'host.docker.internal:27019'}]})"
+# 3. 验证(等几秒选举完成后应看到1个PRIMARY和2个SECONDARY):
+#    docker compose exec mongo-1 mongosh --quiet --eval "rs.status().members.map(m => m.name + ' ' + m.stateStr)"
+#
+# 客户端连接方式:
+# mongodb://127.0.0.1:27017,127.0.0.1:27018,127.0.0.1:27019/?replicaSet=rs0
+# gserver配置提示:副本集URI必须带replicaSet参数;切回单机版db目录时需改回mongodb://127.0.0.1:27017
+
+services:
+  # --- MongoDB ReplicaSet 3节点(1主2从,自动选举) ---
+  # 端口1:1映射到宿主机,供宿主机上的gserver连接
+  # extra_hosts: host.docker.internal指向宿主机网关,Linux原生docker也兼容此写法
+  # bind_ip必须0.0.0.0,默认127.0.0.1会拒绝来自宿主机映射进来的连接
+
+  mongo-1:
+    image: mongo:8
+    ports:
+      - "27017:27017"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    volumes:
+      - mongo-data-1:/data/db
+    command: mongod --port 27017 --replSet rs0 --bind_ip 0.0.0.0
+
+  mongo-2:
+    image: mongo:8
+    ports:
+      - "27018:27018"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    volumes:
+      - mongo-data-2:/data/db
+    command: mongod --port 27018 --replSet rs0 --bind_ip 0.0.0.0
+
+  mongo-3:
+    image: mongo:8
+    ports:
+      - "27019:27019"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    volumes:
+      - mongo-data-3:/data/db
+    command: mongod --port 27019 --replSet rs0 --bind_ip 0.0.0.0
+
+volumes:
+  mongo-data-1:
+  mongo-data-2:
+  mongo-data-3:

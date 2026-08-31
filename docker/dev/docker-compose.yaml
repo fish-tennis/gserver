@@ -7,10 +7,6 @@ services:
       context: ../../
       dockerfile: Dockerfile
     image: gserver:latest
-    #container_name: dev_gate
-    #ports:
-    #  - "8080:8080"
-    #  - "10001:10001"
     volumes:
       - ./config/gate_1.yaml:/app/config/gate_1.yaml #dev环境的服务配置文件
     network_mode: host
@@ -25,7 +21,6 @@ services:
       context: ../../
       dockerfile: Dockerfile
     image: gserver:latest
-    #container_name: dev_login
     volumes:
       - ./config/login_11.yaml:/app/config/login_11.yaml
     network_mode: host
@@ -40,7 +35,6 @@ services:
       context: ../../
       dockerfile: Dockerfile
     image: gserver:latest
-    #container_name: dev_game1
     volumes:
       - ./config/game_101.yaml:/app/config/game_101.yaml
     network_mode: host
@@ -55,7 +49,6 @@ services:
       context: ../../
       dockerfile: Dockerfile
     image: gserver:latest
-    #container_name: dev_game2
     volumes:
       - ./config/game_102.yaml:/app/config/game_102.yaml
     network_mode: host
@@ -70,7 +63,6 @@ services:
       context: ../../
       dockerfile: Dockerfile
     image: gserver:latest
-    #container_name: dev_social1
     volumes:
       - ./config/social_201.yaml:/app/config/social_201.yaml
     network_mode: host
@@ -85,7 +77,6 @@ services:
       context: ../../
       dockerfile: Dockerfile
     image: gserver:latest
-    #container_name: dev_social2
     volumes:
       - ./config/social_202.yaml:/app/config/social_202.yaml
     network_mode: host
@@ -97,33 +88,26 @@ services:
 
   # --- Redis 服务 ---
   redis:
-    image: redis:7-alpine # 使用轻量级镜像
-    #container_name: dev-redis
-    #ports:
-    #  - "6379:6379"
+    image: redis:7-alpine
     network_mode: host
     restart: unless-stopped
     volumes:
       - redis-data:/data/redis # 持久化数据
-    command: redis-server --appendonly yes # 启动命令
+    command: redis-server --appendonly yes --dir /data/redis # 持久化数据写入挂载卷
     # environment:  # 如果需要密码，可以添加
     #   - REDIS_PASSWORD=yourpassword
 
   # --- MongoDB 服务 ---
   mongodb:
     image: mongo:7
-    #container_name: dev-mongodb
-    #ports:
-    #  - "27017:27017"
     network_mode: host
     restart: unless-stopped
     volumes:
-      - mongo-data:/data/mongodb
-    environment:
-      # 初始化root用户和密码
-      #MONGO_INITDB_ROOT_USERNAME: root
-      #MONGO_INITDB_ROOT_PASSWORD: 123456
-      MONGO_INITDB_DATABASE: testdb
+      - mongo-data:/data/db
+    # 如需账号密码,可启用:
+    #   environment:
+    #     MONGO_INITDB_ROOT_USERNAME: root
+    #     MONGO_INITDB_ROOT_PASSWORD: 123456
 
 # 定义持久化卷
 volumes:

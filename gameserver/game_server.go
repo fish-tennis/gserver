@@ -125,13 +125,11 @@ func (this *GameServer) initDb() {
 	// 使用mongodb来演示
 	mongoDb := gentity.NewMongoDb(this.GetConfig().Mongo.Uri, this.GetConfig().Mongo.Db)
 	// 玩家数据库
-	mongoDb.RegisterPlayerDb(db.PlayerDbName, true, db.UniqueIdName, db.PlayerAccountId, db.PlayerRegionId)
+	db.RegisterPlayerDb(mongoDb)
 	// 公会数据库
-	mongoDb.RegisterEntityDb(db.GuildDbName, true, db.UniqueIdName)
-	// 全局对象数据库(如GlobalEntity)
-	mongoDb.RegisterEntityDb(db.GlobalDbName, true, db.GlobalDbKeyName)
-	// kv数据库
-	mongoDb.RegisterKvDb(db.GlobalDbName, true, db.GlobalDbKeyName, db.GlobalDbValueName)
+	db.RegisterGuildDb(mongoDb)
+	// 全局对象数据库(如GlobalEntity),同时也是kv数据库
+	db.RegisterGlobalDb(mongoDb)
 	if !mongoDb.Connect() {
 		panic("connect db error")
 	}

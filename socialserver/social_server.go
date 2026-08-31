@@ -74,9 +74,9 @@ func (this *SocialServer) initDb() {
 	// 使用mongodb来演示
 	mongoDb := gentity.NewMongoDb(this.GetConfig().Mongo.Uri, this.GetConfig().Mongo.Db)
 	// 玩家数据库(跨玩家协程实体保存玩家的简要数据时使用)
-	mongoDb.RegisterPlayerDb(db.PlayerDbName, true, db.UniqueIdName, db.PlayerAccountId, db.PlayerRegionId)
+	db.RegisterPlayerDb(mongoDb)
 	// 公会数据库
-	mongoDb.RegisterEntityDb(db.GuildDbName, true, db.UniqueIdName)
+	db.RegisterGuildDb(mongoDb)
 	if !mongoDb.Connect() {
 		panic("connect db error")
 	}

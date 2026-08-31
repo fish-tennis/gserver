@@ -1,0 +1,89 @@
+# 单机模拟的MongoDB分片集群测试环境:config server副本集3节点 + 2个单成员shard副本集 + mongos路由
+# 定位:验证分片集群形态下的数据层行为
+#
+# 使用步骤:
+# 1. docker compose up -d
+# 2. 初始化config server副本集(仅需一次,配置持久化在local库中):
+#    docker compose exec cfg-1 mongosh --quiet --port 27217 --eval "rs.initiate({_id:'rs-cfg',configsvr:true,members:[{_id:0,host:'cfg-1:27217'},{_id:1,host:'cfg-2:27218'},{_id:2,host:'cfg-3:27219'}]})"
+# 3. 初始化2个shard副本集(单成员,仅需一次):
+#    docker compose exec shard-0 mongosh --quiet --port 27107 --eval "rs.initiate({_id:'rs-shard0',members:[{_id:0,host:'shard-0:27107'}]})"
+#    docker compose exec shard-1 mongosh --quiet --port 27108 --eval "rs.initiate({_id:'rs-shard1',members:[{_id:0,host:'shard-1:27108'}]})"
+# 4. mongos上注册2个shard(仅需一次,分片元数据持久化在config库中):
+#    docker compose exec mongos mongosh --quiet --eval "db.adminCommand({addShard:'rs-shard0/shard-0:27107'})"
+#    docker compose exec mongos mongosh --quiet --eval "db.adminCommand({addShard:'rs-shard1/shard-1:27108'})"
+# 5. 验证(应看到shards数组里有rs-shard0和rs-shard1):
+#    docker compose exec mongos mongosh --quiet --eval "db.adminCommand({listShards:1}).shards"
+#
+# 客户端连接方式:
+# - MongoDB(分片集群,连mongos): mongodb://127.0.0.1:27017 (与单机版同地址,无需replicaSet参数)
+# - gserver配置提示:连mongos的URI不能带replicaSet参数,与mongo_replicaset的写法互斥
+#
+
+services:
+  # --- Config Server 副本集 3节点(分片集群的元数据中心) ---
+  # --configsvr模式默认dbPath为/data/configdb,必须是副本集(生产建议3成员)
+  # 不映射宿主机端口:仅mongos经服务名访问,排查时docker compose exec进入容器即可
+
+  cfg-1:
+    image: mongo:8
+    restart: unless-stopped
+    volumes:
+      - cfg-data-1:/data/configdb
+    command: mongod --configsvr --replSet rs-cfg --port 27217 --bind_ip 0.0.0.0
+
+  cfg-2:
+    image: mongo:8
+    restart: unless-stopped
+    volumes:
+      - cfg-data-2:/data/configdb
+    command: mongod --configsvr --replSet rs-cfg --port 27218 --bind_ip 0.0.0.0
+
+  cfg-3:
+    image: mongo:8
+    restart: unless-stopped
+    volumes:
+      - cfg-data-3:/data/configdb
+    command: mongod --configsvr --replSet rs-cfg --port 27219 --bind_ip 0.0.0.0
+
+  # --- Shard 0(单成员副本集,生产为每shard一个3成员副本集) ---
+  # --shardsvr模式默认dbPath为/data/db
+
+  shard-0:
+    image: mongo:8
+    restart: unless-stopped
+    volumes:
+      - shard-data-0:/data/db
+    command: mongod --shardsvr --replSet rs-shard0 --port 27107 --bind_ip 0.0.0.0
+
+  # --- Shard 1(单成员副本集,生产为每shard一个3成员副本集) ---
+
+  shard-1:
+    image: mongo:8
+    restart: unless-stopped
+    volumes:
+      - shard-data-1:/data/db
+    command: mongod --shardsvr --replSet rs-shard1 --port 27108 --bind_ip 0.0.0.0
+
+  # --- mongos 路由(客户端入口,占27017与单机版同端口) ---
+  # mongo:8镜像自带mongos二进制;--configsvr指向config副本集(经服务名直连docker内网)
+
+  mongos:
+    image: mongo:8
+    ports:
+      - "27017:27017"
+    restart: unless-stopped
+    depends_on:
+      - cfg-1
+      - cfg-2
+      - cfg-3
+      - shard-0
+      - shard-1
+    # 注意是--configdb(mongos的参数);mongod的--configsvr是另一回事
+    command: mongos --port 27017 --bind_ip 0.0.0.0 --configdb rs-cfg/cfg-1:27217,cfg-2:27218,cfg-3:27219
+
+volumes:
+  cfg-data-1:
+  cfg-data-2:
+  cfg-data-3:
+  shard-data-0:
+  shard-data-1:

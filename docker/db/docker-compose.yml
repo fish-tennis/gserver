@@ -1,0 +1,31 @@
+
+services:
+  # --- Redis 服务 ---
+  redis:
+    # redis7支持redis function
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    volumes:
+      - redis-data:/data/redis # 持久化数据
+    command: redis-server --appendonly yes --dir /data/redis
+    # environment:  # 如果需要密码，可以添加
+    #   - REDIS_PASSWORD=yourpassword
+
+  # --- MongoDB 服务 ---
+  mongodb:
+    image: mongo:8
+    ports:
+      - "27017:27017"
+    restart: unless-stopped
+    volumes:
+      - mongo-data:/data/db
+    # 如需账号密码,可启用:
+    #   environment:
+    #     MONGO_INITDB_ROOT_USERNAME: root
+    #     MONGO_INITDB_ROOT_PASSWORD: 123456
+
+volumes:
+  redis-data:
+  mongo-data:
