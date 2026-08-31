@@ -41,7 +41,7 @@ type GlobalEntity struct {
 func NewGlobalEntity() *GlobalEntity {
 	return &GlobalEntity{
 		BaseRoutineEntity: *gentity.NewRoutineEntity(32),
-		// NOTE: 需要在服务器初始化时调用mongoDb.RegisterEntityDb("global", "key")
+		// NOTE: 需要在服务器初始化时调用db.RegisterGlobalEntityDb(mongoDb)
 		globalDb: db.GetGlobalDb(),
 		key:      fmt.Sprintf("%v%v", GlobalEntityCollectionKeyPrefix, gentity.GetApplication().GetId()),
 	}

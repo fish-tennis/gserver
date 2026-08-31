@@ -24,61 +24,112 @@ const (
 type ErrorCode int32
 
 const (
-	ErrorCode_ErrorCode_OK                     ErrorCode = 0
-	ErrorCode_ErrorCode_NotReg                 ErrorCode = 11 // 账号未注册
-	ErrorCode_ErrorCode_PasswordError          ErrorCode = 12 // 密码错误
-	ErrorCode_ErrorCode_DbErr                  ErrorCode = 13 // 数据库错误
-	ErrorCode_ErrorCode_NameDuplicate          ErrorCode = 14 // 重名
-	ErrorCode_ErrorCode_HasLogin               ErrorCode = 15 // 该连接已经登录过(客户端需要退回登录界面)
-	ErrorCode_ErrorCode_SessionError           ErrorCode = 16 // 进游戏服的验证码错误
-	ErrorCode_ErrorCode_NoPlayer               ErrorCode = 17 // 还没创建角色
-	ErrorCode_ErrorCode_TryLater               ErrorCode = 18 // 稍后重试
-	ErrorCode_ErrorCode_VersionTooLow          ErrorCode = 19 // 客户端版本号过低
-	ErrorCode_ErrorCode_ReconnectSessionError  ErrorCode = 20 // 重连session校验失败(客户端需要退回登录界面)
-	ErrorCode_ErrorCode_ServerClosing          ErrorCode = 21 // 服务器正在关闭
-	ErrorCode_ErrorCode_ReconnectNeedRelogin   ErrorCode = 22 // 重连失败需要重新登录(客户端需要退回登录界面)
-	ErrorCode_ErrorCode_RouteClientPacketError ErrorCode = 23 // 网关转发消息失败(客户端需要退回登录界面)
-	ErrorCode_ErrorCode_RouteClientPacketLoss  ErrorCode = 24 // 网关转发消息丢失,可能目标服务器暂时繁忙
-	ErrorCode_ErrorCode_PushClientPacketLoss   ErrorCode = 25 // 游戏服收到客户端消息丢失,玩家chan已满
+	ErrorCode_ErrorCode_OK                       ErrorCode = 0
+	ErrorCode_ErrorCode_NotReg                   ErrorCode = 11  // 账号未注册
+	ErrorCode_ErrorCode_PasswordError            ErrorCode = 12  // 密码错误
+	ErrorCode_ErrorCode_DbErr                    ErrorCode = 13  // 数据库错误
+	ErrorCode_ErrorCode_NameDuplicate            ErrorCode = 14  // 重名
+	ErrorCode_ErrorCode_HasLogin                 ErrorCode = 15  // 该连接已经登录过(客户端需要退回登录界面)
+	ErrorCode_ErrorCode_SessionError             ErrorCode = 16  // 进游戏服的验证码错误
+	ErrorCode_ErrorCode_NoPlayer                 ErrorCode = 17  // 还没创建角色
+	ErrorCode_ErrorCode_TryLater                 ErrorCode = 18  // 稍后重试
+	ErrorCode_ErrorCode_VersionTooLow            ErrorCode = 19  // 客户端版本号过低
+	ErrorCode_ErrorCode_ReconnectSessionError    ErrorCode = 20  // 重连session校验失败(客户端需要退回登录界面)
+	ErrorCode_ErrorCode_ServerClosing            ErrorCode = 21  // 服务器正在关闭
+	ErrorCode_ErrorCode_ReconnectNeedRelogin     ErrorCode = 22  // 重连失败需要重新登录(客户端需要退回登录界面)
+	ErrorCode_ErrorCode_RouteClientPacketError   ErrorCode = 23  // 网关转发消息失败(客户端需要退回登录界面)
+	ErrorCode_ErrorCode_RouteClientPacketLoss    ErrorCode = 24  // 网关转发消息丢失,可能目标服务器暂时繁忙
+	ErrorCode_ErrorCode_PushClientPacketLoss     ErrorCode = 25  // 游戏服收到客户端消息丢失,玩家chan已满
+	ErrorCode_ErrorCode_Banned                   ErrorCode = 26  // 账号或玩家被封禁
+	ErrorCode_ErrorCode_Maintenance              ErrorCode = 27  // 服务器维护中
+	ErrorCode_ErrorCode_RegionClosedRegistration ErrorCode = 28  // 区服已关闭注册新角色
+	ErrorCode_ErrorCode_RegionIdError            ErrorCode = 29  // 区服Id错误
+	ErrorCode_ErrorCode_PlayerAlreadyExist       ErrorCode = 30  // 该账号在此区服已有角色
+	ErrorCode_ErrorCode_SdkAuthFailed            ErrorCode = 41  // SDK登录验证失败(客户端需要重新登录SDK)
+	ErrorCode_ErrorCode_SdkConfigErr             ErrorCode = 42  // SDK配置错误(服务器未配置SDK验证地址,需运维排查)
+	ErrorCode_ErrorCode_SdkApiErr                ErrorCode = 43  // SDK验证接口异常(网络/响应异常,可稍后重试)
+	ErrorCode_ErrorCode_InvalidAccountName       ErrorCode = 44  // 无效的账号名(自建账号名不允许包含下划线)
+	ErrorCode_ErrorCode_NameInvalid              ErrorCode = 91  // 无效的角色名(长度或内容不合法)
+	ErrorCode_ErrorCode_NameFilterReject         ErrorCode = 92  // 角色名包含敏感词,未通过过滤
+	ErrorCode_ErrorCode_NameFilterErr            ErrorCode = 93  // 名称过滤服务异常,可稍后重试
+	ErrorCode_ErrorCode_MailNotFound             ErrorCode = 101 // 邮件不存在
+	ErrorCode_ErrorCode_MailAlreadyClaimed       ErrorCode = 102 // 邮件附件已领取
+	ErrorCode_ErrorCode_MailExpired              ErrorCode = 103 // 邮件已过期
+	ErrorCode_ErrorCode_MailHasUnclaimedItems    ErrorCode = 104 // 邮件有未领取附件,禁止删除
+	ErrorCode_ErrorCode_MailNoAttachment         ErrorCode = 105 // 邮件没有附件
 )
 
 // Enum value maps for ErrorCode.
 var (
 	ErrorCode_name = map[int32]string{
-		0:  "ErrorCode_OK",
-		11: "ErrorCode_NotReg",
-		12: "ErrorCode_PasswordError",
-		13: "ErrorCode_DbErr",
-		14: "ErrorCode_NameDuplicate",
-		15: "ErrorCode_HasLogin",
-		16: "ErrorCode_SessionError",
-		17: "ErrorCode_NoPlayer",
-		18: "ErrorCode_TryLater",
-		19: "ErrorCode_VersionTooLow",
-		20: "ErrorCode_ReconnectSessionError",
-		21: "ErrorCode_ServerClosing",
-		22: "ErrorCode_ReconnectNeedRelogin",
-		23: "ErrorCode_RouteClientPacketError",
-		24: "ErrorCode_RouteClientPacketLoss",
-		25: "ErrorCode_PushClientPacketLoss",
+		0:   "ErrorCode_OK",
+		11:  "ErrorCode_NotReg",
+		12:  "ErrorCode_PasswordError",
+		13:  "ErrorCode_DbErr",
+		14:  "ErrorCode_NameDuplicate",
+		15:  "ErrorCode_HasLogin",
+		16:  "ErrorCode_SessionError",
+		17:  "ErrorCode_NoPlayer",
+		18:  "ErrorCode_TryLater",
+		19:  "ErrorCode_VersionTooLow",
+		20:  "ErrorCode_ReconnectSessionError",
+		21:  "ErrorCode_ServerClosing",
+		22:  "ErrorCode_ReconnectNeedRelogin",
+		23:  "ErrorCode_RouteClientPacketError",
+		24:  "ErrorCode_RouteClientPacketLoss",
+		25:  "ErrorCode_PushClientPacketLoss",
+		26:  "ErrorCode_Banned",
+		27:  "ErrorCode_Maintenance",
+		28:  "ErrorCode_RegionClosedRegistration",
+		29:  "ErrorCode_RegionIdError",
+		30:  "ErrorCode_PlayerAlreadyExist",
+		41:  "ErrorCode_SdkAuthFailed",
+		42:  "ErrorCode_SdkConfigErr",
+		43:  "ErrorCode_SdkApiErr",
+		44:  "ErrorCode_InvalidAccountName",
+		91:  "ErrorCode_NameInvalid",
+		92:  "ErrorCode_NameFilterReject",
+		93:  "ErrorCode_NameFilterErr",
+		101: "ErrorCode_MailNotFound",
+		102: "ErrorCode_MailAlreadyClaimed",
+		103: "ErrorCode_MailExpired",
+		104: "ErrorCode_MailHasUnclaimedItems",
+		105: "ErrorCode_MailNoAttachment",
 	}
 	ErrorCode_value = map[string]int32{
-		"ErrorCode_OK":                     0,
-		"ErrorCode_NotReg":                 11,
-		"ErrorCode_PasswordError":          12,
-		"ErrorCode_DbErr":                  13,
-		"ErrorCode_NameDuplicate":          14,
-		"ErrorCode_HasLogin":               15,
-		"ErrorCode_SessionError":           16,
-		"ErrorCode_NoPlayer":               17,
-		"ErrorCode_TryLater":               18,
-		"ErrorCode_VersionTooLow":          19,
-		"ErrorCode_ReconnectSessionError":  20,
-		"ErrorCode_ServerClosing":          21,
-		"ErrorCode_ReconnectNeedRelogin":   22,
-		"ErrorCode_RouteClientPacketError": 23,
-		"ErrorCode_RouteClientPacketLoss":  24,
-		"ErrorCode_PushClientPacketLoss":   25,
+		"ErrorCode_OK":                       0,
+		"ErrorCode_NotReg":                   11,
+		"ErrorCode_PasswordError":            12,
+		"ErrorCode_DbErr":                    13,
+		"ErrorCode_NameDuplicate":            14,
+		"ErrorCode_HasLogin":                 15,
+		"ErrorCode_SessionError":             16,
+		"ErrorCode_NoPlayer":                 17,
+		"ErrorCode_TryLater":                 18,
+		"ErrorCode_VersionTooLow":            19,
+		"ErrorCode_ReconnectSessionError":    20,
+		"ErrorCode_ServerClosing":            21,
+		"ErrorCode_ReconnectNeedRelogin":     22,
+		"ErrorCode_RouteClientPacketError":   23,
+		"ErrorCode_RouteClientPacketLoss":    24,
+		"ErrorCode_PushClientPacketLoss":     25,
+		"ErrorCode_Banned":                   26,
+		"ErrorCode_Maintenance":              27,
+		"ErrorCode_RegionClosedRegistration": 28,
+		"ErrorCode_RegionIdError":            29,
+		"ErrorCode_PlayerAlreadyExist":       30,
+		"ErrorCode_SdkAuthFailed":            41,
+		"ErrorCode_SdkConfigErr":             42,
+		"ErrorCode_SdkApiErr":                43,
+		"ErrorCode_InvalidAccountName":       44,
+		"ErrorCode_NameInvalid":              91,
+		"ErrorCode_NameFilterReject":         92,
+		"ErrorCode_NameFilterErr":            93,
+		"ErrorCode_MailNotFound":             101,
+		"ErrorCode_MailAlreadyClaimed":       102,
+		"ErrorCode_MailExpired":              103,
+		"ErrorCode_MailHasUnclaimedItems":    104,
+		"ErrorCode_MailNoAttachment":         105,
 	}
 )
 
@@ -113,7 +164,7 @@ var File_error_code_proto protoreflect.FileDescriptor
 
 const file_error_code_proto_rawDesc = "" +
 	"\n" +
-	"\x10error_code.proto\x12\agserver*\xd8\x03\n" +
+	"\x10error_code.proto\x12\agserver*\xda\a\n" +
 	"\tErrorCode\x12\x10\n" +
 	"\fErrorCode_OK\x10\x00\x12\x14\n" +
 	"\x10ErrorCode_NotReg\x10\v\x12\x1b\n" +
@@ -130,7 +181,24 @@ const file_error_code_proto_rawDesc = "" +
 	"\x1eErrorCode_ReconnectNeedRelogin\x10\x16\x12$\n" +
 	" ErrorCode_RouteClientPacketError\x10\x17\x12#\n" +
 	"\x1fErrorCode_RouteClientPacketLoss\x10\x18\x12\"\n" +
-	"\x1eErrorCode_PushClientPacketLoss\x10\x19B\x06Z\x04./pbb\x06proto3"
+	"\x1eErrorCode_PushClientPacketLoss\x10\x19\x12\x14\n" +
+	"\x10ErrorCode_Banned\x10\x1a\x12\x19\n" +
+	"\x15ErrorCode_Maintenance\x10\x1b\x12&\n" +
+	"\"ErrorCode_RegionClosedRegistration\x10\x1c\x12\x1b\n" +
+	"\x17ErrorCode_RegionIdError\x10\x1d\x12 \n" +
+	"\x1cErrorCode_PlayerAlreadyExist\x10\x1e\x12\x1b\n" +
+	"\x17ErrorCode_SdkAuthFailed\x10)\x12\x1a\n" +
+	"\x16ErrorCode_SdkConfigErr\x10*\x12\x17\n" +
+	"\x13ErrorCode_SdkApiErr\x10+\x12 \n" +
+	"\x1cErrorCode_InvalidAccountName\x10,\x12\x19\n" +
+	"\x15ErrorCode_NameInvalid\x10[\x12\x1e\n" +
+	"\x1aErrorCode_NameFilterReject\x10\\\x12\x1b\n" +
+	"\x17ErrorCode_NameFilterErr\x10]\x12\x1a\n" +
+	"\x16ErrorCode_MailNotFound\x10e\x12 \n" +
+	"\x1cErrorCode_MailAlreadyClaimed\x10f\x12\x19\n" +
+	"\x15ErrorCode_MailExpired\x10g\x12#\n" +
+	"\x1fErrorCode_MailHasUnclaimedItems\x10h\x12\x1e\n" +
+	"\x1aErrorCode_MailNoAttachment\x10iB\x06Z\x04./pbb\x06proto3"
 
 var (
 	file_error_code_proto_rawDescOnce sync.Once

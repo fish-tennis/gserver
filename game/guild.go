@@ -76,7 +76,11 @@ func (g *Guild) OnGuildListReq(req *pb.GuildListReq) (*pb.GuildListRes, error) {
 		slog.Error("Guild.OnGuildListReq: db error", "error", err)
 		return nil, errors.New("DbError")
 	}
-	cursor, dbErr := col.Find(context.Background(), bson.D{}, options.Find().SetSkip(pageSize*int64(req.PageIndex)).SetLimit(pageSize))
+	// 按_id排序保证分页稳定:分片集群上无sort的skip/limit返回顺序不确定,
+	// 翻页会出现重复/漏公会;单机环境下排序也是分页稳定性的必要条件
+	cursor, dbErr := col.Find(context.Background(), bson.D{},
+		options.Find().SetSort(bson.D{{Key: db.UniqueIdName, Value: 1}}).
+			SetSkip(pageSize*int64(req.PageIndex)).SetLimit(pageSize))
 	if dbErr != nil {
 		slog.Error("Guild.OnGuildListReq: db error", "error", dbErr)
 		return nil, errors.New("DbError")

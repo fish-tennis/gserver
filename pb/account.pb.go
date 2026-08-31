@@ -23,10 +23,13 @@ const (
 
 // 账号
 type Account struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	XId           int64                  `protobuf:"varint,1,opt,name=_id,json=Id,proto3" json:"_id,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=Name,proto3" json:"Name,omitempty"`
-	Password      string                 `protobuf:"bytes,3,opt,name=Password,proto3" json:"Password,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 业务账号ID(由KV自增分配,登录/封禁/在线状态等业务均以此为准)。
+	// 注意:account集合的mongodb _id是账号名(分片键),并非此字段;
+	// 历史字段名_id是想映射mongo主键却从未实现,改造后语义已彻底错位,故更名
+	Id            int64  `protobuf:"varint,1,opt,name=Id,proto3" json:"Id,omitempty"`
+	Name          string `protobuf:"bytes,2,opt,name=Name,proto3" json:"Name,omitempty"`
+	Password      string `protobuf:"bytes,3,opt,name=Password,proto3" json:"Password,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -61,9 +64,9 @@ func (*Account) Descriptor() ([]byte, []int) {
 	return file_account_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *Account) GetXId() int64 {
+func (x *Account) GetId() int64 {
 	if x != nil {
-		return x.XId
+		return x.Id
 	}
 	return 0
 }
@@ -86,9 +89,9 @@ var File_account_proto protoreflect.FileDescriptor
 
 const file_account_proto_rawDesc = "" +
 	"\n" +
-	"\raccount.proto\x12\agserver\"J\n" +
-	"\aAccount\x12\x0f\n" +
-	"\x03_id\x18\x01 \x01(\x03R\x02Id\x12\x12\n" +
+	"\raccount.proto\x12\agserver\"I\n" +
+	"\aAccount\x12\x0e\n" +
+	"\x02Id\x18\x01 \x01(\x03R\x02Id\x12\x12\n" +
 	"\x04Name\x18\x02 \x01(\tR\x04Name\x12\x1a\n" +
 	"\bPassword\x18\x03 \x01(\tR\bPasswordB\x06Z\x04./pbb\x06proto3"
 

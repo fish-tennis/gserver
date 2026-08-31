@@ -16,7 +16,7 @@ var (
 		SendPacketCacheCap: 256,
 		SendBufferSize:     8 * 1024,  // 8K
 		RecvBufferSize:     8 * 1024,  // 8K
-		MaxPacketSize:      16 * 1024, // 16K
+		MaxPacketSize:      16 * 1024, // 16K 收包的最大限制
 		RecvTimeout:        20,        // 20s
 		WriteTimeout:       10,        // 10s
 	}
@@ -25,7 +25,7 @@ var (
 		SendPacketCacheCap: 256,
 		SendBufferSize:     8 * 1024,  // 8K
 		RecvBufferSize:     8 * 1024,  // 8K
-		MaxPacketSize:      16 * 1024, // 16K
+		MaxPacketSize:      16 * 1024, // 16K 收包的最大限制
 		RecvTimeout:        30,        // 30s
 		WriteTimeout:       10,        // 10s
 		Path:               "/ws",

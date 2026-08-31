@@ -6,7 +6,10 @@ package gserver;
 
 // 账号
 message Account {
-  int64 _id = 1;
+  // 业务账号ID(由KV自增分配,登录/封禁/在线状态等业务均以此为准)。
+  // 注意:account集合的mongodb _id是账号名(分片键),并非此字段;
+  // 历史字段名_id是想映射mongo主键却从未实现,改造后语义已彻底错位,故更名
+  int64 Id = 1;
   string Name = 2;
   string Password = 3;
 }

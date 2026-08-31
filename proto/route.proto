@@ -8,13 +8,20 @@ package gserver;
 
 // 路由转发相关proto
 
+// 路由选项(位掩码,可组合使用)
+enum RouteOption {
+  RouteOption_None = 0;
+  RouteOption_DirectSendClient = 1; // 直接转发给客户端,不做逻辑处理
+  RouteOption_SaveDb = 2;           // 先存数据库,防止路由失败造成消息丢失
+}
+
 // [其他服或其他协程]发给[game服]再路由转发给玩家的消息
 // otherserver -> game -> player
 message RoutePlayerMessage {
   string Error = 1; // 错误码
   int64 ToPlayerId = 2; // 玩家id
   int32 PacketCommand = 3; // 消息号
-  bool DirectSendClient = 4; // 是否直接转发给客户端
+  int32 Options = 4; // RouteOption位掩码
   int64 PendingMessageId = 5; // 待处理消息id
   google.protobuf.Any PacketData = 6; // 转发的消息
 }

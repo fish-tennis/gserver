@@ -42,7 +42,7 @@ func processLoginReq(connection Connection, packet Packet, req *pb.LoginReq) {
 	account := &pb.Account{}
 	defer func() {
 		network.SendPacketAdaptWithError(connection, packet, loginRes, int32(errorCode))
-		slog.Debug("loginRes", "accountName", loginRes.AccountName, "accountId", account.GetXId(), "gameServer", loginRes.GameServer, "error", errorCode)
+		slog.Debug("loginRes", "accountName", loginRes.AccountName, "accountId", account.GetId(), "gameServer", loginRes.GameServer, "error", errorCode)
 	}()
 	// DB协程池中执行,connection跨协程:连接已断开则直接返回,避免无意义的DB查询
 	if !connection.IsConnected() {
@@ -54,7 +54,7 @@ func processLoginReq(connection Connection, packet Packet, req *pb.LoginReq) {
 		errorCode = pb.ErrorCode_ErrorCode_DbErr
 		return
 	} else {
-		if account.XId == 0 {
+		if account.Id == 0 {
 			errorCode = pb.ErrorCode_ErrorCode_NotReg
 			return
 			// 密码安全说明:客户端在传输前已完成加密(如RSA+AES混合加密),传到服务器的并非明文
@@ -64,23 +64,23 @@ func processLoginReq(connection Connection, packet Packet, req *pb.LoginReq) {
 			return
 		}
 	}
-	loginRes.AccountId = account.XId
+	loginRes.AccountId = account.Id
 	loginRes.LoginSession = cache.NewLoginSession(account)
 	if loginRes.LoginSession == "" {
 		errorCode = pb.ErrorCode_ErrorCode_DbErr
 		return
 	}
-	onlinePlayerId, gameServerId := cache.GetOnlineAccount(account.GetXId())
+	onlinePlayerId, gameServerId := cache.GetOnlineAccount(account.GetId())
 	if onlinePlayerId > 0 {
 		// 如果该账号还在游戏中,则需要先将其清理下线
-		slog.Error("exist online account", "accountId", account.GetXId(), "playerId", onlinePlayerId, "gameServerId", gameServerId)
+		slog.Error("exist online account", "accountId", account.GetId(), "playerId", onlinePlayerId, "gameServerId", gameServerId)
 		if gameServerId > 0 {
 			if _loginServer.GetServerList().GetServerInfo(gameServerId) == nil {
 				// 目标游戏服已宕机(不在服务器列表中),直接清理 Redis 缓存,防止玩家永久"卡号"
 				// 条件释放:值匹配才删,防止清理瞬间该玩家恰好重新登录到其他服后误删新记录
 				cache.RemoveOnlinePlayer(onlinePlayerId, gameServerId)
-				cache.RemoveOnlineAccount(account.GetXId(), onlinePlayerId, gameServerId)
-				slog.Error("RemoveOnlinePlayer for crashed server", "accountId", account.GetXId(), "playerId", onlinePlayerId, "gameServerId", gameServerId)
+				cache.RemoveOnlineAccount(account.GetId(), onlinePlayerId, gameServerId)
+				slog.Error("RemoveOnlinePlayer for crashed server", "accountId", account.GetId(), "playerId", onlinePlayerId, "gameServerId", gameServerId)
 			} else {
 				// 游戏服在线,异步通知踢人
 				// 不能用同步 Rpc:此处运行在 gate 连接的收包协程中,Rpc 会阻塞整个收包协程,
@@ -88,7 +88,7 @@ func processLoginReq(connection Connection, packet Packet, req *pb.LoginReq) {
 				// 踢人完成后客户端通过 PlayerEntryGameReq 登录,若踢人尚未完成则 AddOnlineAccount 失败返回 TryLater,客户端重试即可
 				cmd := network.GetCommandByProto(new(pb.KickPlayerReq))
 				internal.GetServerList().Send(gameServerId, PacketCommand(cmd), &pb.KickPlayerReq{
-					AccountId: account.GetXId(),
+					AccountId: account.GetId(),
 					PlayerId:  onlinePlayerId,
 				})
 			}
@@ -176,19 +176,16 @@ func processAccountReg(connection Connection, packet Packet, req *pb.AccountReg)
 		return
 	}
 	account := &pb.Account{
-		XId:  newAccountId,
+		Id:  newAccountId,
 		Name: req.GetAccountName(),
 		// 存储的是客户端加密后的值,非明文密码(加密由客户端负责)
 		Password: req.GetPassword(),
 	}
-	accountMapData := map[string]any{
-		db.UniqueIdName: account.XId, // mongodb _id特殊处理
-		"Name":          account.Name,
-		"Password":      account.Password, // 客户端加密后的值,非明文
-	}
-	err, isDuplicateKey := _loginServer.GetAccountDb().InsertEntity(account.XId, accountMapData)
+	// _id=账号名:同名注册由MongoDB原子拒绝(E11000),分片集群下同样成立
+	// (与单机环境依靠Name唯一索引的语义一致,但防线从应用层索引下沉到了主键路由)
+	err, isDuplicateKey := _loginServer.GetAccountDb().InsertEntity(account.Name, AccountSaveData(account))
 	if err != nil {
-		account.XId = 0
+		account.Id = 0
 		if isDuplicateKey {
 			errorCode = pb.ErrorCode_ErrorCode_NameDuplicate
 			result = "AccountNameDuplicate"
@@ -199,5 +196,6 @@ func processAccountReg(connection Connection, packet Packet, req *pb.AccountReg)
 		slog.Error("onAccountReg error", "account", account.Name, "result", result, "error", err.Error())
 		return
 	}
-	res.AccountId = account.XId
+	res.AccountId = account.Id
 }
+

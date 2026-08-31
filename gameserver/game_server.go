@@ -121,21 +121,50 @@ func (this *GameServer) loadCfgs() {
 }
 
 // 初始化数据库
-func (this *GameServer) initDb() {
+func (s *GameServer) initDb() {
 	// 使用mongodb来演示
-	mongoDb := gentity.NewMongoDb(this.GetConfig().Mongo.Uri, this.GetConfig().Mongo.Db)
-	// 玩家数据库
-	db.RegisterPlayerDb(mongoDb)
+	// 顺序要求:必须先Register再Connect——框架Connect会回填各集合的client/db句柄,
+	// 并自动为uniqueId非_id的集合建唯一索引(global_mail.MailId/global的Key(kv)等)
+	mongoDb := gentity.NewMongoDb(s.GetConfig().Mongo.Uri, s.GetConfig().Mongo.Db)
+	// 玩家数据库(全项目唯一分片集合,ShardKeyHashed)
+	playerDb := db.RegisterPlayerDb(mongoDb)
 	// 公会数据库
 	db.RegisterGuildDb(mongoDb)
-	// 全局对象数据库(如GlobalEntity),同时也是kv数据库
-	db.RegisterGlobalDb(mongoDb)
+	// 全局对象数据库(如GlobalEntity),global同时注册EntityDb和KvDb,
+	// KvDb形态的Key唯一索引由Connect自动创建(闭合KvDb.Inc的upsert并发竞态)
+	db.RegisterGlobalEntityDb(mongoDb)
+	db.RegisterGlobalKvDb(mongoDb)
+	// 账号区服注册表:建角防重的原子抢占集合(设计说明见db/player_account.go)。
+	// 只有GameServer处理建角,其余进程(api/pay/login)不访问该集合,无需注册
+	db.RegisterPlayerAccountDb(mongoDb)
 	if !mongoDb.Connect() {
 		panic("connect db error")
 	}
-	// 玩家数据库设置分片
-	mongoDb.ShardDatabase(this.GetConfig().Mongo.Db)
+	// 先设置全局DbMgr:后续EnsureSdkOrderIdIndex等函数内部经GetDbMgr()取单例,
+	// 若在SetDbMgr之前调用会是nil导致panic
 	db.SetDbMgr(mongoDb)
+	// 分片策略:只对player集合分片(ShardKeyHashed),其余集合ShardKeyNone被框架自动跳过
+	// (策略说明与理由见db/db_mgr.go文件头);单机/副本集环境enableSharding命令不存在,
+	// 返回错误属预期降级(所有集合不分片,功能不受影响),仅记日志不阻断
+	if err := mongoDb.ShardDatabase(s.GetConfig().Mongo.Db); err != nil {
+		slog.Info("ShardDatabase skip", "error", err)
+	}
+	// 为 regionid 创建索引
+	if colPlayer, ok := playerDb.(*gentity.MongoCollectionPlayer); ok {
+		colPlayer.CreateIndex(db.PlayerRegionId, false)
+	}
+	// player复合索引{AccountId,RegionId}:登录/进服/建角的账号查询走索引直达,
+	// 否则分片集群下每次登录都在所有shard上全表扫描(见db/db_mgr.go的设计说明)
+	if err := db.EnsurePlayerAccountRegionIndex(); err != nil {
+		panic(fmt.Sprintf("EnsurePlayerAccountRegionIndex err:%v", err))
+	}
+	// 注册表TTL索引:自动清理建角中断(crash/panic)留下的注册位残留,
+	// 消除"抢占成功后进程崩溃导致该账号永远无法建角"的泄漏问题;
+	// 分片集合的TTL索引在各shard本地清理,createIndex自动传播,无需特殊处理。
+	// NOTE:必须在SetDbMgr之后调用(内部经GetDbMgr取单例,见上方注释)
+	if err := db.EnsurePlayerAccountTtlIndex(); err != nil {
+		panic(fmt.Sprintf("EnsurePlayerAccountTtlIndex err:%v", err))
+	}
 }
 
 // 初始化redis缓存
@@ -401,7 +430,7 @@ func (this *GameServer) onRoutePlayerMessage(connection Connection, packet Packe
 		return
 	}
 	pushed := true
-	if req.DirectSendClient {
+	if req.Options & int32(pb.RouteOption_RouteOption_DirectSendClient) != 0 {
 		// 不需要player处理的消息,投递到玩家协程内转发给客户端,避免跨协程读 p.connection
 		// 使用 TryPushMessage 非阻塞投递:channel 满时丢弃并告警,防止阻塞服务器间收包协程
 		pushed = player.TryPushMessage(&game.PlayerDirectSendMessage{Cmd: PacketCommand(uint16(req.PacketCommand)), Message: message})
@@ -410,13 +439,29 @@ func (this *GameServer) onRoutePlayerMessage(connection Connection, packet Packe
 				"playerId", req.ToPlayerId, "cmd", req.PacketCommand, "message", message)
 		}
 	} else {
-		// 需要player处理的消息,放进player的消息队列,在玩家的逻辑协程中处理
-		// 这是使用 TryPushMessage 非阻塞投递:channel 满时丢弃并告警,防止阻塞服务器间收包协程
-		// 如果是重要的不能丢弃的消息,应该设置PendingMessageId,留待玩家下次上线重试
-		pushed = player.TryPushMessage(NewProtoPacket(PacketCommand(req.PacketCommand), message))
-		if !pushed {
-			slog.Warn("onRoutePlayerMessage player channel full, dropping message",
-				"playerId", req.ToPlayerId, "cmd", req.PacketCommand, "message", message)
+		// 需要player处理的消息
+		if packet.RpcCallId() > 0 {
+			// RpcCallId > 0: 需要reply,投递PlayerRouteMessage携带来源connection和rpcCallId
+			// 玩家协程执行完handler后通过来源connection做rpc reply
+			pushed = player.TryPushMessage(&game.PlayerRouteMessage{
+				Cmd:        PacketCommand(req.PacketCommand),
+				Message:    message,
+				RpcCallId:  packet.RpcCallId(),
+				Connection: connection,
+			})
+			if !pushed {
+				slog.Warn("onRoutePlayerMessage player channel full, dropping route rpc",
+					"playerId", req.ToPlayerId, "cmd", req.PacketCommand)
+			}
+		} else {
+			// RpcCallId == 0: 无需reply,放进player的消息队列,在玩家的逻辑协程中处理
+			// 这是使用 TryPushMessage 非阻塞投递:channel 满时丢弃并告警,防止阻塞服务器间收包协程
+			// 如果是重要的不能丢弃的消息,应该设置PendingMessageId,留待玩家下次上线重试
+			pushed = player.TryPushMessage(NewProtoPacket(PacketCommand(req.PacketCommand), message))
+			if !pushed {
+				slog.Warn("onRoutePlayerMessage player channel full, dropping message",
+					"playerId", req.ToPlayerId, "cmd", req.PacketCommand, "message", message)
+			}
 		}
 	}
 	if pushed && req.PendingMessageId > 0 {

@@ -82,17 +82,41 @@ func (this *LoginServer) Exit() {
 // 初始化数据库
 func (this *LoginServer) initDb() {
 	// 使用mongodb来演示
+	// 顺序要求:必须先Register再Connect——框架Connect会回填各集合的client/db句柄,
+	// 并自动为uniqueId非_id的集合建唯一索引(account.Name/global的Key(kv)等)
 	mongoDb := gentity.NewMongoDb(this.GetConfig().Mongo.Uri, this.GetConfig().Mongo.Db)
-	// 账号数据库
+	// 账号数据库(不分片)
+	// _id=账号名(uniqueId=Name):账号名唯一性由不分片集合的_id主键在数据库层全局原子保证。
+	// 之前_id=KV自增账号ID时,分片集群上无法创建Name唯一索引(MongoDB要求分片集合的
+	// 唯一索引必须以分片键为前缀),并发同名注册会路由到不同shard双双插入成功(同名双账号);
+	// 业务账号ID改存Id字段(仍由KV自增分配),登录/封禁/在线状态等业务继续以Id为准。
+	// NOTE:存量旧格式文档(_id=数字ID,无Id字段)不兼容新逻辑,上线前需清表重建或迁移
 	this.accountDb = db.RegisterAccountDb(mongoDb)
-	// 全局对象数据库,同时也是kv数据库
-	db.RegisterGlobalDb(mongoDb)
+	// 玩家数据库,用于登录时查询账号在各区服的角色信息
+	db.RegisterPlayerDb(mongoDb)
+	// global同时注册为EntityDb和KvDb,以便initRegions可以直接用Collection操作;
+	// KvDb形态的Key唯一索引由Connect自动创建(闭合KvDb.Inc的upsert并发竞态)
+	db.RegisterGlobalEntityDb(mongoDb)
+	db.RegisterGlobalKvDb(mongoDb)
 	if !mongoDb.Connect() {
 		panic(fmt.Sprintf("connect db error,uri:%v db:%v", this.GetConfig().Mongo.Uri, this.GetConfig().Mongo.Db))
 	}
-	// 账号名建立唯一索引
-	this.accountDb.(*gentity.MongoCollection).CreateIndex(db.AccountName, true)
 	db.SetDbMgr(mongoDb)
+	// 分片策略:只对player集合分片(ShardKeyHashed),其余集合ShardKeyNone被框架自动跳过
+	// (策略说明与理由见db/db_mgr.go文件头);单机/副本集环境enableSharding命令不存在,
+	// 返回错误属预期降级(所有集合不分片,功能不受影响),仅记日志不阻断
+	if err := mongoDb.ShardDatabase(this.GetConfig().Mongo.Db); err != nil {
+		slog.Info("ShardDatabase skip", "error", err)
+	}
+	// 账号业务ID普通索引(非唯一:Id唯一性由KV自增分配器保证),
+	// 支撑按账号ID查询账号信息的功能
+	this.accountDb.(*gentity.MongoCollection).CreateIndex("Id", false)
+	// player复合索引{AccountId,RegionId}:登录时queryAccountRegionRoles按AccountId
+	// 查角色列表(每次登录必经),无此索引时在每shard上退化为全集合扫描;
+	// GameServer启动时也会建(createIndex幂等),此处保证login独立部署时索引不缺
+	if err := db.EnsurePlayerAccountRegionIndex(); err != nil {
+		panic(fmt.Sprintf("EnsurePlayerAccountRegionIndex err:%v", err))
+	}
 }
 
 // 初始化redis缓存
@@ -117,10 +141,26 @@ func (this *LoginServer) initNetwork() {
 	this.BaseServer.GetServerList().SetFetchServerTypes(ServerType_Game)
 }
 
+// AccountSaveData 构建账号文档的存储数据(自建注册与SDK开户共用,保证字段口径一致)
+// _id=账号名:账号名唯一性由分片键(_id)路由+本地唯一索引全局保证(分片集群安全),
+// 并发同名注册/开户时,后插入者由MongoDB原子返回E11000;
+// Id为KV自增分配的业务账号ID(proto字段,原名_id/XId,分片改造后更名),
+// 登录/封禁/在线状态等业务均以Id为准
+func AccountSaveData(account *pb.Account) map[string]any {
+	return map[string]any{
+		db.UniqueIdName: account.Name,     // mongodb _id = 账号名
+		db.AccountName:  account.Name,     // 分片键字段(必须存在于每个文档,与_id同值)
+		"Id":            account.Id,       // 业务账号ID
+		"Password":      account.Password, // 客户端加密后的值,非明文
+	}
+}
+
 func (this *LoginServer) getAccountData(accountName string, accountData *pb.Account) error {
 	mongoCol := this.GetAccountDb().(*gentity.MongoCollection)
 	col := mongoCol.GetCollection()
-	result := col.FindOne(context.Background(), bson.D{{db.AccountName, accountName}})
+	// 按账号名(_id)查询:主键直达,且与写入的唯一性口径一致
+	// (_id即账号名,E11000与查询命中的是同一个键,不存在"索引与主键不一致"的缝隙)
+	result := col.FindOne(context.Background(), bson.D{{db.UniqueIdName, accountName}})
 	if result == nil || errors.Is(result.Err(), mongo.ErrNoDocuments) {
 		return nil
 	}
@@ -128,22 +168,9 @@ func (this *LoginServer) getAccountData(accountName string, accountData *pb.Acco
 	if err != nil {
 		return err
 	}
-	// Q:_id为什么不会赋值?
-	// A:因为protobuf自动生成的struct tag,无法适配mongodb的_id字段
-	// 解决方案: 使用工具生成自定义的struct tag,如github.com/favadi/protoc-go-inject-tag
-	// 如果能生成下面这种struct tag,就可以直接把mongodb的_id的值赋值到accountData.XId了
-	// XId int64 `protobuf:"varint,1,opt,name=_id,json=Id,proto3" json:"_id,omitempty" bson:"_id"`
-	if accountData.XId == 0 {
-		raw, err := result.Raw()
-		if err != nil {
-			return err
-		}
-		idValue, err := raw.LookupErr("_id")
-		if err != nil {
-			return err
-		}
-		accountData.XId = idValue.Int64()
-	}
+	// XId/Name/Password均为文档显式字段,driver解码时按字段名大小写不敏感匹配
+	// (无bson tag的struct先按原名后按小写匹配,见mongo-driver struct_codec),
+	// 可直接decode到pb.Account对应字段,无需手工从Raw补值
 	return nil
 }
 

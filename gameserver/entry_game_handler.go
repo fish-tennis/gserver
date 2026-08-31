@@ -195,6 +195,10 @@ func processPlayerEntryGameReq(connection Connection, packet Packet, req *pb.Pla
 // 在Connection的收包协程中调用
 func onPlayerReconnectGameReq(connection Connection, packet Packet) {
 	req := packet.Message().(*pb.PlayerReconnectGameReq)
+	// 解析客户端真实IP:网关模式取请求体中由网关填充的ClientIp,直连模式从connection提取
+	// 后续将用于玩家行为记录与分析,当前阶段先输出到日志
+	clientIp := network.ResolveClientIp(connection, packet, req.GetClientIp())
+	slog.Info("onPlayerReconnectGameReq clientIp", "playerId", req.GetPlayerId(), "clientIp", clientIp)
 	player := game.GetPlayer(req.PlayerId)
 	if player == nil {
 		// 玩家不在线(可能保留期已过或从未登录)
@@ -288,6 +292,31 @@ func processCreatePlayerReq(connection Connection, packet Packet, req *pb.Create
 		slog.Error("onCreatePlayerReq invalid playerId type", "type", newPlayerIdValue, "val", newPlayerIdValue)
 		return
 	}
+	// 原子抢占账号区服注册位:一个账号在同一个区服只能创建1个角色
+	// 并发建角(双端登录/请求重试/恶意刷)时,多个请求可能同时通过上面的预检查,
+	// 注册表_id("{accountId}_{regionId}")的唯一性由MongoDB全局原子保证,
+	// 只有抢到注册位的请求能继续,其余在数据库层被拒绝(设计说明见db/player_account.go)
+	if ok, err := db.RegisterPlayerAccount(req.GetAccountId(), req.GetRegionId(), newPlayerId); err != nil {
+		errorCode = pb.ErrorCode_ErrorCode_DbErr
+		slog.Error("RegisterPlayerAccount error", "error", err, "accountId", req.GetAccountId(), "regionId", req.GetRegionId())
+		return
+	} else if !ok {
+		// _id冲突,查player表区分冲突原因:
+		// player已存在 → 真已有角色(并发建角的另一端已抢先完成);
+		// player不存在 → 另一请求建角进行中(毫秒级完成,稍后重试即可),
+		//   或上次建角crash留下的残留注册位(TTL索引会在~2分钟内自动清理)
+		existPlayerId, findErr := db.GetPlayerDb().FindPlayerIdByAccountId(req.GetAccountId(), req.GetRegionId())
+		switch {
+		case findErr != nil:
+			errorCode = pb.ErrorCode_ErrorCode_DbErr
+			slog.Error("RegisterPlayerAccount find player error", "error", findErr, "accountId", req.GetAccountId(), "regionId", req.GetRegionId())
+		case existPlayerId != 0:
+			errorCode = pb.ErrorCode_ErrorCode_PlayerAlreadyExist
+		default:
+			errorCode = pb.ErrorCode_ErrorCode_TryLater
+		}
+		return
+	}
 	playerData := &pb.PlayerData{
 		XId:       newPlayerId,
 		Name:      trimmed,
@@ -315,12 +344,25 @@ func processCreatePlayerReq(connection Connection, packet Packet, req *pb.Create
 	gentity.GetEntitySaveData(newPlayer, newPlayerSaveData)
 	err, isDuplicateKey := db.GetPlayerDb().InsertEntity(playerData.XId, newPlayerSaveData)
 	if err != nil {
+		// 注册位已抢占但player文档写入失败,回滚释放注册位,
+		// 让该账号无需等待TTL过期即可立即重试建角
+		if rollbackErr := db.UnregisterPlayerAccount(req.GetAccountId(), req.GetRegionId()); rollbackErr != nil {
+			// 回滚失败仅告警:残留文档带ExpireAt,会被TTL索引自动清理
+			slog.Error("UnregisterPlayerAccount rollback error", "error", rollbackErr, "accountId", req.GetAccountId(), "regionId", req.GetRegionId(), "playerId", playerData.XId)
+		}
 		errorCode = pb.ErrorCode_ErrorCode_DbErr
 		if isDuplicateKey {
 			errorCode = pb.ErrorCode_ErrorCode_NameDuplicate
 		}
 		slog.Error("CreatePlayer error", "errorCode", errorCode, "error", err, "playerData", playerData)
 		return
+	}
+	// 建角成功后释放注册位:注册表仅作为建角互斥锁,
+	// 账号->角色的持久事实以player表为准(表内有AccountId字段可查);
+	// 删除失败无需重试:残留文档会被TTL索引在保护期后自动清理,
+	// 期间重试者会经player表预检查查到已有角色,不会产生双角色
+	if delErr := db.UnregisterPlayerAccount(req.GetAccountId(), req.GetRegionId()); delErr != nil {
+		slog.Warn("UnregisterPlayerAccount after create error", "error", delErr, "accountId", req.GetAccountId(), "regionId", req.GetRegionId(), "playerId", playerData.XId)
 	}
 }
 

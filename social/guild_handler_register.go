@@ -9,7 +9,6 @@ import (
 
 	"github.com/fish-tennis/gentity"
 	. "github.com/fish-tennis/gnet"
-	"github.com/fish-tennis/gserver/game"
 	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/network"
 	"github.com/fish-tennis/gserver/pb"
@@ -116,7 +115,7 @@ func GuildServerHandlerRegister(handler PacketHandlerRegister) {
 			// 回复一个结果,避免rpc调用方超时
 			routePacket := NewProtoPacketEx(network.GetResCommand(req.PacketCommand), nil)
 			routePacket.SetRpcCallId(packet.RpcCallId())
-			game.RoutePlayerPacket(req.FromPlayerId, routePacket, game.WithConnection(connection), game.WithError(err))
+			internal.RoutePlayerPacket(req.FromPlayerId, routePacket, internal.WithConnection(connection), internal.WithError(err))
 		}
 	})
 

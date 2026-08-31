@@ -26,7 +26,7 @@ func keyLoginSession(accountId int64) string {
 func NewLoginSession(account *pb.Account) string {
 	session := generateRandomSession()
 	// 登录session存redis,供玩家登录游戏服时验证用,使登录服和游戏服可以解耦
-	_, err := GetRedis().SetEx(context.Background(), keyLoginSession(account.GetXId()), session, LoginSessionExpireTime).Result()
+	_, err := GetRedis().SetEx(context.Background(), keyLoginSession(account.GetId()), session, LoginSessionExpireTime).Result()
 	if IsRedisError(err) {
 		slog.Error("NewLoginSession error", "error", err)
 		return ""

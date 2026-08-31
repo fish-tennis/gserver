@@ -8,7 +8,7 @@ enum ErrorCode {
 	ErrorCode_OK = 0;
 
 	ErrorCode_NotReg = 11; // 账号未注册
-    	ErrorCode_PasswordError = 12; // 密码错误
+	ErrorCode_PasswordError = 12; // 密码错误
 	ErrorCode_DbErr = 13; // 数据库错误
 	ErrorCode_NameDuplicate = 14; // 重名
 	ErrorCode_HasLogin = 15; // 该连接已经登录过(客户端需要退回登录界面)
@@ -22,4 +22,21 @@ enum ErrorCode {
 	ErrorCode_RouteClientPacketError = 23; // 网关转发消息失败(客户端需要退回登录界面)
 	ErrorCode_RouteClientPacketLoss = 24; // 网关转发消息丢失,可能目标服务器暂时繁忙
 	ErrorCode_PushClientPacketLoss = 25; // 游戏服收到客户端消息丢失,玩家chan已满
+	ErrorCode_Banned = 26; // 账号或玩家被封禁
+	ErrorCode_Maintenance = 27; // 服务器维护中
+	ErrorCode_RegionClosedRegistration = 28; // 区服已关闭注册新角色
+	ErrorCode_RegionIdError = 29; // 区服Id错误
+	ErrorCode_PlayerAlreadyExist = 30; // 该账号在此区服已有角色
+	ErrorCode_SdkAuthFailed = 41; // SDK登录验证失败(客户端需要重新登录SDK)
+	ErrorCode_SdkConfigErr = 42; // SDK配置错误(服务器未配置SDK验证地址,需运维排查)
+	ErrorCode_SdkApiErr = 43; // SDK验证接口异常(网络/响应异常,可稍后重试)
+	ErrorCode_InvalidAccountName = 44; // 无效的账号名(自建账号名不允许包含下划线)
+	ErrorCode_NameInvalid = 91; // 无效的角色名(长度或内容不合法)
+	ErrorCode_NameFilterReject = 92; // 角色名包含敏感词,未通过过滤
+	ErrorCode_NameFilterErr = 93; // 名称过滤服务异常,可稍后重试
+	ErrorCode_MailNotFound = 101; // 邮件不存在
+	ErrorCode_MailAlreadyClaimed = 102; // 邮件附件已领取
+	ErrorCode_MailExpired = 103; // 邮件已过期
+	ErrorCode_MailHasUnclaimedItems = 104; // 邮件有未领取附件,禁止删除
+	ErrorCode_MailNoAttachment = 105; // 邮件没有附件
 }

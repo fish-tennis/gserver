@@ -13,6 +13,7 @@ import (
 	"github.com/fish-tennis/gserver/network"
 	"github.com/fish-tennis/gserver/pb"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/anypb"
 )
 
 const (
@@ -135,6 +136,15 @@ func (p *Player) Kick() {
 type PlayerDirectSendMessage struct {
 	Cmd     PacketCommand
 	Message proto.Message
+}
+
+// PlayerRouteMessage 路由消息,由网络协程投递,在玩家协程内消费
+// 携带来源服务器的connection和RpcCallId,处理完后通过来源connection做rpc reply
+type PlayerRouteMessage struct {
+	Cmd        PacketCommand
+	Message    proto.Message
+	RpcCallId  uint32
+	Connection Connection // 来源服务器连接,用于reply
 }
 
 // playerCheckConnectionMessage 验证连接归属并投递消息,由网络协程投递,在玩家协程内消费
@@ -488,6 +498,8 @@ func (p *Player) RunRoutine() bool {
 				p.Stop()
 			case *PlayerDirectSendMessage:
 				p.SendWithCommand(msg.Cmd, msg.Message)
+			case *PlayerRouteMessage:
+				p.processRouteMessage(msg)
 			case *playerCheckConnectionMessage:
 				if p.GetConnection() == msg.connection {
 					p.processMessage(msg.packet)
@@ -564,6 +576,51 @@ func (p *Player) processMessage(message *ProtoPacket) {
 		return
 	}
 	p.Log.Error("processMessageUnhandled", "msg", proto.MessageName(message.Message()).Name())
+}
+
+// processRouteMessage 处理路由消息,执行handler后通过来源连接做rpc reply
+// 与processMessage不同:processMessage把结果发回玩家的客户端连接,
+// 而processRouteMessage把结果通过来源服务器连接做rpc reply,供apiserver等调用方获取执行结果
+func (p *Player) processRouteMessage(msg *PlayerRouteMessage) {
+	defer func() {
+		if err := recover(); err != nil {
+			slog.Error("processRouteMessage panic", "error", err)
+			LogStack()
+			internal.SendAlert(err)
+		}
+	}()
+	p.Log.Debug("processRouteMessage", "msg", proto.MessageName(msg.Message).Name())
+	packet := NewProtoPacket(msg.Cmd, msg.Message)
+	// handler的返回值中包含执行结果,包装成RoutePlayerMessage做rpc reply
+	_playerPacketHandlerMgr.Invoke(p, packet, func(handlerInfo *internal.PacketHandlerInfo, returnValues []reflect.Value) {
+		if handlerInfo.ResCmd == 0 || len(returnValues) != 2 {
+			// handler无返回值,reply一个空的RoutePlayerMessage
+			replyPacket := network.NewPacket(&pb.RoutePlayerMessage{})
+			replyPacket.SetRpcCallId(msg.RpcCallId)
+			msg.Connection.SendPacket(replyPacket)
+			return
+		}
+		resProto, _ := returnValues[0].Interface().(proto.Message)
+		resErr, _ := returnValues[1].Interface().(error)
+		if resProto == nil {
+			resProto = reflect.New(handlerInfo.ResMessageElem).Interface().(proto.Message)
+		}
+		// 把handler执行结果包装到RoutePlayerMessage,通过来源连接reply
+		routeReply := &pb.RoutePlayerMessage{}
+		if resErr != nil {
+			routeReply.Error = resErr.Error()
+		} else {
+			anyRes, err := anypb.New(resProto)
+			if err == nil {
+				routeReply.PacketData = anyRes
+			}
+		}
+		replyPacket := network.NewPacket(routeReply)
+		replyPacket.SetRpcCallId(msg.RpcCallId)
+		msg.Connection.SendPacket(replyPacket)
+	})
+	p.firePostedEvents()
+	p.SaveCache(cache.Get())
 }
 
 // 放入消息队列

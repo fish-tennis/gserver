@@ -22,6 +22,56 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// 路由选项(位掩码,可组合使用)
+type RouteOption int32
+
+const (
+	RouteOption_RouteOption_None             RouteOption = 0
+	RouteOption_RouteOption_DirectSendClient RouteOption = 1 // 直接转发给客户端,不做逻辑处理
+	RouteOption_RouteOption_SaveDb           RouteOption = 2 // 先存数据库,防止路由失败造成消息丢失
+)
+
+// Enum value maps for RouteOption.
+var (
+	RouteOption_name = map[int32]string{
+		0: "RouteOption_None",
+		1: "RouteOption_DirectSendClient",
+		2: "RouteOption_SaveDb",
+	}
+	RouteOption_value = map[string]int32{
+		"RouteOption_None":             0,
+		"RouteOption_DirectSendClient": 1,
+		"RouteOption_SaveDb":           2,
+	}
+)
+
+func (x RouteOption) Enum() *RouteOption {
+	p := new(RouteOption)
+	*p = x
+	return p
+}
+
+func (x RouteOption) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (RouteOption) Descriptor() protoreflect.EnumDescriptor {
+	return file_route_proto_enumTypes[0].Descriptor()
+}
+
+func (RouteOption) Type() protoreflect.EnumType {
+	return &file_route_proto_enumTypes[0]
+}
+
+func (x RouteOption) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use RouteOption.Descriptor instead.
+func (RouteOption) EnumDescriptor() ([]byte, []int) {
+	return file_route_proto_rawDescGZIP(), []int{0}
+}
+
 // [其他服或其他协程]发给[game服]再路由转发给玩家的消息
 // otherserver -> game -> player
 type RoutePlayerMessage struct {
@@ -29,7 +79,7 @@ type RoutePlayerMessage struct {
 	Error            string                 `protobuf:"bytes,1,opt,name=Error,proto3" json:"Error,omitempty"`                        // 错误码
 	ToPlayerId       int64                  `protobuf:"varint,2,opt,name=ToPlayerId,proto3" json:"ToPlayerId,omitempty"`             // 玩家id
 	PacketCommand    int32                  `protobuf:"varint,3,opt,name=PacketCommand,proto3" json:"PacketCommand,omitempty"`       // 消息号
-	DirectSendClient bool                   `protobuf:"varint,4,opt,name=DirectSendClient,proto3" json:"DirectSendClient,omitempty"` // 是否直接转发给客户端
+	Options          int32                  `protobuf:"varint,4,opt,name=Options,proto3" json:"Options,omitempty"`                   // RouteOption位掩码
 	PendingMessageId int64                  `protobuf:"varint,5,opt,name=PendingMessageId,proto3" json:"PendingMessageId,omitempty"` // 待处理消息id
 	PacketData       *anypb.Any             `protobuf:"bytes,6,opt,name=PacketData,proto3" json:"PacketData,omitempty"`              // 转发的消息
 	unknownFields    protoimpl.UnknownFields
@@ -87,11 +137,11 @@ func (x *RoutePlayerMessage) GetPacketCommand() int32 {
 	return 0
 }
 
-func (x *RoutePlayerMessage) GetDirectSendClient() bool {
+func (x *RoutePlayerMessage) GetOptions() int32 {
 	if x != nil {
-		return x.DirectSendClient
+		return x.Options
 	}
-	return false
+	return 0
 }
 
 func (x *RoutePlayerMessage) GetPendingMessageId() int64 {
@@ -292,14 +342,14 @@ var File_route_proto protoreflect.FileDescriptor
 
 const file_route_proto_rawDesc = "" +
 	"\n" +
-	"\vroute.proto\x12\agserver\x1a\x19google/protobuf/any.proto\"\xfe\x01\n" +
+	"\vroute.proto\x12\agserver\x1a\x19google/protobuf/any.proto\"\xec\x01\n" +
 	"\x12RoutePlayerMessage\x12\x14\n" +
 	"\x05Error\x18\x01 \x01(\tR\x05Error\x12\x1e\n" +
 	"\n" +
 	"ToPlayerId\x18\x02 \x01(\x03R\n" +
 	"ToPlayerId\x12$\n" +
-	"\rPacketCommand\x18\x03 \x01(\x05R\rPacketCommand\x12*\n" +
-	"\x10DirectSendClient\x18\x04 \x01(\bR\x10DirectSendClient\x12*\n" +
+	"\rPacketCommand\x18\x03 \x01(\x05R\rPacketCommand\x12\x18\n" +
+	"\aOptions\x18\x04 \x01(\x05R\aOptions\x12*\n" +
 	"\x10PendingMessageId\x18\x05 \x01(\x03R\x10PendingMessageId\x124\n" +
 	"\n" +
 	"PacketData\x18\x06 \x01(\v2\x14.google.protobuf.AnyR\n" +
@@ -322,7 +372,11 @@ const file_route_proto_rawDesc = "" +
 	"\n" +
 	"PacketData\x18\x06 \x01(\v2\x14.google.protobuf.AnyR\n" +
 	"PacketData\x12&\n" +
-	"\x0eTargetEntityId\x18\a \x01(\x03R\x0eTargetEntityIdB\x06Z\x04./pbb\x06proto3"
+	"\x0eTargetEntityId\x18\a \x01(\x03R\x0eTargetEntityId*]\n" +
+	"\vRouteOption\x12\x14\n" +
+	"\x10RouteOption_None\x10\x00\x12 \n" +
+	"\x1cRouteOption_DirectSendClient\x10\x01\x12\x16\n" +
+	"\x12RouteOption_SaveDb\x10\x02B\x06Z\x04./pbb\x06proto3"
 
 var (
 	file_route_proto_rawDescOnce sync.Once
@@ -336,17 +390,19 @@ func file_route_proto_rawDescGZIP() []byte {
 	return file_route_proto_rawDescData
 }
 
+var file_route_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 var file_route_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_route_proto_goTypes = []any{
-	(*RoutePlayerMessage)(nil),         // 0: gserver.RoutePlayerMessage
-	(*GuildRoutePlayerMessageReq)(nil), // 1: gserver.GuildRoutePlayerMessageReq
-	(*RoutePlayerMessageReq)(nil),      // 2: gserver.RoutePlayerMessageReq
-	(*anypb.Any)(nil),                  // 3: google.protobuf.Any
+	(RouteOption)(0),                   // 0: gserver.RouteOption
+	(*RoutePlayerMessage)(nil),         // 1: gserver.RoutePlayerMessage
+	(*GuildRoutePlayerMessageReq)(nil), // 2: gserver.GuildRoutePlayerMessageReq
+	(*RoutePlayerMessageReq)(nil),      // 3: gserver.RoutePlayerMessageReq
+	(*anypb.Any)(nil),                  // 4: google.protobuf.Any
 }
 var file_route_proto_depIdxs = []int32{
-	3, // 0: gserver.RoutePlayerMessage.PacketData:type_name -> google.protobuf.Any
-	3, // 1: gserver.GuildRoutePlayerMessageReq.PacketData:type_name -> google.protobuf.Any
-	3, // 2: gserver.RoutePlayerMessageReq.PacketData:type_name -> google.protobuf.Any
+	4, // 0: gserver.RoutePlayerMessage.PacketData:type_name -> google.protobuf.Any
+	4, // 1: gserver.GuildRoutePlayerMessageReq.PacketData:type_name -> google.protobuf.Any
+	4, // 2: gserver.RoutePlayerMessageReq.PacketData:type_name -> google.protobuf.Any
 	3, // [3:3] is the sub-list for method output_type
 	3, // [3:3] is the sub-list for method input_type
 	3, // [3:3] is the sub-list for extension type_name
@@ -364,13 +420,14 @@ func file_route_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_route_proto_rawDesc), len(file_route_proto_rawDesc)),
-			NumEnums:      0,
+			NumEnums:      1,
 			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
 		GoTypes:           file_route_proto_goTypes,
 		DependencyIndexes: file_route_proto_depIdxs,
+		EnumInfos:         file_route_proto_enumTypes,
 		MessageInfos:      file_route_proto_msgTypes,
 	}.Build()
 	File_route_proto = out.File

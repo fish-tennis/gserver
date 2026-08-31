@@ -7,6 +7,7 @@ import (
 	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gentity/util"
 	"github.com/fish-tennis/gserver/game"
+	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/network"
 	"github.com/fish-tennis/gserver/pb"
 )
@@ -105,12 +106,12 @@ func (this *GuildJoinRequests) HandleGuildJoinAgreeReq(guildMessage *GuildMessag
 		if !game.AtomicSetGuildId(joinRequest.PlayerId, g.GetId(), 0) {
 			g.GetMembers().Remove(joinRequest.PlayerId)
 			// 通知申请者并发冲突
-			game.RoutePlayerPacket(joinRequest.PlayerId, network.NewPacket(&pb.GuildJoinReqOpResult{
+			internal.RoutePlayerPacket(joinRequest.PlayerId, network.NewPacket(&pb.GuildJoinReqOpResult{
 				GuildId:         g.GetId(),
 				ManagerPlayerId: guildMessage.fromPlayerId,
 				JoinPlayerId:    joinRequest.PlayerId,
 				IsAgree:         false,
-			}), game.WithSaveDb())
+			}), internal.WithSaveDb())
 			// 并发冲突时也要清理入会申请,否则该申请会残留在列表中,
 			// 导致玩家日后无法再次申请加入本公会(HandleGuildJoinReq 会判定 "already have a join request")
 			g.GetJoinRequests().Remove(req.JoinPlayerId)
@@ -118,20 +119,20 @@ func (this *GuildJoinRequests) HandleGuildJoinAgreeReq(guildMessage *GuildMessag
 		}
 		// 通知对方已经入会了
 		// 这里使用了WithSaveDb选项,如果玩家此时不在线,等他下次上线时,会收到该消息
-		game.RoutePlayerPacket(joinRequest.PlayerId, network.NewPacket(&pb.GuildJoinReqOpResult{
+		internal.RoutePlayerPacket(joinRequest.PlayerId, network.NewPacket(&pb.GuildJoinReqOpResult{
 			GuildId:         g.GetId(),
 			ManagerPlayerId: guildMessage.fromPlayerId,
 			JoinPlayerId:    joinRequest.PlayerId,
 			IsAgree:         true,
-		}), game.WithSaveDb())
+		}), internal.WithSaveDb())
 	} else {
 		// 拒绝入会申请,通知申请者
-		game.RoutePlayerPacket(joinRequest.PlayerId, network.NewPacket(&pb.GuildJoinReqOpResult{
+		internal.RoutePlayerPacket(joinRequest.PlayerId, network.NewPacket(&pb.GuildJoinReqOpResult{
 			GuildId:         g.GetId(),
 			ManagerPlayerId: guildMessage.fromPlayerId,
 			JoinPlayerId:    joinRequest.PlayerId,
 			IsAgree:         false,
-		}), game.WithSaveDb())
+		}), internal.WithSaveDb())
 	}
 	g.GetJoinRequests().Remove(req.JoinPlayerId)
 	return &pb.GuildJoinAgreeRes{

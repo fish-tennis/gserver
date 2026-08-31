@@ -6,7 +6,6 @@ import (
 
 	"github.com/fish-tennis/gentity"
 	. "github.com/fish-tennis/gnet"
-	"github.com/fish-tennis/gserver/game"
 	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/network"
 	"github.com/fish-tennis/gserver/pb"
@@ -84,7 +83,7 @@ func (this *Guild) processMessage(guildMessage *GuildMessage) {
 				if resProto == nil {
 					resProto = reflect.New(handlerInfo.ResMessageElem).Interface().(proto.Message)
 				}
-				this.RoutePlayerPacket(guildMessage, handlerInfo.ResCmd, resProto, game.WithError(resErr))
+				this.RoutePlayerPacket(guildMessage, handlerInfo.ResCmd, resProto, internal.WithError(resErr))
 			}
 			return
 		}
@@ -98,25 +97,25 @@ func (this *Guild) GetMember(playerId int64) *pb.GuildMemberData {
 
 // 路由玩家消息
 // this server -> other server -> player
-func (this *Guild) RoutePlayerPacket(guildMessage *GuildMessage, cmd any, message proto.Message, opts ...game.RouteOption) {
+func (this *Guild) RoutePlayerPacket(guildMessage *GuildMessage, cmd any, message proto.Message, opts ...internal.RoutePacketOption) {
 	routePacket := NewProtoPacketEx(cmd, message)
 	if protoPacket, ok := guildMessage.srcPacket.(*ProtoPacket); ok {
 		routePacket.SetRpcCallId(protoPacket.RpcCallId())
 	}
-	newOpts := make([]game.RouteOption, len(opts)+1)
+	newOpts := make([]internal.RoutePacketOption, len(opts)+1)
 	// 回消息时,使用来源连接,才能让rpc调用方收到结果
-	newOpts[0] = game.WithConnection(guildMessage.srcConnection)
+	newOpts[0] = internal.WithConnection(guildMessage.srcConnection)
 	for i, opt := range opts {
 		newOpts[i+1] = opt
 	}
-	game.RoutePlayerPacket(guildMessage.fromPlayerId, routePacket, newOpts...)
+	internal.RoutePlayerPacket(guildMessage.fromPlayerId, routePacket, newOpts...)
 }
 
 // 路由玩家消息,直接发给客户端
 // this server -> other server -> client
 func (this *Guild) RouteClientPacket(guildMessage *GuildMessage, message proto.Message) {
-	game.RoutePlayerPacket(guildMessage.fromPlayerId, network.NewPacket(message),
-		game.WithDirectSendClient(), game.WithConnection(guildMessage.srcConnection))
+	internal.RoutePlayerPacket(guildMessage.fromPlayerId, network.NewPacket(message),
+		internal.WithDirectSendClient(), internal.WithConnection(guildMessage.srcConnection))
 }
 
 // 广播公会消息
@@ -126,7 +125,7 @@ func (this *Guild) BroadcastPlayerPacket(message proto.Message) {
 	for _, member := range this.GetMembers().Data {
 		memberIds = append(memberIds, member.Id)
 	}
-	game.RoutePlayerPackets(memberIds, network.NewPacket(message))
+	internal.RoutePlayerPackets(memberIds, network.NewPacket(message))
 }
 
 // 广播公会消息,直接发给客户端
@@ -136,5 +135,5 @@ func (this *Guild) BroadcastClientPacket(message proto.Message) {
 	for _, member := range this.GetMembers().Data {
 		memberIds = append(memberIds, member.Id)
 	}
-	game.RoutePlayerPackets(memberIds, network.NewPacket(message), game.WithDirectSendClient())
+	internal.RoutePlayerPackets(memberIds, network.NewPacket(message), internal.WithDirectSendClient())
 }

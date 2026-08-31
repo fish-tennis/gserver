@@ -70,9 +70,12 @@ func (this *SocialServer) Exit() {
 }
 
 // 初始化数据库
+// NOTE: 顺序不可调整:先注册表,再Connect()(为已注册的表回填连接指针并创建唯一索引),
+// 最后SetDbMgr对外暴露;详见db包注册函数和gentity.MongoDb的注释
 func (this *SocialServer) initDb() {
 	// 使用mongodb来演示
 	mongoDb := gentity.NewMongoDb(this.GetConfig().Mongo.Uri, this.GetConfig().Mongo.Db)
+	// 注册表(必须在Connect()之前,分片策略见db包的统一注册函数)
 	// 玩家数据库(跨玩家协程实体保存玩家的简要数据时使用)
 	db.RegisterPlayerDb(mongoDb)
 	// 公会数据库
@@ -80,6 +83,7 @@ func (this *SocialServer) initDb() {
 	if !mongoDb.Connect() {
 		panic("connect db error")
 	}
+	// 对外暴露DbMgr(最后调用)
 	db.SetDbMgr(mongoDb)
 }
 
