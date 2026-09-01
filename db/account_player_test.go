@@ -54,7 +54,7 @@ func TestGenAccountPlayerKey_NoCollision(t *testing.T) {
 }
 
 // initAccountPlayerTestDb 为注册表测试初始化MongoDB(仅注册player_account集合)
-// 本地MongoDB不可用时跳过,避免CI环境因无DB而失败(与api包initPayApiTestDb同一模式)
+// 本地MongoDB不可用时跳过,避免CI环境因无DB而失败
 func initAccountPlayerTestDb(t *testing.T) {
 	t.Helper()
 	if GetDbMgr() != nil {

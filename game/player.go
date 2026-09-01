@@ -579,7 +579,7 @@ func (p *Player) processMessage(message *ProtoPacket) {
 
 // processRouteMessage 处理路由消息,执行handler后通过来源连接做rpc reply
 // 与processMessage不同:processMessage把结果发回玩家的客户端连接,
-// 而processRouteMessage把结果通过来源服务器连接做rpc reply,供apiserver等调用方获取执行结果
+// 而processRouteMessage把结果通过来源服务器连接做rpc reply,供other server等调用方获取执行结果
 func (p *Player) processRouteMessage(msg *PlayerRouteMessage) {
 	defer func() {
 		if err := recover(); err != nil {

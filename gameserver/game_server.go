@@ -140,7 +140,7 @@ func (s *GameServer) initDb() {
 	// 封禁记录数据库
 	db.RegisterBanDb(mongoDb)
 	// 账号区服注册表:建角防重的原子抢占集合(设计说明见db/account_player.go)。
-	// 只有GameServer处理建角,其余进程(api/pay/login)不访问该集合,无需注册
+	// 只有GameServer处理建角,其余进程(login)不访问该集合,无需注册
 	db.RegisterAccountPlayerDb(mongoDb)
 	if !mongoDb.Connect() {
 		panic("connect db error")
@@ -429,7 +429,7 @@ func (this *GameServer) onRoutePlayerMessage(connection Connection, packet Packe
 		return
 	}
 	pushed := true
-	if req.Options & int32(pb.RouteOption_RouteOption_DirectSendClient) != 0 {
+	if req.Options&int32(pb.RouteOption_RouteOption_DirectSendClient) != 0 {
 		// 不需要player处理的消息,投递到玩家协程内转发给客户端,避免跨协程读 p.connection
 		// 使用 TryPushMessage 非阻塞投递:channel 满时丢弃并告警,防止阻塞服务器间收包协程
 		pushed = player.TryPushMessage(&game.PlayerDirectSendMessage{Cmd: PacketCommand(uint16(req.PacketCommand)), Message: message})
