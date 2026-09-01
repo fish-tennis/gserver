@@ -21,6 +21,213 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// 区服状态
+type RegionStatus int32
+
+const (
+	RegionStatus_RegionStatus_Normal             RegionStatus = 0 // 流畅
+	RegionStatus_RegionStatus_Recommended        RegionStatus = 1 // 推荐
+	RegionStatus_RegionStatus_ClosedRegistration RegionStatus = 2 // 关闭注册新角色
+	RegionStatus_RegionStatus_OnlyWhiteList      RegionStatus = 3 // 维护:只能白名单进,一般用于内部验收
+)
+
+// Enum value maps for RegionStatus.
+var (
+	RegionStatus_name = map[int32]string{
+		0: "RegionStatus_Normal",
+		1: "RegionStatus_Recommended",
+		2: "RegionStatus_ClosedRegistration",
+		3: "RegionStatus_OnlyWhiteList",
+	}
+	RegionStatus_value = map[string]int32{
+		"RegionStatus_Normal":             0,
+		"RegionStatus_Recommended":        1,
+		"RegionStatus_ClosedRegistration": 2,
+		"RegionStatus_OnlyWhiteList":      3,
+	}
+)
+
+func (x RegionStatus) Enum() *RegionStatus {
+	p := new(RegionStatus)
+	*p = x
+	return p
+}
+
+func (x RegionStatus) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (RegionStatus) Descriptor() protoreflect.EnumDescriptor {
+	return file_login_proto_enumTypes[0].Descriptor()
+}
+
+func (RegionStatus) Type() protoreflect.EnumType {
+	return &file_login_proto_enumTypes[0]
+}
+
+func (x RegionStatus) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use RegionStatus.Descriptor instead.
+func (RegionStatus) EnumDescriptor() ([]byte, []int) {
+	return file_login_proto_rawDescGZIP(), []int{0}
+}
+
+// 区服信息
+type Region struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Id              int32                  `protobuf:"varint,1,opt,name=Id,proto3" json:"Id,omitempty"`                                   // 区服id
+	Name            string                 `protobuf:"bytes,2,opt,name=Name,proto3" json:"Name,omitempty"`                                // 区服名称
+	Status          RegionStatus           `protobuf:"varint,3,opt,name=Status,proto3,enum=gserver.RegionStatus" json:"Status,omitempty"` // 区服状态
+	CreateTimestamp int64                  `protobuf:"varint,4,opt,name=CreateTimestamp,proto3" json:"CreateTimestamp,omitempty"`         // 创建时间戳(秒)
+	UpdateTimestamp int64                  `protobuf:"varint,5,opt,name=UpdateTimestamp,proto3" json:"UpdateTimestamp,omitempty"`         // 最后一次修改的时间戳(秒)
+	OpenTimestamp   int64                  `protobuf:"varint,6,opt,name=OpenTimestamp,proto3" json:"OpenTimestamp,omitempty"`             // 开服时间戳(秒),0=不限制,开服时间前仅白名单账号可进入
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *Region) Reset() {
+	*x = Region{}
+	mi := &file_login_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Region) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Region) ProtoMessage() {}
+
+func (x *Region) ProtoReflect() protoreflect.Message {
+	mi := &file_login_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Region.ProtoReflect.Descriptor instead.
+func (*Region) Descriptor() ([]byte, []int) {
+	return file_login_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *Region) GetId() int32 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *Region) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *Region) GetStatus() RegionStatus {
+	if x != nil {
+		return x.Status
+	}
+	return RegionStatus_RegionStatus_Normal
+}
+
+func (x *Region) GetCreateTimestamp() int64 {
+	if x != nil {
+		return x.CreateTimestamp
+	}
+	return 0
+}
+
+func (x *Region) GetUpdateTimestamp() int64 {
+	if x != nil {
+		return x.UpdateTimestamp
+	}
+	return 0
+}
+
+func (x *Region) GetOpenTimestamp() int64 {
+	if x != nil {
+		return x.OpenTimestamp
+	}
+	return 0
+}
+
+// 账号在某区服的角色概要
+type RegionRoleInfo struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RegionId      int32                  `protobuf:"varint,1,opt,name=RegionId,proto3" json:"RegionId,omitempty"`    // 区服id
+	PlayerId      int64                  `protobuf:"varint,2,opt,name=PlayerId,proto3" json:"PlayerId,omitempty"`    // 角色id
+	PlayerName    string                 `protobuf:"bytes,3,opt,name=PlayerName,proto3" json:"PlayerName,omitempty"` // 角色名
+	Level         int32                  `protobuf:"varint,4,opt,name=Level,proto3" json:"Level,omitempty"`          // 角色等级
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RegionRoleInfo) Reset() {
+	*x = RegionRoleInfo{}
+	mi := &file_login_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RegionRoleInfo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RegionRoleInfo) ProtoMessage() {}
+
+func (x *RegionRoleInfo) ProtoReflect() protoreflect.Message {
+	mi := &file_login_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RegionRoleInfo.ProtoReflect.Descriptor instead.
+func (*RegionRoleInfo) Descriptor() ([]byte, []int) {
+	return file_login_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *RegionRoleInfo) GetRegionId() int32 {
+	if x != nil {
+		return x.RegionId
+	}
+	return 0
+}
+
+func (x *RegionRoleInfo) GetPlayerId() int64 {
+	if x != nil {
+		return x.PlayerId
+	}
+	return 0
+}
+
+func (x *RegionRoleInfo) GetPlayerName() string {
+	if x != nil {
+		return x.PlayerName
+	}
+	return ""
+}
+
+func (x *RegionRoleInfo) GetLevel() int32 {
+	if x != nil {
+		return x.Level
+	}
+	return 0
+}
+
 // 账号登录请求
 type LoginReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -34,7 +241,7 @@ type LoginReq struct {
 
 func (x *LoginReq) Reset() {
 	*x = LoginReq{}
-	mi := &file_login_proto_msgTypes[0]
+	mi := &file_login_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -46,7 +253,7 @@ func (x *LoginReq) String() string {
 func (*LoginReq) ProtoMessage() {}
 
 func (x *LoginReq) ProtoReflect() protoreflect.Message {
-	mi := &file_login_proto_msgTypes[0]
+	mi := &file_login_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -59,7 +266,7 @@ func (x *LoginReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LoginReq.ProtoReflect.Descriptor instead.
 func (*LoginReq) Descriptor() ([]byte, []int) {
-	return file_login_proto_rawDescGZIP(), []int{0}
+	return file_login_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *LoginReq) GetAccountName() string {
@@ -97,13 +304,17 @@ type LoginRes struct {
 	AccountId     int64                  `protobuf:"varint,2,opt,name=AccountId,proto3" json:"AccountId,omitempty"`
 	LoginSession  string                 `protobuf:"bytes,3,opt,name=LoginSession,proto3" json:"LoginSession,omitempty"` // 账号验证成功后的缓存session
 	GameServer    *GameServerInfo        `protobuf:"bytes,4,opt,name=GameServer,proto3" json:"GameServer,omitempty"`     // 游戏服信息
+	BanReason     string                 `protobuf:"bytes,5,opt,name=BanReason,proto3" json:"BanReason,omitempty"`       // 封禁原因（封禁时返回）
+	BanDeadline   int64                  `protobuf:"varint,6,opt,name=BanDeadline,proto3" json:"BanDeadline,omitempty"`  // 封禁截止时间戳（秒，0=永久封禁）（封禁时返回）
+	Regions       []*Region              `protobuf:"bytes,7,rep,name=Regions,proto3" json:"Regions,omitempty"`           // 区服列表
+	RegionRoles   []*RegionRoleInfo      `protobuf:"bytes,8,rep,name=RegionRoles,proto3" json:"RegionRoles,omitempty"`   // 该账号在各区服的角色概要
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *LoginRes) Reset() {
 	*x = LoginRes{}
-	mi := &file_login_proto_msgTypes[1]
+	mi := &file_login_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -115,7 +326,7 @@ func (x *LoginRes) String() string {
 func (*LoginRes) ProtoMessage() {}
 
 func (x *LoginRes) ProtoReflect() protoreflect.Message {
-	mi := &file_login_proto_msgTypes[1]
+	mi := &file_login_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -128,7 +339,7 @@ func (x *LoginRes) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LoginRes.ProtoReflect.Descriptor instead.
 func (*LoginRes) Descriptor() ([]byte, []int) {
-	return file_login_proto_rawDescGZIP(), []int{1}
+	return file_login_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *LoginRes) GetAccountName() string {
@@ -159,7 +370,35 @@ func (x *LoginRes) GetGameServer() *GameServerInfo {
 	return nil
 }
 
-// 注册账号
+func (x *LoginRes) GetBanReason() string {
+	if x != nil {
+		return x.BanReason
+	}
+	return ""
+}
+
+func (x *LoginRes) GetBanDeadline() int64 {
+	if x != nil {
+		return x.BanDeadline
+	}
+	return 0
+}
+
+func (x *LoginRes) GetRegions() []*Region {
+	if x != nil {
+		return x.Regions
+	}
+	return nil
+}
+
+func (x *LoginRes) GetRegionRoles() []*RegionRoleInfo {
+	if x != nil {
+		return x.RegionRoles
+	}
+	return nil
+}
+
+// 注册账号 TODO:AccountRegReq
 type AccountReg struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	AccountName   string                 `protobuf:"bytes,1,opt,name=AccountName,proto3" json:"AccountName,omitempty"`
@@ -170,7 +409,7 @@ type AccountReg struct {
 
 func (x *AccountReg) Reset() {
 	*x = AccountReg{}
-	mi := &file_login_proto_msgTypes[2]
+	mi := &file_login_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -182,7 +421,7 @@ func (x *AccountReg) String() string {
 func (*AccountReg) ProtoMessage() {}
 
 func (x *AccountReg) ProtoReflect() protoreflect.Message {
-	mi := &file_login_proto_msgTypes[2]
+	mi := &file_login_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -195,7 +434,7 @@ func (x *AccountReg) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AccountReg.ProtoReflect.Descriptor instead.
 func (*AccountReg) Descriptor() ([]byte, []int) {
-	return file_login_proto_rawDescGZIP(), []int{2}
+	return file_login_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *AccountReg) GetAccountName() string {
@@ -212,7 +451,7 @@ func (x *AccountReg) GetPassword() string {
 	return ""
 }
 
-// 注册账号回复
+// 注册账号回复 TODO:AccountRegRes
 type AccountRes struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	AccountName   string                 `protobuf:"bytes,1,opt,name=AccountName,proto3" json:"AccountName,omitempty"`
@@ -223,7 +462,7 @@ type AccountRes struct {
 
 func (x *AccountRes) Reset() {
 	*x = AccountRes{}
-	mi := &file_login_proto_msgTypes[3]
+	mi := &file_login_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -235,7 +474,7 @@ func (x *AccountRes) String() string {
 func (*AccountRes) ProtoMessage() {}
 
 func (x *AccountRes) ProtoReflect() protoreflect.Message {
-	mi := &file_login_proto_msgTypes[3]
+	mi := &file_login_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -248,7 +487,7 @@ func (x *AccountRes) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AccountRes.ProtoReflect.Descriptor instead.
 func (*AccountRes) Descriptor() ([]byte, []int) {
-	return file_login_proto_rawDescGZIP(), []int{3}
+	return file_login_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *AccountRes) GetAccountName() string {
@@ -276,7 +515,7 @@ type GameServerInfo struct {
 
 func (x *GameServerInfo) Reset() {
 	*x = GameServerInfo{}
-	mi := &file_login_proto_msgTypes[4]
+	mi := &file_login_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -288,7 +527,7 @@ func (x *GameServerInfo) String() string {
 func (*GameServerInfo) ProtoMessage() {}
 
 func (x *GameServerInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_login_proto_msgTypes[4]
+	mi := &file_login_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -301,7 +540,7 @@ func (x *GameServerInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GameServerInfo.ProtoReflect.Descriptor instead.
 func (*GameServerInfo) Descriptor() ([]byte, []int) {
-	return file_login_proto_rawDescGZIP(), []int{4}
+	return file_login_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *GameServerInfo) GetServerId() int32 {
@@ -332,7 +571,7 @@ type PlayerEntryGameReq struct {
 
 func (x *PlayerEntryGameReq) Reset() {
 	*x = PlayerEntryGameReq{}
-	mi := &file_login_proto_msgTypes[5]
+	mi := &file_login_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -344,7 +583,7 @@ func (x *PlayerEntryGameReq) String() string {
 func (*PlayerEntryGameReq) ProtoMessage() {}
 
 func (x *PlayerEntryGameReq) ProtoReflect() protoreflect.Message {
-	mi := &file_login_proto_msgTypes[5]
+	mi := &file_login_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -357,7 +596,7 @@ func (x *PlayerEntryGameReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PlayerEntryGameReq.ProtoReflect.Descriptor instead.
 func (*PlayerEntryGameReq) Descriptor() ([]byte, []int) {
-	return file_login_proto_rawDescGZIP(), []int{5}
+	return file_login_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *PlayerEntryGameReq) GetAccountId() int64 {
@@ -403,13 +642,15 @@ type PlayerEntryGameRes struct {
 	RegionId      int32                  `protobuf:"varint,3,opt,name=RegionId,proto3" json:"RegionId,omitempty"` // 区服id
 	PlayerName    string                 `protobuf:"bytes,4,opt,name=PlayerName,proto3" json:"PlayerName,omitempty"`
 	GameServerId  int32                  `protobuf:"varint,5,opt,name=GameServerId,proto3" json:"GameServerId,omitempty"` // game服Id,客户端重连时需要带上
+	BanReason     string                 `protobuf:"bytes,6,opt,name=BanReason,proto3" json:"BanReason,omitempty"`        // 封禁原因（封禁时返回）
+	BanDeadline   int64                  `protobuf:"varint,7,opt,name=BanDeadline,proto3" json:"BanDeadline,omitempty"`   // 封禁截止时间戳（秒，0=永久封禁）（封禁时返回）
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *PlayerEntryGameRes) Reset() {
 	*x = PlayerEntryGameRes{}
-	mi := &file_login_proto_msgTypes[6]
+	mi := &file_login_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -421,7 +662,7 @@ func (x *PlayerEntryGameRes) String() string {
 func (*PlayerEntryGameRes) ProtoMessage() {}
 
 func (x *PlayerEntryGameRes) ProtoReflect() protoreflect.Message {
-	mi := &file_login_proto_msgTypes[6]
+	mi := &file_login_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -434,7 +675,7 @@ func (x *PlayerEntryGameRes) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PlayerEntryGameRes.ProtoReflect.Descriptor instead.
 func (*PlayerEntryGameRes) Descriptor() ([]byte, []int) {
-	return file_login_proto_rawDescGZIP(), []int{6}
+	return file_login_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *PlayerEntryGameRes) GetAccountId() int64 {
@@ -472,6 +713,20 @@ func (x *PlayerEntryGameRes) GetGameServerId() int32 {
 	return 0
 }
 
+func (x *PlayerEntryGameRes) GetBanReason() string {
+	if x != nil {
+		return x.BanReason
+	}
+	return ""
+}
+
+func (x *PlayerEntryGameRes) GetBanDeadline() int64 {
+	if x != nil {
+		return x.BanDeadline
+	}
+	return 0
+}
+
 // 玩家重连游戏服
 type PlayerReconnectGameReq struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
@@ -487,7 +742,7 @@ type PlayerReconnectGameReq struct {
 
 func (x *PlayerReconnectGameReq) Reset() {
 	*x = PlayerReconnectGameReq{}
-	mi := &file_login_proto_msgTypes[7]
+	mi := &file_login_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -499,7 +754,7 @@ func (x *PlayerReconnectGameReq) String() string {
 func (*PlayerReconnectGameReq) ProtoMessage() {}
 
 func (x *PlayerReconnectGameReq) ProtoReflect() protoreflect.Message {
-	mi := &file_login_proto_msgTypes[7]
+	mi := &file_login_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -512,7 +767,7 @@ func (x *PlayerReconnectGameReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PlayerReconnectGameReq.ProtoReflect.Descriptor instead.
 func (*PlayerReconnectGameReq) Descriptor() ([]byte, []int) {
-	return file_login_proto_rawDescGZIP(), []int{7}
+	return file_login_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *PlayerReconnectGameReq) GetAccountId() int64 {
@@ -563,13 +818,15 @@ type PlayerReconnectGameRes struct {
 	AccountId     int64                  `protobuf:"varint,1,opt,name=AccountId,proto3" json:"AccountId,omitempty"`
 	PlayerId      int64                  `protobuf:"varint,2,opt,name=PlayerId,proto3" json:"PlayerId,omitempty"`
 	GameServerId  int32                  `protobuf:"varint,3,opt,name=GameServerId,proto3" json:"GameServerId,omitempty"` // game服Id
+	BanReason     string                 `protobuf:"bytes,4,opt,name=BanReason,proto3" json:"BanReason,omitempty"`        // 封禁原因（封禁时返回）
+	BanDeadline   int64                  `protobuf:"varint,5,opt,name=BanDeadline,proto3" json:"BanDeadline,omitempty"`   // 封禁截止时间戳（秒，0=永久封禁）（封禁时返回）
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *PlayerReconnectGameRes) Reset() {
 	*x = PlayerReconnectGameRes{}
-	mi := &file_login_proto_msgTypes[8]
+	mi := &file_login_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -581,7 +838,7 @@ func (x *PlayerReconnectGameRes) String() string {
 func (*PlayerReconnectGameRes) ProtoMessage() {}
 
 func (x *PlayerReconnectGameRes) ProtoReflect() protoreflect.Message {
-	mi := &file_login_proto_msgTypes[8]
+	mi := &file_login_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -594,7 +851,7 @@ func (x *PlayerReconnectGameRes) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PlayerReconnectGameRes.ProtoReflect.Descriptor instead.
 func (*PlayerReconnectGameRes) Descriptor() ([]byte, []int) {
-	return file_login_proto_rawDescGZIP(), []int{8}
+	return file_login_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *PlayerReconnectGameRes) GetAccountId() int64 {
@@ -618,6 +875,20 @@ func (x *PlayerReconnectGameRes) GetGameServerId() int32 {
 	return 0
 }
 
+func (x *PlayerReconnectGameRes) GetBanReason() string {
+	if x != nil {
+		return x.BanReason
+	}
+	return ""
+}
+
+func (x *PlayerReconnectGameRes) GetBanDeadline() int64 {
+	if x != nil {
+		return x.BanDeadline
+	}
+	return 0
+}
+
 // 创建角色
 type CreatePlayerReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -634,7 +905,7 @@ type CreatePlayerReq struct {
 
 func (x *CreatePlayerReq) Reset() {
 	*x = CreatePlayerReq{}
-	mi := &file_login_proto_msgTypes[9]
+	mi := &file_login_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -646,7 +917,7 @@ func (x *CreatePlayerReq) String() string {
 func (*CreatePlayerReq) ProtoMessage() {}
 
 func (x *CreatePlayerReq) ProtoReflect() protoreflect.Message {
-	mi := &file_login_proto_msgTypes[9]
+	mi := &file_login_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -659,7 +930,7 @@ func (x *CreatePlayerReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreatePlayerReq.ProtoReflect.Descriptor instead.
 func (*CreatePlayerReq) Descriptor() ([]byte, []int) {
-	return file_login_proto_rawDescGZIP(), []int{9}
+	return file_login_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *CreatePlayerReq) GetAccountId() int64 {
@@ -723,7 +994,7 @@ type CreatePlayerRes struct {
 
 func (x *CreatePlayerRes) Reset() {
 	*x = CreatePlayerRes{}
-	mi := &file_login_proto_msgTypes[10]
+	mi := &file_login_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -735,7 +1006,7 @@ func (x *CreatePlayerRes) String() string {
 func (*CreatePlayerRes) ProtoMessage() {}
 
 func (x *CreatePlayerRes) ProtoReflect() protoreflect.Message {
-	mi := &file_login_proto_msgTypes[10]
+	mi := &file_login_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -748,7 +1019,7 @@ func (x *CreatePlayerRes) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreatePlayerRes.ProtoReflect.Descriptor instead.
 func (*CreatePlayerRes) Descriptor() ([]byte, []int) {
-	return file_login_proto_rawDescGZIP(), []int{10}
+	return file_login_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *CreatePlayerRes) GetAccountId() int64 {
@@ -782,7 +1053,7 @@ type TestCmd struct {
 
 func (x *TestCmd) Reset() {
 	*x = TestCmd{}
-	mi := &file_login_proto_msgTypes[11]
+	mi := &file_login_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -794,7 +1065,7 @@ func (x *TestCmd) String() string {
 func (*TestCmd) ProtoMessage() {}
 
 func (x *TestCmd) ProtoReflect() protoreflect.Message {
-	mi := &file_login_proto_msgTypes[11]
+	mi := &file_login_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -807,7 +1078,7 @@ func (x *TestCmd) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TestCmd.ProtoReflect.Descriptor instead.
 func (*TestCmd) Descriptor() ([]byte, []int) {
-	return file_login_proto_rawDescGZIP(), []int{11}
+	return file_login_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *TestCmd) GetCmd() string {
@@ -827,7 +1098,7 @@ type TestRes struct {
 
 func (x *TestRes) Reset() {
 	*x = TestRes{}
-	mi := &file_login_proto_msgTypes[12]
+	mi := &file_login_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -839,7 +1110,7 @@ func (x *TestRes) String() string {
 func (*TestRes) ProtoMessage() {}
 
 func (x *TestRes) ProtoReflect() protoreflect.Message {
-	mi := &file_login_proto_msgTypes[12]
+	mi := &file_login_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -852,7 +1123,7 @@ func (x *TestRes) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TestRes.ProtoReflect.Descriptor instead.
 func (*TestRes) Descriptor() ([]byte, []int) {
-	return file_login_proto_rawDescGZIP(), []int{12}
+	return file_login_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *TestRes) GetResult() string {
@@ -866,19 +1137,37 @@ var File_login_proto protoreflect.FileDescriptor
 
 const file_login_proto_rawDesc = "" +
 	"\n" +
-	"\vlogin.proto\x12\agserver\x1a\fplayer.proto\"~\n" +
+	"\vlogin.proto\x12\agserver\x1a\fplayer.proto\"\xd5\x01\n" +
+	"\x06Region\x12\x0e\n" +
+	"\x02Id\x18\x01 \x01(\x05R\x02Id\x12\x12\n" +
+	"\x04Name\x18\x02 \x01(\tR\x04Name\x12-\n" +
+	"\x06Status\x18\x03 \x01(\x0e2\x15.gserver.RegionStatusR\x06Status\x12(\n" +
+	"\x0fCreateTimestamp\x18\x04 \x01(\x03R\x0fCreateTimestamp\x12(\n" +
+	"\x0fUpdateTimestamp\x18\x05 \x01(\x03R\x0fUpdateTimestamp\x12$\n" +
+	"\rOpenTimestamp\x18\x06 \x01(\x03R\rOpenTimestamp\"~\n" +
+	"\x0eRegionRoleInfo\x12\x1a\n" +
+	"\bRegionId\x18\x01 \x01(\x05R\bRegionId\x12\x1a\n" +
+	"\bPlayerId\x18\x02 \x01(\x03R\bPlayerId\x12\x1e\n" +
+	"\n" +
+	"PlayerName\x18\x03 \x01(\tR\n" +
+	"PlayerName\x12\x14\n" +
+	"\x05Level\x18\x04 \x01(\x05R\x05Level\"~\n" +
 	"\bLoginReq\x12 \n" +
 	"\vAccountName\x18\x01 \x01(\tR\vAccountName\x12\x1a\n" +
 	"\bPassword\x18\x02 \x01(\tR\bPassword\x12\x18\n" +
 	"\aVersion\x18\x03 \x01(\tR\aVersion\x12\x1a\n" +
-	"\bClientIp\x18\x04 \x01(\tR\bClientIp\"\xa7\x01\n" +
+	"\bClientIp\x18\x04 \x01(\tR\bClientIp\"\xcd\x02\n" +
 	"\bLoginRes\x12 \n" +
 	"\vAccountName\x18\x01 \x01(\tR\vAccountName\x12\x1c\n" +
 	"\tAccountId\x18\x02 \x01(\x03R\tAccountId\x12\"\n" +
 	"\fLoginSession\x18\x03 \x01(\tR\fLoginSession\x127\n" +
 	"\n" +
 	"GameServer\x18\x04 \x01(\v2\x17.gserver.GameServerInfoR\n" +
-	"GameServer\"J\n" +
+	"GameServer\x12\x1c\n" +
+	"\tBanReason\x18\x05 \x01(\tR\tBanReason\x12 \n" +
+	"\vBanDeadline\x18\x06 \x01(\x03R\vBanDeadline\x12)\n" +
+	"\aRegions\x18\a \x03(\v2\x0f.gserver.RegionR\aRegions\x129\n" +
+	"\vRegionRoles\x18\b \x03(\v2\x17.gserver.RegionRoleInfoR\vRegionRoles\"J\n" +
 	"\n" +
 	"AccountReg\x12 \n" +
 	"\vAccountName\x18\x01 \x01(\tR\vAccountName\x12\x1a\n" +
@@ -895,7 +1184,7 @@ const file_login_proto_rawDesc = "" +
 	"\fLoginSession\x18\x02 \x01(\tR\fLoginSession\x12\x1a\n" +
 	"\bRegionId\x18\x03 \x01(\x05R\bRegionId\x12\x18\n" +
 	"\aVersion\x18\x04 \x01(\tR\aVersion\x12\x1a\n" +
-	"\bClientIp\x18\x05 \x01(\tR\bClientIp\"\xae\x01\n" +
+	"\bClientIp\x18\x05 \x01(\tR\bClientIp\"\xee\x01\n" +
 	"\x12PlayerEntryGameRes\x12\x1c\n" +
 	"\tAccountId\x18\x01 \x01(\x03R\tAccountId\x12\x1a\n" +
 	"\bPlayerId\x18\x02 \x01(\x03R\bPlayerId\x12\x1a\n" +
@@ -903,18 +1192,22 @@ const file_login_proto_rawDesc = "" +
 	"\n" +
 	"PlayerName\x18\x04 \x01(\tR\n" +
 	"PlayerName\x12\"\n" +
-	"\fGameServerId\x18\x05 \x01(\x05R\fGameServerId\"\xd8\x01\n" +
+	"\fGameServerId\x18\x05 \x01(\x05R\fGameServerId\x12\x1c\n" +
+	"\tBanReason\x18\x06 \x01(\tR\tBanReason\x12 \n" +
+	"\vBanDeadline\x18\a \x01(\x03R\vBanDeadline\"\xd8\x01\n" +
 	"\x16PlayerReconnectGameReq\x12\x1c\n" +
 	"\tAccountId\x18\x01 \x01(\x03R\tAccountId\x12\x1a\n" +
 	"\bPlayerId\x18\x02 \x01(\x03R\bPlayerId\x12*\n" +
 	"\x10ReconnectSession\x18\x03 \x01(\tR\x10ReconnectSession\x12\x18\n" +
 	"\aVersion\x18\x04 \x01(\tR\aVersion\x12\"\n" +
 	"\fGameServerId\x18\x05 \x01(\x05R\fGameServerId\x12\x1a\n" +
-	"\bClientIp\x18\x06 \x01(\tR\bClientIp\"v\n" +
+	"\bClientIp\x18\x06 \x01(\tR\bClientIp\"\xb6\x01\n" +
 	"\x16PlayerReconnectGameRes\x12\x1c\n" +
 	"\tAccountId\x18\x01 \x01(\x03R\tAccountId\x12\x1a\n" +
 	"\bPlayerId\x18\x02 \x01(\x03R\bPlayerId\x12\"\n" +
-	"\fGameServerId\x18\x03 \x01(\x05R\fGameServerId\"\xd1\x01\n" +
+	"\fGameServerId\x18\x03 \x01(\x05R\fGameServerId\x12\x1c\n" +
+	"\tBanReason\x18\x04 \x01(\tR\tBanReason\x12 \n" +
+	"\vBanDeadline\x18\x05 \x01(\x03R\vBanDeadline\"\xd1\x01\n" +
 	"\x0fCreatePlayerReq\x12\x1c\n" +
 	"\tAccountId\x18\x01 \x01(\x03R\tAccountId\x12\"\n" +
 	"\fLoginSession\x18\x02 \x01(\tR\fLoginSession\x12\x1a\n" +
@@ -930,7 +1223,12 @@ const file_login_proto_rawDesc = "" +
 	"\aTestCmd\x12\x10\n" +
 	"\x03Cmd\x18\x01 \x01(\tR\x03Cmd\"!\n" +
 	"\aTestRes\x12\x16\n" +
-	"\x06Result\x18\x01 \x01(\tR\x06ResultB\x06Z\x04./pbb\x06proto3"
+	"\x06Result\x18\x01 \x01(\tR\x06Result*\x8a\x01\n" +
+	"\fRegionStatus\x12\x17\n" +
+	"\x13RegionStatus_Normal\x10\x00\x12\x1c\n" +
+	"\x18RegionStatus_Recommended\x10\x01\x12#\n" +
+	"\x1fRegionStatus_ClosedRegistration\x10\x02\x12\x1e\n" +
+	"\x1aRegionStatus_OnlyWhiteList\x10\x03B\x06Z\x04./pbb\x06proto3"
 
 var (
 	file_login_proto_rawDescOnce sync.Once
@@ -944,29 +1242,36 @@ func file_login_proto_rawDescGZIP() []byte {
 	return file_login_proto_rawDescData
 }
 
-var file_login_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
+var file_login_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_login_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
 var file_login_proto_goTypes = []any{
-	(*LoginReq)(nil),               // 0: gserver.LoginReq
-	(*LoginRes)(nil),               // 1: gserver.LoginRes
-	(*AccountReg)(nil),             // 2: gserver.AccountReg
-	(*AccountRes)(nil),             // 3: gserver.AccountRes
-	(*GameServerInfo)(nil),         // 4: gserver.GameServerInfo
-	(*PlayerEntryGameReq)(nil),     // 5: gserver.PlayerEntryGameReq
-	(*PlayerEntryGameRes)(nil),     // 6: gserver.PlayerEntryGameRes
-	(*PlayerReconnectGameReq)(nil), // 7: gserver.PlayerReconnectGameReq
-	(*PlayerReconnectGameRes)(nil), // 8: gserver.PlayerReconnectGameRes
-	(*CreatePlayerReq)(nil),        // 9: gserver.CreatePlayerReq
-	(*CreatePlayerRes)(nil),        // 10: gserver.CreatePlayerRes
-	(*TestCmd)(nil),                // 11: gserver.TestCmd
-	(*TestRes)(nil),                // 12: gserver.TestRes
+	(RegionStatus)(0),              // 0: gserver.RegionStatus
+	(*Region)(nil),                 // 1: gserver.Region
+	(*RegionRoleInfo)(nil),         // 2: gserver.RegionRoleInfo
+	(*LoginReq)(nil),               // 3: gserver.LoginReq
+	(*LoginRes)(nil),               // 4: gserver.LoginRes
+	(*AccountReg)(nil),             // 5: gserver.AccountReg
+	(*AccountRes)(nil),             // 6: gserver.AccountRes
+	(*GameServerInfo)(nil),         // 7: gserver.GameServerInfo
+	(*PlayerEntryGameReq)(nil),     // 8: gserver.PlayerEntryGameReq
+	(*PlayerEntryGameRes)(nil),     // 9: gserver.PlayerEntryGameRes
+	(*PlayerReconnectGameReq)(nil), // 10: gserver.PlayerReconnectGameReq
+	(*PlayerReconnectGameRes)(nil), // 11: gserver.PlayerReconnectGameRes
+	(*CreatePlayerReq)(nil),        // 12: gserver.CreatePlayerReq
+	(*CreatePlayerRes)(nil),        // 13: gserver.CreatePlayerRes
+	(*TestCmd)(nil),                // 14: gserver.TestCmd
+	(*TestRes)(nil),                // 15: gserver.TestRes
 }
 var file_login_proto_depIdxs = []int32{
-	4, // 0: gserver.LoginRes.GameServer:type_name -> gserver.GameServerInfo
-	1, // [1:1] is the sub-list for method output_type
-	1, // [1:1] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	0, // 0: gserver.Region.Status:type_name -> gserver.RegionStatus
+	7, // 1: gserver.LoginRes.GameServer:type_name -> gserver.GameServerInfo
+	1, // 2: gserver.LoginRes.Regions:type_name -> gserver.Region
+	2, // 3: gserver.LoginRes.RegionRoles:type_name -> gserver.RegionRoleInfo
+	4, // [4:4] is the sub-list for method output_type
+	4, // [4:4] is the sub-list for method input_type
+	4, // [4:4] is the sub-list for extension type_name
+	4, // [4:4] is the sub-list for extension extendee
+	0, // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_login_proto_init() }
@@ -980,13 +1285,14 @@ func file_login_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_login_proto_rawDesc), len(file_login_proto_rawDesc)),
-			NumEnums:      0,
-			NumMessages:   13,
+			NumEnums:      1,
+			NumMessages:   15,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
 		GoTypes:           file_login_proto_goTypes,
 		DependencyIndexes: file_login_proto_depIdxs,
+		EnumInfos:         file_login_proto_enumTypes,
 		MessageInfos:      file_login_proto_msgTypes,
 	}.Build()
 	File_login_proto = out.File

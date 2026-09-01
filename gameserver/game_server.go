@@ -51,7 +51,6 @@ func (this *GameServer) Init(ctx context.Context, configFile string) bool {
 
 	game.InitPlayerStructAndHandler()
 	// 其他模块初始化接口
-	// 公会等跨玩家协程实体已迁移至独立的social服务器进程
 	this.AddServerHook(&game.Hook{})
 
 	this.initDb()
@@ -64,6 +63,10 @@ func (this *GameServer) Init(ctx context.Context, configFile string) bool {
 			slog.Info("GameServer config reloaded")
 		}
 	})
+	// 预加载区服数据到内存缓存并订阅变更通知(订阅逻辑已收敛在InitRegionCache内部)
+	if err := InitRegionCache(this.GetContext()); err != nil {
+		slog.Error("InitRegionCache failed", "error", err)
+	}
 	this.initNetwork()
 	// 初始化DB操作协程池,将进游/创角等含DB查询的请求从收包goroutine卸载
 	InitDbWorkerPool()
@@ -134,6 +137,8 @@ func (s *GameServer) initDb() {
 	// KvDb形态的Key唯一索引由Connect自动创建(闭合KvDb.Inc的upsert并发竞态)
 	db.RegisterGlobalEntityDb(mongoDb)
 	db.RegisterGlobalKvDb(mongoDb)
+	// 封禁记录数据库
+	db.RegisterBanDb(mongoDb)
 	// 账号区服注册表:建角防重的原子抢占集合(设计说明见db/player_account.go)。
 	// 只有GameServer处理建角,其余进程(api/pay/login)不访问该集合,无需注册
 	db.RegisterPlayerAccountDb(mongoDb)

@@ -334,6 +334,83 @@ func (x *ServerHello) GetServerType() string {
 	return ""
 }
 
+// 封禁记录,存储在MongoDB ban collection中
+type BanRecord struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TargetId      int64                  `protobuf:"varint,1,opt,name=TargetId,proto3" json:"TargetId,omitempty"`     // 封禁目标id（accountId或playerId）
+	TargetType    int32                  `protobuf:"varint,2,opt,name=TargetType,proto3" json:"TargetType,omitempty"` // 1=账号, 2=玩家
+	BanTime       int64                  `protobuf:"varint,3,opt,name=BanTime,proto3" json:"BanTime,omitempty"`       // 封禁时间戳（秒）
+	Duration      int64                  `protobuf:"varint,4,opt,name=Duration,proto3" json:"Duration,omitempty"`     // 封禁时长（秒），0=永久
+	Reason        string                 `protobuf:"bytes,5,opt,name=Reason,proto3" json:"Reason,omitempty"`          // 封禁原因
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BanRecord) Reset() {
+	*x = BanRecord{}
+	mi := &file_server_base_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BanRecord) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BanRecord) ProtoMessage() {}
+
+func (x *BanRecord) ProtoReflect() protoreflect.Message {
+	mi := &file_server_base_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BanRecord.ProtoReflect.Descriptor instead.
+func (*BanRecord) Descriptor() ([]byte, []int) {
+	return file_server_base_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *BanRecord) GetTargetId() int64 {
+	if x != nil {
+		return x.TargetId
+	}
+	return 0
+}
+
+func (x *BanRecord) GetTargetType() int32 {
+	if x != nil {
+		return x.TargetType
+	}
+	return 0
+}
+
+func (x *BanRecord) GetBanTime() int64 {
+	if x != nil {
+		return x.BanTime
+	}
+	return 0
+}
+
+func (x *BanRecord) GetDuration() int64 {
+	if x != nil {
+		return x.Duration
+	}
+	return 0
+}
+
+func (x *BanRecord) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
 var File_server_base_proto protoreflect.FileDescriptor
 
 const file_server_base_proto_rawDesc = "" +
@@ -364,7 +441,15 @@ const file_server_base_proto_rawDesc = "" +
 	"\bServerId\x18\x01 \x01(\x05R\bServerId\x12\x1e\n" +
 	"\n" +
 	"ServerType\x18\x02 \x01(\tR\n" +
-	"ServerTypeB\x06Z\x04./pbb\x06proto3"
+	"ServerType\"\x95\x01\n" +
+	"\tBanRecord\x12\x1a\n" +
+	"\bTargetId\x18\x01 \x01(\x03R\bTargetId\x12\x1e\n" +
+	"\n" +
+	"TargetType\x18\x02 \x01(\x05R\n" +
+	"TargetType\x12\x18\n" +
+	"\aBanTime\x18\x03 \x01(\x03R\aBanTime\x12\x1a\n" +
+	"\bDuration\x18\x04 \x01(\x03R\bDuration\x12\x16\n" +
+	"\x06Reason\x18\x05 \x01(\tR\x06ReasonB\x06Z\x04./pbb\x06proto3"
 
 var (
 	file_server_base_proto_rawDescOnce sync.Once
@@ -378,13 +463,14 @@ func file_server_base_proto_rawDescGZIP() []byte {
 	return file_server_base_proto_rawDescData
 }
 
-var file_server_base_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_server_base_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_server_base_proto_goTypes = []any{
 	(*ServerInfo)(nil),       // 0: gserver.ServerInfo
 	(*KickPlayerReq)(nil),    // 1: gserver.KickPlayerReq
 	(*KickPlayerRes)(nil),    // 2: gserver.KickPlayerRes
 	(*ClientDisconnect)(nil), // 3: gserver.ClientDisconnect
 	(*ServerHello)(nil),      // 4: gserver.ServerHello
+	(*BanRecord)(nil),        // 5: gserver.BanRecord
 }
 var file_server_base_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type
@@ -405,7 +491,7 @@ func file_server_base_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_server_base_proto_rawDesc), len(file_server_base_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   5,
+			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

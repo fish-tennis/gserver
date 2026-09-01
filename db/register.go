@@ -7,7 +7,7 @@ import (
 // 集合注册统一入口
 //
 // 设计目的:把每个集合的"分片策略+唯一键"固化在db包这一处,
-// 各服务器(gameserver/loginserver/apiserver/payserver)的initDb只调用这里的函数组合,
+// 各服务器(gameserver/loginserver)的initDb只调用这里的函数组合,
 // 避免不同进程对同一集合传入不同的ShardKeyType导致元数据互相覆盖。
 
 // RegisterPlayerDb 注册player集合(全项目唯一分片集合)
@@ -56,6 +56,12 @@ func RegisterGlobalKvDb(mongoDb *gentity.MongoDb) gentity.KvDb {
 	return mongoDb.RegisterKvDb(GlobalDbName, gentity.ShardKeyNone, GlobalDbKeyName, GlobalDbValueName)
 }
 
+// RegisterBanDb 注册封禁记录集合(不分片)
+//
+// _id={accountId}_{regionId}复合键:同一账号区服维度的封禁记录唯一。
+func RegisterBanDb(mongoDb *gentity.MongoDb) gentity.EntityDb {
+	return mongoDb.RegisterEntityDb(BanDbName, gentity.ShardKeyNone, UniqueIdName)
+}
 // RegisterPlayerAccountDb 注册账号区服注册表(不分片)
 //
 // _id={accountId}_{regionId}(业务复合键):建角防重的原子抢占集合,

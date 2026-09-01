@@ -5,10 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/fish-tennis/gentity"
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
+	"github.com/fish-tennis/gserver/cfg"
 	"github.com/fish-tennis/gserver/db"
 	. "github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/network"
@@ -51,8 +53,23 @@ func (this *LoginServer) Init(ctx context.Context, configFile string) bool {
 	if !this.BaseServer.Init(ctx, configFile) {
 		return false
 	}
+	// 加载配置数据,用于读取GlobalCfg等策划配置
+	if err := cfg.Load(this.GetCfgDir(), nil); err != nil {
+		panic(fmt.Sprintf("LoginServer loadCfgs:%v", err))
+	}
+	// 启动加载成功后建立md5快照,首次热更即走增量路径(见cfg/reload.go)
+	cfg.InitMd5Snapshot(this.GetCfgDir())
 	this.initDb()
 	this.initCache()
+	// 订阅热更配置通知,收到通知后按md5快照diff选择性重载本进程配置表
+	cache.SubscribeReloadConfig(this.GetContext(), func() {
+		if err := cfg.Reload(this.GetCfgDir()); err != nil {
+			slog.Error("LoginServer reload config failed", "error", err)
+		} else {
+			slog.Info("LoginServer config reloaded")
+		}
+	})
+	this.initRegions()
 	this.initNetwork()
 	// 初始化DB操作协程池,将登录/注册等含DB查询的请求从收包goroutine卸载
 	InitDbWorkerPool()
@@ -87,11 +104,10 @@ func (this *LoginServer) initDb() {
 	mongoDb := gentity.NewMongoDb(this.GetConfig().Mongo.Uri, this.GetConfig().Mongo.Db)
 	// 账号数据库(不分片)
 	// _id=账号名(uniqueId=Name):账号名唯一性由不分片集合的_id主键在数据库层全局原子保证。
-	// 之前_id=KV自增账号ID时,分片集群上无法创建Name唯一索引(MongoDB要求分片集合的
-	// 唯一索引必须以分片键为前缀),并发同名注册会路由到不同shard双双插入成功(同名双账号);
 	// 业务账号ID改存Id字段(仍由KV自增分配),登录/封禁/在线状态等业务继续以Id为准。
-	// NOTE:存量旧格式文档(_id=数字ID,无Id字段)不兼容新逻辑,上线前需清表重建或迁移
 	this.accountDb = db.RegisterAccountDb(mongoDb)
+	// 封禁记录数据库
+	db.RegisterBanDb(mongoDb)
 	// 玩家数据库,用于登录时查询账号在各区服的角色信息
 	db.RegisterPlayerDb(mongoDb)
 	// global同时注册为EntityDb和KvDb,以便initRegions可以直接用Collection操作;
@@ -139,6 +155,66 @@ func (this *LoginServer) initNetwork() {
 	}
 	this.GetServerList().SetCache(cache.Get())
 	this.BaseServer.GetServerList().SetFetchServerTypes(ServerType_Game)
+}
+
+// 启动时初始化区服数据:如果MongoDB中无任何区服则创建默认区服,然后加载进程内存快照
+// 区服数据以BSON明文格式存储在global集合中,key="Regions";
+// LoginServer只承担"首次建区"的写路径,快照加载/订阅刷新统一走internal.InitRegionCache
+func (this *LoginServer) initRegions() {
+	// MongoDB为区服数据唯一源,读取统一收敛到db.LoadAllRegions
+	// (文档不存在或Value缺失时返回空map,nil error,与首次启动语义一致)
+	regions, err := db.LoadAllRegions()
+	if err != nil {
+		panic(fmt.Sprintf("initRegions load err:%v", err))
+	}
+	slog.Info("initRegions loaded", "count", len(regions))
+	if len(regions) == 0 {
+		// 首次启动,创建默认区服
+		now := time.Now().Unix()
+		defaultRegion := &pb.Region{
+			Id:              1,
+			Name:            "默认区服",
+			Status:          pb.RegionStatus_RegionStatus_Normal,
+			CreateTimestamp: now,
+			UpdateTimestamp: now,
+		}
+		regions[defaultRegion.Id] = defaultRegion
+		// 以BSON明文map格式保存到mongodb,key=区服id
+		regionDocs := make(bson.M, len(regions))
+		for id, r := range regions {
+			regionDocs[fmt.Sprintf("%v", id)] = bson.M{
+				"Id":              r.Id,
+				"Name":            r.Name,
+				"Status":          int32(r.Status),
+				"CreateTimestamp": r.CreateTimestamp,
+				"UpdateTimestamp": r.UpdateTimestamp,
+			}
+		}
+		doc := bson.M{
+			db.GlobalDbKeyName:   db.RegionsKeyName,
+			db.GlobalDbValueName: regionDocs,
+		}
+		// 首次建区的写路径仍直接操作global集合整份插入(读取已收敛到db.LoadAllRegions)
+		mongoCol := db.GetGlobalDb().(*gentity.MongoCollection)
+		_, err = mongoCol.GetCollection().InsertOne(context.Background(), doc)
+		if err != nil {
+			panic(fmt.Sprintf("initRegions insert default region err:%v", err))
+		}
+		slog.Info("initRegions created default region", "id", defaultRegion.Id, "name", defaultRegion.Name)
+		// 建区后发布变更通知:正常部署顺序下其他进程尚未启动(无订阅者,PUBLISH不是错误),
+		// 但若GameServer先于LoginServer启动,其快照此时为空map,靠这条通知立即补齐,
+		// 不必等到下一次GM区服变更或进程重启
+		if err := cache.PublishRegionUpdate(context.Background(), defaultRegion.Id); err != nil {
+			// 发布失败仅记日志:本进程随后的InitRegionCache会读到刚插入的数据,
+			// 受影响的只是可能已在运行的其他进程,它们重启后自然纠正
+			slog.Error("initRegions publish default region failed",
+				"regionId", defaultRegion.Id, "error", err)
+		}
+	}
+	// 加载进程内存快照并订阅后续变更通知(与GameServer共用internal的同一套快照)
+	if err := InitRegionCache(this.GetContext()); err != nil {
+		panic(fmt.Sprintf("initRegions InitRegionCache err:%v", err))
+	}
 }
 
 // AccountSaveData 构建账号文档的存储数据(自建注册与SDK开户共用,保证字段口径一致)

@@ -39,3 +39,12 @@ message ServerHello {
   int32 ServerId = 1; // 服务器id
   string ServerType = 2; // 服务器类型
 }
+
+// 封禁记录,存储在MongoDB ban collection中
+message BanRecord {
+  int64 TargetId = 1;   // 封禁目标id（accountId或playerId）
+  int32 TargetType = 2; // 1=账号, 2=玩家
+  int64 BanTime = 3;    // 封禁时间戳（秒）
+  int64 Duration = 4;   // 封禁时长（秒），0=永久
+  string Reason = 5;    // 封禁原因
+}

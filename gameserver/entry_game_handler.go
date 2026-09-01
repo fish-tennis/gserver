@@ -1,6 +1,7 @@
 package gameserver
 
 import (
+	"unicode/utf8"
 	"log/slog"
 	"time"
 	"strings"
@@ -77,7 +78,7 @@ func processPlayerEntryGameReq(connection Connection, packet Packet, req *pb.Pla
 	}
 	accountId := req.GetAccountId()
 	// 验证LoginSession
-	if !cache.VerifyLoginSession(accountId, req.GetLoginSession()) {
+	if ok, _ := cache.VerifyLoginSession(accountId, req.GetLoginSession()); !ok {
 		errorCode = pb.ErrorCode_ErrorCode_SessionError
 		return
 	}
@@ -90,6 +91,31 @@ func processPlayerEntryGameReq(connection Connection, packet Packet, req *pb.Pla
 	}
 	if playerId == 0 {
 		errorCode = pb.ErrorCode_ErrorCode_NoPlayer
+		return
+	}
+	// 检查服务器维护状态:维护中仅白名单账号可进入
+	if cache.IsMaintenanceMode() && !cache.IsWhitelistedAccount(accountId) {
+		errorCode = pb.ErrorCode_ErrorCode_Maintenance
+		return
+	}
+	// 检查区服维护状态:OnlyWhiteList 状态下仅白名单账号可进入
+	// 区服数据改从internal内存快照读取(区服唯一源已收敛为MongoDB,启动时预加载+通知刷新);
+	// err != nil 表示区服不在快照中,跳过区服维护检查,保持原先查询Redis缓存返回nil时的语义
+	if region, err := internal.GetRegion(req.GetRegionId()); err == nil {
+		if region.Status == pb.RegionStatus_RegionStatus_OnlyWhiteList && !cache.IsWhitelistedAccount(accountId) {
+			errorCode = pb.ErrorCode_ErrorCode_Maintenance
+			return
+		}
+	}
+	// 检查玩家是否被封禁
+	if banRecord := db.GetBanRecord(db.BanTargetTypePlayer, playerId); banRecord != nil {
+		res.BanReason = banRecord.GetReason()
+		if banRecord.Duration == 0 {
+			res.BanDeadline = 0 // 永久封禁
+		} else {
+			res.BanDeadline = banRecord.BanTime + banRecord.Duration
+		}
+		errorCode = pb.ErrorCode_ErrorCode_Banned
 		return
 	}
 	// 检查该账号是否已经有对应的在线玩家
@@ -210,6 +236,32 @@ func onPlayerReconnectGameReq(connection Connection, packet Packet) {
 		slog.Debug("onPlayerReconnectGameReq player nil", "playerId", req.PlayerId)
 		return
 	}
+	// 检查服务器维护状态:维护中仅白名单账号可重连
+	// 重连和进游一样需要拦截维护,否则被封禁/维护中的玩家可通过保留期内重连绕过限制
+	if cache.IsMaintenanceMode() && !cache.IsWhitelistedAccount(req.GetAccountId()) {
+		network.SendPacketAdaptWithError(connection, packet, &pb.PlayerReconnectGameRes{
+			AccountId: req.AccountId,
+			PlayerId:  req.PlayerId,
+		}, int32(pb.ErrorCode_ErrorCode_Maintenance))
+		slog.Debug("onPlayerReconnectGameReq maintenance", "playerId", req.PlayerId)
+		return
+	}
+	// 检查玩家是否被封禁:重连时也需要拦截,防止被封禁玩家利用保留期内重连绕过封禁
+	if banRecord := db.GetBanRecord(db.BanTargetTypePlayer, req.GetPlayerId()); banRecord != nil {
+		res := &pb.PlayerReconnectGameRes{
+			AccountId: req.AccountId,
+			PlayerId:  req.PlayerId,
+			BanReason: banRecord.GetReason(),
+		}
+		if banRecord.Duration == 0 {
+			res.BanDeadline = 0 // 永久封禁
+		} else {
+			res.BanDeadline = banRecord.BanTime + banRecord.Duration
+		}
+		network.SendPacketAdaptWithError(connection, packet, res, int32(pb.ErrorCode_ErrorCode_Banned))
+		slog.Debug("onPlayerReconnectGameReq banned", "playerId", req.PlayerId)
+		return
+	}
 	// 投递到玩家协程执行,重连的校验、绑定连接、响应发送都在玩家协程内串行处理
 	if !player.OnReconnect(connection, network.IsGatePacket(packet), req.GetReconnectSession(), packet) {
 		network.SendPacketAdaptWithError(connection, packet, &pb.PlayerReconnectGameRes{
@@ -268,9 +320,55 @@ func processCreatePlayerReq(connection Connection, packet Packet, req *pb.Create
 		errorCode = pb.ErrorCode_ErrorCode_HasLogin
 		return
 	}
-	// 验证LoginSession
-	if !cache.VerifyLoginSession(req.GetAccountId(), req.GetLoginSession()) {
+	// 验证LoginSession,并从session缓存中取得账号名(LoginServer生成session时一并存入,免去MongoDB账号表查询)
+	sessionOk, _ := cache.VerifyLoginSession(req.GetAccountId(), req.GetLoginSession())
+	if !sessionOk {
 		errorCode = pb.ErrorCode_ErrorCode_SessionError
+		return
+	}
+	// 检查服务器维护状态:维护中仅白名单账号可操作
+	if cache.IsMaintenanceMode() && !cache.IsWhitelistedAccount(req.GetAccountId()) {
+		errorCode = pb.ErrorCode_ErrorCode_Maintenance
+		return
+	}
+	// 检查账号是否被封禁:创角时还没有角色,检查账号级封禁
+	if banRecord := db.GetBanRecord(db.BanTargetTypeAccount, req.GetAccountId()); banRecord != nil {
+		errorCode = pb.ErrorCode_ErrorCode_Banned
+		return
+	}
+	// 检查区服状态:区服数据必须存在于internal内存快照中,否则视为非法区服
+	// ClosedRegistration 状态下禁止新建角色;OnlyWhiteList(维护)状态下仅白名单可操作
+	region, err := internal.GetRegion(req.GetRegionId())
+	if err != nil {
+		slog.Warn("processCreatePlayerReq region not found", "regionId", req.GetRegionId())
+		errorCode = pb.ErrorCode_ErrorCode_RegionIdError
+		return
+	}
+	if region.Status == pb.RegionStatus_RegionStatus_ClosedRegistration {
+		errorCode = pb.ErrorCode_ErrorCode_RegionClosedRegistration
+		return
+	}
+	if region.Status == pb.RegionStatus_RegionStatus_OnlyWhiteList && !cache.IsWhitelistedAccount(req.GetAccountId()) {
+		errorCode = pb.ErrorCode_ErrorCode_Maintenance
+		return
+	}
+	// 本地基础校验:去空后为空或rune字符数不在1~12范围则拒绝
+	// 用rune计数而非字节len():角色名含中文等多字节字符时应按视觉字符数限制
+	// (纯空格名去空后rune数为0,同样落入<1分支)
+	if nameLen := utf8.RuneCountInString(trimmed); nameLen < 1 || nameLen > 12 {
+		errorCode = pb.ErrorCode_ErrorCode_NameInvalid
+		return
+	}
+	// player表预检查:该账号在此区服已有角色则直接拒绝
+	// NOTE:注册位在建角成功后即被删除(见下方"建角成功后释放注册位"),
+	// 存在性判断不能依赖注册表,必须以player表的持久事实为准;
+	// 此检查同时挡住"建角成功后客户端重复请求/重试"导致的第二角色
+	if existPlayerId, findErr := db.GetPlayerDb().FindPlayerIdByAccountId(req.GetAccountId(), req.GetRegionId()); findErr != nil {
+		errorCode = pb.ErrorCode_ErrorCode_DbErr
+		slog.Error("FindPlayerIdByAccountId error", "error", findErr, "accountId", req.GetAccountId(), "regionId", req.GetRegionId())
+		return
+	} else if existPlayerId != 0 {
+		errorCode = pb.ErrorCode_ErrorCode_PlayerAlreadyExist
 		return
 	}
 	newPlayerIdValue, err := db.GetKvDb().Inc(db.PlayerIdKeyName, int64(1), true)

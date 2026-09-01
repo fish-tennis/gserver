@@ -36,7 +36,6 @@ type Player struct {
 	accountId int64
 	// 区服id
 	regionId int32
-	//accountName string
 	// 是否使用网关
 	useGate bool
 	// 关联的连接,如果是网关模式,就是网关的连接

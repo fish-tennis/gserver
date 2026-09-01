@@ -57,6 +57,7 @@ func (b *BaseInfo) SyncDataToClient() {
 
 func (b *BaseInfo) IncExp(incExp int32) {
 	oldLevel := b.Data.Level
+	oldExp := b.Data.Exp
 	// 防溢出:incExp 为负数时不允许低于 0;上限钳制到 MaxInt32 防止 int32 截断为负数
 	newExp := int64(b.Data.Exp) + int64(incExp)
 	if newExp < 0 {
@@ -76,6 +77,10 @@ func (b *BaseInfo) IncExp(incExp int32) {
 			}
 		}
 		break
+	}
+	// 经验或等级无实际变化时不落盘、不推送(避免无效的全量同步)
+	if b.Data.Exp == oldExp && b.Data.Level == oldLevel {
+		return
 	}
 	slog.Debug("BaseInfo.IncExp", "playerId", b.GetPlayerId(), "exp", b.Data.Exp, "level", b.Data.Level)
 	if oldLevel != b.Data.Level {
@@ -134,12 +139,11 @@ func (b *BaseInfo) GenerateReconnectSession() {
 	b.SetDirty()
 }
 
-// 校验重连session是否有效
+
+// VerifyReconnectSession 校验客户端传入的重连session是否与服务器记录一致
+// session为空或不匹配都返回false
 func (b *BaseInfo) VerifyReconnectSession(session string) bool {
-	if session == "" {
-		return false
-	}
-	return b.Data.ReconnectSession == session
+	return session != "" && b.Data.ReconnectSession == session
 }
 
 // GetCreateDayCount 返回建号天数(建号当天返回1)

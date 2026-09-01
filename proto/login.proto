@@ -6,6 +6,32 @@ import "player.proto";
 
 package gserver;
 
+// 区服状态
+enum RegionStatus {
+  RegionStatus_Normal = 0; // 流畅
+  RegionStatus_Recommended = 1; // 推荐
+  RegionStatus_ClosedRegistration = 2; // 关闭注册新角色
+  RegionStatus_OnlyWhiteList = 3; // 维护:只能白名单进,一般用于内部验收
+}
+
+// 区服信息
+message Region {
+  int32 Id = 1; // 区服id
+  string Name = 2; // 区服名称
+  RegionStatus Status = 3; // 区服状态
+  int64 CreateTimestamp = 4; // 创建时间戳(秒)
+  int64 UpdateTimestamp = 5; // 最后一次修改的时间戳(秒)
+  int64 OpenTimestamp = 6; // 开服时间戳(秒),0=不限制,开服时间前仅白名单账号可进入
+}
+
+// 账号在某区服的角色概要
+message RegionRoleInfo {
+  int32 RegionId = 1; // 区服id
+  int64 PlayerId = 2; // 角色id
+  string PlayerName = 3; // 角色名
+  int32 Level = 4; // 角色等级
+}
+
 // 账号登录请求
 message LoginReq {
   string AccountName = 1;
@@ -20,15 +46,19 @@ message LoginRes {
   int64 AccountId = 2;
   string LoginSession = 3; // 账号验证成功后的缓存session
   GameServerInfo GameServer = 4; // 游戏服信息
+  string BanReason = 5;   // 封禁原因（封禁时返回）
+  int64 BanDeadline = 6;  // 封禁截止时间戳（秒，0=永久封禁）（封禁时返回）
+  repeated Region Regions = 7; // 区服列表
+  repeated RegionRoleInfo RegionRoles = 8; // 该账号在各区服的角色概要
 }
 
-// 注册账号
+// 注册账号 TODO:AccountRegReq
 message AccountReg {
   string AccountName = 1;
   string Password = 2;
 }
 
-// 注册账号回复
+// 注册账号回复 TODO:AccountRegRes
 message AccountRes {
   string AccountName = 1;
   int64 AccountId = 2;
@@ -56,6 +86,8 @@ message PlayerEntryGameRes {
   int32 RegionId = 3; // 区服id
   string PlayerName = 4;
   int32 GameServerId = 5; // game服Id,客户端重连时需要带上
+  string BanReason = 6;   // 封禁原因（封禁时返回）
+  int64 BanDeadline = 7;  // 封禁截止时间戳（秒，0=永久封禁）（封禁时返回）
 }
 
 // 玩家重连游戏服
@@ -73,8 +105,9 @@ message PlayerReconnectGameRes {
   int64 AccountId = 1;
   int64 PlayerId = 2;
   int32 GameServerId = 3; // game服Id
+  string BanReason = 4;   // 封禁原因（封禁时返回）
+  int64 BanDeadline = 5;  // 封禁截止时间戳（秒，0=永久封禁）（封禁时返回）
 }
-
 
 // 创建角色
 message CreatePlayerReq {

@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"log/slog"
+	"strings"
 	"time"
 
 	"strconv"
@@ -23,10 +24,16 @@ func keyLoginSession(accountId int64) string {
 
 // NewLoginSession 新生成一个登录session
 // 使用 crypto/rand 生成不可预测的随机 token,防止攻击者通过时间戳猜测 session 伪造登录
+//
+// Redis存储值格式: {session}:{accountName}
+// 把accountName一并存入session缓存,GameServer创角时可直接从session验证中取得账号名,
+// 分隔符用":"是安全的: session两种生成路径(32位hex/纯数字时间戳回退)都不含":",
+// 而accountName即使含":"也不影响按第一个":"的拆分
 func NewLoginSession(account *pb.Account) string {
 	session := generateRandomSession()
 	// 登录session存redis,供玩家登录游戏服时验证用,使登录服和游戏服可以解耦
-	_, err := GetRedis().SetEx(context.Background(), keyLoginSession(account.GetId()), session, LoginSessionExpireTime).Result()
+	_, err := GetRedis().SetEx(context.Background(),
+		keyLoginSession(account.GetId()), session+":"+account.GetName(), LoginSessionExpireTime).Result()
 	if IsRedisError(err) {
 		slog.Error("NewLoginSession error", "error", err)
 		return ""
@@ -46,14 +53,26 @@ func generateRandomSession() string {
 	return hex.EncodeToString(buf)
 }
 
-// 验证登录session
-func VerifyLoginSession(accountId int64, session string) bool {
+// VerifyLoginSession 验证登录session
+//
+// 返回 (验证是否通过, 账号名):
+// 缓存值格式为{session}:{accountName},按第一个":"拆分后比对session部分(安全性不变),
+// accountName即使含":"也不影响:按第一个":"拆分,剩余整体归accountName;
+func VerifyLoginSession(accountId int64, session string) (bool, string) {
 	if session == "" {
-		return false
+		return false, ""
 	}
-	cacheSession, err := GetRedis().Get(context.Background(), keyLoginSession(accountId)).Result()
+	cacheValue, err := GetRedis().Get(context.Background(), keyLoginSession(accountId)).Result()
 	if IsRedisError(err) {
-		return false
+		return false, ""
 	}
-	return cacheSession == session
+	idx := strings.Index(cacheValue, ":")
+	if idx < 0 {
+		// 旧格式缓存值(纯session,无账号名): 不再兼容比对待重新登录换取新格式
+		return false, ""
+	}
+	if cacheValue[:idx] != session {
+		return false, ""
+	}
+	return true, cacheValue[idx+1:]
 }

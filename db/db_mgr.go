@@ -13,6 +13,7 @@ const (
 	PlayerDbName  = "player"  // 玩家数据库名
 	GuildDbName   = "guild"   // 公会数据库名
 	GlobalDbName  = "global"  // 全局数据库名
+	BanDbName           = "ban"            // 封禁记录数据库名
 	// 账号区服注册表集合名:一个账号在同一个区服只能创建1个角色的原子防重集合
 	// (见player_account.go的设计说明)
 	PlayerAccountDbName = "player_account"

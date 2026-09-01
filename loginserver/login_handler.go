@@ -3,13 +3,16 @@ package loginserver
 import (
 	"log/slog"
 	"math/rand"
-
+	"context"
 	. "github.com/fish-tennis/gnet"
+	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gserver/cache"
 	"github.com/fish-tennis/gserver/db"
 	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/network"
 	"github.com/fish-tennis/gserver/pb"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 // 客户端账号登录
@@ -64,6 +67,22 @@ func processLoginReq(connection Connection, packet Packet, req *pb.LoginReq) {
 			return
 		}
 	}
+	// 检查服务器维护状态:维护中仅白名单账号可进入
+	if cache.IsMaintenanceMode() && !cache.IsWhitelistedAccount(account.GetId()) {
+		errorCode = pb.ErrorCode_ErrorCode_Maintenance
+		return
+	}
+	// 检查账号是否被封禁
+	if banRecord := db.GetBanRecord(db.BanTargetTypeAccount, account.GetId()); banRecord != nil {
+		loginRes.BanReason = banRecord.GetReason()
+		if banRecord.Duration == 0 {
+			loginRes.BanDeadline = 0 // 永久封禁
+		} else {
+			loginRes.BanDeadline = banRecord.BanTime + banRecord.Duration
+		}
+		errorCode = pb.ErrorCode_ErrorCode_Banned
+		return
+	}
 	loginRes.AccountId = account.Id
 	loginRes.LoginSession = cache.NewLoginSession(account)
 	if loginRes.LoginSession == "" {
@@ -94,7 +113,11 @@ func processLoginReq(connection Connection, packet Packet, req *pb.LoginReq) {
 			}
 		}
 	}
-	// 没有在线记录或目标服不可达,随机分配一个游戏服
+	// 返回区服列表(读internal包的进程内存快照,与GameServer共用同一套区服数据)
+	loginRes.Regions = internal.GetAllRegions()
+	// 查询该账号在各区服的角色概要信息
+	loginRes.RegionRoles = queryAccountRegionRoles(account.GetId())
+	// 分配一个游戏服给客户端连接
 	gameServerInfo := selectGameServer(account)
 	if gameServerInfo == nil {
 		errorCode = pb.ErrorCode_ErrorCode_TryLater
@@ -116,6 +139,89 @@ func selectGameServer(account *pb.Account) *pb.ServerInfo {
 		return selectGameServerInfo
 	}
 	return nil
+}
+
+// 查询账号在各区服的角色概要信息
+// player文档的字段大小写形态(与gm/dao/player_dao.go的查询口径一致):
+// 顶层字段Name/AccountId/RegionId是建角时以map key写入,保留大写开头;
+// 组件字段是proto明文存储(db:"plain"),无bson tag,由mongo driver转为全小写
+// (组件名如BaseInfo保留原名,其内部proto字段如level为小写)
+func queryAccountRegionRoles(accountId int64) []*pb.RegionRoleInfo {
+	playerCol := db.GetPlayerDb().(*gentity.MongoCollectionPlayer).GetCollection()
+	// 只查询需要的字段: _id(玩家id), Name, RegionId, BaseInfo.level
+	projection := bson.D{
+		{"_id", 1},
+		{db.PlayerName, 1},
+		{db.PlayerRegionId, 1},
+		// BaseInfo以db:"plain"存储,内部proto字段名为小写level
+		// (字面量与game.ComponentNameBaseInfo对应,loginserver不依赖game包避免引入组件注册副作用)
+		{"BaseInfo", bson.D{{"level", 1}}},
+	}
+	cursor, err := playerCol.Find(context.Background(),
+		bson.D{{db.PlayerAccountId, accountId}},
+		options.Find().SetProjection(projection))
+	if err != nil {
+		slog.Error("queryAccountRegionRoles", "err", err)
+		return nil
+	}
+	var results []bson.M
+	if err = cursor.All(context.Background(), &results); err != nil {
+		slog.Error("queryAccountRegionRoles cursor", "err", err)
+		return nil
+	}
+	regionRoles := make([]*pb.RegionRoleInfo, 0, len(results))
+	for _, doc := range results {
+		info := &pb.RegionRoleInfo{}
+		// MongoDB 驱动解码 bson.M 时,数值类型可能是 int32/int64/float64,
+		// _id 在异常情况下可能是 bson.ObjectID,用安全类型断言避免 panic
+		if idVal, ok := doc["_id"]; ok {
+			if v, ok := idVal.(int64); ok {
+				info.PlayerId = v
+			} else if v, ok := idVal.(int32); ok {
+				info.PlayerId = int64(v)
+			}
+		}
+		if nameVal, ok := doc[db.PlayerName]; ok {
+			if v, ok := nameVal.(string); ok {
+				info.PlayerName = v
+			}
+		}
+		if regionVal, ok := doc[db.PlayerRegionId]; ok {
+			info.RegionId = toInt32(regionVal)
+		}
+		if baseInfoVal, ok := doc["BaseInfo"]; ok {
+			// mongo-driver解码到bson.M时,嵌套文档的实际类型是bson.D(数组形式)而非bson.M,
+			// 仅断言bson.M会静默失败导致Level恒为0,两种类型都必须兼容
+			switch baseInfo := baseInfoVal.(type) {
+			case bson.M:
+				if levelVal, ok := baseInfo["level"]; ok {
+					info.Level = toInt32(levelVal)
+				}
+			case bson.D:
+				for _, elem := range baseInfo {
+					if elem.Key == "level" {
+						info.Level = toInt32(elem.Value)
+					}
+				}
+			}
+		}
+		regionRoles = append(regionRoles, info)
+	}
+	return regionRoles
+}
+
+// toInt32 安全地将 bson.M 中的值转为 int32
+// MongoDB 驱动解码时数值可能是 int32/int64/float64,直接断言会 panic
+func toInt32(v any) int32 {
+	switch val := v.(type) {
+	case int32:
+		return val
+	case int64:
+		return int32(val)
+	case float64:
+		return int32(val)
+	}
+	return 0
 }
 
 // 注册账号
