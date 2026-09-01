@@ -1,4 +1,4 @@
-package loginserver
+﻿package loginserver
 
 import (
 	"context"
@@ -108,8 +108,11 @@ func (this *LoginServer) initDb() {
 	this.accountDb = db.RegisterAccountDb(mongoDb)
 	// 封禁记录数据库
 	db.RegisterBanDb(mongoDb)
-	// 玩家数据库,用于登录时查询账号在各区服的角色信息
+	// 玩家数据库,登录时按playerId批量查角色名/等级(queryAccountRegionRoles第二段)
 	db.RegisterPlayerDb(mongoDb)
+	// 账号区服映射表:登录查角色列表的第一段(按_id直达,
+	// 替代对player表按AccountId的广播查询,见db/account_player.go)
+	db.RegisterAccountPlayerDb(mongoDb)
 	// global同时注册为EntityDb和KvDb,以便initRegions可以直接用Collection操作;
 	// KvDb形态的Key唯一索引由Connect自动创建(闭合KvDb.Inc的upsert并发竞态)
 	db.RegisterGlobalEntityDb(mongoDb)
@@ -127,9 +130,9 @@ func (this *LoginServer) initDb() {
 	// 账号业务ID普通索引(非唯一:Id唯一性由KV自增分配器保证),
 	// 支撑按账号ID查询账号信息的功能
 	this.accountDb.(*gentity.MongoCollection).CreateIndex("Id", false)
-	// player复合索引{AccountId,RegionId}:登录时queryAccountRegionRoles按AccountId
-	// 查角色列表(每次登录必经),无此索引时在每shard上退化为全集合扫描;
-	// GameServer启动时也会建(createIndex幂等),此处保证login独立部署时索引不缺
+	// player复合索引{AccountId,RegionId}:GM后台按账号搜玩家等运维查询走索引直达;
+	// 登录角色列表已改走account_player映射表+按_id批量查,不再依赖此索引
+	// (createIndex幂等,GameServer启动时也会建,此处保证login独立部署时索引不缺)
 	if err := db.EnsurePlayerAccountRegionIndex(); err != nil {
 		panic(fmt.Sprintf("EnsurePlayerAccountRegionIndex err:%v", err))
 	}

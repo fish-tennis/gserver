@@ -1,4 +1,4 @@
-package db
+﻿package db
 
 import (
 	"context"
@@ -15,8 +15,8 @@ const (
 	GlobalDbName  = "global"  // 全局数据库名
 	BanDbName           = "ban"            // 封禁记录数据库名
 	// 账号区服注册表集合名:一个账号在同一个区服只能创建1个角色的原子防重集合
-	// (见player_account.go的设计说明)
-	PlayerAccountDbName = "player_account"
+	// (见account_player.go的设计说明)
+	AccountPlayerDbName = "account_player"
 	UniqueIdName  = "_id"     // 数据库id列名
 
 	AccountIdKeyName  = "AccountId"
@@ -77,7 +77,7 @@ func GetKvDb() gentity.KvDb {
 //   - 进服/建角预检查的FindPlayerIdByAccountId按{AccountId,RegionId}查
 //   - GM后台按账号ID搜玩家
 // 无此索引时上述查询在每shard上退化为全集合扫描,玩家量增长后登录链路会被拖垮;
-// 唯一性由player_account注册表承担,此索引仅作查询加速(非唯一,分片集群创建合法);
+// 唯一性由account_player映射表承担,此索引仅作查询加速(非唯一,分片集群创建合法);
 // 框架的CreateIndex只支持单列,复合索引走原生IndexModel
 func EnsurePlayerAccountRegionIndex() error {
 	model := mongo.IndexModel{

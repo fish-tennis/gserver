@@ -1,4 +1,4 @@
-package gameserver
+﻿package gameserver
 
 import (
 	"context"
@@ -139,9 +139,9 @@ func (s *GameServer) initDb() {
 	db.RegisterGlobalKvDb(mongoDb)
 	// 封禁记录数据库
 	db.RegisterBanDb(mongoDb)
-	// 账号区服注册表:建角防重的原子抢占集合(设计说明见db/player_account.go)。
+	// 账号区服注册表:建角防重的原子抢占集合(设计说明见db/account_player.go)。
 	// 只有GameServer处理建角,其余进程(api/pay/login)不访问该集合,无需注册
-	db.RegisterPlayerAccountDb(mongoDb)
+	db.RegisterAccountPlayerDb(mongoDb)
 	if !mongoDb.Connect() {
 		panic("connect db error")
 	}
@@ -158,17 +158,11 @@ func (s *GameServer) initDb() {
 	if colPlayer, ok := playerDb.(*gentity.MongoCollectionPlayer); ok {
 		colPlayer.CreateIndex(db.PlayerRegionId, false)
 	}
-	// player复合索引{AccountId,RegionId}:登录/进服/建角的账号查询走索引直达,
-	// 否则分片集群下每次登录都在所有shard上全表扫描(见db/db_mgr.go的设计说明)
+	// player复合索引{AccountId,RegionId}:GM后台按账号搜玩家等运维查询走索引直达,
+	// 否则分片集群下每次查询都在所有shard上全表扫描(见db/db_mgr.go的设计说明)
+	// (登录/进游/建角链路已改走account_player映射表,不再依赖此索引)
 	if err := db.EnsurePlayerAccountRegionIndex(); err != nil {
 		panic(fmt.Sprintf("EnsurePlayerAccountRegionIndex err:%v", err))
-	}
-	// 注册表TTL索引:自动清理建角中断(crash/panic)留下的注册位残留,
-	// 消除"抢占成功后进程崩溃导致该账号永远无法建角"的泄漏问题;
-	// 分片集合的TTL索引在各shard本地清理,createIndex自动传播,无需特殊处理。
-	// NOTE:必须在SetDbMgr之后调用(内部经GetDbMgr取单例,见上方注释)
-	if err := db.EnsurePlayerAccountTtlIndex(); err != nil {
-		panic(fmt.Sprintf("EnsurePlayerAccountTtlIndex err:%v", err))
 	}
 }
 

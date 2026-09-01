@@ -1,4 +1,4 @@
-package loginserver
+﻿package loginserver
 
 import (
 	"log/slog"
@@ -141,24 +141,40 @@ func selectGameServer(account *pb.Account) *pb.ServerInfo {
 	return nil
 }
 
-// 查询账号在各区服的角色概要信息
-// player文档的字段大小写形态(与gm/dao/player_dao.go的查询口径一致):
-// 顶层字段Name/AccountId/RegionId是建角时以map key写入,保留大写开头;
+// 查询账号在各区服的角色概要信息(两段式,全程无分片广播)
+// 第一段:account_player映射表按_id前缀查该账号所有区服的(playerId,regionId)——直达;
+// 第二段:player表按_id($in)批量查角色名/等级——每个_id各自路由到目标分片,仍然直达。
+// (原实现对player表按AccountId查询,分片集群下会广播到所有分片)
+//
+// 顶层字段Name是建角时以map key写入,保留大写开头;
 // 组件字段是proto明文存储(db:"plain"),无bson tag,由mongo driver转为全小写
 // (组件名如BaseInfo保留原名,其内部proto字段如level为小写)
 func queryAccountRegionRoles(accountId int64) []*pb.RegionRoleInfo {
+	// 第一段:映射表查账号在各区服的角色
+	accounts, err := db.FindAccountPlayersByAccount(accountId)
+	if err != nil {
+		slog.Error("queryAccountRegionRoles accountMap", "err", err)
+		return nil
+	}
+	if len(accounts) == 0 {
+		return nil
+	}
+	playerIds := make([]int64, 0, len(accounts))
+	for _, acc := range accounts {
+		playerIds = append(playerIds, acc.PlayerId)
+	}
+	// 第二段:player表按_id批量查角色名与等级
+	// 只查询需要的字段: _id(玩家id), Name, BaseInfo.level
 	playerCol := db.GetPlayerDb().(*gentity.MongoCollectionPlayer).GetCollection()
-	// 只查询需要的字段: _id(玩家id), Name, RegionId, BaseInfo.level
 	projection := bson.D{
 		{"_id", 1},
 		{db.PlayerName, 1},
-		{db.PlayerRegionId, 1},
 		// BaseInfo以db:"plain"存储,内部proto字段名为小写level
 		// (字面量与game.ComponentNameBaseInfo对应,loginserver不依赖game包避免引入组件注册副作用)
 		{"BaseInfo", bson.D{{"level", 1}}},
 	}
 	cursor, err := playerCol.Find(context.Background(),
-		bson.D{{db.PlayerAccountId, accountId}},
+		bson.D{{Key: "_id", Value: bson.D{{Key: "$in", Value: playerIds}}}},
 		options.Find().SetProjection(projection))
 	if err != nil {
 		slog.Error("queryAccountRegionRoles", "err", err)
@@ -169,25 +185,29 @@ func queryAccountRegionRoles(accountId int64) []*pb.RegionRoleInfo {
 		slog.Error("queryAccountRegionRoles cursor", "err", err)
 		return nil
 	}
-	regionRoles := make([]*pb.RegionRoleInfo, 0, len(results))
+	// playerId -> 角色名/等级
+	type roleSummary struct {
+		name  string
+		level int32
+	}
+	summaryMap := make(map[int64]*roleSummary, len(results))
 	for _, doc := range results {
-		info := &pb.RegionRoleInfo{}
-		// MongoDB 驱动解码 bson.M 时,数值类型可能是 int32/int64/float64,
-		// _id 在异常情况下可能是 bson.ObjectID,用安全类型断言避免 panic
+		summary := &roleSummary{}
 		if idVal, ok := doc["_id"]; ok {
 			if v, ok := idVal.(int64); ok {
-				info.PlayerId = v
+				summaryMap[v] = summary
 			} else if v, ok := idVal.(int32); ok {
-				info.PlayerId = int64(v)
+				summaryMap[int64(v)] = summary
+			} else {
+				continue
 			}
+		} else {
+			continue
 		}
 		if nameVal, ok := doc[db.PlayerName]; ok {
 			if v, ok := nameVal.(string); ok {
-				info.PlayerName = v
+				summary.name = v
 			}
-		}
-		if regionVal, ok := doc[db.PlayerRegionId]; ok {
-			info.RegionId = toInt32(regionVal)
 		}
 		if baseInfoVal, ok := doc["BaseInfo"]; ok {
 			// mongo-driver解码到bson.M时,嵌套文档的实际类型是bson.D(数组形式)而非bson.M,
@@ -195,15 +215,27 @@ func queryAccountRegionRoles(accountId int64) []*pb.RegionRoleInfo {
 			switch baseInfo := baseInfoVal.(type) {
 			case bson.M:
 				if levelVal, ok := baseInfo["level"]; ok {
-					info.Level = toInt32(levelVal)
+					summary.level = toInt32(levelVal)
 				}
 			case bson.D:
 				for _, elem := range baseInfo {
 					if elem.Key == "level" {
-						info.Level = toInt32(elem.Value)
+						summary.level = toInt32(elem.Value)
 					}
 				}
 			}
+		}
+	}
+	// 组装:regionId来自映射表,角色名/等级来自player表
+	regionRoles := make([]*pb.RegionRoleInfo, 0, len(accounts))
+	for _, acc := range accounts {
+		info := &pb.RegionRoleInfo{
+			PlayerId: acc.PlayerId,
+			RegionId: acc.RegionId,
+		}
+		if summary, ok := summaryMap[acc.PlayerId]; ok {
+			info.PlayerName = summary.name
+			info.Level = summary.level
 		}
 		regionRoles = append(regionRoles, info)
 	}

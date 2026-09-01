@@ -1,4 +1,4 @@
-package db
+﻿package db
 
 import (
 	"github.com/fish-tennis/gentity"
@@ -62,11 +62,14 @@ func RegisterGlobalKvDb(mongoDb *gentity.MongoDb) gentity.KvDb {
 func RegisterBanDb(mongoDb *gentity.MongoDb) gentity.EntityDb {
 	return mongoDb.RegisterEntityDb(BanDbName, gentity.ShardKeyNone, UniqueIdName)
 }
-// RegisterPlayerAccountDb 注册账号区服注册表(不分片)
+
+// RegisterAccountPlayerDb 注册账号区服映射表(不分片)
 //
-// _id={accountId}_{regionId}(业务复合键):建角防重的原子抢占集合,
-// 唯一性由不分片集合的_id主键全局保证(设计说明见player_account.go)。
-// 只有GameServer处理建角,其余进程(login)不访问该集合,无需注册。
-func RegisterPlayerAccountDb(mongoDb *gentity.MongoDb) gentity.EntityDb {
-	return mongoDb.RegisterEntityDb(PlayerAccountDbName, gentity.ShardKeyNone, UniqueIdName)
+// _id={accountId}_{regionId}(业务复合键):一表两用——
+//  1. 建角防重:_id唯一性由不分片集合的主键全局原子保证(设计说明见account_player.go)
+//  2. 按账号查角色的直达入口:player表分片键为_id,按AccountId查询会广播,
+//     登录/进游先查本映射表(按_id直达)再按playerId操作player表
+// GameServer建角写映射,LoginServer登录读映射,两个进程都需注册。
+func RegisterAccountPlayerDb(mongoDb *gentity.MongoDb) gentity.EntityDb {
+	return mongoDb.RegisterEntityDb(AccountPlayerDbName, gentity.ShardKeyNone, UniqueIdName)
 }

@@ -1,4 +1,4 @@
-package db
+﻿package db
 
 import (
 	"context"
@@ -10,10 +10,10 @@ import (
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
-// TestGenPlayerAccountKey 测试注册表复合key构造函数
+// TestGenAccountPlayerKey 测试注册表复合key构造函数
 // key是注册表的_id,构造错误会导致不同账号/区服的注册位互相覆盖(误占或漏占),
 // 或同一账号区服组合生成不同key(防重失效)
-func TestGenPlayerAccountKey(t *testing.T) {
+func TestGenAccountPlayerKey(t *testing.T) {
 	tests := []struct {
 		name      string
 		accountId int64
@@ -27,93 +27,113 @@ func TestGenPlayerAccountKey(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := GenPlayerAccountKey(tt.accountId, tt.regionId)
+			got := GenAccountPlayerKey(tt.accountId, tt.regionId)
 			if got != tt.want {
-				t.Errorf("GenPlayerAccountKey(%d, %d) = %q, want %q", tt.accountId, tt.regionId, got, tt.want)
+				t.Errorf("GenAccountPlayerKey(%d, %d) = %q, want %q", tt.accountId, tt.regionId, got, tt.want)
 			}
 		})
 	}
 }
 
-// TestGenPlayerAccountKey_NoCollision 验证账号与区服数值互换时key不同,
+// TestGenAccountPlayerKey_NoCollision 验证账号与区服数值互换时key不同,
 // 以及同账号不同区服/不同账号同区服的key均不冲突
 // (这是用字符串"_"分隔而非数字拼接的原因:数字拼接会产生歧义碰撞)
-func TestGenPlayerAccountKey_NoCollision(t *testing.T) {
+func TestGenAccountPlayerKey_NoCollision(t *testing.T) {
 	// (1,100)与(100,1)若用数字拼接可能同值,字符串分隔则必不同
-	if GenPlayerAccountKey(1, 100) == GenPlayerAccountKey(100, 1) {
+	if GenAccountPlayerKey(1, 100) == GenAccountPlayerKey(100, 1) {
 		t.Fatalf("账号与区服数值互换的key不应相同")
 	}
 	// 同账号不同区服:互不冲突
-	if GenPlayerAccountKey(1, 1) == GenPlayerAccountKey(1, 2) {
+	if GenAccountPlayerKey(1, 1) == GenAccountPlayerKey(1, 2) {
 		t.Fatalf("同账号不同区服的key不应相同")
 	}
 	// 不同账号同区服:互不冲突
-	if GenPlayerAccountKey(1, 1) == GenPlayerAccountKey(2, 1) {
+	if GenAccountPlayerKey(1, 1) == GenAccountPlayerKey(2, 1) {
 		t.Fatalf("不同账号同区服的key不应相同")
 	}
 }
 
-// initPlayerAccountTestDb 为注册表测试初始化MongoDB(仅注册player_account集合)
+// initAccountPlayerTestDb 为注册表测试初始化MongoDB(仅注册player_account集合)
 // 本地MongoDB不可用时跳过,避免CI环境因无DB而失败(与api包initPayApiTestDb同一模式)
-func initPlayerAccountTestDb(t *testing.T) {
+func initAccountPlayerTestDb(t *testing.T) {
 	t.Helper()
 	if GetDbMgr() != nil {
 		return
 	}
 	// 使用独立的测试库,避免污染开发数据
-	mongoDb := gentity.NewMongoDb("mongodb://127.0.0.1:27017", "eat_test_player_account")
-	RegisterPlayerAccountDb(mongoDb)
+	mongoDb := gentity.NewMongoDb("mongodb://127.0.0.1:27017", "eat_test_account_player")
+	RegisterAccountPlayerDb(mongoDb)
 	if !mongoDb.Connect() {
 		t.Skip("本地MongoDB不可用,跳过建角注册表测试")
 	}
 	SetDbMgr(mongoDb)
 }
 
-// TestRegisterPlayerAccountSemantics 钉住注册表的三态抢占语义(建角防重的基础契约)
-// (true,nil)=抢占成功 / (false,nil)=已被占用 / (false,err)=数据库异常,
-// 调用方processCreatePlayerReq按此三态区分"继续建角"/"查player表区分原因"/"建角失败",
+// TestAccountPlayerMapSemantics 钉住映射表的持久防重与查询语义(建角防重的基础契约)
+// (true,nil)=写入成功 / (false,nil)=该账号该区服已有角色 / (false,err)=数据库异常,
+// 调用方processCreatePlayerReq按(false,nil)直接返回PlayerAlreadyExist(映射是持久事实,
+// _id冲突有且只有一种含义,无需再查player表裁决);
 // 若占用被误判为err,并发建角会报DbErr而非PlayerAlreadyExist;
 // 若占用被误放行(返回true),防双角色约束直接失效
-func TestRegisterPlayerAccountSemantics(t *testing.T) {
-	initPlayerAccountTestDb(t)
+func TestAccountPlayerMapSemantics(t *testing.T) {
+	initAccountPlayerTestDb(t)
 	if GetDbMgr() == nil {
-		return // 本地MongoDB不可用时initPlayerAccountTestDb内部已Skip
+		return // 本地MongoDB不可用时initAccountPlayerTestDb内部已Skip
 	}
 	// 用纳秒级唯一accountId隔离用例数据,避免重复运行互相污染
 	accountId := time.Now().UnixNano()
 	const regionId = int32(1)
 
-	// 首次注册:必须成功
-	ok, err := RegisterPlayerAccount(accountId, regionId, 100001)
+	// 首次写入:必须成功
+	ok, err := InsertAccountPlayerMap(accountId, regionId, 100001)
 	if err != nil || !ok {
-		t.Fatalf("首次注册应成功: ok=%v err=%v", ok, err)
+		t.Fatalf("首次写入应成功: ok=%v err=%v", ok, err)
 	}
-	// 同账号同区服重复注册:占用而非错误(false,nil),E11000必须被正确识别
-	ok, err = RegisterPlayerAccount(accountId, regionId, 100002)
+	// 同账号同区服重复写入:占用而非错误(false,nil),E11000必须被正确识别
+	ok, err = InsertAccountPlayerMap(accountId, regionId, 100002)
 	if err != nil || ok {
-		t.Fatalf("重复注册应返回(false,nil): ok=%v err=%v(占用被误判,建角防重语义失效)", ok, err)
+		t.Fatalf("重复写入应返回(false,nil): ok=%v err=%v(占用被误判,建角防重语义失效)", ok, err)
+	}
+	// FindPlayerIdByAccount:查到首次写入的playerId(而非重复写入的100002)
+	playerId, err := FindPlayerIdByAccount(accountId, regionId)
+	if err != nil || playerId != 100001 {
+		t.Fatalf("FindPlayerIdByAccount应返回100001: playerId=%v err=%v", playerId, err)
+	}
+	// 未建角色的区服:返回0
+	playerId, err = FindPlayerIdByAccount(accountId, regionId+9)
+	if err != nil || playerId != 0 {
+		t.Fatalf("未建角色的区服应返回0: playerId=%v err=%v", playerId, err)
 	}
 	// 同账号不同区服:互不干扰(一个账号可在多个区服各建1个角色)
-	ok, err = RegisterPlayerAccount(accountId, regionId+1, 100003)
+	ok, err = InsertAccountPlayerMap(accountId, regionId+1, 100003)
 	if err != nil || !ok {
-		t.Fatalf("同账号不同区服注册应成功: ok=%v err=%v", ok, err)
+		t.Fatalf("同账号不同区服写入应成功: ok=%v err=%v", ok, err)
 	}
-	// 释放后可立即重新注册:建角失败的回滚语义,无需等TTL过期才能重试
-	if err = UnregisterPlayerAccount(accountId, regionId); err != nil {
-		t.Fatalf("释放注册位失败: %v", err)
+	// 按账号查所有区服的角色列表:应恰好2条(登录角色列表入口)
+	accounts, err := FindAccountPlayersByAccount(accountId)
+	if err != nil || len(accounts) != 2 {
+		t.Fatalf("按账号查角色列表应2条: len=%v err=%v", len(accounts), err)
 	}
-	ok, err = RegisterPlayerAccount(accountId, regionId, 100004)
+	// 删除后可立即重新写入:建角失败的回滚语义
+	if err = DeleteAccountPlayerMap(accountId, regionId); err != nil {
+		t.Fatalf("删除映射失败: %v", err)
+	}
+	playerId, err = FindPlayerIdByAccount(accountId, regionId)
+	if err != nil || playerId != 0 {
+		t.Fatalf("删除后查询应返回0: playerId=%v err=%v", playerId, err)
+	}
+	ok, err = InsertAccountPlayerMap(accountId, regionId, 100004)
 	if err != nil || !ok {
-		t.Fatalf("释放后重新注册应成功: ok=%v err=%v(回滚失效,建角失败后需等TTL才能重试)", ok, err)
+		t.Fatalf("删除后重新写入应成功: ok=%v err=%v(回滚失效,建角失败后无法重试)", ok, err)
 	}
 }
 
-// TestRegisterPlayerAccountConcurrent 并发建角的最终原子防线
-// 双端同时建角/请求重试/恶意刷时,多个请求可能同时通过player表预检查(check-then-insert竞态),
-// 注册表_id唯一性是唯一能原子裁决的防线:N个并发抢占必须恰好1个成功,
+// TestInsertAccountPlayerMapConcurrent 并发建角的最终原子防线
+// 双端同时建角/请求重试/恶意刷时,多个请求的insert同时到达,
+// 映射表_id唯一性是唯一能原子裁决的防线:N个并发写入必须恰好1个成功,
 // 出现2个及以上成功即产生双角色(数据完整性事故),出现0个成功则正常建角被误拒
-func TestRegisterPlayerAccountConcurrent(t *testing.T) {
-	initPlayerAccountTestDb(t)
+func TestInsertAccountPlayerMapConcurrent(t *testing.T) {
+	initAccountPlayerTestDb(t)
 	if GetDbMgr() == nil {
 		return
 	}
@@ -127,7 +147,7 @@ func TestRegisterPlayerAccountConcurrent(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			ok, err := RegisterPlayerAccount(accountId, regionId, 100005)
+			ok, err := InsertAccountPlayerMap(accountId, regionId, 100005)
 			okCh <- ok
 			errCh <- err
 		}()
@@ -137,7 +157,7 @@ func TestRegisterPlayerAccountConcurrent(t *testing.T) {
 	close(errCh)
 	for err := range errCh {
 		if err != nil {
-			t.Fatalf("并发注册出现错误: %v", err)
+			t.Fatalf("并发写入出现错误: %v", err)
 		}
 	}
 	successCount := 0
@@ -147,7 +167,7 @@ func TestRegisterPlayerAccountConcurrent(t *testing.T) {
 		}
 	}
 	if successCount != 1 {
-		t.Fatalf("并发注册应恰好1个成功,实际%d个(防双角色防线失效)", successCount)
+		t.Fatalf("并发写入应恰好1个成功,实际%d个(防双角色防线失效)", successCount)
 	}
 }
 
