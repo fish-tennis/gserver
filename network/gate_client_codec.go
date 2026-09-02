@@ -151,6 +151,19 @@ func (this *ClientCodec) DecodePacket(connection Connection, packetHeader Packet
 		newPacket.SetErrorCode(errorCode)
 		return newPacket
 	}
-	slog.Error("ClientCodec.DecodePacket: unsupported command", "command", command)
-	return nil
+	// 未绑定连接的业务消息:不能断开连接——重连握手期间(PlayerReconnectGameRes
+	// 还未返回前)客户端发的业务消息会被误杀,触发"重连→被踢→再重连"死循环。
+	// 注意:gnet 对 DecodePacket 返回 nil 同样会断开连接,
+	// 因此"丢弃"只能以放行合法包的形式实现。
+	// 这里放行为 ProtoPacket,交给 handler 层 routeToGameServer 的未绑定分支,
+	// 它会回 SessionNotBound 错误响应并保持连接
+	slog.Warn("ClientCodec.DecodePacket: unbound client message, route to handler",
+		"connId", connection.GetConnectionId(), "command", command)
+	// decodedPacketData 可能引用环形缓冲区内部数组,与上方转发分支同理必须拷贝
+	copiedData := make([]byte, len(decodedPacketData))
+	copy(copiedData, decodedPacketData)
+	newPacket := NewProtoPacketWithData(PacketCommand(command), copiedData)
+	newPacket.SetRpcCallId(rpcCallId)
+	newPacket.SetErrorCode(errorCode)
+	return newPacket
 }

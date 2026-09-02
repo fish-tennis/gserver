@@ -108,6 +108,12 @@ func processPlayerEntryGameReq(connection Connection, packet Packet, req *pb.Pla
 			errorCode = pb.ErrorCode_ErrorCode_Maintenance
 			return
 		}
+		// 检查区服开服时间:未到开服时间的区服仅白名单账号可进入
+		// 与区服维护拦截口径一致,防止定时开服的区服在开服前被普通玩家提前进入
+		if region.GetOpenTimestamp() > time.Now().Unix() && !cache.IsWhitelistedAccount(accountId) {
+			errorCode = pb.ErrorCode_ErrorCode_RegionNotOpen
+			return
+		}
 	}
 	// 检查账号是否被封禁:登录后GM封禁账号,LoginSession仍在有效期内,
 	// 不重新登录直接进游会绕过LoginServer的账号封禁检查,此处兜底拦截
@@ -392,6 +398,12 @@ func processCreatePlayerReq(connection Connection, packet Packet, req *pb.Create
 	}
 	if region.Status == pb.RegionStatus_RegionStatus_OnlyWhiteList && !cache.IsWhitelistedAccount(req.GetAccountId()) {
 		errorCode = pb.ErrorCode_ErrorCode_Maintenance
+		return
+	}
+	// 检查区服开服时间:未到开服时间的区服仅白名单账号可创角
+	// 与区服维护拦截口径一致,防止定时开服的区服在开服前被普通玩家提前创建角色
+	if region.GetOpenTimestamp() > time.Now().Unix() && !cache.IsWhitelistedAccount(req.GetAccountId()) {
+		errorCode = pb.ErrorCode_ErrorCode_RegionNotOpen
 		return
 	}
 	// 本地基础校验:去空后为空或rune字符数不在1~12范围则拒绝

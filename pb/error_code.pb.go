@@ -45,6 +45,7 @@ const (
 	ErrorCode_ErrorCode_RegionClosedRegistration ErrorCode = 28  // 区服已关闭注册新角色
 	ErrorCode_ErrorCode_RegionIdError            ErrorCode = 29  // 区服Id错误
 	ErrorCode_ErrorCode_PlayerAlreadyExist       ErrorCode = 30  // 该账号在此区服已有角色
+	ErrorCode_ErrorCode_RegionNotOpen            ErrorCode = 31  // 区服未到开服时间(仅白名单账号可进入)
 	ErrorCode_ErrorCode_SdkAuthFailed            ErrorCode = 41  // SDK登录验证失败(客户端需要重新登录SDK)
 	ErrorCode_ErrorCode_SdkConfigErr             ErrorCode = 42  // SDK配置错误(服务器未配置SDK验证地址,需运维排查)
 	ErrorCode_ErrorCode_SdkApiErr                ErrorCode = 43  // SDK验证接口异常(网络/响应异常,可稍后重试)
@@ -83,6 +84,7 @@ var (
 		28:  "ErrorCode_RegionClosedRegistration",
 		29:  "ErrorCode_RegionIdError",
 		30:  "ErrorCode_PlayerAlreadyExist",
+		31:  "ErrorCode_RegionNotOpen",
 		41:  "ErrorCode_SdkAuthFailed",
 		42:  "ErrorCode_SdkConfigErr",
 		43:  "ErrorCode_SdkApiErr",
@@ -118,6 +120,7 @@ var (
 		"ErrorCode_RegionClosedRegistration": 28,
 		"ErrorCode_RegionIdError":            29,
 		"ErrorCode_PlayerAlreadyExist":       30,
+		"ErrorCode_RegionNotOpen":            31,
 		"ErrorCode_SdkAuthFailed":            41,
 		"ErrorCode_SdkConfigErr":             42,
 		"ErrorCode_SdkApiErr":                43,
@@ -164,7 +167,7 @@ var File_error_code_proto protoreflect.FileDescriptor
 
 const file_error_code_proto_rawDesc = "" +
 	"\n" +
-	"\x10error_code.proto\x12\agserver*\xda\a\n" +
+	"\x10error_code.proto\x12\agserver*\xf7\a\n" +
 	"\tErrorCode\x12\x10\n" +
 	"\fErrorCode_OK\x10\x00\x12\x14\n" +
 	"\x10ErrorCode_NotReg\x10\v\x12\x1b\n" +
@@ -187,6 +190,7 @@ const file_error_code_proto_rawDesc = "" +
 	"\"ErrorCode_RegionClosedRegistration\x10\x1c\x12\x1b\n" +
 	"\x17ErrorCode_RegionIdError\x10\x1d\x12 \n" +
 	"\x1cErrorCode_PlayerAlreadyExist\x10\x1e\x12\x1b\n" +
+	"\x17ErrorCode_RegionNotOpen\x10\x1f\x12\x1b\n" +
 	"\x17ErrorCode_SdkAuthFailed\x10)\x12\x1a\n" +
 	"\x16ErrorCode_SdkConfigErr\x10*\x12\x17\n" +
 	"\x13ErrorCode_SdkApiErr\x10+\x12 \n" +

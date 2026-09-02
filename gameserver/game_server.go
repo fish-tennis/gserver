@@ -429,7 +429,7 @@ func (this *GameServer) onRoutePlayerMessage(connection Connection, packet Packe
 		return
 	}
 	pushed := true
-	if req.Options&int32(pb.RouteOption_RouteOption_DirectSendClient) != 0 {
+	if req.Options & int32(pb.RouteOption_RouteOption_DirectSendClient) != 0 {
 		// 不需要player处理的消息,投递到玩家协程内转发给客户端,避免跨协程读 p.connection
 		// 使用 TryPushMessage 非阻塞投递:channel 满时丢弃并告警,防止阻塞服务器间收包协程
 		pushed = player.TryPushMessage(&game.PlayerDirectSendMessage{Cmd: PacketCommand(uint16(req.PacketCommand)), Message: message})
