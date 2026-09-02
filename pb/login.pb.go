@@ -398,7 +398,7 @@ func (x *LoginRes) GetRegionRoles() []*RegionRoleInfo {
 	return nil
 }
 
-// 注册账号 TODO:AccountRegReq
+// 注册账号
 type AccountReg struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	AccountName   string                 `protobuf:"bytes,1,opt,name=AccountName,proto3" json:"AccountName,omitempty"`
@@ -451,7 +451,7 @@ func (x *AccountReg) GetPassword() string {
 	return ""
 }
 
-// 注册账号回复 TODO:AccountRegRes
+// 注册账号回复
 type AccountRes struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	AccountName   string                 `protobuf:"bytes,1,opt,name=AccountName,proto3" json:"AccountName,omitempty"`

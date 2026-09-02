@@ -52,13 +52,13 @@ message LoginRes {
   repeated RegionRoleInfo RegionRoles = 8; // 该账号在各区服的角色概要
 }
 
-// 注册账号 TODO:AccountRegReq
+// 注册账号
 message AccountReg {
   string AccountName = 1;
   string Password = 2;
 }
 
-// 注册账号回复 TODO:AccountRegRes
+// 注册账号回复
 message AccountRes {
   string AccountName = 1;
   int64 AccountId = 2;
