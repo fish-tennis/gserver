@@ -1,4 +1,4 @@
-﻿package loginserver
+package loginserver
 
 import (
 	"log/slog"
@@ -167,11 +167,11 @@ func queryAccountRegionRoles(accountId int64) []*pb.RegionRoleInfo {
 	// 只查询需要的字段: _id(玩家id), Name, BaseInfo.level
 	playerCol := db.GetPlayerDb().(*gentity.MongoCollectionPlayer).GetCollection()
 	projection := bson.D{
-		{"_id", 1},
-		{db.PlayerName, 1},
+		{Key: "_id", Value: 1},
+		{Key: db.PlayerName, Value: 1},
 		// BaseInfo以db:"plain"存储,内部proto字段名为小写level
 		// (字面量与game.ComponentNameBaseInfo对应,loginserver不依赖game包避免引入组件注册副作用)
-		{"BaseInfo", bson.D{{"level", 1}}},
+		{Key: "BaseInfo", Value: bson.D{{Key: "level", Value: 1}}},
 	}
 	cursor, err := playerCol.Find(context.Background(),
 		bson.D{{Key: "_id", Value: bson.D{{Key: "$in", Value: playerIds}}}},

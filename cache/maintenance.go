@@ -2,6 +2,7 @@ package cache
 
 import (
 	"context"
+	"log/slog"
 	"strconv"
 )
 
@@ -14,9 +15,12 @@ const (
 // ---- 维护状态 ----
 
 // IsMaintenanceMode 检查是否处于维护状态
+// NOTE:Redis错误时fail-open返回false(可用性优先),维护拦截会被放过,
+// 必须打Error日志让Redis故障期间维护模式失效这一事实可被感知
 func IsMaintenanceMode() bool {
 	val, err := GetRedis().Get(context.Background(), maintenanceKey).Result()
 	if IsRedisError(err) {
+		slog.Error("IsMaintenanceMode redis error, maintenance check bypassed(fail-open)", "error", err)
 		return false
 	}
 	return val == "1"
@@ -34,9 +38,11 @@ func SetMaintenance(on bool) error {
 // ---- 白名单 - 账号 ----
 
 // IsWhitelistedAccount 检查账号是否在白名单
+// NOTE:Redis错误时fail-open返回false(可用性优先),需打Error日志可感知
 func IsWhitelistedAccount(accountId int64) bool {
 	ok, err := GetRedis().SIsMember(context.Background(), whitelistAccountKey, strconv.FormatInt(accountId, 10)).Result()
 	if IsRedisError(err) {
+		slog.Error("IsWhitelistedAccount redis error, whitelist check bypassed(fail-open)", "accountId", accountId, "error", err)
 		return false
 	}
 	return ok

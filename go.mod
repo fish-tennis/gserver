@@ -4,7 +4,7 @@ go 1.26
 
 require (
 	github.com/alicebob/miniredis/v2 v2.34.0
-	github.com/fish-tennis/gentity v1.6.1
+	github.com/fish-tennis/gentity v1.7.0
 	github.com/fish-tennis/gnet v1.5.5
 	github.com/redis/go-redis/v9 v9.12.0
 	go.mongodb.org/mongo-driver/v2 v2.5.0

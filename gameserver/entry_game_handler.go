@@ -1,4 +1,4 @@
-﻿package gameserver
+package gameserver
 
 import (
 	"unicode/utf8"
@@ -108,6 +108,18 @@ func processPlayerEntryGameReq(connection Connection, packet Packet, req *pb.Pla
 			errorCode = pb.ErrorCode_ErrorCode_Maintenance
 			return
 		}
+	}
+	// 检查账号是否被封禁:登录后GM封禁账号,LoginSession仍在有效期内,
+	// 不重新登录直接进游会绕过LoginServer的账号封禁检查,此处兜底拦截
+	if banRecord := db.GetBanRecord(db.BanTargetTypeAccount, accountId); banRecord != nil {
+		res.BanReason = banRecord.GetReason()
+		if banRecord.Duration == 0 {
+			res.BanDeadline = 0 // 永久封禁
+		} else {
+			res.BanDeadline = banRecord.BanTime + banRecord.Duration
+		}
+		errorCode = pb.ErrorCode_ErrorCode_Banned
+		return
 	}
 	// 检查玩家是否被封禁
 	if banRecord := db.GetBanRecord(db.BanTargetTypePlayer, playerId); banRecord != nil {
@@ -245,7 +257,35 @@ func onPlayerReconnectGameReq(connection Connection, packet Packet) {
 			AccountId: req.AccountId,
 			PlayerId:  req.PlayerId,
 		}, int32(pb.ErrorCode_ErrorCode_Maintenance))
-		slog.Debug("onPlayerReconnectGameReq maintenance", "playerId", req.PlayerId)
+		slog.Info("onPlayerReconnectGameReq maintenance blocked", "playerId", req.PlayerId, "accountId", req.AccountId)
+		return
+	}
+	// 检查区服维护状态:与进游的检查口径一致,OnlyWhiteList状态下仅白名单账号可重连,
+	// 否则区服维护期间玩家可通过保留期内重连绕过区服级限制
+	if region, err := internal.GetRegion(player.GetRegionId()); err == nil {
+		if region.Status == pb.RegionStatus_RegionStatus_OnlyWhiteList && !cache.IsWhitelistedAccount(req.GetAccountId()) {
+			network.SendPacketAdaptWithError(connection, packet, &pb.PlayerReconnectGameRes{
+				AccountId: req.AccountId,
+				PlayerId:  req.PlayerId,
+			}, int32(pb.ErrorCode_ErrorCode_Maintenance))
+			slog.Info("onPlayerReconnectGameReq region maintenance blocked", "playerId", req.PlayerId, "regionId", player.GetRegionId())
+			return
+		}
+	}
+	// 检查账号是否被封禁:账号级封禁需即时生效(与进游的兜底检查口径一致)
+	if banRecord := db.GetBanRecord(db.BanTargetTypeAccount, req.GetAccountId()); banRecord != nil {
+		res := &pb.PlayerReconnectGameRes{
+			AccountId: req.AccountId,
+			PlayerId:  req.PlayerId,
+			BanReason: banRecord.GetReason(),
+		}
+		if banRecord.Duration == 0 {
+			res.BanDeadline = 0 // 永久封禁
+		} else {
+			res.BanDeadline = banRecord.BanTime + banRecord.Duration
+		}
+		network.SendPacketAdaptWithError(connection, packet, res, int32(pb.ErrorCode_ErrorCode_Banned))
+		slog.Info("onPlayerReconnectGameReq account banned blocked", "accountId", req.AccountId, "playerId", req.PlayerId)
 		return
 	}
 	// 检查玩家是否被封禁:重连时也需要拦截,防止被封禁玩家利用保留期内重连绕过封禁
@@ -261,7 +301,7 @@ func onPlayerReconnectGameReq(connection Connection, packet Packet) {
 			res.BanDeadline = banRecord.BanTime + banRecord.Duration
 		}
 		network.SendPacketAdaptWithError(connection, packet, res, int32(pb.ErrorCode_ErrorCode_Banned))
-		slog.Debug("onPlayerReconnectGameReq banned", "playerId", req.PlayerId)
+		slog.Info("onPlayerReconnectGameReq banned blocked", "playerId", req.PlayerId, "accountId", req.AccountId)
 		return
 	}
 	// 投递到玩家协程执行,重连的校验、绑定连接、响应发送都在玩家协程内串行处理
@@ -361,13 +401,13 @@ func processCreatePlayerReq(connection Connection, packet Packet, req *pb.Create
 		errorCode = pb.ErrorCode_ErrorCode_NameInvalid
 		return
 	}
-	// player表预检查:该账号在此区服已有角色则直接拒绝
-	// NOTE:注册位在建角成功后即被删除(见下方"建角成功后释放注册位"),
-	// 存在性判断不能依赖注册表,必须以player表的持久事实为准;
+	// 映射表预检查:该账号在此区服已有角色则直接拒绝
+	// 查account_player映射表(按_id直达)而非player表(按AccountId查询,分片集群下广播),
+	// 映射是持久事实,与建角防重的原子裁决(InsertAccountPlayerMap)数据源一致;
 	// 此检查同时挡住"建角成功后客户端重复请求/重试"导致的第二角色
-	if existPlayerId, findErr := db.GetPlayerDb().FindPlayerIdByAccountId(req.GetAccountId(), req.GetRegionId()); findErr != nil {
+	if existPlayerId, findErr := db.FindPlayerIdByAccount(req.GetAccountId(), req.GetRegionId()); findErr != nil {
 		errorCode = pb.ErrorCode_ErrorCode_DbErr
-		slog.Error("FindPlayerIdByAccountId error", "error", findErr, "accountId", req.GetAccountId(), "regionId", req.GetRegionId())
+		slog.Error("FindPlayerIdByAccount error", "error", findErr, "accountId", req.GetAccountId(), "regionId", req.GetRegionId())
 		return
 	} else if existPlayerId != 0 {
 		errorCode = pb.ErrorCode_ErrorCode_PlayerAlreadyExist
@@ -419,6 +459,11 @@ func processCreatePlayerReq(connection Connection, packet Packet, req *pb.Create
 	}
 	newPlayer := game.CreatePlayerFromData(playerData)
 	if newPlayer == nil {
+		// 内存实体组装失败:同样回滚删除映射,与下方InsertEntity失败的回滚语义一致,
+		// 否则残留映射会让该账号在该区服永远报PlayerAlreadyExist,需人工修复
+		if rollbackErr := db.DeleteAccountPlayerMap(req.GetAccountId(), req.GetRegionId()); rollbackErr != nil {
+			slog.Error("DeleteAccountPlayerMap rollback error", "error", rollbackErr, "accountId", req.GetAccountId(), "regionId", req.GetRegionId(), "playerId", playerData.XId)
+		}
 		errorCode = pb.ErrorCode_ErrorCode_DbErr
 		slog.Error("CreatePlayerFromDataErr", "accountId", req.AccountId, "playerData", playerData)
 		return

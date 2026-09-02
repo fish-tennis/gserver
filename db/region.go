@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
+	"strconv"
 
 	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gserver/pb"
@@ -53,14 +55,24 @@ func LoadAllRegions() (map[int32]*pb.Region, error) {
 	}
 	for k, v := range rawMap {
 		// key为区服id字符串,解析为int32;解析失败或非正数的key视为脏数据跳过
-		regionId := int32(0)
-		fmt.Sscanf(k, "%d", &regionId)
-		if regionId > 0 {
-			region := &pb.Region{}
-			bsonBytes2, _ := bson.Marshal(v)
-			bson.Unmarshal(bsonBytes2, region)
-			regions[regionId] = region
+		regionId64, err := strconv.ParseInt(k, 10, 32)
+		if err != nil || regionId64 <= 0 {
+			slog.Warn("LoadAllRegions invalid region key, skip", "key", k)
+			continue
 		}
+		regionId := int32(regionId64)
+		region := &pb.Region{}
+		bsonBytes2, err := bson.Marshal(v)
+		if err != nil {
+			// 单条脏数据跳过并告警,不影响其余区服加载
+			slog.Warn("LoadAllRegions marshal region failed, skip", "regionId", regionId, "error", err)
+			continue
+		}
+		if err := bson.Unmarshal(bsonBytes2, region); err != nil {
+			slog.Warn("LoadAllRegions unmarshal region failed, skip", "regionId", regionId, "error", err)
+			continue
+		}
+		regions[regionId] = region
 	}
 	return regions, nil
 }

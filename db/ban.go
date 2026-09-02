@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/fish-tennis/gserver/pb"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 const (
@@ -54,6 +55,8 @@ func SaveBanRecord(record *pb.BanRecord) error {
 	err, isDuplicateKey := GetDbMgr().GetEntityDb(BanDbName).InsertEntity(key, banData)
 	if err != nil && isDuplicateKey {
 		// 记录已存在(重复封禁),执行更新
+		// NOTE:SaveEntity把第二个参数直接作为update文档,必须携带$set等原子操作符,
+		// 裸map会被MongoDB拒绝:update document must contain key beginning with '$'
 		updateData := map[string]any{
 			"TargetId":   record.TargetId,
 			"TargetType": record.TargetType,
@@ -61,7 +64,7 @@ func SaveBanRecord(record *pb.BanRecord) error {
 			"Duration":   record.Duration,
 			"Reason":     record.Reason,
 		}
-		return GetDbMgr().GetEntityDb(BanDbName).SaveEntity(key, updateData)
+		return GetDbMgr().GetEntityDb(BanDbName).SaveEntity(key, bson.M{"$set": updateData})
 	}
 	return err
 }

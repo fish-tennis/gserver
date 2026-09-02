@@ -77,6 +77,8 @@ func RefreshRegionCache(regionId int32) {
 
 // GetAllRegions 获取所有区服列表(纯内存读取,快照的slice视图)
 // 供LoginServer组装返回给客户端的区服列表等需要遍历全部区服的场景
+// NOTE:元素是与缓存共享的*pb.Region指针,调用方不得修改(只读遍历/序列化),
+// 需要可写副本时自行深拷贝
 func GetAllRegions() []*pb.Region {
 	regionCacheMutex.RLock()
 	defer regionCacheMutex.RUnlock()
@@ -89,12 +91,12 @@ func GetAllRegions() []*pb.Region {
 
 // GetAllRegionIds 获取所有区服Id列表
 // 直接从内存缓存返回,不再访问MongoDB
-func GetAllRegionIds() ([]int32, error) {
+func GetAllRegionIds() []int32 {
 	regionCacheMutex.RLock()
 	defer regionCacheMutex.RUnlock()
 	regionIds := make([]int32, 0, len(regionCache))
 	for regionId := range regionCache {
 		regionIds = append(regionIds, regionId)
 	}
-	return regionIds, nil
+	return regionIds
 }

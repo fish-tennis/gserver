@@ -297,12 +297,12 @@ func AtomicSetGuildId(playerId int64, guildId int64, oldGuildId int64) bool {
 		filterGuildIds = []any{int64(0)}
 	}
 	filter := bson.D{
-		{db.UniqueIdName, playerId},
-		{fieldKey, bson.D{{"$in", filterGuildIds}}},
+		{Key: db.UniqueIdName, Value: playerId},
+		{Key: fieldKey, Value: bson.D{{Key: "$in", Value: filterGuildIds}}},
 	}
 	result := col.GetCollection().FindOneAndUpdate(context.Background(),
 		filter,
-		bson.D{{"$set", bson.D{{fieldKey, guildId}}}})
+		bson.D{{Key: "$set", Value: bson.D{{Key: fieldKey, Value: guildId}}}})
 	err := result.Err()
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {

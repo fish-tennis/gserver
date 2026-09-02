@@ -1,4 +1,4 @@
-﻿package loginserver
+package loginserver
 
 import (
 	"context"
@@ -239,7 +239,7 @@ func (this *LoginServer) getAccountData(accountName string, accountData *pb.Acco
 	col := mongoCol.GetCollection()
 	// 按账号名(_id)查询:主键直达,且与写入的唯一性口径一致
 	// (_id即账号名,E11000与查询命中的是同一个键,不存在"索引与主键不一致"的缝隙)
-	result := col.FindOne(context.Background(), bson.D{{db.UniqueIdName, accountName}})
+	result := col.FindOne(context.Background(), bson.D{{Key: db.UniqueIdName, Value: accountName}})
 	if result == nil || errors.Is(result.Err(), mongo.ErrNoDocuments) {
 		return nil
 	}
