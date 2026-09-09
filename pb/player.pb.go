@@ -317,7 +317,7 @@ func (x *QuestData) GetActivityId() int32 {
 // 已完成的任务
 type FinishedQuestData struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Timestamp     int32                  `protobuf:"varint,1,opt,name=Timestamp,proto3" json:"Timestamp,omitempty"` // 完成时间戳(秒)
+	Timestamp     int64                  `protobuf:"varint,1,opt,name=Timestamp,proto3" json:"Timestamp,omitempty"` // 完成时间戳(秒)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -352,7 +352,7 @@ func (*FinishedQuestData) Descriptor() ([]byte, []int) {
 	return file_player_proto_rawDescGZIP(), []int{4}
 }
 
-func (x *FinishedQuestData) GetTimestamp() int32 {
+func (x *FinishedQuestData) GetTimestamp() int64 {
 	if x != nil {
 		return x.Timestamp
 	}
@@ -533,8 +533,8 @@ func (x *PlayerData) GetExchange() map[int32][]byte {
 // 默认活动模板的基础数据
 type ActivityDefaultBaseData struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
-	LastUpdateTime  int32                  `protobuf:"varint,1,opt,name=LastUpdateTime,proto3" json:"LastUpdateTime,omitempty"`                                                                             // 刷新时间戳
-	JoinTime        int32                  `protobuf:"varint,4,opt,name=JoinTime,proto3" json:"JoinTime,omitempty"`                                                                                         // 参加活动的时间(时间戳)
+	LastUpdateTime  int64                  `protobuf:"varint,1,opt,name=LastUpdateTime,proto3" json:"LastUpdateTime,omitempty"`                                                                             // 刷新时间戳
+	JoinTime        int64                  `protobuf:"varint,4,opt,name=JoinTime,proto3" json:"JoinTime,omitempty"`                                                                                         // 参加活动的时间(时间戳)
 	PropertiesInt32 map[string]int32       `protobuf:"bytes,5,rep,name=PropertiesInt32,proto3" json:"PropertiesInt32,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"` // 动态属性(int32)
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
@@ -570,14 +570,14 @@ func (*ActivityDefaultBaseData) Descriptor() ([]byte, []int) {
 	return file_player_proto_rawDescGZIP(), []int{7}
 }
 
-func (x *ActivityDefaultBaseData) GetLastUpdateTime() int32 {
+func (x *ActivityDefaultBaseData) GetLastUpdateTime() int64 {
 	if x != nil {
 		return x.LastUpdateTime
 	}
 	return 0
 }
 
-func (x *ActivityDefaultBaseData) GetJoinTime() int32 {
+func (x *ActivityDefaultBaseData) GetJoinTime() int64 {
 	if x != nil {
 		return x.JoinTime
 	}
@@ -597,7 +597,7 @@ type PendingMessage struct {
 	MessageId     int64                  `protobuf:"varint,1,opt,name=MessageId,proto3" json:"MessageId,omitempty"`         // 唯一id
 	PacketCommand int32                  `protobuf:"varint,2,opt,name=PacketCommand,proto3" json:"PacketCommand,omitempty"` // 消息号
 	PacketData    *anypb.Any             `protobuf:"bytes,3,opt,name=PacketData,proto3" json:"PacketData,omitempty"`        // 消息内容
-	Timestamp     int32                  `protobuf:"varint,4,opt,name=Timestamp,proto3" json:"Timestamp,omitempty"`         // 时间戳
+	Timestamp     int64                  `protobuf:"varint,4,opt,name=Timestamp,proto3" json:"Timestamp,omitempty"`         // 时间戳
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -653,7 +653,7 @@ func (x *PendingMessage) GetPacketData() *anypb.Any {
 	return nil
 }
 
-func (x *PendingMessage) GetTimestamp() int32 {
+func (x *PendingMessage) GetTimestamp() int64 {
 	if x != nil {
 		return x.Timestamp
 	}
@@ -665,7 +665,7 @@ type ExchangeRecord struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	CfgId         int32                  `protobuf:"varint,1,opt,name=CfgId,proto3" json:"CfgId,omitempty"`
 	Count         int32                  `protobuf:"varint,2,opt,name=Count,proto3" json:"Count,omitempty"`
-	Timestamp     int32                  `protobuf:"varint,3,opt,name=Timestamp,proto3" json:"Timestamp,omitempty"` // 最近一次兑换的时间戳(秒)
+	Timestamp     int64                  `protobuf:"varint,3,opt,name=Timestamp,proto3" json:"Timestamp,omitempty"` // 最近一次兑换的时间戳(秒)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -714,7 +714,7 @@ func (x *ExchangeRecord) GetCount() int32 {
 	return 0
 }
 
-func (x *ExchangeRecord) GetTimestamp() int32 {
+func (x *ExchangeRecord) GetTimestamp() int64 {
 	if x != nil {
 		return x.Timestamp
 	}
@@ -770,7 +770,7 @@ const file_player_proto_rawDesc = "" +
 	"ActivityId\x18\x03 \x01(\x05R\n" +
 	"ActivityId\"1\n" +
 	"\x11FinishedQuestData\x12\x1c\n" +
-	"\tTimestamp\x18\x01 \x01(\x05R\tTimestamp\"+\n" +
+	"\tTimestamp\x18\x01 \x01(\x03R\tTimestamp\"+\n" +
 	"\x0fPlayerGuildData\x12\x18\n" +
 	"\aGuildId\x18\x01 \x01(\x03R\aGuildId\"\xba\x05\n" +
 	"\n" +
@@ -799,8 +799,8 @@ const file_player_proto_rawDesc = "" +
 	"\x03key\x18\x01 \x01(\x05R\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\fR\x05value:\x028\x01\"\x82\x02\n" +
 	"\x17ActivityDefaultBaseData\x12&\n" +
-	"\x0eLastUpdateTime\x18\x01 \x01(\x05R\x0eLastUpdateTime\x12\x1a\n" +
-	"\bJoinTime\x18\x04 \x01(\x05R\bJoinTime\x12_\n" +
+	"\x0eLastUpdateTime\x18\x01 \x01(\x03R\x0eLastUpdateTime\x12\x1a\n" +
+	"\bJoinTime\x18\x04 \x01(\x03R\bJoinTime\x12_\n" +
 	"\x0fPropertiesInt32\x18\x05 \x03(\v25.gserver.ActivityDefaultBaseData.PropertiesInt32EntryR\x0fPropertiesInt32\x1aB\n" +
 	"\x14PropertiesInt32Entry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
@@ -811,11 +811,11 @@ const file_player_proto_rawDesc = "" +
 	"\n" +
 	"PacketData\x18\x03 \x01(\v2\x14.google.protobuf.AnyR\n" +
 	"PacketData\x12\x1c\n" +
-	"\tTimestamp\x18\x04 \x01(\x05R\tTimestamp\"Z\n" +
+	"\tTimestamp\x18\x04 \x01(\x03R\tTimestamp\"Z\n" +
 	"\x0eExchangeRecord\x12\x14\n" +
 	"\x05CfgId\x18\x01 \x01(\x05R\x05CfgId\x12\x14\n" +
 	"\x05Count\x18\x02 \x01(\x05R\x05Count\x12\x1c\n" +
-	"\tTimestamp\x18\x03 \x01(\x05R\tTimestampB\x06Z\x04./pbb\x06proto3"
+	"\tTimestamp\x18\x03 \x01(\x03R\tTimestampB\x06Z\x04./pbb\x06proto3"
 
 var (
 	file_player_proto_rawDescOnce sync.Once

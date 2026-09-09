@@ -124,10 +124,10 @@ func TestSaveable(t *testing.T) {
 	}
 	quest.Quests.Set(questData2.CfgId, questData2)
 	quest.Finished.Set(3, &pb.FinishedQuestData{
-		Timestamp: int32(player.GetTimerEntries().Now().Unix()),
+		Timestamp: player.GetTimerEntries().Now().Unix(),
 	})
 	quest.Finished.Set(4, &pb.FinishedQuestData{
-		Timestamp: int32(player.GetTimerEntries().Now().Unix()),
+		Timestamp: player.GetTimerEntries().Now().Unix(),
 	})
 	saveData, err = gentity.GetComponentSaveData(quest)
 	if err != nil {
@@ -397,7 +397,7 @@ func TestActivity(t *testing.T) {
 				continue
 			}
 			// 参加活动的时间回退到i天前
-			activityDefault.Base.JoinTime = int32(oldDate.Unix())
+			activityDefault.Base.JoinTime = oldDate.Unix()
 			activity.OnDateChange(oldDate, now)
 			player.GetQuest().RangeByActivityId(activity.GetId(), func(v *pb.QuestData) bool {
 				t.Log(fmt.Sprintf("%v Progresses:%v", activityId, v))

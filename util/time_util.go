@@ -1,30 +1,25 @@
 package util
 
 import (
-	"math"
 	"time"
 
 	"github.com/fish-tennis/gserver/pb"
 )
 
 // 计算超时时间戳
-func GetTimeoutTimestamp(timeType, timeout int32, now time.Time) int32 {
+// timeout语义由timeType决定:TimeType_Timestamp时是超时秒数(时长),TimeType_Date时是日期,如20240219
+func GetTimeoutTimestamp(timeType, timeout int32, now time.Time) int64 {
 	switch timeType {
 	case int32(pb.TimeType_TimeType_Timestamp):
 		if timeout <= 0 {
 			return 0
 		}
-		// 防溢出:int32 时间戳 + timeout 可能超过 MaxInt32(Y2038),钳制到上限
-		result := int64(now.Unix()) + int64(timeout)
-		if result > math.MaxInt32 {
-			return math.MaxInt32
-		}
-		return int32(result)
+		return now.Unix() + int64(timeout)
 	case int32(pb.TimeType_TimeType_Date):
 		y := timeout / 10000
 		m := (timeout / 100) % 100
 		d := timeout % 100
-		return int32(time.Date(int(y), time.Month(int(m)), int(d), 0, 0, 0, 0, time.Local).Unix())
+		return time.Date(int(y), time.Month(int(m)), int(d), 0, 0, 0, 0, time.Local).Unix()
 	}
 	return 0
 }

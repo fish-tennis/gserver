@@ -192,16 +192,16 @@ func (a *Activities) CheckJoinTime(activityCfg *pb.ActivityCfg, t time.Time) boo
 		if activityCfg.BeginTime > 0 && now < int64(activityCfg.BeginTime) {
 			return false
 		}
-		if activityCfg.EndTime > 0 && now > int64(activityCfg.EndTime) {
+		if activityCfg.EndTime > 0 && now > activityCfg.EndTime {
 			return false
 		}
 
 	case int32(pb.TimeType_TimeType_Date):
 		nowDateInt := util.ToDateInt(t)
-		if activityCfg.BeginTime > 0 && nowDateInt < activityCfg.BeginTime {
+		if activityCfg.BeginTime > 0 && int64(nowDateInt) < activityCfg.BeginTime {
 			return false
 		}
-		if activityCfg.EndTime > 0 && nowDateInt > activityCfg.EndTime {
+		if activityCfg.EndTime > 0 && int64(nowDateInt) > activityCfg.EndTime {
 			return false
 		}
 	}
@@ -213,13 +213,13 @@ func (a *Activities) CheckEndTime(activityCfg *pb.ActivityCfg, t time.Time) bool
 	switch activityCfg.TimeType {
 	case int32(pb.TimeType_TimeType_Timestamp):
 		now := t.Unix()
-		if now > int64(activityCfg.EndTime) {
+		if now > activityCfg.EndTime {
 			return true
 		}
 
 	case int32(pb.TimeType_TimeType_Date):
 		nowDateInt := util.ToDateInt(t)
-		if nowDateInt > activityCfg.EndTime {
+		if int64(nowDateInt) > activityCfg.EndTime {
 			return true
 		}
 	}

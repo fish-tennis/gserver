@@ -16,7 +16,7 @@ func NewUniqueItemBag(bags *Bags) *UniqueItemBag {
 			return &pb.UniqueCountItem{
 				CfgId:    arg.GetCfgId(),
 				UniqueId: util.GenUniqueId(),
-				Timeout:  arg.GetTimeout(),
+				Timeout:  int64(arg.GetTimeout()),
 			}
 		}),
 	}

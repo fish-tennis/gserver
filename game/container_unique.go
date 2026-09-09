@@ -16,7 +16,7 @@ import (
 
 type timeoutCheckData struct {
 	uniqueId int64 // 物品唯一id
-	timeout  int32 // 超时时间戳(秒)
+	timeout  int64 // 超时时间戳(秒)
 }
 
 // 通用的不可叠加的物品容器(如装备背包或限时道具背包)
@@ -114,7 +114,7 @@ func (b *UniqueContainer[E]) AddElem(arg *pb.AddElemArg, bagUpdate *pb.ElemConta
 		}
 		uniqueItem := b.ElemCtor(arg)
 		// 限时道具
-		timeout := int32(0)
+		timeout := int64(0)
 		if arg.GetTimeType() > 0 {
 			// 可以在添加物品的时候,附加限时属性
 			timeout = util.GetTimeoutTimestamp(arg.GetTimeType(), arg.GetTimeout(), b.Bags.GetPlayer().GetTimerEntries().Now())
@@ -126,7 +126,7 @@ func (b *UniqueContainer[E]) AddElem(arg *pb.AddElemArg, bagUpdate *pb.ElemConta
 			// NOTE:假设固定字段是Timeout
 			timeoutField := reflect.ValueOf(uniqueItem).Elem().FieldByName("Timeout")
 			if timeoutField.IsValid() && timeoutField.CanSet() {
-				timeoutField.SetInt(int64(timeout))
+				timeoutField.SetInt(timeout)
 			} else {
 				// 反射设置失败,物品仍会添加但 Timeout 为 0,限时道具将变成永久道具
 				// 这是编程错误(物品结构体缺少 Timeout 字段),需要修复物品定义
@@ -209,7 +209,7 @@ func (b *UniqueContainer[E]) initTimeoutList() {
 }
 
 // 加到限时检测列表(已按 timeout 降序排列,用二分查找插入位置)
-func (b *UniqueContainer[E]) addToTimeoutList(uniqueId int64, timeout int32) {
+func (b *UniqueContainer[E]) addToTimeoutList(uniqueId int64, timeout int64) {
 	entry := &timeoutCheckData{
 		uniqueId: uniqueId,
 		timeout:  timeout,
@@ -241,7 +241,7 @@ func (b *UniqueContainer[E]) removeFromTimeoutList(uniqueId int64) {
 // 列表按 timeout 降序排列(大→小),尾部是最早过期的
 // 从尾部向前收集所有过期项,统一截断列表,再逐个从 Data 中删除
 // 避免每次 DelUniqueItem 都触发 removeFromTimeoutList 的 O(n) 扫描,总复杂度从 O(n²) 降为 O(n)
-func (b *UniqueContainer[E]) checkTimeout(now int32, bagUpdate *pb.ElemContainerUpdate) {
+func (b *UniqueContainer[E]) checkTimeout(now int64, bagUpdate *pb.ElemContainerUpdate) {
 	if len(b.timeoutCheckList) == 0 {
 		return
 	}

@@ -937,11 +937,11 @@ func (r *ActivityCfgR) GetTimeType() int32 {
 	return r.v.GetTimeType()
 }
 
-func (r *ActivityCfgR) GetBeginTime() int32 {
+func (r *ActivityCfgR) GetBeginTime() int64 {
 	return r.v.GetBeginTime()
 }
 
-func (r *ActivityCfgR) GetEndTime() int32 {
+func (r *ActivityCfgR) GetEndTime() int64 {
 	return r.v.GetEndTime()
 }
 

@@ -192,7 +192,7 @@ func RoutePlayerPacket(playerId int64, packet gnet.Packet, opts ...RoutePacketOp
 			MessageId:     pendingMessageId, // 消息号生成唯一id
 			PacketCommand: int32(packet.Command()),
 			PacketData:    anyPacket,
-			Timestamp:     int32(time.Now().Unix()),
+			Timestamp:     time.Now().Unix(),
 		}
 		pendingMessageBytes, err := proto.Marshal(pendingMessage)
 		if err != nil {
@@ -283,7 +283,7 @@ func RoutePlayerPackets(playerIds []int64, packet gnet.Packet, opts ...RoutePack
 					MessageId:     pendingMessageId,
 					PacketCommand: cmd,
 					PacketData:    anyPacket,
-					Timestamp:     int32(time.Now().Unix()),
+					Timestamp:     time.Now().Unix(),
 				}
 				pendingMessageBytes, err := proto.Marshal(pendingMessage)
 				if err != nil {

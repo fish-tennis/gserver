@@ -92,7 +92,7 @@ func (e *Exchange) addExchangeCount(exchangeCfgId, exchangeCount int32) {
 		newCount = math.MaxInt32
 	}
 	v.Count = int32(newCount)
-	v.Timestamp = int32(e.GetPlayer().GetTimerEntries().Now().Unix())
+	v.Timestamp = e.GetPlayer().GetTimerEntries().Now().Unix()
 	e.Records.Set(exchangeCfgId, v)
 	e.GetPlayer().Send(&pb.ExchangeUpdate{
 		Records: []*pb.ExchangeRecord{v},

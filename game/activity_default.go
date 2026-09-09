@@ -95,7 +95,7 @@ func (a *ActivityDefault) OnDateChange(oldDate time.Time, curDate time.Time) {
 
 // 新活动初始化
 func (a *ActivityDefault) OnInit(t time.Time) {
-	a.Base.JoinTime = int32(t.Unix())
+	a.Base.JoinTime = t.Unix()
 	if a.customInitFn != nil {
 		a.customInitFn(a, t)
 	} else {

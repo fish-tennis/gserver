@@ -388,7 +388,7 @@ type GuildJoinRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	PlayerId      int64                  `protobuf:"varint,1,opt,name=PlayerId,proto3" json:"PlayerId,omitempty"` // 申请加入公会的玩家id
 	PlayerName    string                 `protobuf:"bytes,2,opt,name=PlayerName,proto3" json:"PlayerName,omitempty"`
-	TimestampSec  int32                  `protobuf:"varint,3,opt,name=TimestampSec,proto3" json:"TimestampSec,omitempty"` // 时间戳(秒)
+	TimestampSec  int64                  `protobuf:"varint,3,opt,name=TimestampSec,proto3" json:"TimestampSec,omitempty"` // 时间戳(秒)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -437,7 +437,7 @@ func (x *GuildJoinRequest) GetPlayerName() string {
 	return ""
 }
 
-func (x *GuildJoinRequest) GetTimestampSec() int32 {
+func (x *GuildJoinRequest) GetTimestampSec() int64 {
 	if x != nil {
 		return x.TimestampSec
 	}
@@ -1152,7 +1152,7 @@ const file_guild_proto_rawDesc = "" +
 	"\n" +
 	"PlayerName\x18\x02 \x01(\tR\n" +
 	"PlayerName\x12\"\n" +
-	"\fTimestampSec\x18\x03 \x01(\x05R\fTimestampSec\",\n" +
+	"\fTimestampSec\x18\x03 \x01(\x03R\fTimestampSec\",\n" +
 	"\fGuildListReq\x12\x1c\n" +
 	"\tPageIndex\x18\x01 \x01(\x05R\tPageIndex\"~\n" +
 	"\fGuildListRes\x12\x1c\n" +

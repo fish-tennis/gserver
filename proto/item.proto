@@ -14,14 +14,14 @@ message CountItem {
 message UniqueCountItem {
   int64 UniqueId = 1; // 唯一id
   int32 CfgId = 2; // 物品配置id
-  int32 Timeout = 3; // 超时时间戳(秒)
+  int64 Timeout = 3; // 超时时间戳(秒)
 }
 
 // 装备(不可叠加的)
 message Equip {
   int64 UniqueId = 1; // 唯一id
   int32 CfgId = 2; // 装备配置id，引用 EquipCfg.CfgId
-  int32 Timeout = 3; // 超时时间戳(秒)
+  int64 Timeout = 3; // 超时时间戳(秒)
   // NOTE: 其他装备属性,如强化等级等
 }
 

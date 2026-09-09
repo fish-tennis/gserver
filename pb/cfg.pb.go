@@ -2010,8 +2010,8 @@ type ActivityCfg struct {
 	RefreshType       int32                  `protobuf:"varint,5,opt,name=RefreshType,proto3" json:"RefreshType,omitempty"`                                                                         // 刷新机制(enum RefreshType)
 	CycleType         int32                  `protobuf:"varint,6,opt,name=CycleType,proto3" json:"CycleType,omitempty"`                                                                             // 活动周期类型
 	TimeType          int32                  `protobuf:"varint,7,opt,name=TimeType,proto3" json:"TimeType,omitempty"`                                                                               // 时间类型(enum TimeType)
-	BeginTime         int32                  `protobuf:"varint,8,opt,name=BeginTime,proto3" json:"BeginTime,omitempty"`                                                                             // 开始时间(TimeType为TimeType_Timestamp时,格式是时间戳 TimeType为TimeType_Date时,格式是20240219)
-	EndTime           int32                  `protobuf:"varint,9,opt,name=EndTime,proto3" json:"EndTime,omitempty"`                                                                                 // 结束时间(TimeType为TimeType_Timestamp时,格式是时间戳 TimeType为TimeType_Date时,格式是20240219)
+	BeginTime         int64                  `protobuf:"varint,8,opt,name=BeginTime,proto3" json:"BeginTime,omitempty"`                                                                             // 开始时间(TimeType为TimeType_Timestamp时,格式是时间戳 TimeType为TimeType_Date时,格式是20240219)
+	EndTime           int64                  `protobuf:"varint,9,opt,name=EndTime,proto3" json:"EndTime,omitempty"`                                                                                 // 结束时间(TimeType为TimeType_Timestamp时,格式是时间戳 TimeType为TimeType_Date时,格式是20240219)
 	ExchangeIds       []int32                `protobuf:"varint,10,rep,packed,name=ExchangeIds,proto3" json:"ExchangeIds,omitempty"`                                                                 // 兑换配置
 	IsOff             bool                   `protobuf:"varint,11,opt,name=IsOff,proto3" json:"IsOff,omitempty"`                                                                                    // 是否关闭
 	RemoveDataWhenEnd bool                   `protobuf:"varint,12,opt,name=RemoveDataWhenEnd,proto3" json:"RemoveDataWhenEnd,omitempty"`                                                            // 活动结束时,是否删除活动数据
@@ -2102,14 +2102,14 @@ func (x *ActivityCfg) GetTimeType() int32 {
 	return 0
 }
 
-func (x *ActivityCfg) GetBeginTime() int32 {
+func (x *ActivityCfg) GetBeginTime() int64 {
 	if x != nil {
 		return x.BeginTime
 	}
 	return 0
 }
 
-func (x *ActivityCfg) GetEndTime() int32 {
+func (x *ActivityCfg) GetEndTime() int64 {
 	if x != nil {
 		return x.EndTime
 	}
@@ -2489,8 +2489,8 @@ const file_cfg_proto_rawDesc = "" +
 	"\vRefreshType\x18\x05 \x01(\x05R\vRefreshType\x12\x1c\n" +
 	"\tCycleType\x18\x06 \x01(\x05R\tCycleType\x12\x1a\n" +
 	"\bTimeType\x18\a \x01(\x05R\bTimeType\x12\x1c\n" +
-	"\tBeginTime\x18\b \x01(\x05R\tBeginTime\x12\x18\n" +
-	"\aEndTime\x18\t \x01(\x05R\aEndTime\x12 \n" +
+	"\tBeginTime\x18\b \x01(\x03R\tBeginTime\x12\x18\n" +
+	"\aEndTime\x18\t \x01(\x03R\aEndTime\x12 \n" +
 	"\vExchangeIds\x18\n" +
 	" \x03(\x05R\vExchangeIds\x12\x14\n" +
 	"\x05IsOff\x18\v \x01(\bR\x05IsOff\x12,\n" +

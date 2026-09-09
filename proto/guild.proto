@@ -54,7 +54,7 @@ message GuildSync {
 message GuildJoinRequest {
   int64 PlayerId = 1; // 申请加入公会的玩家id
   string PlayerName = 2;
-  int32 TimestampSec = 3; // 时间戳(秒)
+  int64 TimestampSec = 3; // 时间戳(秒)
 }
 
 // 查看公会列表

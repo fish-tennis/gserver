@@ -50,13 +50,13 @@ func IsHotReloading() bool {
 func InitMd5Snapshot(dataDir string) {
 	md5s, err := loadMd5File(dataDir)
 	if err != nil {
-		slog.Warn("InitMd5Snapshot: md5清单不可用,首次热更将执行全量加载", "file", Md5ManifestName(), "err", err)
+		slog.Warn("InitMd5Snapshot: md5 manifest unavailable, first reload will do full load", "file", Md5ManifestName(), "err", err)
 		return
 	}
 	snapshotMu.Lock()
 	md5Snapshot = md5s
 	snapshotMu.Unlock()
-	slog.Info("InitMd5Snapshot: md5快照已建立", "files", len(md5s))
+	slog.Info("InitMd5Snapshot: md5 snapshot established", "files", len(md5s))
 }
 
 // Reload 热更配置表入口(与启动时的全量Load相区分):
@@ -80,16 +80,16 @@ func Reload(dataDir string) error {
 	newMd5s, err := loadMd5File(dataDir)
 	if err != nil {
 		// md5清单不可用就无法diff,保守降级为全量加载
-		slog.Warn("Reload: md5清单不可用,降级为全量加载", "file", Md5ManifestName(), "err", err)
+		slog.Warn("Reload: md5 manifest unavailable, falling back to full load", "file", Md5ManifestName(), "err", err)
 		return Load(dataDir, nil)
 	}
 
 	changed := diffMd5Snapshot(newMd5s)
 	if len(changed) == 0 {
-		slog.Info("Reload: 配置无变更,跳过加载")
+		slog.Info("Reload: no config changes, skip loading")
 		return nil
 	}
-	slog.Info("Reload: 检测到配置变更,只重载变更文件", "changedFiles", changed)
+	slog.Info("Reload: config changes detected, reloading changed files only", "changedFiles", changed)
 
 	// filter返回true表示需要加载该文件,未变更的文件跳过解析
 	// 注意:pb部署下md5清单key是解析后的文件名(如ItemCfg.pb),而data_mgr.go注册的表名是json名(ItemCfg.json),
@@ -124,10 +124,10 @@ func loadMd5File(dataDir string) (map[string]string, error) {
 	}
 	md5s := make(map[string]string)
 	if err := json.Unmarshal(fileData, &md5s); err != nil {
-		return nil, fmt.Errorf("%s解析失败: %w", fileName, err)
+		return nil, fmt.Errorf("%s parse failed: %w", fileName, err)
 	}
 	if len(md5s) == 0 {
-		return nil, fmt.Errorf("%s内容为空", fileName)
+		return nil, fmt.Errorf("%s is empty", fileName)
 	}
 	return md5s, nil
 }

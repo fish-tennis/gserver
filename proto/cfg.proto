@@ -262,8 +262,8 @@ message ActivityCfg {
   int32 RefreshType = 5; // 刷新机制(enum RefreshType)
   int32 CycleType = 6; // 活动周期类型
   int32 TimeType = 7; // 时间类型(enum TimeType)
-  int32 BeginTime = 8; // 开始时间(TimeType为TimeType_Timestamp时,格式是时间戳 TimeType为TimeType_Date时,格式是20240219)
-  int32 EndTime = 9; // 结束时间(TimeType为TimeType_Timestamp时,格式是时间戳 TimeType为TimeType_Date时,格式是20240219)
+  int64 BeginTime = 8; // 开始时间(TimeType为TimeType_Timestamp时,格式是时间戳 TimeType为TimeType_Date时,格式是20240219)
+  int64 EndTime = 9; // 结束时间(TimeType为TimeType_Timestamp时,格式是时间戳 TimeType为TimeType_Date时,格式是20240219)
   repeated int32 ExchangeIds = 10; // 兑换配置
   bool IsOff = 11; // 是否关闭
   bool RemoveDataWhenEnd = 12; // 活动结束时,是否删除活动数据

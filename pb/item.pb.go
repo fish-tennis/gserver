@@ -79,7 +79,7 @@ type UniqueCountItem struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	UniqueId      int64                  `protobuf:"varint,1,opt,name=UniqueId,proto3" json:"UniqueId,omitempty"` // 唯一id
 	CfgId         int32                  `protobuf:"varint,2,opt,name=CfgId,proto3" json:"CfgId,omitempty"`       // 物品配置id
-	Timeout       int32                  `protobuf:"varint,3,opt,name=Timeout,proto3" json:"Timeout,omitempty"`   // 超时时间戳(秒)
+	Timeout       int64                  `protobuf:"varint,3,opt,name=Timeout,proto3" json:"Timeout,omitempty"`   // 超时时间戳(秒)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -128,7 +128,7 @@ func (x *UniqueCountItem) GetCfgId() int32 {
 	return 0
 }
 
-func (x *UniqueCountItem) GetTimeout() int32 {
+func (x *UniqueCountItem) GetTimeout() int64 {
 	if x != nil {
 		return x.Timeout
 	}
@@ -140,7 +140,7 @@ type Equip struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	UniqueId      int64                  `protobuf:"varint,1,opt,name=UniqueId,proto3" json:"UniqueId,omitempty"` // 唯一id
 	CfgId         int32                  `protobuf:"varint,2,opt,name=CfgId,proto3" json:"CfgId,omitempty"`       // 装备配置id，引用 EquipCfg.CfgId
-	Timeout       int32                  `protobuf:"varint,3,opt,name=Timeout,proto3" json:"Timeout,omitempty"`   // 超时时间戳(秒)
+	Timeout       int64                  `protobuf:"varint,3,opt,name=Timeout,proto3" json:"Timeout,omitempty"`   // 超时时间戳(秒)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -189,7 +189,7 @@ func (x *Equip) GetCfgId() int32 {
 	return 0
 }
 
-func (x *Equip) GetTimeout() int32 {
+func (x *Equip) GetTimeout() int64 {
 	if x != nil {
 		return x.Timeout
 	}
@@ -330,11 +330,11 @@ const file_item_proto_rawDesc = "" +
 	"\x0fUniqueCountItem\x12\x1a\n" +
 	"\bUniqueId\x18\x01 \x01(\x03R\bUniqueId\x12\x14\n" +
 	"\x05CfgId\x18\x02 \x01(\x05R\x05CfgId\x12\x18\n" +
-	"\aTimeout\x18\x03 \x01(\x05R\aTimeout\"S\n" +
+	"\aTimeout\x18\x03 \x01(\x03R\aTimeout\"S\n" +
 	"\x05Equip\x12\x1a\n" +
 	"\bUniqueId\x18\x01 \x01(\x03R\bUniqueId\x12\x14\n" +
 	"\x05CfgId\x18\x02 \x01(\x05R\x05CfgId\x12\x18\n" +
-	"\aTimeout\x18\x03 \x01(\x05R\aTimeout\"P\n" +
+	"\aTimeout\x18\x03 \x01(\x03R\aTimeout\"P\n" +
 	"\n" +
 	"ItemUseReq\x12\x14\n" +
 	"\x05CfgId\x18\x01 \x01(\x05R\x05CfgId\x12\x1a\n" +

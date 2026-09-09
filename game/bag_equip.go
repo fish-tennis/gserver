@@ -16,7 +16,7 @@ func NewBagEquip(bags *Bags) *EquipBag {
 			return &pb.Equip{
 				CfgId:    arg.GetCfgId(),
 				UniqueId: util.GenUniqueId(),
-				Timeout:  arg.GetTimeout(),
+				Timeout:  int64(arg.GetTimeout()),
 			}
 		}),
 	}

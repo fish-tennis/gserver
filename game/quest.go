@@ -217,7 +217,7 @@ func (q *Quest) OnFinishQuestReq(req *pb.FinishQuestReq) (*pb.FinishQuestRes, er
 			if q.CanFinish(questData, questCfg) {
 				q.Quests.Delete(questData.GetCfgId())
 				finishedData := &pb.FinishedQuestData{
-					Timestamp: int32(q.GetPlayer().GetTimerEntries().Now().Unix()),
+					Timestamp: q.GetPlayer().GetTimerEntries().Now().Unix(),
 				}
 				q.Finished.Set(questData.GetCfgId(), finishedData)
 				q.GetPlayer().progressEventMapping.RemoveProgress(questCfg.Progress, questData.GetCfgId())

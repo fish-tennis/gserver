@@ -3,9 +3,9 @@ package social
 import (
 	"errors"
 	"log/slog"
+	"time"
 
 	"github.com/fish-tennis/gentity"
-	"github.com/fish-tennis/gentity/util"
 	"github.com/fish-tennis/gserver/game"
 	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/network"
@@ -66,7 +66,7 @@ func (this *GuildJoinRequests) HandleGuildJoinReq(guildMessage *GuildMessage, re
 	this.Add(&pb.GuildJoinRequest{
 		PlayerId:     guildMessage.fromPlayerId,
 		PlayerName:   guildMessage.fromPlayerName,
-		TimestampSec: int32(util.GetCurrentTimeStamp()),
+		TimestampSec: time.Now().Unix(),
 	})
 	// 广播公会成员
 	g.BroadcastClientPacket(&pb.GuildJoinReqTip{

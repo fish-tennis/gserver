@@ -204,7 +204,7 @@ func (b *Bags) TriggerPlayerEntryGame(event *internal.EventPlayerEntryGame) {
 	// 超时检查回调
 	b.GetPlayer().GetTimerEntries().After(time.Second, func() time.Duration {
 		bagUpdate := &pb.ElemContainerUpdate{}
-		now := int32(b.GetPlayer().GetTimerEntries().Now().Unix())
+		now := b.GetPlayer().GetTimerEntries().Now().Unix()
 		b.BagUniqueItem.checkTimeout(now, bagUpdate)
 		b.BagEquip.checkTimeout(now, bagUpdate)
 		if len(bagUpdate.ElemOps) > 0 {

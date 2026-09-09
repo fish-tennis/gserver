@@ -18,7 +18,7 @@ import (
 func SafeInvoke(name string, fn func()) {
 	defer func() {
 		if r := recover(); r != nil {
-			slog.Error("SafeInvoke: callback panic,已捕获,服务器继续运行", "name", name, "panic", r, "stack", string(debug.Stack()))
+			slog.Error("SafeInvoke: callback panic caught, server continues running", "name", name, "panic", r, "stack", string(debug.Stack()))
 		}
 	}()
 	fn()
@@ -79,7 +79,7 @@ func subscribeLoopOnce(ctx context.Context, channel string, onMessage func(paylo
 	defer func() {
 		// 外层防护:循环内非回调代码意外panic,记录后结束本轮,由外层退避重启订阅
 		if r := recover(); r != nil {
-			slog.Error("SubscribeChannel: subscribe loop panic,已捕获,稍后重启订阅", "channel", channel, "panic", r, "stack", string(debug.Stack()))
+			slog.Error("SubscribeChannel: subscribe loop panic caught, will restart subscription later", "channel", channel, "panic", r, "stack", string(debug.Stack()))
 		}
 	}()
 

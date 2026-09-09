@@ -31,8 +31,8 @@ type Uniquely interface {
 // 限时类对象
 type TimeLimited interface {
 	// 超时时间戳
-	GetTimeout() int32
-	//SetTimeout(timeout int32)
+	GetTimeout() int64
+	//SetTimeout(timeout int64)
 }
 
 // 带数量的物品
