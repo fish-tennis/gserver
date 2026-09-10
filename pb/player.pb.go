@@ -533,9 +533,9 @@ func (x *PlayerData) GetExchange() map[int32][]byte {
 // 默认活动模板的基础数据
 type ActivityDefaultBaseData struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
-	LastUpdateTime int64                  `protobuf:"varint,1,opt,name=LastUpdateTime,proto3" json:"LastUpdateTime,omitempty"`                                                                          // 刷新时间戳
-	JoinTime       int64                  `protobuf:"varint,4,opt,name=JoinTime,proto3" json:"JoinTime,omitempty"`                                                                                      // 参加活动的时间(时间戳)
-	PropertiesInt  map[int32]int64        `protobuf:"bytes,5,rep,name=PropertiesInt,proto3" json:"PropertiesInt,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"` // 动态属性,key为ActivityPropertyId枚举值
+	LastUpdateTime int64                  `protobuf:"varint,1,opt,name=LastUpdateTime,proto3" json:"LastUpdateTime,omitempty"`                                                                    // 刷新时间戳
+	JoinTime       int64                  `protobuf:"varint,4,opt,name=JoinTime,proto3" json:"JoinTime,omitempty"`                                                                                // 参加活动的时间(时间戳)
+	Properties     map[int32]int64        `protobuf:"bytes,5,rep,name=Properties,proto3" json:"Properties,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"` // 动态属性,key为ActivityPropertyId枚举值
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -584,9 +584,9 @@ func (x *ActivityDefaultBaseData) GetJoinTime() int64 {
 	return 0
 }
 
-func (x *ActivityDefaultBaseData) GetPropertiesInt() map[int32]int64 {
+func (x *ActivityDefaultBaseData) GetProperties() map[int32]int64 {
 	if x != nil {
-		return x.PropertiesInt
+		return x.Properties
 	}
 	return nil
 }
@@ -797,12 +797,14 @@ const file_player_proto_rawDesc = "" +
 	"\x05value\x18\x02 \x01(\fR\x05value:\x028\x01\x1a;\n" +
 	"\rExchangeEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\x05R\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\fR\x05value:\x028\x01\"\xfa\x01\n" +
+	"\x05value\x18\x02 \x01(\fR\x05value:\x028\x01\"\xee\x01\n" +
 	"\x17ActivityDefaultBaseData\x12&\n" +
 	"\x0eLastUpdateTime\x18\x01 \x01(\x03R\x0eLastUpdateTime\x12\x1a\n" +
-	"\bJoinTime\x18\x04 \x01(\x03R\bJoinTime\x12Y\n" +
-	"\rPropertiesInt\x18\x05 \x03(\v23.gserver.ActivityDefaultBaseData.PropertiesIntEntryR\rPropertiesInt\x1a@\n" +
-	"\x12PropertiesIntEntry\x12\x10\n" +
+	"\bJoinTime\x18\x04 \x01(\x03R\bJoinTime\x12P\n" +
+	"\n" +
+	"Properties\x18\x05 \x03(\v20.gserver.ActivityDefaultBaseData.PropertiesEntryR\n" +
+	"Properties\x1a=\n" +
+	"\x0fPropertiesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\x05R\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\x03R\x05value:\x028\x01\"\xa8\x01\n" +
 	"\x0ePendingMessage\x12\x1c\n" +
@@ -849,7 +851,7 @@ var file_player_proto_goTypes = []any{
 	nil,                             // 15: gserver.PlayerData.PendingMessagesEntry
 	nil,                             // 16: gserver.PlayerData.ActivitiesEntry
 	nil,                             // 17: gserver.PlayerData.ExchangeEntry
-	nil,                             // 18: gserver.ActivityDefaultBaseData.PropertiesIntEntry
+	nil,                             // 18: gserver.ActivityDefaultBaseData.PropertiesEntry
 	(*anypb.Any)(nil),               // 19: google.protobuf.Any
 }
 var file_player_proto_depIdxs = []int32{
@@ -865,7 +867,7 @@ var file_player_proto_depIdxs = []int32{
 	15, // 9: gserver.PlayerData.PendingMessages:type_name -> gserver.PlayerData.PendingMessagesEntry
 	16, // 10: gserver.PlayerData.Activities:type_name -> gserver.PlayerData.ActivitiesEntry
 	17, // 11: gserver.PlayerData.Exchange:type_name -> gserver.PlayerData.ExchangeEntry
-	18, // 12: gserver.ActivityDefaultBaseData.PropertiesInt:type_name -> gserver.ActivityDefaultBaseData.PropertiesIntEntry
+	18, // 12: gserver.ActivityDefaultBaseData.Properties:type_name -> gserver.ActivityDefaultBaseData.PropertiesEntry
 	19, // 13: gserver.PendingMessage.PacketData:type_name -> google.protobuf.Any
 	14, // [14:14] is the sub-list for method output_type
 	14, // [14:14] is the sub-list for method input_type

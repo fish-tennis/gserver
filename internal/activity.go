@@ -25,7 +25,7 @@ type Activity interface {
 
 	// 获取活动数据上的动态属性值
 	// propertyId为pb.ActivityPropertyId枚举值
-	// NOTE:PropertiesInt的属性值是int64的,int64的属性主要考虑活动自身逻辑的扩展需求,而不是条件和进度
+	// NOTE:Properties的属性值是int64的,int64的属性主要考虑活动自身逻辑的扩展需求,而不是条件和进度
 	GetProperty(propertyId int32) int64
 }
 

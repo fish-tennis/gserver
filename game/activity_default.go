@@ -182,27 +182,27 @@ func (a *ActivityDefault) OnEnd(t time.Time) {
 }
 
 // 获取活动数据上的动态属性值
-// propertyId为pb.ActivityPropertyId枚举值,专用于ActivityDefaultBaseData.PropertiesInt属性值的操作
+// propertyId为pb.ActivityPropertyId枚举值,专用于ActivityDefaultBaseData.Properties属性值的操作
 func (a *ActivityDefault) GetProperty(propertyId int32) int64 {
-	return a.Base.PropertiesInt[propertyId]
+	return a.Base.Properties[propertyId]
 }
 
 func (a *ActivityDefault) SetProperty(propertyId int32, value int64) {
-	if a.Base.PropertiesInt == nil {
-		a.Base.PropertiesInt = make(map[int32]int64)
+	if a.Base.Properties == nil {
+		a.Base.Properties = make(map[int32]int64)
 	}
-	a.Base.PropertiesInt[propertyId] = value
+	a.Base.Properties[propertyId] = value
 	a.SetDirty()
 	slog.Debug("SetProperty", "pid", a.Activities.GetPlayer().GetId(),
 		"activityId", a.GetId(), "propertyId", propertyId, "value", value)
 }
 
 func (a *ActivityDefault) IncProperty(propertyId int32, incValue int64) {
-	if a.Base.PropertiesInt == nil {
-		a.Base.PropertiesInt = make(map[int32]int64)
+	if a.Base.Properties == nil {
+		a.Base.Properties = make(map[int32]int64)
 	}
-	newVal := a.Base.PropertiesInt[propertyId] + incValue
-	a.Base.PropertiesInt[propertyId] = newVal
+	newVal := a.Base.Properties[propertyId] + incValue
+	a.Base.Properties[propertyId] = newVal
 	a.SetDirty()
 	slog.Debug("IncProperty", "pid", a.Activities.GetPlayer().GetId(),
 		"activityId", a.GetId(), "propertyId", propertyId, "newVal", newVal, "incValue", incValue)

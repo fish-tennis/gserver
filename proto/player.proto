@@ -70,7 +70,7 @@ message PlayerData {
 message ActivityDefaultBaseData {
   int64 LastUpdateTime = 1; // 刷新时间戳
   int64 JoinTime = 4; // 参加活动的时间(时间戳)
-  map<int32,int64> PropertiesInt = 5; // 动态属性,key为ActivityPropertyId枚举值
+  map<int32,int64> Properties = 5; // 动态属性,key为ActivityPropertyId枚举值
 }
 
 // 待处理消息

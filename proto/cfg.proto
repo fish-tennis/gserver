@@ -84,7 +84,7 @@ message ItemCfg {
   int32 TimeType = 8; // 限时道具的时间类型(enum TimeType)
   int32 Timeout  = 9; // 限时道具的时限
   int32 ViewType = 10; // 物品显示类型(enum ItemViewType)
-  map<string,string> Properties = 11; // 扩展属性
+  map<int32,int64> Properties = 11; // 扩展属性(key为int32枚举值,值为int64)
   string Icon = 12; // 物品图标(客户端使用)
 }
 
@@ -95,7 +95,7 @@ message AddElemArg {
 	int32 TimeType = 3; // 时间类型(enum TimeType)
 	int32 Timeout = 4; // 结束时间(TimeType=Timestamp时,表示超时秒数 TimeType=Date时,表示日期,如20240219)
 	int32 Source = 5; // 来源(一般用于数据分析)
-	map<string,string> Properties = 6; // 扩展属性
+	map<int32,int64> Properties = 6; // 扩展属性(key为int32枚举值,值为int64)
 	// NOTE: 有些项目有绑定属性,可以在这里加
 }
 
@@ -105,7 +105,7 @@ message DelElemArg {
 	int32 CfgId = 2; // 配置id
 	int32 Num = 3; // 数量
 	int32 Source = 4; // 来源(一般用于数据分析)
-	map<string,string> Properties = 5; // 扩展属性
+	map<int32,int64> Properties = 5; // 扩展属性(key为int32枚举值,值为int64)
 }
 
 // CfgId + Arg
@@ -158,7 +158,7 @@ message QuestCfg {
   repeated int32 NextQuests = 8; // 完成该任务后,自动接后续的任务(任务链)
   repeated ConditionCfg Conditions = 9; // 任务条件
   ProgressCfg Progress = 10; // 任务进度(收集类物品,此字段可能为空)
-  map<string,string> Properties = 11; // 扩展属性
+  map<int32,int64> Properties = 11; // 扩展属性(key为int32枚举值,值为int64)
   string Detail = 12; // 任务描述
   int32 PlayerLevel = 13; // 玩家等级限制(0表示不限制)
   repeated ItemNum Collects = 14; // 需要收集的物品(一般是任务物品)
@@ -180,7 +180,7 @@ message ConditionCfg {
   string Op = 3; // 操作符 = > >= < <= != [] ![]
   repeated int32 Values = 4; // 比较的值(可配多个)
   repeated int32 Options = 5; // 可选参数(可配多个)
-  map<string,string> Properties = 6; // 扩展属性
+  map<int32,int64> Properties = 6; // 扩展属性(key为int32枚举值,值为int64)
   bool ClientCheck = 7; // 客户端是否可以直接判断条件,比如玩家的等级
 }
 
@@ -190,7 +190,7 @@ message ConditionTemplateCfg {
   int32 Type = 1; // 条件类型(enum ConditionType)
   string Key = 2; // 关键字,如ConditionType_PlayerPropertyCompare对应的属性名
   string Op = 3; // 操作符 = > >= < <= != [] ![]
-  map<string,string> Properties = 5; // 扩展属性
+  map<int32,int64> Properties = 5; // 扩展属性(key为int32枚举值,值为int64)
   bool ClientCheck = 6; // 客户端是否可以直接判断条件,比如玩家的等级
 }
 
@@ -203,7 +203,7 @@ message ProgressCfg {
   string ProgressField = 5; // 以事件字段值作为进度值,为空表示进度值是1
   map<string,ValueCompareCfg> IntEventFields = 6; // 数值类型的事件字段值(支持复杂的比较操作符)
   map<string,string> StringEventFields = 7; // 事件字段值(字符串形式)
-  map<string,string> Properties = 8; // 扩展属性
+  map<int32,int64> Properties = 8; // 扩展属性(key为int32枚举值,值为int64)
 }
 
 // 进度模板配置
@@ -215,7 +215,7 @@ message ProgressTemplateCfg {
   string ProgressField = 5; // 以事件字段值作为进度值,为空表示进度值是1
   map<string,ValueCompareCfg> IntEventFields = 6; // 数值类型的事件字段值(支持复杂的比较操作符)
   map<string,string> StringEventFields = 7; // 事件字段值(字符串形式)
-  map<string,string> Properties = 8; // 扩展属性
+  map<int32,int64> Properties = 8; // 扩展属性(key为int32枚举值,值为int64)
 }
 
 // 兑换分类
@@ -235,7 +235,7 @@ message ExchangeCfg {
   int32 RefreshType = 6; // 刷新机制(enum RefreshType)
   int32 Category = 7; // 兑换分类(enum ExchangeCategory)
   int32 RechargeCfgId = 8; // 关联的充值配置ID(>0表示该兑换项由充值回调触发,玩家无法手动领取)
-  map<string,string> Properties = 9; // 扩展属性
+  map<int32,int64> Properties = 9; // 扩展属性(key为int32枚举值,值为int64)
   string Detail = 10;
   string Icon = 11; // 图标(客户端使用)
 
@@ -270,7 +270,7 @@ message ActivityCfg {
   int32 MinPlayerLevel = 14; // 参与活动的最低玩家等级要求(0表示不限制)
   int32 MaxPlayerLevel = 15; // 参与活动的最大玩家等级上限(0表示不限制)
   repeated int32 QuestIds = 16; // 活动子任务id
-  map<string,string> Properties = 17; // 扩展属性
+  map<int32,int64> Properties = 17; // 扩展属性(key为int32枚举值,值为int64)
 }
 
 // 升级经验
@@ -284,5 +284,5 @@ message ShopCfg {
   int32 CfgId = 1; // 配置id
   string Name = 2; // 商店名
   repeated int32 ExchangeIds = 3; // 商店的每1个格子就是1个兑换礼包
-  map<string,string> Properties = 8; // 扩展属性
+  map<int32,int64> Properties = 8; // 扩展属性(key为int32枚举值,值为int64)
 }

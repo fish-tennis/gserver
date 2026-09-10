@@ -22,7 +22,7 @@ const (
 )
 
 // 活动属性名定义
-// 服务器和客户端共用的活动属性枚举,ActivityDefaultBaseData.PropertiesInt的key
+// 服务器和客户端共用的活动属性枚举,ActivityDefaultBaseData.Properties的key
 // 枚举值使用不带前缀的短名,配置表(如条件检查的Key)和客户端可以直接使用属性名
 type ActivityPropertyId int32
 

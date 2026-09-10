@@ -667,15 +667,15 @@ type ItemCfg struct {
 	CfgId         int32                  `protobuf:"varint,1,opt,name=CfgId,proto3" json:"CfgId,omitempty"`
 	Name          string                 `protobuf:"bytes,2,opt,name=Name,proto3" json:"Name,omitempty"`
 	Detail        string                 `protobuf:"bytes,3,opt,name=Detail,proto3" json:"Detail,omitempty"`
-	ItemType      int32                  `protobuf:"varint,4,opt,name=ItemType,proto3" json:"ItemType,omitempty"`                                                                               // 物品类型(enum ItemType)
-	SubType       int32                  `protobuf:"varint,5,opt,name=SubType,proto3" json:"SubType,omitempty"`                                                                                 // 物品子类(enum ItemSubType)
-	Category      int32                  `protobuf:"varint,6,opt,name=Category,proto3" json:"Category,omitempty"`                                                                               // 物品分类(enum ItemCategory)
-	Args          []int32                `protobuf:"varint,7,rep,packed,name=Args,proto3" json:"Args,omitempty"`                                                                                // 参数列表(比如ItemSubType=ItemSubType_Exp是,表示加经验的数值)
-	TimeType      int32                  `protobuf:"varint,8,opt,name=TimeType,proto3" json:"TimeType,omitempty"`                                                                               // 限时道具的时间类型(enum TimeType)
-	Timeout       int32                  `protobuf:"varint,9,opt,name=Timeout,proto3" json:"Timeout,omitempty"`                                                                                 // 限时道具的时限
-	ViewType      int32                  `protobuf:"varint,10,opt,name=ViewType,proto3" json:"ViewType,omitempty"`                                                                              // 物品显示类型(enum ItemViewType)
-	Properties    map[string]string      `protobuf:"bytes,11,rep,name=Properties,proto3" json:"Properties,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // 扩展属性
-	Icon          string                 `protobuf:"bytes,12,opt,name=Icon,proto3" json:"Icon,omitempty"`                                                                                       // 物品图标(客户端使用)
+	ItemType      int32                  `protobuf:"varint,4,opt,name=ItemType,proto3" json:"ItemType,omitempty"`                                                                                 // 物品类型(enum ItemType)
+	SubType       int32                  `protobuf:"varint,5,opt,name=SubType,proto3" json:"SubType,omitempty"`                                                                                   // 物品子类(enum ItemSubType)
+	Category      int32                  `protobuf:"varint,6,opt,name=Category,proto3" json:"Category,omitempty"`                                                                                 // 物品分类(enum ItemCategory)
+	Args          []int32                `protobuf:"varint,7,rep,packed,name=Args,proto3" json:"Args,omitempty"`                                                                                  // 参数列表(比如ItemSubType=ItemSubType_Exp是,表示加经验的数值)
+	TimeType      int32                  `protobuf:"varint,8,opt,name=TimeType,proto3" json:"TimeType,omitempty"`                                                                                 // 限时道具的时间类型(enum TimeType)
+	Timeout       int32                  `protobuf:"varint,9,opt,name=Timeout,proto3" json:"Timeout,omitempty"`                                                                                   // 限时道具的时限
+	ViewType      int32                  `protobuf:"varint,10,opt,name=ViewType,proto3" json:"ViewType,omitempty"`                                                                                // 物品显示类型(enum ItemViewType)
+	Properties    map[int32]int64        `protobuf:"bytes,11,rep,name=Properties,proto3" json:"Properties,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"` // 扩展属性(key为int32枚举值,值为int64)
+	Icon          string                 `protobuf:"bytes,12,opt,name=Icon,proto3" json:"Icon,omitempty"`                                                                                         // 物品图标(客户端使用)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -780,7 +780,7 @@ func (x *ItemCfg) GetViewType() int32 {
 	return 0
 }
 
-func (x *ItemCfg) GetProperties() map[string]string {
+func (x *ItemCfg) GetProperties() map[int32]int64 {
 	if x != nil {
 		return x.Properties
 	}
@@ -797,12 +797,12 @@ func (x *ItemCfg) GetIcon() string {
 // 添加元素参数
 type AddElemArg struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	CfgId         int32                  `protobuf:"varint,1,opt,name=CfgId,proto3" json:"CfgId,omitempty"`                                                                                    // 配置id
-	Num           int32                  `protobuf:"varint,2,opt,name=Num,proto3" json:"Num,omitempty"`                                                                                        // 数量
-	TimeType      int32                  `protobuf:"varint,3,opt,name=TimeType,proto3" json:"TimeType,omitempty"`                                                                              // 时间类型(enum TimeType)
-	Timeout       int32                  `protobuf:"varint,4,opt,name=Timeout,proto3" json:"Timeout,omitempty"`                                                                                // 结束时间(TimeType=Timestamp时,表示超时秒数 TimeType=Date时,表示日期,如20240219)
-	Source        int32                  `protobuf:"varint,5,opt,name=Source,proto3" json:"Source,omitempty"`                                                                                  // 来源(一般用于数据分析)
-	Properties    map[string]string      `protobuf:"bytes,6,rep,name=Properties,proto3" json:"Properties,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // 扩展属性
+	CfgId         int32                  `protobuf:"varint,1,opt,name=CfgId,proto3" json:"CfgId,omitempty"`                                                                                      // 配置id
+	Num           int32                  `protobuf:"varint,2,opt,name=Num,proto3" json:"Num,omitempty"`                                                                                          // 数量
+	TimeType      int32                  `protobuf:"varint,3,opt,name=TimeType,proto3" json:"TimeType,omitempty"`                                                                                // 时间类型(enum TimeType)
+	Timeout       int32                  `protobuf:"varint,4,opt,name=Timeout,proto3" json:"Timeout,omitempty"`                                                                                  // 结束时间(TimeType=Timestamp时,表示超时秒数 TimeType=Date时,表示日期,如20240219)
+	Source        int32                  `protobuf:"varint,5,opt,name=Source,proto3" json:"Source,omitempty"`                                                                                    // 来源(一般用于数据分析)
+	Properties    map[int32]int64        `protobuf:"bytes,6,rep,name=Properties,proto3" json:"Properties,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"` // 扩展属性(key为int32枚举值,值为int64)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -872,7 +872,7 @@ func (x *AddElemArg) GetSource() int32 {
 	return 0
 }
 
-func (x *AddElemArg) GetProperties() map[string]string {
+func (x *AddElemArg) GetProperties() map[int32]int64 {
 	if x != nil {
 		return x.Properties
 	}
@@ -882,11 +882,11 @@ func (x *AddElemArg) GetProperties() map[string]string {
 // 删除元素参数
 type DelElemArg struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	UniqueId      int64                  `protobuf:"varint,1,opt,name=UniqueId,proto3" json:"UniqueId,omitempty"`                                                                              // 唯一id(删除指定的不可叠加的元素才需要)
-	CfgId         int32                  `protobuf:"varint,2,opt,name=CfgId,proto3" json:"CfgId,omitempty"`                                                                                    // 配置id
-	Num           int32                  `protobuf:"varint,3,opt,name=Num,proto3" json:"Num,omitempty"`                                                                                        // 数量
-	Source        int32                  `protobuf:"varint,4,opt,name=Source,proto3" json:"Source,omitempty"`                                                                                  // 来源(一般用于数据分析)
-	Properties    map[string]string      `protobuf:"bytes,5,rep,name=Properties,proto3" json:"Properties,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // 扩展属性
+	UniqueId      int64                  `protobuf:"varint,1,opt,name=UniqueId,proto3" json:"UniqueId,omitempty"`                                                                                // 唯一id(删除指定的不可叠加的元素才需要)
+	CfgId         int32                  `protobuf:"varint,2,opt,name=CfgId,proto3" json:"CfgId,omitempty"`                                                                                      // 配置id
+	Num           int32                  `protobuf:"varint,3,opt,name=Num,proto3" json:"Num,omitempty"`                                                                                          // 数量
+	Source        int32                  `protobuf:"varint,4,opt,name=Source,proto3" json:"Source,omitempty"`                                                                                    // 来源(一般用于数据分析)
+	Properties    map[int32]int64        `protobuf:"bytes,5,rep,name=Properties,proto3" json:"Properties,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"` // 扩展属性(key为int32枚举值,值为int64)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -949,7 +949,7 @@ func (x *DelElemArg) GetSource() int32 {
 	return 0
 }
 
-func (x *DelElemArg) GetProperties() map[string]string {
+func (x *DelElemArg) GetProperties() map[int32]int64 {
 	if x != nil {
 		return x.Properties
 	}
@@ -1181,20 +1181,20 @@ type QuestCfg struct {
 	state              protoimpl.MessageState `protogen:"open.v1"`
 	CfgId              int32                  `protobuf:"varint,1,opt,name=CfgId,proto3" json:"CfgId,omitempty"`
 	Name               string                 `protobuf:"bytes,2,opt,name=Name,proto3" json:"Name,omitempty"`
-	QuestType          int32                  `protobuf:"varint,3,opt,name=QuestType,proto3" json:"QuestType,omitempty"`                                                                             // 任务类型(enum QuestType)
-	RefreshType        int32                  `protobuf:"varint,4,opt,name=RefreshType,proto3" json:"RefreshType,omitempty"`                                                                         // 刷新机制(enum RefreshType)
-	Category           int32                  `protobuf:"varint,5,opt,name=Category,proto3" json:"Category,omitempty"`                                                                               // 任务分类(enum QuestCategory)
-	Rewards            []*AddElemArg          `protobuf:"bytes,6,rep,name=Rewards,proto3" json:"Rewards,omitempty"`                                                                                  // 任务奖励
-	PreQuest           int32                  `protobuf:"varint,7,opt,name=PreQuest,proto3" json:"PreQuest,omitempty"`                                                                               // 前置任务
-	NextQuests         []int32                `protobuf:"varint,8,rep,packed,name=NextQuests,proto3" json:"NextQuests,omitempty"`                                                                    // 完成该任务后,自动接后续的任务(任务链)
-	Conditions         []*ConditionCfg        `protobuf:"bytes,9,rep,name=Conditions,proto3" json:"Conditions,omitempty"`                                                                            // 任务条件
-	Progress           *ProgressCfg           `protobuf:"bytes,10,opt,name=Progress,proto3" json:"Progress,omitempty"`                                                                               // 任务进度(收集类物品,此字段可能为空)
-	Properties         map[string]string      `protobuf:"bytes,11,rep,name=Properties,proto3" json:"Properties,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // 扩展属性
-	Detail             string                 `protobuf:"bytes,12,opt,name=Detail,proto3" json:"Detail,omitempty"`                                                                                   // 任务描述
-	PlayerLevel        int32                  `protobuf:"varint,13,opt,name=PlayerLevel,proto3" json:"PlayerLevel,omitempty"`                                                                        // 玩家等级限制(0表示不限制)
-	Collects           []*ItemNum             `protobuf:"bytes,14,rep,name=Collects,proto3" json:"Collects,omitempty"`                                                                               // 需要收集的物品(一般是任务物品)
-	ConditionTemplates []*CfgArgOptions       `protobuf:"bytes,21,rep,name=ConditionTemplates,proto3" json:"ConditionTemplates,omitempty"`                                                           // 关联的配置模板id和参数,简化配置表用,业务代码不要调用
-	ProgressTemplate   *CfgArg                `protobuf:"bytes,22,opt,name=ProgressTemplate,proto3" json:"ProgressTemplate,omitempty"`                                                               // 关联的配置模板id和参数,简化配置表用,业务代码不要调用
+	QuestType          int32                  `protobuf:"varint,3,opt,name=QuestType,proto3" json:"QuestType,omitempty"`                                                                               // 任务类型(enum QuestType)
+	RefreshType        int32                  `protobuf:"varint,4,opt,name=RefreshType,proto3" json:"RefreshType,omitempty"`                                                                           // 刷新机制(enum RefreshType)
+	Category           int32                  `protobuf:"varint,5,opt,name=Category,proto3" json:"Category,omitempty"`                                                                                 // 任务分类(enum QuestCategory)
+	Rewards            []*AddElemArg          `protobuf:"bytes,6,rep,name=Rewards,proto3" json:"Rewards,omitempty"`                                                                                    // 任务奖励
+	PreQuest           int32                  `protobuf:"varint,7,opt,name=PreQuest,proto3" json:"PreQuest,omitempty"`                                                                                 // 前置任务
+	NextQuests         []int32                `protobuf:"varint,8,rep,packed,name=NextQuests,proto3" json:"NextQuests,omitempty"`                                                                      // 完成该任务后,自动接后续的任务(任务链)
+	Conditions         []*ConditionCfg        `protobuf:"bytes,9,rep,name=Conditions,proto3" json:"Conditions,omitempty"`                                                                              // 任务条件
+	Progress           *ProgressCfg           `protobuf:"bytes,10,opt,name=Progress,proto3" json:"Progress,omitempty"`                                                                                 // 任务进度(收集类物品,此字段可能为空)
+	Properties         map[int32]int64        `protobuf:"bytes,11,rep,name=Properties,proto3" json:"Properties,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"` // 扩展属性(key为int32枚举值,值为int64)
+	Detail             string                 `protobuf:"bytes,12,opt,name=Detail,proto3" json:"Detail,omitempty"`                                                                                     // 任务描述
+	PlayerLevel        int32                  `protobuf:"varint,13,opt,name=PlayerLevel,proto3" json:"PlayerLevel,omitempty"`                                                                          // 玩家等级限制(0表示不限制)
+	Collects           []*ItemNum             `protobuf:"bytes,14,rep,name=Collects,proto3" json:"Collects,omitempty"`                                                                                 // 需要收集的物品(一般是任务物品)
+	ConditionTemplates []*CfgArgOptions       `protobuf:"bytes,21,rep,name=ConditionTemplates,proto3" json:"ConditionTemplates,omitempty"`                                                             // 关联的配置模板id和参数,简化配置表用,业务代码不要调用
+	ProgressTemplate   *CfgArg                `protobuf:"bytes,22,opt,name=ProgressTemplate,proto3" json:"ProgressTemplate,omitempty"`                                                                 // 关联的配置模板id和参数,简化配置表用,业务代码不要调用
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -1299,7 +1299,7 @@ func (x *QuestCfg) GetProgress() *ProgressCfg {
 	return nil
 }
 
-func (x *QuestCfg) GetProperties() map[string]string {
+func (x *QuestCfg) GetProperties() map[int32]int64 {
 	if x != nil {
 		return x.Properties
 	}
@@ -1397,13 +1397,13 @@ func (x *ValueCompareCfg) GetValues() []int32 {
 // 条件配置(ConditionTemplateCfg + Values + 可选Options)
 type ConditionCfg struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Type          int32                  `protobuf:"varint,1,opt,name=Type,proto3" json:"Type,omitempty"`                                                                                      // 条件类型(enum ConditionType)
-	Key           string                 `protobuf:"bytes,2,opt,name=Key,proto3" json:"Key,omitempty"`                                                                                         // 关键字,如ConditionType_PlayerPropertyCompare对应的属性名
-	Op            string                 `protobuf:"bytes,3,opt,name=Op,proto3" json:"Op,omitempty"`                                                                                           // 操作符 = > >= < <= != [] ![]
-	Values        []int32                `protobuf:"varint,4,rep,packed,name=Values,proto3" json:"Values,omitempty"`                                                                           // 比较的值(可配多个)
-	Options       []int32                `protobuf:"varint,5,rep,packed,name=Options,proto3" json:"Options,omitempty"`                                                                         // 可选参数(可配多个)
-	Properties    map[string]string      `protobuf:"bytes,6,rep,name=Properties,proto3" json:"Properties,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // 扩展属性
-	ClientCheck   bool                   `protobuf:"varint,7,opt,name=ClientCheck,proto3" json:"ClientCheck,omitempty"`                                                                        // 客户端是否可以直接判断条件,比如玩家的等级
+	Type          int32                  `protobuf:"varint,1,opt,name=Type,proto3" json:"Type,omitempty"`                                                                                        // 条件类型(enum ConditionType)
+	Key           string                 `protobuf:"bytes,2,opt,name=Key,proto3" json:"Key,omitempty"`                                                                                           // 关键字,如ConditionType_PlayerPropertyCompare对应的属性名
+	Op            string                 `protobuf:"bytes,3,opt,name=Op,proto3" json:"Op,omitempty"`                                                                                             // 操作符 = > >= < <= != [] ![]
+	Values        []int32                `protobuf:"varint,4,rep,packed,name=Values,proto3" json:"Values,omitempty"`                                                                             // 比较的值(可配多个)
+	Options       []int32                `protobuf:"varint,5,rep,packed,name=Options,proto3" json:"Options,omitempty"`                                                                           // 可选参数(可配多个)
+	Properties    map[int32]int64        `protobuf:"bytes,6,rep,name=Properties,proto3" json:"Properties,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"` // 扩展属性(key为int32枚举值,值为int64)
+	ClientCheck   bool                   `protobuf:"varint,7,opt,name=ClientCheck,proto3" json:"ClientCheck,omitempty"`                                                                          // 客户端是否可以直接判断条件,比如玩家的等级
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1473,7 +1473,7 @@ func (x *ConditionCfg) GetOptions() []int32 {
 	return nil
 }
 
-func (x *ConditionCfg) GetProperties() map[string]string {
+func (x *ConditionCfg) GetProperties() map[int32]int64 {
 	if x != nil {
 		return x.Properties
 	}
@@ -1490,12 +1490,12 @@ func (x *ConditionCfg) GetClientCheck() bool {
 // 条件模板配置
 type ConditionTemplateCfg struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	CfgId         int32                  `protobuf:"varint,4,opt,name=CfgId,proto3" json:"CfgId,omitempty"`                                                                                    // 配置id
-	Type          int32                  `protobuf:"varint,1,opt,name=Type,proto3" json:"Type,omitempty"`                                                                                      // 条件类型(enum ConditionType)
-	Key           string                 `protobuf:"bytes,2,opt,name=Key,proto3" json:"Key,omitempty"`                                                                                         // 关键字,如ConditionType_PlayerPropertyCompare对应的属性名
-	Op            string                 `protobuf:"bytes,3,opt,name=Op,proto3" json:"Op,omitempty"`                                                                                           // 操作符 = > >= < <= != [] ![]
-	Properties    map[string]string      `protobuf:"bytes,5,rep,name=Properties,proto3" json:"Properties,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // 扩展属性
-	ClientCheck   bool                   `protobuf:"varint,6,opt,name=ClientCheck,proto3" json:"ClientCheck,omitempty"`                                                                        // 客户端是否可以直接判断条件,比如玩家的等级
+	CfgId         int32                  `protobuf:"varint,4,opt,name=CfgId,proto3" json:"CfgId,omitempty"`                                                                                      // 配置id
+	Type          int32                  `protobuf:"varint,1,opt,name=Type,proto3" json:"Type,omitempty"`                                                                                        // 条件类型(enum ConditionType)
+	Key           string                 `protobuf:"bytes,2,opt,name=Key,proto3" json:"Key,omitempty"`                                                                                           // 关键字,如ConditionType_PlayerPropertyCompare对应的属性名
+	Op            string                 `protobuf:"bytes,3,opt,name=Op,proto3" json:"Op,omitempty"`                                                                                             // 操作符 = > >= < <= != [] ![]
+	Properties    map[int32]int64        `protobuf:"bytes,5,rep,name=Properties,proto3" json:"Properties,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"` // 扩展属性(key为int32枚举值,值为int64)
+	ClientCheck   bool                   `protobuf:"varint,6,opt,name=ClientCheck,proto3" json:"ClientCheck,omitempty"`                                                                          // 客户端是否可以直接判断条件,比如玩家的等级
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1558,7 +1558,7 @@ func (x *ConditionTemplateCfg) GetOp() string {
 	return ""
 }
 
-func (x *ConditionTemplateCfg) GetProperties() map[string]string {
+func (x *ConditionTemplateCfg) GetProperties() map[int32]int64 {
 	if x != nil {
 		return x.Properties
 	}
@@ -1582,7 +1582,7 @@ type ProgressCfg struct {
 	ProgressField     string                      `protobuf:"bytes,5,opt,name=ProgressField,proto3" json:"ProgressField,omitempty"`                                                                                   // 以事件字段值作为进度值,为空表示进度值是1
 	IntEventFields    map[string]*ValueCompareCfg `protobuf:"bytes,6,rep,name=IntEventFields,proto3" json:"IntEventFields,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`       // 数值类型的事件字段值(支持复杂的比较操作符)
 	StringEventFields map[string]string           `protobuf:"bytes,7,rep,name=StringEventFields,proto3" json:"StringEventFields,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // 事件字段值(字符串形式)
-	Properties        map[string]string           `protobuf:"bytes,8,rep,name=Properties,proto3" json:"Properties,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`               // 扩展属性
+	Properties        map[int32]int64             `protobuf:"bytes,8,rep,name=Properties,proto3" json:"Properties,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`             // 扩展属性(key为int32枚举值,值为int64)
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -1666,7 +1666,7 @@ func (x *ProgressCfg) GetStringEventFields() map[string]string {
 	return nil
 }
 
-func (x *ProgressCfg) GetProperties() map[string]string {
+func (x *ProgressCfg) GetProperties() map[int32]int64 {
 	if x != nil {
 		return x.Properties
 	}
@@ -1683,7 +1683,7 @@ type ProgressTemplateCfg struct {
 	ProgressField     string                      `protobuf:"bytes,5,opt,name=ProgressField,proto3" json:"ProgressField,omitempty"`                                                                                   // 以事件字段值作为进度值,为空表示进度值是1
 	IntEventFields    map[string]*ValueCompareCfg `protobuf:"bytes,6,rep,name=IntEventFields,proto3" json:"IntEventFields,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`       // 数值类型的事件字段值(支持复杂的比较操作符)
 	StringEventFields map[string]string           `protobuf:"bytes,7,rep,name=StringEventFields,proto3" json:"StringEventFields,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // 事件字段值(字符串形式)
-	Properties        map[string]string           `protobuf:"bytes,8,rep,name=Properties,proto3" json:"Properties,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`               // 扩展属性
+	Properties        map[int32]int64             `protobuf:"bytes,8,rep,name=Properties,proto3" json:"Properties,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`             // 扩展属性(key为int32枚举值,值为int64)
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -1767,7 +1767,7 @@ func (x *ProgressTemplateCfg) GetStringEventFields() map[string]string {
 	return nil
 }
 
-func (x *ProgressTemplateCfg) GetProperties() map[string]string {
+func (x *ProgressTemplateCfg) GetProperties() map[int32]int64 {
 	if x != nil {
 		return x.Properties
 	}
@@ -1778,14 +1778,14 @@ func (x *ProgressTemplateCfg) GetProperties() map[string]string {
 type ExchangeCfg struct {
 	state              protoimpl.MessageState `protogen:"open.v1"`
 	CfgId              int32                  `protobuf:"varint,1,opt,name=CfgId,proto3" json:"CfgId,omitempty"`
-	Conditions         []*ConditionCfg        `protobuf:"bytes,2,rep,name=Conditions,proto3" json:"Conditions,omitempty"`                                                                           // 兑换条件
-	Consumes           []*ItemNum             `protobuf:"bytes,3,rep,name=Consumes,proto3" json:"Consumes,omitempty"`                                                                               // 需要消耗的物品
-	Rewards            []*AddElemArg          `protobuf:"bytes,4,rep,name=Rewards,proto3" json:"Rewards,omitempty"`                                                                                 // 获得物品
-	CountLimit         int32                  `protobuf:"varint,5,opt,name=CountLimit,proto3" json:"CountLimit,omitempty"`                                                                          // 兑换次数限制(0表示无次数限制)
-	RefreshType        int32                  `protobuf:"varint,6,opt,name=RefreshType,proto3" json:"RefreshType,omitempty"`                                                                        // 刷新机制(enum RefreshType)
-	Category           int32                  `protobuf:"varint,7,opt,name=Category,proto3" json:"Category,omitempty"`                                                                              // 兑换分类(enum ExchangeCategory)
-	RechargeCfgId      int32                  `protobuf:"varint,8,opt,name=RechargeCfgId,proto3" json:"RechargeCfgId,omitempty"`                                                                    // 关联的充值配置ID(>0表示该兑换项由充值回调触发,玩家无法手动领取)
-	Properties         map[string]string      `protobuf:"bytes,9,rep,name=Properties,proto3" json:"Properties,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // 扩展属性
+	Conditions         []*ConditionCfg        `protobuf:"bytes,2,rep,name=Conditions,proto3" json:"Conditions,omitempty"`                                                                             // 兑换条件
+	Consumes           []*ItemNum             `protobuf:"bytes,3,rep,name=Consumes,proto3" json:"Consumes,omitempty"`                                                                                 // 需要消耗的物品
+	Rewards            []*AddElemArg          `protobuf:"bytes,4,rep,name=Rewards,proto3" json:"Rewards,omitempty"`                                                                                   // 获得物品
+	CountLimit         int32                  `protobuf:"varint,5,opt,name=CountLimit,proto3" json:"CountLimit,omitempty"`                                                                            // 兑换次数限制(0表示无次数限制)
+	RefreshType        int32                  `protobuf:"varint,6,opt,name=RefreshType,proto3" json:"RefreshType,omitempty"`                                                                          // 刷新机制(enum RefreshType)
+	Category           int32                  `protobuf:"varint,7,opt,name=Category,proto3" json:"Category,omitempty"`                                                                                // 兑换分类(enum ExchangeCategory)
+	RechargeCfgId      int32                  `protobuf:"varint,8,opt,name=RechargeCfgId,proto3" json:"RechargeCfgId,omitempty"`                                                                      // 关联的充值配置ID(>0表示该兑换项由充值回调触发,玩家无法手动领取)
+	Properties         map[int32]int64        `protobuf:"bytes,9,rep,name=Properties,proto3" json:"Properties,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"` // 扩展属性(key为int32枚举值,值为int64)
 	Detail             string                 `protobuf:"bytes,10,opt,name=Detail,proto3" json:"Detail,omitempty"`
 	Icon               string                 `protobuf:"bytes,11,opt,name=Icon,proto3" json:"Icon,omitempty"`                             // 图标(客户端使用)
 	ConditionTemplates []*CfgArgOptions       `protobuf:"bytes,21,rep,name=ConditionTemplates,proto3" json:"ConditionTemplates,omitempty"` // 关联的配置模板id和参数,简化配置表用,业务代码不要调用
@@ -1879,7 +1879,7 @@ func (x *ExchangeCfg) GetRechargeCfgId() int32 {
 	return 0
 }
 
-func (x *ExchangeCfg) GetProperties() map[string]string {
+func (x *ExchangeCfg) GetProperties() map[int32]int64 {
 	if x != nil {
 		return x.Properties
 	}
@@ -2006,19 +2006,19 @@ type ActivityCfg struct {
 	CfgId             int32                  `protobuf:"varint,1,opt,name=CfgId,proto3" json:"CfgId,omitempty"`
 	Name              string                 `protobuf:"bytes,2,opt,name=Name,proto3" json:"Name,omitempty"`
 	Detail            string                 `protobuf:"bytes,3,opt,name=Detail,proto3" json:"Detail,omitempty"`
-	Template          string                 `protobuf:"bytes,4,opt,name=Template,proto3" json:"Template,omitempty"`                                                                                // 活动模板名
-	RefreshType       int32                  `protobuf:"varint,5,opt,name=RefreshType,proto3" json:"RefreshType,omitempty"`                                                                         // 刷新机制(enum RefreshType)
-	CycleType         int32                  `protobuf:"varint,6,opt,name=CycleType,proto3" json:"CycleType,omitempty"`                                                                             // 活动周期类型
-	TimeType          int32                  `protobuf:"varint,7,opt,name=TimeType,proto3" json:"TimeType,omitempty"`                                                                               // 时间类型(enum TimeType)
-	BeginTime         int64                  `protobuf:"varint,8,opt,name=BeginTime,proto3" json:"BeginTime,omitempty"`                                                                             // 开始时间(TimeType为TimeType_Timestamp时,格式是时间戳 TimeType为TimeType_Date时,格式是20240219)
-	EndTime           int64                  `protobuf:"varint,9,opt,name=EndTime,proto3" json:"EndTime,omitempty"`                                                                                 // 结束时间(TimeType为TimeType_Timestamp时,格式是时间戳 TimeType为TimeType_Date时,格式是20240219)
-	ExchangeIds       []int32                `protobuf:"varint,10,rep,packed,name=ExchangeIds,proto3" json:"ExchangeIds,omitempty"`                                                                 // 兑换配置
-	IsOff             bool                   `protobuf:"varint,11,opt,name=IsOff,proto3" json:"IsOff,omitempty"`                                                                                    // 是否关闭
-	RemoveDataWhenEnd bool                   `protobuf:"varint,12,opt,name=RemoveDataWhenEnd,proto3" json:"RemoveDataWhenEnd,omitempty"`                                                            // 活动结束时,是否删除活动数据
-	MinPlayerLevel    int32                  `protobuf:"varint,14,opt,name=MinPlayerLevel,proto3" json:"MinPlayerLevel,omitempty"`                                                                  // 参与活动的最低玩家等级要求(0表示不限制)
-	MaxPlayerLevel    int32                  `protobuf:"varint,15,opt,name=MaxPlayerLevel,proto3" json:"MaxPlayerLevel,omitempty"`                                                                  // 参与活动的最大玩家等级上限(0表示不限制)
-	QuestIds          []int32                `protobuf:"varint,16,rep,packed,name=QuestIds,proto3" json:"QuestIds,omitempty"`                                                                       // 活动子任务id
-	Properties        map[string]string      `protobuf:"bytes,17,rep,name=Properties,proto3" json:"Properties,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // 扩展属性
+	Template          string                 `protobuf:"bytes,4,opt,name=Template,proto3" json:"Template,omitempty"`                                                                                  // 活动模板名
+	RefreshType       int32                  `protobuf:"varint,5,opt,name=RefreshType,proto3" json:"RefreshType,omitempty"`                                                                           // 刷新机制(enum RefreshType)
+	CycleType         int32                  `protobuf:"varint,6,opt,name=CycleType,proto3" json:"CycleType,omitempty"`                                                                               // 活动周期类型
+	TimeType          int32                  `protobuf:"varint,7,opt,name=TimeType,proto3" json:"TimeType,omitempty"`                                                                                 // 时间类型(enum TimeType)
+	BeginTime         int64                  `protobuf:"varint,8,opt,name=BeginTime,proto3" json:"BeginTime,omitempty"`                                                                               // 开始时间(TimeType为TimeType_Timestamp时,格式是时间戳 TimeType为TimeType_Date时,格式是20240219)
+	EndTime           int64                  `protobuf:"varint,9,opt,name=EndTime,proto3" json:"EndTime,omitempty"`                                                                                   // 结束时间(TimeType为TimeType_Timestamp时,格式是时间戳 TimeType为TimeType_Date时,格式是20240219)
+	ExchangeIds       []int32                `protobuf:"varint,10,rep,packed,name=ExchangeIds,proto3" json:"ExchangeIds,omitempty"`                                                                   // 兑换配置
+	IsOff             bool                   `protobuf:"varint,11,opt,name=IsOff,proto3" json:"IsOff,omitempty"`                                                                                      // 是否关闭
+	RemoveDataWhenEnd bool                   `protobuf:"varint,12,opt,name=RemoveDataWhenEnd,proto3" json:"RemoveDataWhenEnd,omitempty"`                                                              // 活动结束时,是否删除活动数据
+	MinPlayerLevel    int32                  `protobuf:"varint,14,opt,name=MinPlayerLevel,proto3" json:"MinPlayerLevel,omitempty"`                                                                    // 参与活动的最低玩家等级要求(0表示不限制)
+	MaxPlayerLevel    int32                  `protobuf:"varint,15,opt,name=MaxPlayerLevel,proto3" json:"MaxPlayerLevel,omitempty"`                                                                    // 参与活动的最大玩家等级上限(0表示不限制)
+	QuestIds          []int32                `protobuf:"varint,16,rep,packed,name=QuestIds,proto3" json:"QuestIds,omitempty"`                                                                         // 活动子任务id
+	Properties        map[int32]int64        `protobuf:"bytes,17,rep,name=Properties,proto3" json:"Properties,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"` // 扩展属性(key为int32枚举值,值为int64)
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -2158,7 +2158,7 @@ func (x *ActivityCfg) GetQuestIds() []int32 {
 	return nil
 }
 
-func (x *ActivityCfg) GetProperties() map[string]string {
+func (x *ActivityCfg) GetProperties() map[int32]int64 {
 	if x != nil {
 		return x.Properties
 	}
@@ -2221,10 +2221,10 @@ func (x *LevelExp) GetNeedExp() int32 {
 // 商店配置
 type ShopCfg struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	CfgId         int32                  `protobuf:"varint,1,opt,name=CfgId,proto3" json:"CfgId,omitempty"`                                                                                    // 配置id
-	Name          string                 `protobuf:"bytes,2,opt,name=Name,proto3" json:"Name,omitempty"`                                                                                       // 商店名
-	ExchangeIds   []int32                `protobuf:"varint,3,rep,packed,name=ExchangeIds,proto3" json:"ExchangeIds,omitempty"`                                                                 // 商店的每1个格子就是1个兑换礼包
-	Properties    map[string]string      `protobuf:"bytes,8,rep,name=Properties,proto3" json:"Properties,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // 扩展属性
+	CfgId         int32                  `protobuf:"varint,1,opt,name=CfgId,proto3" json:"CfgId,omitempty"`                                                                                      // 配置id
+	Name          string                 `protobuf:"bytes,2,opt,name=Name,proto3" json:"Name,omitempty"`                                                                                         // 商店名
+	ExchangeIds   []int32                `protobuf:"varint,3,rep,packed,name=ExchangeIds,proto3" json:"ExchangeIds,omitempty"`                                                                   // 商店的每1个格子就是1个兑换礼包
+	Properties    map[int32]int64        `protobuf:"bytes,8,rep,name=Properties,proto3" json:"Properties,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"` // 扩展属性(key为int32枚举值,值为int64)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2280,7 +2280,7 @@ func (x *ShopCfg) GetExchangeIds() []int32 {
 	return nil
 }
 
-func (x *ShopCfg) GetProperties() map[string]string {
+func (x *ShopCfg) GetProperties() map[int32]int64 {
 	if x != nil {
 		return x.Properties
 	}
@@ -2315,8 +2315,8 @@ const file_cfg_proto_rawDesc = "" +
 	"Properties\x12\x12\n" +
 	"\x04Icon\x18\f \x01(\tR\x04Icon\x1a=\n" +
 	"\x0fPropertiesEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x86\x02\n" +
+	"\x03key\x18\x01 \x01(\x05R\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\x03R\x05value:\x028\x01\"\x86\x02\n" +
 	"\n" +
 	"AddElemArg\x12\x14\n" +
 	"\x05CfgId\x18\x01 \x01(\x05R\x05CfgId\x12\x10\n" +
@@ -2328,8 +2328,8 @@ const file_cfg_proto_rawDesc = "" +
 	"Properties\x18\x06 \x03(\v2#.gserver.AddElemArg.PropertiesEntryR\n" +
 	"Properties\x1a=\n" +
 	"\x0fPropertiesEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xec\x01\n" +
+	"\x03key\x18\x01 \x01(\x05R\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\x03R\x05value:\x028\x01\"\xec\x01\n" +
 	"\n" +
 	"DelElemArg\x12\x1a\n" +
 	"\bUniqueId\x18\x01 \x01(\x03R\bUniqueId\x12\x14\n" +
@@ -2340,8 +2340,8 @@ const file_cfg_proto_rawDesc = "" +
 	"Properties\x18\x05 \x03(\v2#.gserver.DelElemArg.PropertiesEntryR\n" +
 	"Properties\x1a=\n" +
 	"\x0fPropertiesEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"0\n" +
+	"\x03key\x18\x01 \x01(\x05R\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\x03R\x05value:\x028\x01\"0\n" +
 	"\x06CfgArg\x12\x14\n" +
 	"\x05CfgId\x18\x01 \x01(\x05R\x05CfgId\x12\x10\n" +
 	"\x03Arg\x18\x02 \x01(\x05R\x03Arg\"3\n" +
@@ -2380,8 +2380,8 @@ const file_cfg_proto_rawDesc = "" +
 	"\x12ConditionTemplates\x18\x15 \x03(\v2\x16.gserver.CfgArgOptionsR\x12ConditionTemplates\x12;\n" +
 	"\x10ProgressTemplate\x18\x16 \x01(\v2\x0f.gserver.CfgArgR\x10ProgressTemplate\x1a=\n" +
 	"\x0fPropertiesEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"9\n" +
+	"\x03key\x18\x01 \x01(\x05R\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\x03R\x05value:\x028\x01\"9\n" +
 	"\x0fValueCompareCfg\x12\x0e\n" +
 	"\x02Op\x18\x01 \x01(\tR\x02Op\x12\x16\n" +
 	"\x06Values\x18\x02 \x03(\x05R\x06Values\"\x9e\x02\n" +
@@ -2396,8 +2396,8 @@ const file_cfg_proto_rawDesc = "" +
 	"Properties\x12 \n" +
 	"\vClientCheck\x18\a \x01(\bR\vClientCheck\x1a=\n" +
 	"\x0fPropertiesEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x92\x02\n" +
+	"\x03key\x18\x01 \x01(\x05R\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\x03R\x05value:\x028\x01\"\x92\x02\n" +
 	"\x14ConditionTemplateCfg\x12\x14\n" +
 	"\x05CfgId\x18\x04 \x01(\x05R\x05CfgId\x12\x12\n" +
 	"\x04Type\x18\x01 \x01(\x05R\x04Type\x12\x10\n" +
@@ -2408,8 +2408,8 @@ const file_cfg_proto_rawDesc = "" +
 	"Properties\x12 \n" +
 	"\vClientCheck\x18\x06 \x01(\bR\vClientCheck\x1a=\n" +
 	"\x0fPropertiesEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xe4\x04\n" +
+	"\x03key\x18\x01 \x01(\x05R\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\x03R\x05value:\x028\x01\"\xe4\x04\n" +
 	"\vProgressCfg\x12\x12\n" +
 	"\x04Type\x18\x01 \x01(\x05R\x04Type\x12\x14\n" +
 	"\x05Total\x18\x02 \x01(\x05R\x05Total\x12\x1a\n" +
@@ -2428,8 +2428,8 @@ const file_cfg_proto_rawDesc = "" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a=\n" +
 	"\x0fPropertiesEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x84\x05\n" +
+	"\x03key\x18\x01 \x01(\x05R\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\x03R\x05value:\x028\x01\"\x84\x05\n" +
 	"\x13ProgressTemplateCfg\x12\x14\n" +
 	"\x05CfgId\x18\x01 \x01(\x05R\x05CfgId\x12\x12\n" +
 	"\x04Type\x18\x02 \x01(\x05R\x04Type\x12\x1a\n" +
@@ -2448,8 +2448,8 @@ const file_cfg_proto_rawDesc = "" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a=\n" +
 	"\x0fPropertiesEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xb4\x04\n" +
+	"\x03key\x18\x01 \x01(\x05R\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\x03R\x05value:\x028\x01\"\xb4\x04\n" +
 	"\vExchangeCfg\x12\x14\n" +
 	"\x05CfgId\x18\x01 \x01(\x05R\x05CfgId\x125\n" +
 	"\n" +
@@ -2471,8 +2471,8 @@ const file_cfg_proto_rawDesc = "" +
 	"\x04Icon\x18\v \x01(\tR\x04Icon\x12F\n" +
 	"\x12ConditionTemplates\x18\x15 \x03(\v2\x16.gserver.CfgArgOptionsR\x12ConditionTemplates\x1a=\n" +
 	"\x0fPropertiesEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xb3\x01\n" +
+	"\x03key\x18\x01 \x01(\x05R\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\x03R\x05value:\x028\x01\"\xb3\x01\n" +
 	"\vRechargeCfg\x12\x14\n" +
 	"\x05CfgId\x18\x01 \x01(\x05R\x05CfgId\x12\x14\n" +
 	"\x05Price\x18\x02 \x01(\x05R\x05Price\x12\x1a\n" +
@@ -2502,8 +2502,8 @@ const file_cfg_proto_rawDesc = "" +
 	"Properties\x18\x11 \x03(\v2$.gserver.ActivityCfg.PropertiesEntryR\n" +
 	"Properties\x1a=\n" +
 	"\x0fPropertiesEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\":\n" +
+	"\x03key\x18\x01 \x01(\x05R\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\x03R\x05value:\x028\x01\":\n" +
 	"\bLevelExp\x12\x14\n" +
 	"\x05Level\x18\x01 \x01(\x05R\x05Level\x12\x18\n" +
 	"\aNeedExp\x18\x02 \x01(\x05R\aNeedExp\"\xd6\x01\n" +
@@ -2515,8 +2515,8 @@ const file_cfg_proto_rawDesc = "" +
 	"Properties\x18\b \x03(\v2 .gserver.ShopCfg.PropertiesEntryR\n" +
 	"Properties\x1a=\n" +
 	"\x0fPropertiesEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*i\n" +
+	"\x03key\x18\x01 \x01(\x05R\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\x03R\x05value:\x028\x01*i\n" +
 	"\x05Color\x12\x0e\n" +
 	"\n" +
 	"Color_None\x10\x00\x12\r\n" +
