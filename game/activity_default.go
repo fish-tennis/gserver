@@ -1,15 +1,14 @@
 package game
 
 import (
+	"log/slog"
+	"reflect"
+	"time"
+
 	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gserver/cfg"
 	. "github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/pb"
-	"github.com/fish-tennis/gserver/util"
-	"log/slog"
-	"math"
-	"reflect"
-	"time"
 )
 
 func init() {
@@ -182,47 +181,31 @@ func (a *ActivityDefault) OnEnd(t time.Time) {
 	}
 }
 
-func (a *ActivityDefault) GetPropertyInt32(propertyName string, conditionCfg *pb.ConditionCfg) int32 {
-	if property, ok := a.Base.PropertiesInt32[propertyName]; ok {
-		return property
-	}
-	switch propertyName {
-	case "DayCount":
-		// 当前是参加这个活动的第几天,从1开始
-		days := util.DayCount(a.Activities.GetPlayer().GetTimerEntries().Now(), time.Unix(int64(a.Base.JoinTime), 0))
-		return int32(days) + 1
-	default:
-		slog.Error("Not support property", "activityId", a.GetId(), "propertyName", propertyName)
-	}
-	return 0
+// 获取活动数据上的动态属性值
+// propertyId为pb.ActivityPropertyId枚举值,专用于ActivityDefaultBaseData.PropertiesInt属性值的操作
+func (a *ActivityDefault) GetProperty(propertyId int32) int64 {
+	return a.Base.PropertiesInt[propertyId]
 }
 
-func (a *ActivityDefault) SetPropertyInt32(propertyName string, value int32) {
-	if a.Base.PropertiesInt32 == nil {
-		a.Base.PropertiesInt32 = make(map[string]int32)
+func (a *ActivityDefault) SetProperty(propertyId int32, value int64) {
+	if a.Base.PropertiesInt == nil {
+		a.Base.PropertiesInt = make(map[int32]int64)
 	}
-	a.Base.PropertiesInt32[propertyName] = value
+	a.Base.PropertiesInt[propertyId] = value
 	a.SetDirty()
-	slog.Debug("SetPropertyInt32", "pid", a.Activities.GetPlayer().GetId(),
-		"activityId", a.GetId(), "propertyName", propertyName, "value", value)
+	slog.Debug("SetProperty", "pid", a.Activities.GetPlayer().GetId(),
+		"activityId", a.GetId(), "propertyId", propertyId, "value", value)
 }
 
-func (a *ActivityDefault) IncPropertyInt32(propertyName string, incValue int32) {
-	if a.Base.PropertiesInt32 == nil {
-		a.Base.PropertiesInt32 = make(map[string]int32)
+func (a *ActivityDefault) IncProperty(propertyId int32, incValue int64) {
+	if a.Base.PropertiesInt == nil {
+		a.Base.PropertiesInt = make(map[int32]int64)
 	}
-	// int64 运算防溢出,钳制到 MaxInt32
-	newVal := int64(a.Base.PropertiesInt32[propertyName]) + int64(incValue)
-	if newVal > math.MaxInt32 {
-		newVal = math.MaxInt32
-	}
-	if newVal < 0 {
-		newVal = 0
-	}
-	a.Base.PropertiesInt32[propertyName] = int32(newVal)
+	newVal := a.Base.PropertiesInt[propertyId] + incValue
+	a.Base.PropertiesInt[propertyId] = newVal
 	a.SetDirty()
-	slog.Debug("IncPropertyInt32", "pid", a.Activities.GetPlayer().GetId(),
-		"activityId", a.GetId(), "propertyName", propertyName, "incValue", incValue)
+	slog.Debug("IncProperty", "pid", a.Activities.GetPlayer().GetId(),
+		"activityId", a.GetId(), "propertyId", propertyId, "newVal", newVal, "incValue", incValue)
 }
 
 // 同步数据给客户端

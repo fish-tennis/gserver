@@ -1,12 +1,13 @@
 package game
 
 import (
-	"github.com/fish-tennis/gserver/cfg"
-	. "github.com/fish-tennis/gserver/internal"
-	"github.com/fish-tennis/gserver/pb"
 	"log/slog"
 	"math/rand"
 	"time"
+
+	"github.com/fish-tennis/gserver/cfg"
+	. "github.com/fish-tennis/gserver/internal"
+	"github.com/fish-tennis/gserver/pb"
 )
 
 func init() {
@@ -33,14 +34,14 @@ func randomQuestInit(a *ActivityDefault, t time.Time) {
 		return
 	}
 	a.AddQuest(questCfg)
-	a.SetPropertyInt32("QuestId", questId) // 记录随机出来的任务id
+	a.SetProperty(int32(pb.ActivityPropertyId_RandomQuestId), int64(questId)) // 记录随机出来的任务id
 	slog.Debug("randomQuestInit", "pid", a.Activities.GetPlayer().GetId(),
 		"activityId", a.GetId(), "activityName", activityCfg.Name, "questId", questId)
 }
 
 func randomQuestRefresh(a *ActivityDefault, t time.Time, refreshType int32) {
 	// 先删除之前随机出来的任务
-	a.Activities.GetPlayer().GetQuest().RemoveQuest(a.GetPropertyInt32("QuestId", nil))
+	a.Activities.GetPlayer().GetQuest().RemoveQuest(int32(a.GetProperty(int32(pb.ActivityPropertyId_RandomQuestId))))
 	// 再重新随机一个
 	randomQuestInit(a, t)
 	a.defaultRefreshExchange(t, refreshType) // 兑换的刷新继续复用默认接口

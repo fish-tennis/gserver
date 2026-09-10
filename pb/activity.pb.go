@@ -21,6 +21,55 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// 活动属性名定义
+// 服务器和客户端共用的活动属性枚举,ActivityDefaultBaseData.PropertiesInt的key
+// 枚举值使用不带前缀的短名,配置表(如条件检查的Key)和客户端可以直接使用属性名
+type ActivityPropertyId int32
+
+const (
+	ActivityPropertyId_None          ActivityPropertyId = 0 // 解决"The first enum value must be zero in proto3."的报错
+	ActivityPropertyId_RandomQuestId ActivityPropertyId = 1 // 随机任务id(game\activity_random_quest.go测试使用)
+)
+
+// Enum value maps for ActivityPropertyId.
+var (
+	ActivityPropertyId_name = map[int32]string{
+		0: "None",
+		1: "RandomQuestId",
+	}
+	ActivityPropertyId_value = map[string]int32{
+		"None":          0,
+		"RandomQuestId": 1,
+	}
+)
+
+func (x ActivityPropertyId) Enum() *ActivityPropertyId {
+	p := new(ActivityPropertyId)
+	*p = x
+	return p
+}
+
+func (x ActivityPropertyId) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ActivityPropertyId) Descriptor() protoreflect.EnumDescriptor {
+	return file_activity_proto_enumTypes[0].Descriptor()
+}
+
+func (ActivityPropertyId) Type() protoreflect.EnumType {
+	return &file_activity_proto_enumTypes[0]
+}
+
+func (x ActivityPropertyId) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ActivityPropertyId.Descriptor instead.
+func (ActivityPropertyId) EnumDescriptor() ([]byte, []int) {
+	return file_activity_proto_rawDescGZIP(), []int{0}
+}
+
 // 同步活动数据给客户端
 type ActivitySync struct {
 	state         protoimpl.MessageState   `protogen:"open.v1"`
@@ -132,7 +181,10 @@ const file_activity_proto_rawDesc = "" +
 	"\x11ActivityRemoveRes\x12\x1e\n" +
 	"\n" +
 	"ActivityId\x18\x01 \x01(\x05R\n" +
-	"ActivityIdB\x06Z\x04./pbb\x06proto3"
+	"ActivityId*1\n" +
+	"\x12ActivityPropertyId\x12\b\n" +
+	"\x04None\x10\x00\x12\x11\n" +
+	"\rRandomQuestId\x10\x01B\x06Z\x04./pbb\x06proto3"
 
 var (
 	file_activity_proto_rawDescOnce sync.Once
@@ -146,14 +198,16 @@ func file_activity_proto_rawDescGZIP() []byte {
 	return file_activity_proto_rawDescData
 }
 
+var file_activity_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 var file_activity_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_activity_proto_goTypes = []any{
-	(*ActivitySync)(nil),            // 0: gserver.ActivitySync
-	(*ActivityRemoveRes)(nil),       // 1: gserver.ActivityRemoveRes
-	(*ActivityDefaultBaseData)(nil), // 2: gserver.ActivityDefaultBaseData
+	(ActivityPropertyId)(0),         // 0: gserver.ActivityPropertyId
+	(*ActivitySync)(nil),            // 1: gserver.ActivitySync
+	(*ActivityRemoveRes)(nil),       // 2: gserver.ActivityRemoveRes
+	(*ActivityDefaultBaseData)(nil), // 3: gserver.ActivityDefaultBaseData
 }
 var file_activity_proto_depIdxs = []int32{
-	2, // 0: gserver.ActivitySync.BaseData:type_name -> gserver.ActivityDefaultBaseData
+	3, // 0: gserver.ActivitySync.BaseData:type_name -> gserver.ActivityDefaultBaseData
 	1, // [1:1] is the sub-list for method output_type
 	1, // [1:1] is the sub-list for method input_type
 	1, // [1:1] is the sub-list for extension type_name
@@ -172,13 +226,14 @@ func file_activity_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_activity_proto_rawDesc), len(file_activity_proto_rawDesc)),
-			NumEnums:      0,
+			NumEnums:      1,
 			NumMessages:   2,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
 		GoTypes:           file_activity_proto_goTypes,
 		DependencyIndexes: file_activity_proto_depIdxs,
+		EnumInfos:         file_activity_proto_enumTypes,
 		MessageInfos:      file_activity_proto_msgTypes,
 	}.Build()
 	File_activity_proto = out.File

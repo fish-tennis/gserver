@@ -6,6 +6,14 @@ package gserver;
 
 import "player.proto";
 
+// 活动属性名定义
+// 服务器和客户端共用的活动属性枚举,ActivityDefaultBaseData.PropertiesInt的key
+// 枚举值使用不带前缀的短名,配置表(如条件检查的Key)和客户端可以直接使用属性名
+enum ActivityPropertyId {
+  None = 0; 			// 解决"The first enum value must be zero in proto3."的报错
+  RandomQuestId = 1; 	// 随机任务id(game\activity_random_quest.go测试使用)
+}
+
 // 同步活动数据给客户端
 message ActivitySync {
   int32 ActivityId = 1; // 活动id
