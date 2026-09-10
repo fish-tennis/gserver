@@ -102,6 +102,13 @@ func NewBaseServer(ctx context.Context, serverType string, configFile string, cf
 		cfgDir:     cfgDir,
 		serverInfo: &pb.ServerInfo{
 			ServerType: serverType,
+			// StartupTime记录进程启动时刻:NewBaseServer在所有协程启动之前执行
+			// (每秒读serverInfo的updateLoop由Run()才启动),此处直接写serverInfo无并发风险,
+			// 之后由RegisterLocalServerInfo每秒随心跳上报
+			StartupTime: time.Now().Unix(),
+			// GitVersion在包init时已确定最终值(ldflags注入优先,其次构建时VCS嵌入),
+			// 同包直接引用包变量,无需等待配置
+			GitVersion: GitVersion,
 		},
 	}
 	// 创建可取消的 context,确保 Exit() 能主动触发 updateLoop 退出

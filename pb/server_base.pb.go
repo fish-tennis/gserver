@@ -21,7 +21,7 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// 服务器信息
+// 服务器进程信息
 type ServerInfo struct {
 	state              protoimpl.MessageState `protogen:"open.v1"`
 	ServerId           int32                  `protobuf:"varint,1,opt,name=ServerId,proto3" json:"ServerId,omitempty"`                    // 服务器id
@@ -32,6 +32,11 @@ type ServerInfo struct {
 	GateListenAddr     string                 `protobuf:"bytes,6,opt,name=GateListenAddr,proto3" json:"GateListenAddr,omitempty"`         // 监听网关地址
 	LastActiveTime     int64                  `protobuf:"varint,7,opt,name=LastActiveTime,proto3" json:"LastActiveTime,omitempty"`        // 最近上传信息的时间戳(毫秒)
 	Ping               int32                  `protobuf:"varint,8,opt,name=Ping,proto3" json:"Ping,omitempty"`                            // ping值(毫秒)
+	ReloadTime         int64                  `protobuf:"varint,9,opt,name=ReloadTime,proto3" json:"ReloadTime,omitempty"`                // 最近热更配置表时间戳(秒)
+	StartupTime        int64                  `protobuf:"varint,10,opt,name=StartupTime,proto3" json:"StartupTime,omitempty"`             // 进程启动时间戳(秒)
+	OnlineCount        int32                  `protobuf:"varint,11,opt,name=OnlineCount,proto3" json:"OnlineCount,omitempty"`             // 在线人数(仅Game进程有值,含断线保留期玩家)
+	GitVersion         string                 `protobuf:"bytes,12,opt,name=GitVersion,proto3" json:"GitVersion,omitempty"`                // build时传入的GitVersion
+	Info               string                 `protobuf:"bytes,13,opt,name=Info,proto3" json:"Info,omitempty"`                            // 自定义信息,用于不同的服务器上传自定义的内容
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -120,6 +125,41 @@ func (x *ServerInfo) GetPing() int32 {
 		return x.Ping
 	}
 	return 0
+}
+
+func (x *ServerInfo) GetReloadTime() int64 {
+	if x != nil {
+		return x.ReloadTime
+	}
+	return 0
+}
+
+func (x *ServerInfo) GetStartupTime() int64 {
+	if x != nil {
+		return x.StartupTime
+	}
+	return 0
+}
+
+func (x *ServerInfo) GetOnlineCount() int32 {
+	if x != nil {
+		return x.OnlineCount
+	}
+	return 0
+}
+
+func (x *ServerInfo) GetGitVersion() string {
+	if x != nil {
+		return x.GitVersion
+	}
+	return ""
+}
+
+func (x *ServerInfo) GetInfo() string {
+	if x != nil {
+		return x.Info
+	}
+	return ""
 }
 
 // 踢玩家下线req
@@ -415,7 +455,7 @@ var File_server_base_proto protoreflect.FileDescriptor
 
 const file_server_base_proto_rawDesc = "" +
 	"\n" +
-	"\x11server_base.proto\x12\agserver\"\xb4\x02\n" +
+	"\x11server_base.proto\x12\agserver\"\xcc\x03\n" +
 	"\n" +
 	"ServerInfo\x12\x1a\n" +
 	"\bServerId\x18\x01 \x01(\x05R\bServerId\x12\x1e\n" +
@@ -427,7 +467,17 @@ const file_server_base_proto_rawDesc = "" +
 	"\x12WsClientListenAddr\x18\x05 \x01(\tR\x12WsClientListenAddr\x12&\n" +
 	"\x0eGateListenAddr\x18\x06 \x01(\tR\x0eGateListenAddr\x12&\n" +
 	"\x0eLastActiveTime\x18\a \x01(\x03R\x0eLastActiveTime\x12\x12\n" +
-	"\x04Ping\x18\b \x01(\x05R\x04Ping\"I\n" +
+	"\x04Ping\x18\b \x01(\x05R\x04Ping\x12\x1e\n" +
+	"\n" +
+	"ReloadTime\x18\t \x01(\x03R\n" +
+	"ReloadTime\x12 \n" +
+	"\vStartupTime\x18\n" +
+	" \x01(\x03R\vStartupTime\x12 \n" +
+	"\vOnlineCount\x18\v \x01(\x05R\vOnlineCount\x12\x1e\n" +
+	"\n" +
+	"GitVersion\x18\f \x01(\tR\n" +
+	"GitVersion\x12\x12\n" +
+	"\x04Info\x18\r \x01(\tR\x04Info\"I\n" +
 	"\rKickPlayerReq\x12\x1c\n" +
 	"\tAccountId\x18\x01 \x01(\x03R\tAccountId\x12\x1a\n" +
 	"\bPlayerId\x18\x02 \x01(\x03R\bPlayerId\"_\n" +

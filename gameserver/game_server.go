@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"sync"
+	"sync/atomic"
 
 	"github.com/fish-tennis/gentity"
 	. "github.com/fish-tennis/gnet"
@@ -19,6 +20,9 @@ import (
 
 var (
 	_ gentity.Application = (*GameServer)(nil)
+	// singleton:包级消息回调(entry_game_handler等)不是方法,通过该单例访问服务器实例
+	// (与loginserver的_loginServer模式一致)
+	_gameServer *GameServer
 )
 
 // 游戏服
@@ -31,6 +35,11 @@ type GameServer struct {
 	// 用于Exit时等待所有玩家协程完成EndFunc(SaveDb+RemovePlayer)后再关闭基础设施
 	// AddPlayer时Add(1),RemovePlayer时Done()
 	playerWg sync.WaitGroup
+	// 在线人数计数,与playerMap同步增减,用于ServerInfo.OnlineCount上报
+	// 语义与pb注释一致:含断线保留期玩家(playerMap中存在即计数)
+	// 用atomic而不是锁:AddPlayer/RemovePlayer运行在玩家协程/DB工作协程,
+	// 与每秒读取该值的updateLoop上报协程并发访问
+	onlineCount atomic.Int32
 }
 
 func NewGameServer(ctx context.Context, configFile string, cfgDir string) *GameServer {
@@ -43,6 +52,9 @@ func NewGameServer(ctx context.Context, configFile string, cfgDir string) *GameS
 
 // 初始化
 func (this *GameServer) Init(ctx context.Context, configFile string) bool {
+	// 单例赋值放在Init最前:网络监听启动后收包协程即可能读_gameServer,
+	// 先赋值再启动监听,保证happens-before
+	_gameServer = this
 	game.SetPlayerMgr(this)
 	if !this.BaseServer.Init(ctx, configFile) {
 		return false
@@ -60,6 +72,11 @@ func (this *GameServer) Init(ctx context.Context, configFile string) bool {
 		if err := cfg.Reload(this.GetCfgDir()); err != nil {
 			slog.Error("GameServer reload config failed", "error", err)
 		} else {
+			// 仅在实际发生了重载时刷新上报的ReloadTime:
+			// Reload对"无变更跳过"也返回nil,用LastRealReloadUnix区分(0表示本次无变更)
+			if t := cfg.LastRealReloadUnix(); t > 0 {
+				GetServerList().SetLocalReloadTime(t)
+			}
 			slog.Info("GameServer config reloaded")
 		}
 	})
@@ -333,6 +350,7 @@ func (this *GameServer) registerServerPacket(handler *DefaultConnectionHandler) 
 func (this *GameServer) AddPlayer(player IPlayer) {
 	this.playerWg.Add(1)
 	this.playerMap.Store(player.GetId(), player)
+	GetServerList().SetLocalOnlineCount(this.onlineCount.Add(1))
 	if !cache.AddOnlinePlayer(player.GetId(), player.GetAccountId(), this.GetId()) {
 		// 占有失败说明记录被其他服务器持有
 		// 本服已通过 AddOnlineAccount 获得账号独占,记录持有者只可能是:
@@ -357,6 +375,7 @@ func (this *GameServer) RemovePlayer(player IPlayer) {
 		slog.Error("RemovePlayer SaveDb error", "playerId", player.GetId(), "error", err)
 	}
 	this.playerMap.Delete(player.GetId())
+	GetServerList().SetLocalOnlineCount(this.onlineCount.Add(-1))
 	// 条件释放:仅当记录仍属于本服时才删除,防止误删新服务器已写入的新记录
 	cache.RemoveOnlineAccount(player.GetAccountId(), player.GetId(), this.GetId())
 	cache.RemoveOnlinePlayer(player.GetId(), this.GetId())
@@ -429,7 +448,7 @@ func (this *GameServer) onRoutePlayerMessage(connection Connection, packet Packe
 		return
 	}
 	pushed := true
-	if req.Options & int32(pb.RouteOption_RouteOption_DirectSendClient) != 0 {
+	if req.Options&int32(pb.RouteOption_RouteOption_DirectSendClient) != 0 {
 		// 不需要player处理的消息,投递到玩家协程内转发给客户端,避免跨协程读 p.connection
 		// 使用 TryPushMessage 非阻塞投递:channel 满时丢弃并告警,防止阻塞服务器间收包协程
 		pushed = player.TryPushMessage(&game.PlayerDirectSendMessage{Cmd: PacketCommand(uint16(req.PacketCommand)), Message: message})

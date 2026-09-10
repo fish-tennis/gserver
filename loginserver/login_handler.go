@@ -120,7 +120,7 @@ func processLoginReq(connection Connection, packet Packet, req *pb.LoginReq) {
 	// 分配一个游戏服给客户端连接
 	gameServerInfo := selectGameServer(account)
 	if gameServerInfo == nil {
-		errorCode = pb.ErrorCode_ErrorCode_TryLater
+		errorCode = pb.ErrorCode_ErrorCode_NoGameServer
 		return
 	}
 	loginRes.GameServer = &pb.GameServerInfo{

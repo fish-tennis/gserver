@@ -18,8 +18,9 @@ RUN go mod download
 # 复制所有go代码
 COPY . .
 
-# 声明一个构建参数，用于接收构建时间
+# 声明构建参数:构建时间和git版本(由docker build --build-arg注入,未传时为空)
 ARG BUILD_DATE
+ARG GIT_VERSION
 
 # 可选：将这个参数持久化为环境变量，供容器运行时使用
 ENV BUILD_DATE=${BUILD_DATE}
@@ -27,7 +28,8 @@ ENV BUILD_DATE=${BUILD_DATE}
 # 编译为静态二进制文件(禁用CGO,确保兼容性)
 # 必须显式指定 GOARCH=amd64:gnet 库的 WsConnection.lastRecvPacketTick 字段在 32 位(GOARCH=386)下
 # 无法保证 8 字节对齐,导致 atomic.StoreInt64 panic(unaligned 64-bit atomic operation)
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-X github.com/fish-tennis/gserver/internal.BuildType=docker -X 'github.com/fish-tennis/gserver/internal.BuildTime=${BUILD_DATE}'" -o gserver main.go
+# ldflags -X 把构建信息注入到 internal 包的包级变量,运行时告警/日志可直接读取
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-X github.com/fish-tennis/gserver/internal.BuildType=docker -X 'github.com/fish-tennis/gserver/internal.BuildTime=${BUILD_DATE}' -X 'github.com/fish-tennis/gserver/internal.GitVersion=${GIT_VERSION}'" -o gserver main.go
 
 # 第二阶段：运行
 # 使用极小的alpine镜像作为运行环境

@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
 // Md5ManifestName 根据配置数据文件格式(DataFileExt)返回导表工具生成的md5清单文件名:
@@ -36,11 +37,21 @@ var (
 	// 启动加载时配置问题返回error拒绝启动(fail fast);
 	// 热更时仅告警不阻断,避免个别坏配置让整个热更流程中断
 	reloading atomic.Bool
+	// 最近一次"实际发生了配置重载"的unix秒级时间戳
+	// 为什么需要它:Reload对"无变更跳过"和"重载成功"都返回nil,调用方无法从返回值区分两者,
+	// ServerInfo上报ReloadTime时需要知道是否真的发生了重载,避免无变更的热更广播虚刷时间戳
+	lastRealReloadUnix atomic.Int64
 )
 
 // IsHotReloading 当前是否处于热更重载流程
 func IsHotReloading() bool {
 	return reloading.Load()
+}
+
+// LastRealReloadUnix 返回最近一次实际重载生效的unix秒级时间戳,从未实际重载过返回0
+// Reload返回nil时调用方用该值判断:0表示本次是无变更跳过,不应刷新上报的ReloadTime
+func LastRealReloadUnix() int64 {
+	return lastRealReloadUnix.Load()
 }
 
 // InitMd5Snapshot 服务器启动时建立md5快照,在启动加载(cfg.Load)成功后调用
@@ -81,7 +92,12 @@ func Reload(dataDir string) error {
 	if err != nil {
 		// md5清单不可用就无法diff,保守降级为全量加载
 		slog.Warn("Reload: md5 manifest unavailable, falling back to full load", "file", Md5ManifestName(), "err", err)
-		return Load(dataDir, nil)
+		if err := Load(dataDir, nil); err != nil {
+			return err
+		}
+		// 降级全量也是实际重载,成功后同样记录时间戳
+		lastRealReloadUnix.Store(time.Now().Unix())
+		return nil
 	}
 
 	changed := diffMd5Snapshot(newMd5s)
@@ -111,6 +127,8 @@ func Reload(dataDir string) error {
 	snapshotMu.Lock()
 	md5Snapshot = newMd5s
 	snapshotMu.Unlock()
+	// 实际重载成功才记录时间戳,供ServerInfo上报ReloadTime(无变更提前返回的路径不会走到这里)
+	lastRealReloadUnix.Store(time.Now().Unix())
 	return nil
 }
 

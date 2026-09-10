@@ -83,6 +83,27 @@ func SendAlert(err interface{}) {
 	go alertMgr.send(err, stack, dedupKey)
 }
 
+// SendAlertSync 同步发送 panic 告警信息到 webhook
+// 用于进程即将退出的场景(如 main.go 顶层 recover),确保 HTTP 请求在进程退出前完成
+func SendAlertSync(err interface{}) {
+	if !alertMgr.enabled {
+		return
+	}
+	stack := debug.Stack()
+	dedupKey := parseDedupKey(stack)
+
+	alertMgr.mu.Lock()
+	if alertMgr.dedup[dedupKey] {
+		alertMgr.mu.Unlock()
+		return
+	}
+	alertMgr.dedup[dedupKey] = true
+	alertMgr.mu.Unlock()
+
+	// 同步发送,确保进程退出前 HTTP 请求已完成
+	alertMgr.send(err, stack, dedupKey)
+}
+
 // 用于匹配堆栈中的 file:line
 var fileLineRe = regexp.MustCompile(`\t(.+\.go):(\d+)`)
 

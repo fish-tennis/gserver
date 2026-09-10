@@ -58,6 +58,10 @@ type ServerList struct {
 	localServerInfo *pb.ServerInfo
 	// Ping 的原子读写,避免心跳回调协程与 RegisterLocalServerInfo 协程的数据竞争
 	localServerInfoPing atomic.Int32
+	// 最近一次热更生效时间(unix秒)的原子读写
+	localReloadTime atomic.Int64
+	// 当前在线人数的原子读写
+	localOnlineCount atomic.Int32
 	// 服务器的监听配置
 	serverListenerConfig gnet.ListenerConfig
 	// 服务器之间的连接配置
@@ -314,10 +318,20 @@ func (this *ServerList) ConnectServer(ctx context.Context, info *pb.ServerInfo) 
 	}
 }
 
+func (this *ServerList) SetLocalReloadTime(unixSec int64) {
+	this.localReloadTime.Store(unixSec)
+}
+
+func (this *ServerList) SetLocalOnlineCount(n int32) {
+	this.localOnlineCount.Store(n)
+}
+
 // 服务注册:上传本地服务器的信息
 func (this *ServerList) RegisterLocalServerInfo() {
-	// 从原子变量读取最新的 Ping 值,避免与心跳回调协程的数据竞争
+	// 从原子变量读取最新的 Ping/热更时间/在线人数,避免与心跳回调/热更订阅/玩家协程的数据竞争
 	this.localServerInfo.Ping = this.localServerInfoPing.Load()
+	this.localServerInfo.ReloadTime = this.localReloadTime.Load()
+	this.localServerInfo.OnlineCount = this.localOnlineCount.Load()
 	bytes, _ := proto.Marshal(this.localServerInfo)
 	this.cache.HSet(fmt.Sprintf("servers:%v", this.localServerInfo.GetServerType()),
 		util.Itoa(this.localServerInfo.GetServerId()), bytes)

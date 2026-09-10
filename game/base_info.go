@@ -32,7 +32,7 @@ func init() {
 			Data: &pb.BaseInfo{
 				Level:           1,
 				Exp:             0,
-				CreateTimestamp: time.Now().Unix(),
+				CreateTimestamp: player.GetTimerEntries().Now().Unix(),
 			},
 		}
 	})

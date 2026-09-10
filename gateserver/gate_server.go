@@ -192,7 +192,7 @@ func (s *GateServer) routeToLoginServer(connection Connection, packet Packet) {
 	if len(loginServers) == 0 {
 		slog.Debug("routeToLoginServerErr", "clientConn", connection.GetConnectionId(), "cmd", packet.Command(), "error", "noLoginServer")
 		// 没有 LoginServer 可用,必须回错误响应,否则带 rpcCallId 的请求会让客户端一直等到超时
-		s.sendRouteErrorRes(connection, packet.Command(), packet.RpcCallId(), pb.ErrorCode_ErrorCode_TryLater, "NoLoginServer")
+		s.sendRouteErrorRes(connection, packet.Command(), packet.RpcCallId(), pb.ErrorCode_ErrorCode_NoLoginServer, "NoLoginServer")
 		return
 	}
 	// 负载均衡:随机一个LoginServer
@@ -201,7 +201,7 @@ func (s *GateServer) routeToLoginServer(connection Connection, packet Packet) {
 	if loginServerConn == nil {
 		slog.Debug("routeToLoginServerErr", "clientConn", connection.GetConnectionId(), "cmd", packet.Command(), "serverId", randomServer.GetServerId())
 		// 选中的 LoginServer 连接不可用,同样需要回错误响应,避免客户端等超时
-		s.sendRouteErrorRes(connection, packet.Command(), packet.RpcCallId(), pb.ErrorCode_ErrorCode_TryLater, "LoginServerNotReached")
+		s.sendRouteErrorRes(connection, packet.Command(), packet.RpcCallId(), pb.ErrorCode_ErrorCode_NoLoginServer, "LoginServerNotReached")
 		return
 	}
 	// 登录消息,附加上客户端的connId,转发给LoginServer
@@ -242,7 +242,7 @@ func (s *GateServer) routeToGameServerWithConnId(connection Connection, packet P
 	if !s.GetServerList().SendPacket(clientData.GetGameServerId(), gatePacket) {
 		// GameServer 不可达时回错误响应,语义与 routeToGameServer 保持一致:
 		// 登录期请求(如 PlayerEntryGameReq)同样带 rpcCallId,不回包会让客户端卡到超时
-		s.sendRouteErrorRes(connection, packet.Command(), packet.RpcCallId(), pb.ErrorCode_ErrorCode_TryLater, "GameServerNotReached")
+		s.sendRouteErrorRes(connection, packet.Command(), packet.RpcCallId(), pb.ErrorCode_ErrorCode_RouteClientPacketLoss, "GameServerNotReached")
 		return
 	}
 	slog.Debug("routeToGameServerWithConnId", "clientConn", connection.GetConnectionId(), "connId", clientData.ConnId, "cmd", packet.Command(), "serverId", clientData.GetGameServerId())
@@ -293,7 +293,7 @@ func (s *GateServer) routeReconnectToGameServer(connection Connection, packet Pa
 	gatePacket.SetRpcCallId(packet.RpcCallId())
 	if !s.GetServerList().SendPacket(targetGameServerId, gatePacket) {
 		s.sendRouteErrorRes(connection, packet.Command(), packet.RpcCallId(),
-			pb.ErrorCode_ErrorCode_TryLater, "GameServerNotReached")
+			pb.ErrorCode_ErrorCode_RouteClientPacketLoss, "GameServerNotReached")
 		return
 	}
 	slog.Debug("routeReconnectToGameServer", "clientConn", connection.GetConnectionId(), "playerId", req.GetPlayerId(), "cmd", packet.Command(), "serverId", targetGameServerId, "onlineGameServerId", onlineGameServerId)
@@ -323,7 +323,7 @@ func (s *GateServer) routeToGameServer(connection Connection, packet Packet) {
 		if !s.GetServerList().SendPacket(gameServerId, gatePacket) {
 			// GameServer 不可达时回错误响应,统一走 sendRouteErrorRes:
 			// 既透传 rpcCallId 保证 Req/Res 配对,又带上 errorCode 让客户端能按 header 判断失败
-			s.sendRouteErrorRes(connection, packet.Command(), packet.RpcCallId(), pb.ErrorCode_ErrorCode_TryLater, "GameServerNotReached")
+			s.sendRouteErrorRes(connection, packet.Command(), packet.RpcCallId(), pb.ErrorCode_ErrorCode_RouteClientPacketLoss, "GameServerNotReached")
 			return
 		}
 		slog.Debug("routeToGameServer", "clientConn", connection.GetConnectionId(), "playerId", clientData.GetPlayerId(), "cmd", packet.Command(), "serverId", clientData.GetGameServerId(), "message", proto.MessageName(message))

@@ -66,6 +66,11 @@ func (this *LoginServer) Init(ctx context.Context, configFile string) bool {
 		if err := cfg.Reload(this.GetCfgDir()); err != nil {
 			slog.Error("LoginServer reload config failed", "error", err)
 		} else {
+			// 仅在实际发生了重载时刷新上报的ReloadTime:
+			// Reload对"无变更跳过"也返回nil,用LastRealReloadUnix区分(0表示本次无变更)
+			if t := cfg.LastRealReloadUnix(); t > 0 {
+				GetServerList().SetLocalReloadTime(t)
+			}
 			slog.Info("LoginServer config reloaded")
 		}
 	})

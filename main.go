@@ -37,7 +37,7 @@ func main() {
 
 	defer func() {
 		if err := recover(); err != nil {
-			internal.SendAlert(err)
+			internal.SendAlertSync(err)
 			panic(err)
 		}
 	}()
