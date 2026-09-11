@@ -23,6 +23,14 @@ const (
 	PlayerChanLen = 512
 	// ReconnectWaitSeconds 玩家掉线后的保留期(秒),期间等待客户端重连,超时则正式下线
 	ReconnectWaitSeconds = 60
+	// PlayerSaveDbInterval 玩家滚动存档周期
+	// 在线期间定期把脏数据落库,限制下线/关服时的未落库增量,同时缩短crash恢复的数据窗口;
+	// 存档用SaveDb(false):落库但不删Redis缓存,保持crash兜底链路完整
+	PlayerSaveDbInterval = 5 * time.Minute
+	// PlayerSaveDbBucketCount 滚动存档分桶数,桶间隔1秒
+	// 首次触发按playerId%N秒错开,桶数×1秒恰覆盖一个完整周期;
+	// 秒级粒度防止开服同批进游的玩家形成分钟级聚集的存档波峰
+	PlayerSaveDbBucketCount = 300
 )
 
 var _ gentity.RoutineEntity = (*Player)(nil)
@@ -524,6 +532,20 @@ func (p *Player) RunRoutine() bool {
 			}
 			p.FireEvent(evt)
 			return time.Minute
+		})
+		// 滚动存档:在线期间定期把变化的组件数据落库(在玩家协程内执行,与消息处理串行,无并发问题)
+		// 定时器回调与消息处理共用协程,存档阻塞最长时间为mongodb操作超时(mongoOpTimeout)
+		// 首次触发延迟一个完整周期再按秒级分桶错峰:玩家本就分散进游,分桶防止开服同批进游形成波峰
+		firstSaveDbDelay := PlayerSaveDbInterval + time.Duration(p.GetId()%PlayerSaveDbBucketCount)*time.Second
+		p.GetTimerEntries().After(firstSaveDbDelay, func() time.Duration {
+			start := time.Now()
+			if err := p.SaveDb(false); err != nil {
+				p.Log.Error("saveDb timer err", "err", err)
+			} else if cost := time.Since(start); cost > time.Second {
+				// 慢存档告警:间接反映MongoDB负载,便于运维感知
+				p.Log.Warn("saveDb slow", "cost", cost)
+			}
+			return PlayerSaveDbInterval
 		})
 	}
 	return ok

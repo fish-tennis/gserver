@@ -74,7 +74,7 @@ func (this *SocialServer) Exit() {
 // 最后SetDbMgr对外暴露;详见db包注册函数和gentity.MongoDb的注释
 func (this *SocialServer) initDb() {
 	// 使用mongodb来演示
-	mongoDb := gentity.NewMongoDb(this.GetConfig().Mongo.Uri, this.GetConfig().Mongo.Db)
+	mongoDb := this.NewMongoDb()
 	// 注册表(必须在Connect()之前,分片策略见db包的统一注册函数)
 	// 玩家数据库(跨玩家协程实体保存玩家的简要数据时使用)
 	db.RegisterPlayerDb(mongoDb)

@@ -106,7 +106,7 @@ func (this *LoginServer) initDb() {
 	// 使用mongodb来演示
 	// 顺序要求:必须先Register再Connect——框架Connect会回填各集合的client/db句柄,
 	// 并自动为uniqueId非_id的集合建唯一索引(account.Name/global的Key(kv)等)
-	mongoDb := gentity.NewMongoDb(this.GetConfig().Mongo.Uri, this.GetConfig().Mongo.Db)
+	mongoDb := this.NewMongoDb()
 	// 账号数据库(不分片)
 	// _id=账号名(uniqueId=Name):账号名唯一性由不分片集合的_id主键在数据库层全局原子保证。
 	// 业务账号ID改存Id字段(仍由KV自增分配),登录/封禁/在线状态等业务继续以Id为准。

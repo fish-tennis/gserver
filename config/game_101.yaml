@@ -13,6 +13,8 @@ Server:
 Mongo:
   Uri: mongodb://127.0.0.1:27017
   Db: testdb
+  #连接最大空闲时间(秒),闲置连接定期回收防止长期占用实例连接数
+  MaxConnIdleTimeSec: 300
 #缓存
 Redis:
   Uri:

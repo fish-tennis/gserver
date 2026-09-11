@@ -2,6 +2,7 @@ package internal
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"log/slog"
 	"os"
@@ -20,6 +21,8 @@ import (
 	gserverutil "github.com/fish-tennis/gserver/util"
 	"google.golang.org/protobuf/proto"
 	"gopkg.in/yaml.v3"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
+	"go.mongodb.org/mongo-driver/v2/mongo/writeconcern"
 )
 
 type ListerConfig struct {
@@ -30,6 +33,58 @@ type ListerConfig struct {
 type MongoConfig struct {
 	Uri string `yaml:"Uri"`
 	Db  string `yaml:"Db"`
+	// OpTimeoutSec 单次CRUD操作超时时间(秒),0=使用框架默认值(60秒)
+	// 默认值针对极低概率的"静默卡死"兜底,宁大勿小防误伤排队/负载抖动;
+	// 追求更快的故障隔离(容忍误伤)时可调小,如10~20
+	OpTimeoutSec int `yaml:"OpTimeoutSec"`
+	// MaxPoolSize MongoDB连接池上限,0=驱动默认值(100)
+	// 多个game进程共用同一MongoDB实例时,所有进程连接池上限之和不应超过
+	// 实例的maxConnections,建议按单进程并发需求收紧(如每game进程32)
+	MaxPoolSize uint64 `yaml:"MaxPoolSize"`
+	// MinPoolSize 连接池预热下限,0=驱动默认值(0)
+	// 设8~16可避免停服/开服突发时从零建连(每次建连含握手/认证,约几十毫秒)
+	MinPoolSize uint64 `yaml:"MinPoolSize"`
+	// MaxConnIdleTimeSec 连接最大空闲时间(秒),0=驱动默认值(不回收)
+	// 设300~600可让白天高峰建的连接在夜间低谷回收,防止长期占用实例连接数
+	MaxConnIdleTimeSec int `yaml:"MaxConnIdleTimeSec"`
+	// ConnectTimeoutSec 建连超时(秒),0=驱动默认值(30)
+	// 缩短(如5)可让Mongo不可达时进程启动快速失败,而非挂默认30秒
+	ConnectTimeoutSec int `yaml:"ConnectTimeoutSec"`
+	// WriteConcern 写关注级别:"1"或"majority",空=沿用实例默认
+	// 存档写已有Redis兜底+云实例双机热备,建议"1";majority会显著降低写吞吐
+	WriteConcern string `yaml:"WriteConcern"`
+	// Compressors 网络压缩算法,如["snappy"]或["zstd"],空=不压缩
+	// 注意:大文档+zstd的CPU开销可能反噬吞吐(腾讯云实测500KB文档zstd比snappy慢36%),带宽紧张时才建议开启并实测
+	Compressors []string `yaml:"Compressors"`
+}
+
+// BuildMongoClientOptions 从Mongo配置构造客户端options
+// 仅映射显式配置项(非零值),未配置的沿用uri参数或驱动默认值
+// NOTE: AppName由BaseServer.NewMongoDb自动设置为servertype_serverId,此处无需处理
+func BuildMongoClientOptions(cfg *MongoConfig) *options.ClientOptions {
+	clientOpts := options.Client()
+	if cfg.MaxPoolSize > 0 {
+		clientOpts.SetMaxPoolSize(cfg.MaxPoolSize)
+	}
+	if cfg.MinPoolSize > 0 {
+		clientOpts.SetMinPoolSize(cfg.MinPoolSize)
+	}
+	if cfg.MaxConnIdleTimeSec > 0 {
+		clientOpts.SetMaxConnIdleTime(time.Duration(cfg.MaxConnIdleTimeSec) * time.Second)
+	}
+	if cfg.ConnectTimeoutSec > 0 {
+		clientOpts.SetConnectTimeout(time.Duration(cfg.ConnectTimeoutSec) * time.Second)
+	}
+	switch cfg.WriteConcern {
+	case "majority":
+		clientOpts.SetWriteConcern(writeconcern.Majority())
+	case "1":
+		clientOpts.SetWriteConcern(writeconcern.W1())
+	}
+	if len(cfg.Compressors) > 0 {
+		clientOpts.SetCompressors(cfg.Compressors)
+	}
+	return clientOpts
 }
 
 type RedisConfig struct {
@@ -122,6 +177,18 @@ func (this *BaseServer) GetConfig() *BaseServerConfig {
 	return this.config
 }
 
+// NewMongoDb 根据配置创建MongoDb实例(各server的initDb统一入口)
+// 客户端连接参数(连接池/超时/写关注/压缩等)已在内部按MongoConfig映射,
+// AppName自动设置为servertype_serverId(如game_101),无需手动配置——
+// 在Mongo侧的currentOp/连接列表中可直接定位连接来自哪个进程
+// 后续RegisterXxxDb -> Connect的标准流程不变
+func (this *BaseServer) NewMongoDb() *gentity.MongoDb {
+	clientOpts := BuildMongoClientOptions(&this.GetConfig().Mongo).
+		SetAppName(fmt.Sprintf("%v_%v", this.serverInfo.ServerType, this.GetId()))
+	return gentity.NewMongoDb(this.GetConfig().Mongo.Uri, this.GetConfig().Mongo.Db).
+		SetClientOptions(clientOpts)
+}
+
 func (this *BaseServer) GetConfigFile() string {
 	return this.configFile
 }
@@ -153,6 +220,11 @@ func (this *BaseServer) ReadConfig() {
 		this.serverInfo.WsClientListenAddr = ""
 	}
 	this.SetAlertWebhook(this.config.AlertWebhook)
+	// 应用MongoDB单次操作超时配置(在所有server的initDb之前执行,全程生效)
+	// >0才覆盖,0保持框架默认值;GateServer等不连Mongo的进程设置了也无害
+	if this.config.Mongo.OpTimeoutSec > 0 {
+		gentity.SetMongoOpTimeout(time.Duration(this.config.Mongo.OpTimeoutSec) * time.Second)
+	}
 }
 
 func (this *BaseServer) GetId() int32 {

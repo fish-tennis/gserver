@@ -145,7 +145,7 @@ func (s *GameServer) initDb() {
 	// 使用mongodb来演示
 	// 顺序要求:必须先Register再Connect——框架Connect会回填各集合的client/db句柄,
 	// 并自动为uniqueId非_id的集合建唯一索引(global_mail.MailId/global的Key(kv)等)
-	mongoDb := gentity.NewMongoDb(s.GetConfig().Mongo.Uri, s.GetConfig().Mongo.Db)
+	mongoDb := s.NewMongoDb()
 	// 玩家数据库(全项目唯一分片集合,ShardKeyHashed)
 	playerDb := db.RegisterPlayerDb(mongoDb)
 	// 公会数据库
