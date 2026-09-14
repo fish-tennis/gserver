@@ -37,6 +37,8 @@ type ServerInfo struct {
 	OnlineCount        int32                  `protobuf:"varint,11,opt,name=OnlineCount,proto3" json:"OnlineCount,omitempty"`             // 在线人数(仅Game进程有值,含断线保留期玩家)
 	GitVersion         string                 `protobuf:"bytes,12,opt,name=GitVersion,proto3" json:"GitVersion,omitempty"`                // build时传入的GitVersion
 	Info               string                 `protobuf:"bytes,13,opt,name=Info,proto3" json:"Info,omitempty"`                            // 自定义信息,用于不同的服务器上传自定义的内容
+	MaxOnline          int32                  `protobuf:"varint,14,opt,name=MaxOnline,proto3" json:"MaxOnline,omitempty"`                 // 在线人数上限(仅Game进程有值,登录服按剩余容量加权选服;0=未配置,选服时按默认容量计算)
+	LoginForbidden     bool                   `protobuf:"varint,15,opt,name=LoginForbidden,proto3" json:"LoginForbidden,omitempty"`       // 禁止登录
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -160,6 +162,20 @@ func (x *ServerInfo) GetInfo() string {
 		return x.Info
 	}
 	return ""
+}
+
+func (x *ServerInfo) GetMaxOnline() int32 {
+	if x != nil {
+		return x.MaxOnline
+	}
+	return 0
+}
+
+func (x *ServerInfo) GetLoginForbidden() bool {
+	if x != nil {
+		return x.LoginForbidden
+	}
+	return false
 }
 
 // 踢玩家下线req
@@ -455,7 +471,7 @@ var File_server_base_proto protoreflect.FileDescriptor
 
 const file_server_base_proto_rawDesc = "" +
 	"\n" +
-	"\x11server_base.proto\x12\agserver\"\xcc\x03\n" +
+	"\x11server_base.proto\x12\agserver\"\x92\x04\n" +
 	"\n" +
 	"ServerInfo\x12\x1a\n" +
 	"\bServerId\x18\x01 \x01(\x05R\bServerId\x12\x1e\n" +
@@ -477,7 +493,9 @@ const file_server_base_proto_rawDesc = "" +
 	"\n" +
 	"GitVersion\x18\f \x01(\tR\n" +
 	"GitVersion\x12\x12\n" +
-	"\x04Info\x18\r \x01(\tR\x04Info\"I\n" +
+	"\x04Info\x18\r \x01(\tR\x04Info\x12\x1c\n" +
+	"\tMaxOnline\x18\x0e \x01(\x05R\tMaxOnline\x12&\n" +
+	"\x0eLoginForbidden\x18\x0f \x01(\bR\x0eLoginForbidden\"I\n" +
 	"\rKickPlayerReq\x12\x1c\n" +
 	"\tAccountId\x18\x01 \x01(\x03R\tAccountId\x12\x1a\n" +
 	"\bPlayerId\x18\x02 \x01(\x03R\bPlayerId\"_\n" +

@@ -115,9 +115,9 @@ func processPlayerEntryGameReq(connection Connection, packet Packet, req *pb.Pla
 			return
 		}
 	}
-	// 检查账号是否被封禁:登录后GM封禁账号,LoginSession仍在有效期内,
-	// 不重新登录直接进游会绕过LoginServer的账号封禁检查,此处兜底拦截
-	if banRecord := db.GetBanRecord(db.BanTargetTypeAccount, accountId); banRecord != nil {
+	// 检查账号/玩家是否被封禁
+	accountBan, playerBan := db.GetBanRecordsForLogin(accountId, playerId)
+	if banRecord := accountBan; banRecord != nil {
 		res.BanReason = banRecord.GetReason()
 		if banRecord.Duration == 0 {
 			res.BanDeadline = 0 // 永久封禁
@@ -127,8 +127,7 @@ func processPlayerEntryGameReq(connection Connection, packet Packet, req *pb.Pla
 		errorCode = pb.ErrorCode_ErrorCode_Banned
 		return
 	}
-	// 检查玩家是否被封禁
-	if banRecord := db.GetBanRecord(db.BanTargetTypePlayer, playerId); banRecord != nil {
+	if banRecord := playerBan; banRecord != nil {
 		res.BanReason = banRecord.GetReason()
 		if banRecord.Duration == 0 {
 			res.BanDeadline = 0 // 永久封禁
@@ -223,8 +222,9 @@ func processPlayerEntryGameReq(connection Connection, packet Packet, req *pb.Pla
 		if !network.IsGatePacket(packet) {
 			connection.SetTag(nil)
 		}
+		// RemovePlayer内部包含完整清理(SaveDb+playerMap.Delete+计数+onlineaccount/onlineplayer条件释放),
+		// 无需再显式调用cache.RemoveOnlineAccount(参数与RemovePlayer内部的完全一致,重复调用冗余)
 		game.GetPlayerMgr().RemovePlayer(entryPlayer)
-		cache.RemoveOnlineAccount(accountId, playerId, gentity.GetApplication().GetId())
 		errorCode = pb.ErrorCode_ErrorCode_TryLater
 		slog.Error("RunRoutine failed", "playerId", entryPlayer.GetId())
 		return
@@ -245,9 +245,8 @@ func onPlayerReconnectGameReq(connection Connection, packet Packet) {
 	// 后续将用于玩家行为记录与分析,当前阶段先输出到日志
 	clientIp := network.ResolveClientIp(connection, packet, req.GetClientIp())
 	slog.Info("onPlayerReconnectGameReq clientIp", "playerId", req.GetPlayerId(), "clientIp", clientIp)
-	player := game.GetPlayer(req.PlayerId)
-	if player == nil {
-		// 玩家不在线(可能保留期已过或从未登录)
+	// 快速路径:玩家不在内存(保留期已过或从未登录),纯内存判断直接拒绝,零DB/Redis开销
+	if game.GetPlayer(req.PlayerId) == nil {
 		res := &pb.PlayerReconnectGameRes{
 			AccountId: req.AccountId,
 			PlayerId:  req.PlayerId,
@@ -256,68 +255,96 @@ func onPlayerReconnectGameReq(connection Connection, packet Packet) {
 		slog.Debug("onPlayerReconnectGameReq player nil", "playerId", req.PlayerId)
 		return
 	}
-	// 检查服务器维护状态:维护中仅白名单账号可重连
-	// 重连和进游一样需要拦截维护,否则被封禁/维护中的玩家可通过保留期内重连绕过限制
-	if cache.IsMaintenanceMode() && !cache.IsWhitelistedAccount(req.GetAccountId()) {
+	// 按accountId hash投递DB协程池:与进游同键,保证同一账号的重连/进游请求串行执行
+	if !internal.SubmitDbTask(req.GetAccountId(), func() {
+		processPlayerReconnectGameReq(connection, packet, req)
+	}) {
+		// 协程池队列满,返回TryLater让客户端延迟重试
 		network.SendPacketAdaptWithError(connection, packet, &pb.PlayerReconnectGameRes{
 			AccountId: req.AccountId,
 			PlayerId:  req.PlayerId,
-		}, int32(pb.ErrorCode_ErrorCode_Maintenance))
-		slog.Info("onPlayerReconnectGameReq maintenance blocked", "playerId", req.PlayerId, "accountId", req.AccountId)
+		}, int32(pb.ErrorCode_ErrorCode_TryLater))
+		slog.Warn("DbWorkerPool full for onPlayerReconnectGameReq", "accountId", req.GetAccountId())
+	}
+}
+
+// processPlayerReconnectGameReq 重连请求的实际处理逻辑,在DB协程池中执行
+// 维护/区服维护/封禁检查与原收包协程版本完全一致,仅执行位置移入DB协程池
+func processPlayerReconnectGameReq(connection Connection, packet Packet, req *pb.PlayerReconnectGameReq) {
+	res := &pb.PlayerReconnectGameRes{
+		AccountId: req.AccountId,
+		PlayerId:  req.PlayerId,
+	}
+	var errorCode pb.ErrorCode
+	// routedToRoutine标记:已投递到玩家协程处理,成功响应在玩家协程的onReconnect中发送,
+	// defer不再重复发送(与processPlayerEntryGameReq的routedToRoutine模式一致)
+	routedToRoutine := false
+	defer func() {
+		if routedToRoutine {
+			return
+		}
+		network.SendPacketAdaptWithError(connection, packet, res, int32(errorCode))
+	}()
+	// DB协程池中执行,connection跨协程:先检查连接是否已断开,避免无意义的DB查询
+	if !connection.IsConnected() {
+		slog.Debug("processPlayerReconnectGameReq connection closed", "playerId", req.PlayerId)
+		return
+	}
+	// DB查询排队期间玩家可能已退出(保留期到期被移除),重新判空
+	player := game.GetPlayer(req.PlayerId)
+	if player == nil {
+		errorCode = pb.ErrorCode_ErrorCode_ReconnectNeedRelogin
+		return
+	}
+	// 检查服务器维护状态:维护中仅白名单账号可重连
+	// 重连和进游一样需要拦截维护,否则被封禁/维护中的玩家可通过保留期内重连绕过限制
+	if cache.IsMaintenanceMode() && !cache.IsWhitelistedAccount(req.GetAccountId()) {
+		errorCode = pb.ErrorCode_ErrorCode_Maintenance
+		slog.Info("processPlayerReconnectGameReq maintenance blocked", "playerId", req.PlayerId, "accountId", req.AccountId)
 		return
 	}
 	// 检查区服维护状态:与进游的检查口径一致,OnlyWhiteList状态下仅白名单账号可重连,
 	// 否则区服维护期间玩家可通过保留期内重连绕过区服级限制
 	if region, err := internal.GetRegion(player.GetRegionId()); err == nil {
 		if region.Status == pb.RegionStatus_RegionStatus_OnlyWhiteList && !cache.IsWhitelistedAccount(req.GetAccountId()) {
-			network.SendPacketAdaptWithError(connection, packet, &pb.PlayerReconnectGameRes{
-				AccountId: req.AccountId,
-				PlayerId:  req.PlayerId,
-			}, int32(pb.ErrorCode_ErrorCode_Maintenance))
-			slog.Info("onPlayerReconnectGameReq region maintenance blocked", "playerId", req.PlayerId, "regionId", player.GetRegionId())
+			errorCode = pb.ErrorCode_ErrorCode_Maintenance
+			slog.Info("processPlayerReconnectGameReq region maintenance blocked", "playerId", req.PlayerId, "regionId", player.GetRegionId())
 			return
 		}
 	}
-	// 检查账号是否被封禁:账号级封禁需即时生效(与进游的兜底检查口径一致)
-	if banRecord := db.GetBanRecord(db.BanTargetTypeAccount, req.GetAccountId()); banRecord != nil {
-		res := &pb.PlayerReconnectGameRes{
-			AccountId: req.AccountId,
-			PlayerId:  req.PlayerId,
-			BanReason: banRecord.GetReason(),
-		}
+	// 检查账号/玩家是否被封禁:一次MongoDB往返批量查两个维度(账号+玩家),
+	// 账号级封禁需即时生效(与进游的兜底检查口径一致),
+	// 玩家级封禁防止被封禁玩家利用保留期内重连绕过限制
+	accountBan, playerBan := db.GetBanRecordsForLogin(req.GetAccountId(), req.GetPlayerId())
+	if banRecord := accountBan; banRecord != nil {
+		res.BanReason = banRecord.GetReason()
 		if banRecord.Duration == 0 {
 			res.BanDeadline = 0 // 永久封禁
 		} else {
 			res.BanDeadline = banRecord.BanTime + banRecord.Duration
 		}
-		network.SendPacketAdaptWithError(connection, packet, res, int32(pb.ErrorCode_ErrorCode_Banned))
-		slog.Info("onPlayerReconnectGameReq account banned blocked", "accountId", req.AccountId, "playerId", req.PlayerId)
+		errorCode = pb.ErrorCode_ErrorCode_Banned
+		slog.Info("processPlayerReconnectGameReq account banned blocked", "accountId", req.AccountId, "playerId", req.PlayerId)
 		return
 	}
-	// 检查玩家是否被封禁:重连时也需要拦截,防止被封禁玩家利用保留期内重连绕过封禁
-	if banRecord := db.GetBanRecord(db.BanTargetTypePlayer, req.GetPlayerId()); banRecord != nil {
-		res := &pb.PlayerReconnectGameRes{
-			AccountId: req.AccountId,
-			PlayerId:  req.PlayerId,
-			BanReason: banRecord.GetReason(),
-		}
+	if banRecord := playerBan; banRecord != nil {
+		res.BanReason = banRecord.GetReason()
 		if banRecord.Duration == 0 {
 			res.BanDeadline = 0 // 永久封禁
 		} else {
 			res.BanDeadline = banRecord.BanTime + banRecord.Duration
 		}
-		network.SendPacketAdaptWithError(connection, packet, res, int32(pb.ErrorCode_ErrorCode_Banned))
-		slog.Info("onPlayerReconnectGameReq banned blocked", "playerId", req.PlayerId, "accountId", req.AccountId)
+		errorCode = pb.ErrorCode_ErrorCode_Banned
+		slog.Info("processPlayerReconnectGameReq banned blocked", "playerId", req.PlayerId, "accountId", req.AccountId)
 		return
 	}
 	// 投递到玩家协程执行,重连的校验、绑定连接、响应发送都在玩家协程内串行处理
 	if !player.OnReconnect(connection, network.IsGatePacket(packet), req.GetReconnectSession(), packet) {
-		network.SendPacketAdaptWithError(connection, packet, &pb.PlayerReconnectGameRes{
-			AccountId: req.AccountId,
-			PlayerId:  req.PlayerId,
-		}, int32(pb.ErrorCode_ErrorCode_TryLater))
+		errorCode = pb.ErrorCode_ErrorCode_TryLater
 		slog.Warn("player channel full for reconnect", "playerId", req.PlayerId)
+		return
 	}
+	routedToRoutine = true
 }
 
 // 创建角色

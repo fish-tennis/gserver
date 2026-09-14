@@ -61,6 +61,9 @@ func (this *LoginServer) Init(ctx context.Context, configFile string) bool {
 	cfg.InitMd5Snapshot(this.GetCfgDir())
 	this.initDb()
 	this.initCache()
+	// 初始化维护状态内存缓存(启动加载+订阅变更通知+定期兜底),
+	// 之后processLoginReq的维护检查读内存副本,登录链路常态零该类Redis查询
+	cache.InitMaintenanceCache(this.GetContext())
 	// 订阅热更配置通知,收到通知后按md5快照diff选择性重载本进程配置表
 	cache.SubscribeReloadConfig(this.GetContext(), func() {
 		if err := cfg.Reload(this.GetCfgDir()); err != nil {

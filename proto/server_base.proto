@@ -19,6 +19,8 @@ message ServerInfo {
   int32 OnlineCount = 11; // 在线人数(仅Game进程有值,含断线保留期玩家)
   string GitVersion = 12; // build时传入的GitVersion
   string Info = 13; // 自定义信息,用于不同的服务器上传自定义的内容
+  int32 MaxOnline = 14; // 在线人数上限(仅Game进程有值,登录服按剩余容量加权选服;0=未配置,选服时按默认容量计算)
+  bool LoginForbidden = 15; // 禁止登录
 }
 
 // 踢玩家下线req

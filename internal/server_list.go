@@ -62,6 +62,8 @@ type ServerList struct {
 	localReloadTime atomic.Int64
 	// 当前在线人数的原子读写
 	localOnlineCount atomic.Int32
+	// 禁止登录标记的原子读写(灰度更新/停服用,见SetLocalLoginForbidden)
+	localLoginForbidden atomic.Bool
 	// 服务器的监听配置
 	serverListenerConfig gnet.ListenerConfig
 	// 服务器之间的连接配置
@@ -79,7 +81,7 @@ type ServerList struct {
 
 func NewServerList(serverInfo *pb.ServerInfo) *ServerList {
 	_serverList = &ServerList{
-		activeTimeout:         3 * 1000, // 默认3秒
+		activeTimeout:         DefaultServerActiveTimeoutMs,
 		serverInfos:           make(map[int32]*pb.ServerInfo),
 		connectedServers:      make(map[int32]gnet.Connection),
 		serverInfoTypeMap:     make(map[string][]*pb.ServerInfo),
@@ -332,9 +334,18 @@ func (this *ServerList) RegisterLocalServerInfo() {
 	this.localServerInfo.Ping = this.localServerInfoPing.Load()
 	this.localServerInfo.ReloadTime = this.localReloadTime.Load()
 	this.localServerInfo.OnlineCount = this.localOnlineCount.Load()
+	this.localServerInfo.LoginForbidden = this.localLoginForbidden.Load()
 	bytes, _ := proto.Marshal(this.localServerInfo)
 	this.cache.HSet(fmt.Sprintf("servers:%v", this.localServerInfo.GetServerType()),
 		util.Itoa(this.localServerInfo.GetServerId()), bytes)
+}
+
+// SetLocalLoginForbidden 设置本服的"禁止登录"标记
+// 用途:灰度更新/停服——退出流程开始时置true,登录服选服时会过滤掉本服,
+// 不再把新玩家分配过来,避免玩家连上一个正在退出的服;
+// 重启恢复:进程重启后原子变量零值即false,天然恢复
+func (this *ServerList) SetLocalLoginForbidden(forbidden bool) {
+	this.localLoginForbidden.Store(forbidden)
 }
 
 // 获取某个服务器的信息

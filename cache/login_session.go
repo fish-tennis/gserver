@@ -19,7 +19,7 @@ const (
 )
 
 func keyLoginSession(accountId int64) string {
-	return "ses:" + strconv.FormatInt(accountId, 10)
+	return "ses:{" + strconv.FormatInt(accountId, 10) + "}"
 }
 
 // NewLoginSession 新生成一个登录session

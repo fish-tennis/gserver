@@ -10,7 +10,7 @@ import (
 )
 
 func keyOnlineAccount(accountId int64) string {
-	return "onlineaccount:" + strconv.FormatInt(accountId, 10)
+	return "onlineaccount:{" + strconv.FormatInt(accountId, 10) + "}"
 }
 
 // 条件释放在线账号记录:值等于 "playerId;gameServerId" 时才删除

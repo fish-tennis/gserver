@@ -67,6 +67,9 @@ func (this *GameServer) Init(ctx context.Context, configFile string) bool {
 
 	this.initDb()
 	this.initCache()
+	// 初始化维护状态内存缓存(启动加载+订阅变更通知+定期兜底),
+	// 之后进游/重连/创角的维护检查读内存副本,这些链路常态零该类Redis查询
+	cache.InitMaintenanceCache(this.GetContext())
 	// 订阅热更配置通知,收到通知后按md5快照diff选择性重载本进程配置表
 	cache.SubscribeReloadConfig(this.GetContext(), func() {
 		if err := cfg.Reload(this.GetCfgDir()); err != nil {
@@ -104,6 +107,13 @@ func (this *GameServer) Run(ctx context.Context) {
 // 退出
 func (this *GameServer) Exit() {
 	this.SetStatus(ServerStatus_Exit)
+	// 玩家存档等前置流程可能持续几十秒,期间登录服仍视本服为Active,
+	// 必须在Exit最前面就置禁止登录标记,心跳1秒内上报后,
+	// 登录服就停止把新玩家分配过来(存档期内有几十次心跳,标记必然被上报)
+	// (BaseServer.Exit里还有一次统一设置,这里提前是为了覆盖存档耗时窗口;幂等无害)
+	if serverList := this.GetServerList(); serverList != nil {
+		serverList.SetLocalLoginForbidden(true)
+	}
 	// 先关闭DB协程池并等待在途任务(含AddPlayer)全部完成:
 	// 新请求已被状态检查拒绝,不会再投递新任务到协程池
 	// 若不先关闭,在途的AddPlayer可能在下面的Range之后才执行,

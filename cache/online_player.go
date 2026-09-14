@@ -11,11 +11,11 @@ import (
 )
 
 func keyOnlinePlayer(playerId int64) string {
-	return "onlineplayer:" + strconv.FormatInt(playerId, 10)
+	return "onlineplayer:{" + strconv.FormatInt(playerId, 10) + "}"
 }
 
 func keyGameServerPlayer(gameServerId int32) string {
-	return "game:" + strconv.FormatInt(int64(gameServerId), 10)
+	return "game:{" + strconv.FormatInt(int64(gameServerId), 10) + "}"
 }
 
 // 在线玩家的key结构设计说明(生产环境为Redis Cluster多节点部署):

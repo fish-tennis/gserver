@@ -98,6 +98,9 @@ type RedisConfig struct {
 type BaseServerConfig struct {
 	// 服务器id
 	ServerId int32 `yaml:"ServerId"`
+	// 在线人数上限(仅Game进程有意义),随ServerInfo心跳上报,
+	// 登录服按剩余容量(MaxOnline-OnlineCount)加权随机选服;0=未配置,选服时按默认容量计算
+	MaxOnline int32 `yaml:"MaxOnline"`
 	// 是否开启测试命令(仅测试环境开启,防止正式服作弊)
 	IsOpenTestCommand bool         `yaml:"IsOpenTestCommand"`
 	Client            ListerConfig `yaml:"Client"`
@@ -209,6 +212,7 @@ func (this *BaseServer) ReadConfig() {
 	}
 	slog.Debug("ReadConfig", "config", this.config)
 	this.serverInfo.ServerId = this.config.ServerId
+	this.serverInfo.MaxOnline = this.config.MaxOnline
 	this.serverInfo.ClientListenAddr = this.config.Client.Addr
 	this.serverInfo.GateListenAddr = this.config.Gate.Addr
 	this.serverInfo.ServerListenAddr = this.config.Server.Addr
@@ -312,6 +316,14 @@ func (this *BaseServer) OnUpdate(ctx context.Context, updateCount int64) {
 
 func (this *BaseServer) Exit() {
 	this.status.Store(int32(ServerStatus_Exit))
+	// 退出流程开始即置禁止登录标记:登录服选服时过滤掉本服,不再分配新玩家过来;
+	// 上报由每秒心跳完成(atomic写入保证对心跳协程可见),必须在停心跳之前设置——
+	// 之后心跳停止,标记将没有机会上报(该场景下本服10秒后会被心跳超时剔除,效果等同)
+	// (各具体服务器若Exit有长耗时的前置流程,如GameServer的玩家存档,应在自己的Exit开头更早调用;
+	// nil检查:测试环境可能只构造BaseServer而不初始化ServerList)
+	if serverList := this.GetServerList(); serverList != nil {
+		serverList.SetLocalLoginForbidden(true)
+	}
 	slog.Info("BaseServer.Exit")
 	// 取消 context,确保 updateLoop 协程退出,不再依赖外部调用方取消 context
 	if this.ctxCancel != nil {
