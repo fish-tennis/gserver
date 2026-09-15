@@ -128,6 +128,12 @@ type playerDisconnectMessage struct {
 // playerKickMessage 踢人内部消息,由网络协程投递,在玩家协程内消费
 type playerKickMessage struct{}
 
+// playerInitTimersMessage 定时器初始化内部消息,由RunRoutine的调用方协程投递,在玩家协程内消费
+// TimerEntries为无锁设计,只允许在实体自己的协程内调用(或在协程启动前调用);
+// RunRoutine返回时玩家协程已启动(Start并发执行中),调用方协程不能再直接调用After注册定时器,
+// 改为投递本消息,由玩家协程在消息处理中完成注册
+type playerInitTimersMessage struct{}
+
 // Kick 踢玩家下线,由网络协程调用
 // 使用 TryPushMessage 非阻塞投递,防止玩家 channel 满时阻塞服务器间收包协程
 // channel 满说明玩家协程已严重积压,直接 Stop 强制清理(跳过 ResetConnection,但 Stop→EndFunc→RemovePlayer 仍会完成清理)
@@ -495,6 +501,8 @@ func (p *Player) RunRoutine() bool {
 				p.processMessage(msg)
 			case *playerDisconnectMessage:
 				p.onDisconnect(msg.connection)
+			case *playerInitTimersMessage:
+				p.initTimers()
 			case *playerReconnectMessage:
 				p.onReconnect(msg)
 			case *playerEntryReconnectMessage:
@@ -522,33 +530,42 @@ func (p *Player) RunRoutine() bool {
 		},
 	})
 	if ok {
-		// 每分钟执行一次,刷新在线时间
-		p.GetTimerEntries().After(time.Minute, func() time.Duration {
-			evt := &pb.EventPlayerProperty{
-				PlayerId: p.GetId(),
-				Property: "OnlineMinute",
-				Delta:    1,
-				Current:  p.GetPropertyInt32("OnlineMinute", nil),
-			}
-			p.FireEvent(evt)
-			return time.Minute
-		})
-		// 滚动存档:在线期间定期把变化的组件数据落库(在玩家协程内执行,与消息处理串行,无并发问题)
-		// 定时器回调与消息处理共用协程,存档阻塞最长时间为mongodb操作超时(mongoOpTimeout)
-		// 首次触发延迟一个完整周期再按秒级分桶错峰:玩家本就分散进游,分桶防止开服同批进游形成波峰
-		firstSaveDbDelay := PlayerSaveDbInterval + time.Duration(p.GetId()%PlayerSaveDbBucketCount)*time.Second
-		p.GetTimerEntries().After(firstSaveDbDelay, func() time.Duration {
-			start := time.Now()
-			if err := p.SaveDb(false); err != nil {
-				p.Log.Error("saveDb timer err", "err", err)
-			} else if cost := time.Since(start); cost > time.Second {
-				// 慢存档告警:间接反映MongoDB负载,便于运维感知
-				p.Log.Warn("saveDb slow", "cost", cost)
-			}
-			return PlayerSaveDbInterval
-		})
+		// 注册在线时间/滚动存档定时器:必须投递消息由玩家协程执行,
+		// 不能在这里直接调用After——RunProcessRoutine返回时玩家协程已启动,
+		// TimerEntries的Start正在协程中并发执行,外部协程调用After会构成数据竞争
+		// (TimerEntries为无锁设计,仅限实体自己的协程内调用)
+		p.PushMessage(&playerInitTimersMessage{})
 	}
 	return ok
+}
+
+// initTimers 注册玩家协程的常驻定时器,在玩家协程内调用(见playerInitTimersMessage)
+func (p *Player) initTimers() {
+	// 每分钟执行一次,刷新在线时间
+	p.GetTimerEntries().After(time.Minute, func() time.Duration {
+		evt := &pb.EventPlayerProperty{
+			PlayerId: p.GetId(),
+			Property: "OnlineMinute",
+			Delta:    1,
+			Current:  p.GetPropertyInt32("OnlineMinute", nil),
+		}
+		p.FireEvent(evt)
+		return time.Minute
+	})
+	// 滚动存档:在线期间定期把变化的组件数据落库(在玩家协程内执行,与消息处理串行,无并发问题)
+	// 定时器回调与消息处理共用协程,存档阻塞最长时间为mongodb操作超时(mongoOpTimeout)
+	// 首次触发延迟一个完整周期再按秒级分桶错峰:玩家本就分散进游,分桶防止开服同批进游形成波峰
+	firstSaveDbDelay := PlayerSaveDbInterval + time.Duration(p.GetId()%PlayerSaveDbBucketCount)*time.Second
+	p.GetTimerEntries().After(firstSaveDbDelay, func() time.Duration {
+		start := time.Now()
+		if err := p.SaveDb(false); err != nil {
+			p.Log.Error("saveDb timer err", "err", err)
+		} else if cost := time.Since(start); cost > time.Second {
+			// 慢存档告警:间接反映MongoDB负载,便于运维感知
+			p.Log.Warn("saveDb slow", "cost", cost)
+		}
+		return PlayerSaveDbInterval
+	})
 }
 
 func (p *Player) processMessage(message *ProtoPacket) {
