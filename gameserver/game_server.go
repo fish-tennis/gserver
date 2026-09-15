@@ -67,7 +67,7 @@ func (this *GameServer) Init(ctx context.Context, configFile string) bool {
 
 	this.initDb()
 	this.initCache()
-	// 初始化维护状态内存缓存(启动加载+订阅变更通知+定期兜底),
+	// 初始化维护状态内存缓存(启动加载+订阅变更通知),
 	// 之后进游/重连/创角的维护检查读内存副本,这些链路常态零该类Redis查询
 	cache.InitMaintenanceCache(this.GetContext())
 	// 订阅热更配置通知,收到通知后按md5快照diff选择性重载本进程配置表

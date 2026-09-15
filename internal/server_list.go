@@ -35,6 +35,13 @@ type ServerInfo interface {
 	GetLastActiveTime() int64
 }
 
+// serverListSnapshot 服务器列表的不可变快照
+// 同一轮从Redis读到的数据构建出byId/byType两个索引,发布后只读
+type serverListSnapshot struct {
+	byId   map[int32]*pb.ServerInfo    // serverId -> ServerInfo
+	byType map[string][]*pb.ServerInfo // serverType -> 预排序的ServerInfo列表
+}
+
 // 服务器列表管理
 // 每个服务器定时上传自己的信息到redis,其他服务器定时从redis获取整个服务器集群的信息
 // 属于服务注册和发现的功能,zookeeper的临时节点更适合来实现这类需求
@@ -48,12 +55,11 @@ type ServerList struct {
 	connectServerTypes []string
 	// 服务器多少毫秒没上传自己的信息,就判断为不活跃了
 	activeTimeout int32
-	// 缓存的服务器列表信息
-	serverInfos      map[int32]*pb.ServerInfo // serverId-ServerInfo
-	serverInfosMutex sync.RWMutex
-	// 按照服务器类型分组的服务器列表信息
-	serverInfoTypeMap      map[string][]*pb.ServerInfo
-	serverInfoTypeMapMutex sync.RWMutex
+	// 缓存的服务器列表快照:不可变快照+整体替换(copy-on-write)——
+	// 每轮从Redis反序列化出新的snapshot结构体后Store发布,发布后不再修改,
+	// 读为无锁原子Load,写永不阻塞读;byId/byType是同一轮数据的两个索引,
+	// 合并在一个快照里原子发布,保证读方看到的两个索引永远来自同一轮数据
+	serverListSnapshot atomic.Pointer[serverListSnapshot]
 	// 本地服务器信息
 	localServerInfo *pb.ServerInfo
 	// Ping 的原子读写,避免心跳回调协程与 RegisterLocalServerInfo 协程的数据竞争
@@ -82,12 +88,15 @@ type ServerList struct {
 func NewServerList(serverInfo *pb.ServerInfo) *ServerList {
 	_serverList = &ServerList{
 		activeTimeout:         DefaultServerActiveTimeoutMs,
-		serverInfos:           make(map[int32]*pb.ServerInfo),
 		connectedServers:      make(map[int32]gnet.Connection),
-		serverInfoTypeMap:     make(map[string][]*pb.ServerInfo),
 		localServerInfo:       serverInfo,
 		serverConnectorConfig: network.ServerConnectionConfig,
 	}
+	// 发布初始空快照,保证读方Load()永远拿到非nil的快照
+	_serverList.serverListSnapshot.Store(&serverListSnapshot{
+		byId:   make(map[int32]*pb.ServerInfo),
+		byType: make(map[string][]*pb.ServerInfo),
+	})
 	// 初始化服务器之间的网络配置
 	_serverList.initDefaultServerConnectorConfig()
 	_serverList.initDefaultServerListenerConfig()
@@ -196,7 +205,11 @@ func (this *ServerList) NewAdaptPacket(message proto.Message) gnet.Packet {
 
 // 服务发现: 读取服务器列表信息,并连接这些服务器
 func (this *ServerList) FindAndConnectServers(ctx context.Context) {
-	serverInfoMapUpdated := false
+	// 服务器"成员集合"是否变化(新服加入/旧服被剔除)
+	// 注意与数据刷新区分:OnlineCount/LoginForbidden等动态字段的变化不算成员变化
+	serverMemberChanged := false
+	// 上一轮发布的快照,用于成员变化判断(快照不可变,读无需加锁)
+	prevSnapshot := this.serverListSnapshot.Load()
 	infoMap := make(map[int32]*pb.ServerInfo)
 	for _, serverType := range this.fetchServerTypes {
 		serverInfos := make(map[int32]*pb.ServerInfo)
@@ -210,42 +223,44 @@ func (this *ServerList) FindAndConnectServers(ctx context.Context) {
 			if util.GetCurrentMS()-serverInfo.GetLastActiveTime() > int64(this.activeTimeout) {
 				continue
 			}
-			// 这里不用加锁,因为其他协程不会修改serverInfos
-			if _, ok := this.serverInfos[serverInfo.GetServerId()]; !ok {
-				serverInfoMapUpdated = true
+			if _, ok := prevSnapshot.byId[serverInfo.GetServerId()]; !ok {
+				serverMemberChanged = true
 			}
 			infoMap[serverInfo.GetServerId()] = serverInfo
 		}
 	}
-	if len(this.serverInfos) != len(infoMap) {
-		serverInfoMapUpdated = true
+	if len(prevSnapshot.byId) != len(infoMap) {
+		serverMemberChanged = true
 	}
-	// 服务器列表有更新,才更新服务器列表和类型分组信息
-	if serverInfoMapUpdated {
-		this.serverInfosMutex.Lock()
-		this.serverInfos = infoMap
-		this.serverInfosMutex.Unlock()
-		serverInfoTypeMap := make(map[string][]*pb.ServerInfo)
-		for _, info := range infoMap {
-			infoSlice, ok := serverInfoTypeMap[info.GetServerType()]
-			if !ok {
-				infoSlice = make([]*pb.ServerInfo, 0)
-				serverInfoTypeMap[info.GetServerType()] = infoSlice
-			}
-			infoSlice = append(infoSlice, info)
+	// 每轮都用Redis刚读到的数据刷新本地缓存,不能只在成员变化时刷新:
+	// OnlineCount/LoginForbidden/MaxOnline等字段随心跳每秒上报变化,
+	// 登录服的加权选服(剩余容量)和退出服过滤(LoginForbidden)都依赖这些字段的秒级时效;
+	// 若只在成员集合变化时替换,集合稳定期这些字段会永远冻结在最后一次成员变化时的快照,
+	// 加权选服退化为均等随机、满载保护失效、退出服的禁止登录标记也到不了登录服
+	serverInfoTypeMap := make(map[string][]*pb.ServerInfo)
+	for _, info := range infoMap {
+		infoSlice, ok := serverInfoTypeMap[info.GetServerType()]
+		if !ok {
+			infoSlice = make([]*pb.ServerInfo, 0)
 			serverInfoTypeMap[info.GetServerType()] = infoSlice
 		}
-		// 预排序:避免 GetServersByType 每次调用都排序
-		for _, infoSlice := range serverInfoTypeMap {
-			sort.Slice(infoSlice, func(i, j int) bool {
-				return infoSlice[i].GetServerId() < infoSlice[j].GetServerId()
-			})
-		}
-		var oldList map[string][]*pb.ServerInfo
-		this.serverInfoTypeMapMutex.Lock()
-		oldList = this.serverInfoTypeMap
-		this.serverInfoTypeMap = serverInfoTypeMap
-		this.serverInfoTypeMapMutex.Unlock()
+		infoSlice = append(infoSlice, info)
+		serverInfoTypeMap[info.GetServerType()] = infoSlice
+	}
+	// 预排序:避免 GetServersByType 每次调用都排序
+	for _, infoSlice := range serverInfoTypeMap {
+		sort.Slice(infoSlice, func(i, j int) bool {
+			return infoSlice[i].GetServerId() < infoSlice[j].GetServerId()
+		})
+	}
+	// Swap原子地发布新快照并返回旧快照
+	oldList := this.serverListSnapshot.Swap(&serverListSnapshot{
+		byId:   infoMap,
+		byType: serverInfoTypeMap,
+	}).byType
+	// 列表更新回调只在成员集合变化时触发(新增/剔除服务器),
+	// 动态字段刷新不触发,避免ReBalance等回调被每秒调用
+	if serverMemberChanged {
 		for _, hookFunc := range this.listUpdateHooks {
 			hookFunc(serverInfoTypeMap, oldList)
 		}
@@ -314,7 +329,7 @@ func (this *ServerList) ConnectServer(ctx context.Context, info *pb.ServerInfo) 
 			slog.Info("ConnectServer closed", "serverId", info.GetServerId(), "serverType", info.GetServerType())
 		}
 		this.connectedServersMutex.Unlock()
-		
+
 	} else {
 		slog.Info("ConnectServerError", "serverId", info.GetServerId(), "serverType", info.GetServerType())
 	}
@@ -350,9 +365,7 @@ func (this *ServerList) SetLocalLoginForbidden(forbidden bool) {
 
 // 获取某个服务器的信息
 func (this *ServerList) GetServerInfo(serverId int32) *pb.ServerInfo {
-	this.serverInfosMutex.RLock()
-	defer this.serverInfosMutex.RUnlock()
-	info, _ := this.serverInfos[serverId]
+	info, _ := this.serverListSnapshot.Load().byId[serverId]
 	return info
 }
 
@@ -412,9 +425,7 @@ func (this *ServerList) SetFetchAndConnectServerTypes(serverTypes ...string) {
 
 // 获取某类服务器的信息列表(已预排序,仅做浅拷贝)
 func (this *ServerList) GetServersByType(serverType string) []*pb.ServerInfo {
-	this.serverInfoTypeMapMutex.RLock()
-	defer this.serverInfoTypeMapMutex.RUnlock()
-	if infoList, ok := this.serverInfoTypeMap[serverType]; ok {
+	if infoList, ok := this.serverListSnapshot.Load().byType[serverType]; ok {
 		// 返回浅拷贝,防止调用方修改内部 slice
 		result := make([]*pb.ServerInfo, len(infoList))
 		copy(result, infoList)

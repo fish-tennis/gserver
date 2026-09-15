@@ -44,6 +44,12 @@ func processPlayerEntryGameReq(connection Connection, packet Packet, req *pb.Pla
 	// 后续将用于玩家行为记录与分析,当前阶段先输出到日志
 	clientIp := network.ResolveClientIp(connection, packet, req.GetClientIp())
 	slog.Info("processPlayerEntryGameReq clientIp", "accountId", req.GetAccountId(), "clientIp", clientIp)
+	// DB协程池中执行,connection跨协程:排队期间连接可能已断开,直接返回——
+	// IsConnected是原子读,Close后返回false
+	if !connection.IsConnected() {
+		slog.Debug("processPlayerEntryGameReq connection closed", "accountId", req.GetAccountId())
+		return
+	}
 	var errorCode pb.ErrorCode
 	var entryPlayer *game.Player
 	// routedToRoutine 标记:内存命中的进游请求已投递到玩家协程处理,
@@ -65,12 +71,6 @@ func processPlayerEntryGameReq(connection Connection, packet Packet, req *pb.Pla
 		}
 		slog.Debug("onPlayerEntryGameReq", "res", res, "error", errorCode)
 	}()
-	// DB协程池中执行,connection跨协程:先检查连接是否已断开
-	// IsConnected是原子读,Close后返回false,避免后续操作已关闭的connection
-	if !connection.IsConnected() {
-		slog.Debug("processPlayerEntryGameReq connection closed", "accountId", req.GetAccountId())
-		return
-	}
 	// HasLogin检查仅用于客户端直连模式(网关模式下connection是gate连接,tag不会是playerId)
 	if !network.IsGatePacket(packet) && connection.GetTag() != nil {
 		errorCode = pb.ErrorCode_ErrorCode_HasLogin
@@ -275,6 +275,11 @@ func processPlayerReconnectGameReq(connection Connection, packet Packet, req *pb
 		AccountId: req.AccountId,
 		PlayerId:  req.PlayerId,
 	}
+	// DB协程池中执行,connection跨协程:排队期间连接可能已断开,直接返回——
+	if !connection.IsConnected() {
+		slog.Debug("processPlayerReconnectGameReq connection closed", "playerId", req.PlayerId)
+		return
+	}
 	var errorCode pb.ErrorCode
 	// routedToRoutine标记:已投递到玩家协程处理,成功响应在玩家协程的onReconnect中发送,
 	// defer不再重复发送(与processPlayerEntryGameReq的routedToRoutine模式一致)
@@ -285,11 +290,6 @@ func processPlayerReconnectGameReq(connection Connection, packet Packet, req *pb
 		}
 		network.SendPacketAdaptWithError(connection, packet, res, int32(errorCode))
 	}()
-	// DB协程池中执行,connection跨协程:先检查连接是否已断开,避免无意义的DB查询
-	if !connection.IsConnected() {
-		slog.Debug("processPlayerReconnectGameReq connection closed", "playerId", req.PlayerId)
-		return
-	}
 	// DB查询排队期间玩家可能已退出(保留期到期被移除),重新判空
 	player := game.GetPlayer(req.PlayerId)
 	if player == nil {

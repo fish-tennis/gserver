@@ -12,7 +12,7 @@ import (
 // offlineProcessing 离线玩家处理中的playerId集合(进程内标记)
 //
 // 为什么需要标记:OfflinePlayerProcess持有onlineaccount独占期间,该记录的特征
-// (属于本服+玩家不在内存+无onlineplayer记录)与"进游崩溃残留"完全同构,
+// (属于本服+玩家不在内存+无onlineplayer记录)
 var offlineProcessing sync.Map
 
 // IsOfflinePlayerProcessing 该玩家是否正处于离线数据处理中(本进程内)

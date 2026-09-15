@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/fish-tennis/gentity"
@@ -59,7 +60,12 @@ func GetBanRecordsForLogin(accountId int64, playerId int64) (accountBan *pb.BanR
 	// 会永久阻塞,占死DB worker并拖垮同hash槽的所有进游/重连请求
 	ctx, cancel := context.WithTimeout(context.Background(), gentity.GetMongoOpTimeout())
 	defer cancel()
-	cursor, err := GetDbMgr().GetEntityDb(BanDbName).(*gentity.MongoCollection).GetCollection().Find(
+	mongoCol, ok := GetDbMgr().GetEntityDb(BanDbName).(*gentity.MongoCollection)
+	if !ok {
+		slog.Error("GetBanRecordsForLogin: unsupported ban db type", "accountId", accountId, "playerId", playerId)
+		return nil, nil
+	}
+	cursor, err := mongoCol.GetCollection().Find(
 		ctx,
 		bson.D{{Key: UniqueIdName, Value: bson.D{
 			{Key: "$in", Value: []string{accountKey, playerKey}},
