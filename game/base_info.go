@@ -155,6 +155,11 @@ func (b *BaseInfo) GetCreateDayCount() int32 {
 	}
 	now := b.GetPlayer().GetTimerEntries().Now()
 	createTime := time.Unix(b.Data.CreateTimestamp, 0)
+	// 时钟早于建号时刻(虚拟时钟清零等回退场景,建号发生在快进期间):钳制为第1天——
+	// DayCount的abs语义会把"未来1天"虚算成"已过1天"(第2天),创角天数必须单调不小于1
+	if now.Before(createTime) {
+		return 1
+	}
 	// DayCount 返回两个日期相隔的自然日天数,建号当天为 0,所以 +1
 	return int32(util.DayCount(now, createTime) + 1)
 }

@@ -16,8 +16,14 @@ func init() {
 	_activityPropertyGetterMap = map[string]ActivityPropertyGetter{
 		// 当前是参加这个活动的第几天,从1开始
 		"DayCount": func(a *ActivityDefault, _ string, _ *pb.ConditionCfg) int32 {
-			days := util.DayCount(a.Activities.GetPlayer().GetTimerEntries().Now(), time.Unix(int64(a.Base.JoinTime), 0))
-			return int32(days) + 1
+			now := a.Activities.GetPlayer().GetTimerEntries().Now()
+			joinTime := time.Unix(int64(a.Base.JoinTime), 0)
+			// 时钟早于加入时刻(虚拟时钟清零等回退场景,活动在快进期间开启):钳制为第1天——
+			// DayCount的abs语义会把"未来"虚算成已过天数,导致按天解锁的活动条件误判通过
+			if now.Before(joinTime) {
+				return 1
+			}
+			return int32(util.DayCount(now, joinTime)) + 1
 		},
 	}
 }
