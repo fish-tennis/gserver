@@ -2,9 +2,11 @@ package game
 
 import (
 	"fmt"
+	"time"
 	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gentity/util"
 	"github.com/fish-tennis/gnet"
+	"github.com/fish-tennis/gserver/cache"
 	"github.com/fish-tennis/gserver/cfg"
 	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/network"
@@ -19,9 +21,11 @@ import (
 // 客户端输入的测试命令
 func (p *Player) OnTestCmd(req *pb.TestCmd) {
 	slog.Info("OnTestCmd", "cmd", req.Cmd)
-	// 测试命令仅在测试环境可用,由配置文件的IsOpenTestCommand控制
-	app, ok := gentity.GetApplication().(interface{ GetConfig() *internal.BaseServerConfig })
-	if !ok || !app.GetConfig().IsOpenTestCommand {
+	// 测试命令仅在测试环境可用,由配置文件的IsTestEnv控制
+	app, ok := gentity.GetApplication().(interface {
+		GetConfig() *internal.BaseServerConfig
+	})
+	if !ok || !app.GetConfig().IsTestEnv {
 		p.SendErrorRes(gnet.PacketCommand(network.GetCommandByProto(req)), "test cmd disabled")
 		return
 	}
@@ -34,6 +38,55 @@ func (p *Player) OnTestCmd(req *pb.TestCmd) {
 	cmdKey := strings.ToLower(cmdStrs[0])
 	cmdArgs := cmdStrs[1:]
 	switch cmdKey {
+	case strings.ToLower("Date"):
+		// 设置游戏时间偏移(测试用): date 2026-9-23 10:14:00 | date 2026-09-23 10:14 | date 2026-9-23
+		// 把本组游戏时间偏移到指定日期时间
+		// 写Redis组级偏移并广播变更,组内所有进程的GameNow与实体时钟毫秒级生效;
+		// 目标时间必须晚于当前真实时间:偏移不支持负值
+		// 无参数=移除时间偏移(恢复真实时间)
+		if len(cmdArgs) == 0 {
+			if err := cache.SetGameTimeOffset(0); err != nil {
+				p.SendErrorRes(cmd, "Date clear offset error: "+err.Error())
+				return
+			}
+			slog.Info("Date reset offset success", "playerId", p.GetId())
+			return
+		}
+		if len(cmdArgs) > 2 {
+			p.SendErrorRes(cmd, "Date cmdArgs error, usage: date 2026-9-23 10:14:00 | date(无参数=恢复真实时间)")
+			return
+		}
+		// 日期与时间被空格分割成两个参数,重组后按多种宽松格式解析
+		// (月日可不补零/秒可省略/只给日期=当天0点,"1""2"模板可兼容补零输入)
+		dateStr := cmdArgs[0]
+		if len(cmdArgs) == 2 {
+			dateStr += " " + cmdArgs[1]
+		}
+		var target time.Time
+		parsed := false
+		for _, layout := range []string{"2006-1-2 15:04:05", "2006-1-2 15:04", "2006-1-2"} {
+			if t, err := time.ParseInLocation(layout, dateStr, time.Local); err == nil {
+				target = t
+				parsed = true
+				break
+			}
+		}
+		if !parsed {
+			p.SendErrorRes(cmd, "Date format error, usage: date 2026-9-23 10:14:00")
+			return
+		}
+		// 偏移=目标时间-当前真实时间:GameNow=time.Now()+offset,令GameNow到达目标时刻
+		offset := target.Unix() - time.Now().Unix()
+		if offset < 0 {
+			p.SendErrorRes(cmd, "Date target must be later than now(不支持时间回退)")
+			return
+		}
+		if err := cache.SetGameTimeOffset(offset); err != nil {
+			p.SendErrorRes(cmd, "Date set offset error: "+err.Error())
+			return
+		}
+		slog.Info("Date success", "target", dateStr, "offsetSec", offset, "playerId", p.GetId())
+
 	case strings.ToLower("AddExp"):
 		// 加经验值
 		if len(cmdArgs) != 1 {

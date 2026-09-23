@@ -24,6 +24,7 @@ import (
 	"strings"
 	"syscall"
 	"time"
+	"github.com/fish-tennis/gserver/cache"
 )
 
 func main() {
@@ -76,6 +77,8 @@ func main() {
 	if !server.Init(ctx, configFile) {
 		panic("server init error")
 	}
+	// 启动游戏时间偏移量的进程内同步(同步读初值+订阅变更通知)
+	cache.StartGameTimeSync(ctx)
 	// 服务器运行
 	server.Run(ctx)
 
@@ -87,7 +90,11 @@ func main() {
 		go func() {
 			consoleReader := bufio.NewReader(os.Stdin)
 			for {
-				lineBytes, _, _ := consoleReader.ReadLine()
+				lineBytes, _, err := consoleReader.ReadLine()
+				if err != nil {
+					slog.Info("console reader exit", "err", err.Error())
+					return
+				}
 				line := strings.ToLower(string(lineBytes))
 				slog.Info("line", "line", line)
 				if line == "close" || line == "exit" {

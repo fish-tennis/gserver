@@ -3,12 +3,14 @@ package social
 import (
 	"log/slog"
 	"reflect"
+	"time"
 
 	"github.com/fish-tennis/gentity"
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/network"
 	"github.com/fish-tennis/gserver/pb"
+	"github.com/fish-tennis/gserver/util"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -36,7 +38,9 @@ type GuildMessage struct {
 
 func NewGuild(guildLoadData *pb.GuildLoadData) *Guild {
 	guild := &Guild{
-		BaseRoutineEntity: *gentity.NewRoutineEntity(1024),
+		// 注入GameNow作为公会实体的时钟源:实体内所有GetTimerEntries().Now()取时与
+		// After定时回调统一走虚拟游戏时间轴(测试环境可组级快进),业务代码无需各自取GameNow
+		BaseRoutineEntity: *gentity.NewRoutineEntityWithArgs(1024, util.GameNow, time.Second),
 	}
 	guild.Id = guildLoadData.Id
 	_guildComponentRegister.InitComponents(guild, nil)

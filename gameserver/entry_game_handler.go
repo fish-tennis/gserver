@@ -3,7 +3,6 @@ package gameserver
 import (
 	"unicode/utf8"
 	"log/slog"
-	"time"
 	"strings"
 
 	"github.com/fish-tennis/gentity"
@@ -14,6 +13,7 @@ import (
 	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/network"
 	"github.com/fish-tennis/gserver/pb"
+	"github.com/fish-tennis/gserver/util"
 )
 
 // 玩家进游戏服的请求
@@ -110,7 +110,8 @@ func processPlayerEntryGameReq(connection Connection, packet Packet, req *pb.Pla
 		}
 		// 检查区服开服时间:未到开服时间的区服仅白名单账号可进入
 		// 与区服维护拦截口径一致,防止定时开服的区服在开服前被普通玩家提前进入
-		if region.GetOpenTimestamp() > time.Now().Unix() && !cache.IsWhitelistedAccount(accountId) {
+		// 开服时间拦截走GameNow:与区服创建/修改时间戳同源,测试环境快进可立即开服
+		if region.GetOpenTimestamp() > util.GameNowUnix() && !cache.IsWhitelistedAccount(accountId) {
 			errorCode = pb.ErrorCode_ErrorCode_RegionNotOpen
 			return
 		}
@@ -429,7 +430,8 @@ func processCreatePlayerReq(connection Connection, packet Packet, req *pb.Create
 	}
 	// 检查区服开服时间:未到开服时间的区服仅白名单账号可创角
 	// 与区服维护拦截口径一致,防止定时开服的区服在开服前被普通玩家提前创建角色
-	if region.GetOpenTimestamp() > time.Now().Unix() && !cache.IsWhitelistedAccount(req.GetAccountId()) {
+	// 开服时间拦截走GameNow,与进游侧拦截同一时钟
+	if region.GetOpenTimestamp() > util.GameNowUnix() && !cache.IsWhitelistedAccount(req.GetAccountId()) {
 		errorCode = pb.ErrorCode_ErrorCode_RegionNotOpen
 		return
 	}
@@ -493,7 +495,8 @@ func processCreatePlayerReq(connection Connection, packet Packet, req *pb.Create
 			Level:  1,
 			Exp:    0,
 			// 记录角色创建时间(秒级时间戳),用于后续创角时长统计、老玩家回归等业务
-			CreateTimestamp: time.Now().Unix(),
+			// 业务时间走GameNow,支持测试环境时间快进
+			CreateTimestamp: util.GameNowUnix(),
 		},
 	}
 	newPlayer := game.CreatePlayerFromData(playerData)

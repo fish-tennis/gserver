@@ -3,13 +3,13 @@ package social
 import (
 	"errors"
 	"log/slog"
-	"time"
 
 	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gserver/game"
 	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/network"
 	"github.com/fish-tennis/gserver/pb"
+	"github.com/fish-tennis/gserver/util"
 )
 
 const (
@@ -63,10 +63,11 @@ func (this *GuildJoinRequests) HandleGuildJoinReq(guildMessage *GuildMessage, re
 	if this.Get(guildMessage.fromPlayerId) != nil {
 		return nil, errors.New("already have a join request")
 	}
+	// 入会申请时间走GameNow,支持测试环境时间快进
 	this.Add(&pb.GuildJoinRequest{
 		PlayerId:     guildMessage.fromPlayerId,
 		PlayerName:   guildMessage.fromPlayerName,
-		TimestampSec: time.Now().Unix(),
+		TimestampSec: util.GameNowUnix(),
 	})
 	// 广播公会成员
 	g.BroadcastClientPacket(&pb.GuildJoinReqTip{

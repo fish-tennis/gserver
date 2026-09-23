@@ -94,6 +94,8 @@ func (this *SocialServer) initCache() {
 	if err != nil || pong == "" {
 		panic(fmt.Sprintf("redis connect error,uri:%v err:%v pong:%v", this.GetConfig().Redis.Uri, err, pong))
 	}
+	// 初始化维护状态内存缓存(启动加载+订阅变更通知)
+	cache.InitMaintenanceCache(this.GetContext())
 }
 
 func (this *SocialServer) initNetwork() {

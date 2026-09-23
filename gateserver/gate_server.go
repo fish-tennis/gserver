@@ -61,6 +61,9 @@ func (s *GateServer) initCache() {
 		slog.Error("redis connect error", "uri", s.GetConfig().Redis.Uri, "cluster", s.GetConfig().Redis.Cluster, "err", err)
 		panic(fmt.Sprintf("redis connect error: uri:%v(%v) err:%v", s.GetConfig().Redis.Uri, s.GetConfig().Redis.Cluster, err))
 	}
+	// 初始化维护状态内存缓存:维护状态是整个服务器组的状态,组内所有进程统一持有副本,
+	// 保证任何进程未来需要检查维护状态时视图一致(未初始化的进程恒为false,会造成组内视角分裂)
+	cache.InitMaintenanceCache(s.GetContext())
 }
 
 func (s *GateServer) initNetwork() {

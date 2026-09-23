@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"time"
 
 	"github.com/fish-tennis/gentity"
 	. "github.com/fish-tennis/gnet"
@@ -15,6 +14,7 @@ import (
 	. "github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/network"
 	"github.com/fish-tennis/gserver/pb"
+	"github.com/fish-tennis/gserver/util"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
@@ -181,7 +181,7 @@ func (this *LoginServer) initRegions() {
 	slog.Info("initRegions loaded", "count", len(regions))
 	if len(regions) == 0 {
 		// 首次启动,创建默认区服
-		now := time.Now().Unix()
+		now := util.GameNowUnix()
 		defaultRegion := &pb.Region{
 			Id:              1,
 			Name:            "默认区服",

@@ -12,6 +12,7 @@ import (
 	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/network"
 	"github.com/fish-tennis/gserver/pb"
+	"github.com/fish-tennis/gserver/util"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 )
@@ -694,14 +695,28 @@ func (p *Player) HandlePlayerEntryGameOk(msg *pb.PlayerEntryGameOk) {
 		IsReconnect:    msg.IsReconnect,
 		OfflineSeconds: offlineSeconds,
 	})
+	// 同步服务器时间给客户端:登录/重连统一在此校准客户端虚拟时钟
+	p.Send(NewServerTimeSync())
 }
 
+// NewServerTimeSync 构造服务器时间同步消息(Real=真实墙钟毫秒,Virtual=游戏时钟毫秒,UtcOffsetSeconds=服务器时区UTC偏移秒)
+func NewServerTimeSync() *pb.ServerTimeSync {
+	// Zone()返回当前时区的名称与UTC偏移秒(服务器启动时time.Local已统一设为Asia/Shanghai)
+	_, utcOffsetSec := time.Now().Zone()
+	return &pb.ServerTimeSync{
+		RealTimestamp:    time.Now().UnixMilli(),
+		VirtualTimestamp: util.GameNow().UnixMilli(),
+		UtcOffsetSeconds: int32(utcOffsetSec),
+	}
+}
 func CreatePlayer(playerId int64, playerName string, accountId int64, regionId int32) *Player {
 	player := &Player{
 		name:              playerName,
 		accountId:         accountId,
 		regionId:          regionId,
-		BaseRoutineEntity: *gentity.NewRoutineEntity(PlayerChanLen),
+		// 注入GameNow作为玩家实体的时钟源:实体内所有GetTimerEntries().Now()取时与
+		// After定时回调统一走虚拟游戏时间轴(测试环境可组级快进),业务代码无需各自取GameNow
+		BaseRoutineEntity: *gentity.NewRoutineEntityWithArgs(PlayerChanLen, util.GameNow, time.Second),
 		Log:               slog.With("pid", playerId),
 	}
 	player.Id = playerId

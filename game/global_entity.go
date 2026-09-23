@@ -11,6 +11,7 @@ import (
 	"github.com/fish-tennis/gserver/db"
 	"github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/pb"
+	"github.com/fish-tennis/gserver/util"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -40,7 +41,9 @@ type GlobalEntity struct {
 
 func NewGlobalEntity() *GlobalEntity {
 	return &GlobalEntity{
-		BaseRoutineEntity: *gentity.NewRoutineEntity(32),
+		// 注入GameNow作为全局实体的时钟源:实体内所有GetTimerEntries().Now()取时与
+		// After定时回调统一走虚拟游戏时间轴(测试环境可组级快进),业务代码无需各自取GameNow
+		BaseRoutineEntity: *gentity.NewRoutineEntityWithArgs(32, util.GameNow, time.Second),
 		// NOTE: 需要在服务器初始化时调用db.RegisterGlobalEntityDb(mongoDb)
 		globalDb: db.GetGlobalDb(),
 		key:      fmt.Sprintf("%v%v", GlobalEntityCollectionKeyPrefix, gentity.GetApplication().GetId()),

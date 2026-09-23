@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"time"
 
 	"github.com/fish-tennis/gentity"
 	"github.com/fish-tennis/gserver/pb"
+	"github.com/fish-tennis/gserver/util"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
@@ -28,7 +28,7 @@ func banRecordActive(record *pb.BanRecord) bool {
 	if record.Duration == 0 {
 		return true // 永久封禁
 	}
-	return record.BanTime+record.Duration > time.Now().Unix()
+	return record.BanTime+record.Duration > util.GameNowUnix()
 }
 
 // IsBanned 检查目标是否处于封禁状态

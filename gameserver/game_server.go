@@ -67,6 +67,8 @@ func (this *GameServer) Init(ctx context.Context, configFile string) bool {
 
 	this.initDb()
 	this.initCache()
+	// 注册虚拟时钟偏移变更回调:放在initCache之后(Redis已就绪,与回调触发时的重读链路同源)
+	cache.RegisterGameTimeChangeCallback(this.BroadcastServerTime)
 	// 初始化维护状态内存缓存(启动加载+订阅变更通知),
 	// 之后进游/重连/创角的维护检查读内存副本,这些链路常态零该类Redis查询
 	cache.InitMaintenanceCache(this.GetContext())
@@ -356,6 +358,26 @@ func (this *GameServer) registerServerPacket(handler *DefaultConnectionHandler) 
 	network.RegisterPacketHandler(handler, new(pb.RoutePlayerMessage), this.onRoutePlayerMessage)
 }
 
+// BroadcastServerTime 向本进程所有在线玩家推送服务器时间同步消息(ServerTimeSync)
+func (this *GameServer) BroadcastServerTime() {
+	cmd := network.GetCommandByProto(new(pb.ServerTimeSync))
+	this.playerMap.Range(func(key, value interface{}) bool {
+		player, ok := value.(*game.Player)
+		if !ok {
+			return true
+		}
+		// 每个玩家独立的消息副本:构造开销极小,且彻底避免多玩家协程共享同一message
+		if !player.TryPushMessage(&game.PlayerDirectSendMessage{
+			Cmd:     PacketCommand(cmd),
+			Message: game.NewServerTimeSync(),
+		}) {
+			// 单个玩家投递失败只记日志继续下一个:广播不能因个别玩家(协程积压)中断;
+			// 失败的玩家下次进游/重连时HandlePlayerEntryGameOk会重新校准时间,不丢信息
+			slog.Error("BroadcastServerTime player channel full", "playerId", key)
+		}
+		return true
+	})
+}
 // 添加一个在线玩家
 func (this *GameServer) AddPlayer(player IPlayer) {
 	this.playerWg.Add(1)

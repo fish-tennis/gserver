@@ -15,6 +15,13 @@ message HeartBeatRes {
   int64 ResponseTimestamp = 2;// 回复方的时间戳(毫秒)
 }
 
+// 同步服务器的时间给客户端
+message ServerTimeSync {
+  int64 RealTimestamp = 1; 		// 服务器的现实时间戳(毫秒)
+  int64 VirtualTimestamp = 2; 	// 服务器的虚拟时间戳(毫秒)
+  int32 UtcOffsetSeconds = 3; 	// 服务器时区相对UTC的偏移秒数(取自服务器time.Local,如东八区=28800;客户端按服务器时区计算日期边界/每日重置/格式化显示,便于不同地区的客户端正确处理)
+}
+
 // 通用的错误返回消息
 message ErrorRes {
   int32 Command = 1; // 消息号

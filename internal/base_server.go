@@ -102,7 +102,9 @@ type BaseServerConfig struct {
 	// 登录服按剩余容量(MaxOnline-OnlineCount)加权随机选服;0=未配置,选服时按默认容量计算
 	MaxOnline int32 `yaml:"MaxOnline"`
 	// 是否开启测试命令(仅测试环境开启,防止正式服作弊)
-	IsOpenTestCommand bool         `yaml:"IsOpenTestCommand"`
+	// 是否测试环境
+	// 生产环境必须为false或不配置,防止正式服作弊)
+	IsTestEnv         bool         `yaml:"IsTestEnv"`
 	Client            ListerConfig `yaml:"Client"`
 	Gate              ListerConfig `yaml:"Gate"`
 	Server            ListerConfig `yaml:"Server"`

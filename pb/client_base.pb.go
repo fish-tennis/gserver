@@ -119,6 +119,67 @@ func (x *HeartBeatRes) GetResponseTimestamp() int64 {
 	return 0
 }
 
+// 同步服务器的时间给客户端
+type ServerTimeSync struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	RealTimestamp    int64                  `protobuf:"varint,1,opt,name=RealTimestamp,proto3" json:"RealTimestamp,omitempty"`       // 服务器的现实时间戳(毫秒)
+	VirtualTimestamp int64                  `protobuf:"varint,2,opt,name=VirtualTimestamp,proto3" json:"VirtualTimestamp,omitempty"` // 服务器的虚拟时间戳(毫秒)
+	UtcOffsetSeconds int32                  `protobuf:"varint,3,opt,name=UtcOffsetSeconds,proto3" json:"UtcOffsetSeconds,omitempty"` // 服务器时区相对UTC的偏移秒数(取自服务器time.Local,如东八区=28800;客户端按服务器时区计算日期边界/每日重置/格式化显示,便于不同地区的客户端正确处理)
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *ServerTimeSync) Reset() {
+	*x = ServerTimeSync{}
+	mi := &file_client_base_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ServerTimeSync) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ServerTimeSync) ProtoMessage() {}
+
+func (x *ServerTimeSync) ProtoReflect() protoreflect.Message {
+	mi := &file_client_base_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ServerTimeSync.ProtoReflect.Descriptor instead.
+func (*ServerTimeSync) Descriptor() ([]byte, []int) {
+	return file_client_base_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *ServerTimeSync) GetRealTimestamp() int64 {
+	if x != nil {
+		return x.RealTimestamp
+	}
+	return 0
+}
+
+func (x *ServerTimeSync) GetVirtualTimestamp() int64 {
+	if x != nil {
+		return x.VirtualTimestamp
+	}
+	return 0
+}
+
+func (x *ServerTimeSync) GetUtcOffsetSeconds() int32 {
+	if x != nil {
+		return x.UtcOffsetSeconds
+	}
+	return 0
+}
+
 // 通用的错误返回消息
 type ErrorRes struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -131,7 +192,7 @@ type ErrorRes struct {
 
 func (x *ErrorRes) Reset() {
 	*x = ErrorRes{}
-	mi := &file_client_base_proto_msgTypes[2]
+	mi := &file_client_base_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -143,7 +204,7 @@ func (x *ErrorRes) String() string {
 func (*ErrorRes) ProtoMessage() {}
 
 func (x *ErrorRes) ProtoReflect() protoreflect.Message {
-	mi := &file_client_base_proto_msgTypes[2]
+	mi := &file_client_base_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -156,7 +217,7 @@ func (x *ErrorRes) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ErrorRes.ProtoReflect.Descriptor instead.
 func (*ErrorRes) Descriptor() ([]byte, []int) {
-	return file_client_base_proto_rawDescGZIP(), []int{2}
+	return file_client_base_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *ErrorRes) GetCommand() int32 {
@@ -193,7 +254,7 @@ type GateRouteClientPacketError struct {
 
 func (x *GateRouteClientPacketError) Reset() {
 	*x = GateRouteClientPacketError{}
-	mi := &file_client_base_proto_msgTypes[3]
+	mi := &file_client_base_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -205,7 +266,7 @@ func (x *GateRouteClientPacketError) String() string {
 func (*GateRouteClientPacketError) ProtoMessage() {}
 
 func (x *GateRouteClientPacketError) ProtoReflect() protoreflect.Message {
-	mi := &file_client_base_proto_msgTypes[3]
+	mi := &file_client_base_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -218,7 +279,7 @@ func (x *GateRouteClientPacketError) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GateRouteClientPacketError.ProtoReflect.Descriptor instead.
 func (*GateRouteClientPacketError) Descriptor() ([]byte, []int) {
-	return file_client_base_proto_rawDescGZIP(), []int{3}
+	return file_client_base_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *GateRouteClientPacketError) GetPlayerId() int64 {
@@ -258,7 +319,11 @@ const file_client_base_proto_rawDesc = "" +
 	"\tTimestamp\x18\x01 \x01(\x03R\tTimestamp\"h\n" +
 	"\fHeartBeatRes\x12*\n" +
 	"\x10RequestTimestamp\x18\x01 \x01(\x03R\x10RequestTimestamp\x12,\n" +
-	"\x11ResponseTimestamp\x18\x02 \x01(\x03R\x11ResponseTimestamp\"^\n" +
+	"\x11ResponseTimestamp\x18\x02 \x01(\x03R\x11ResponseTimestamp\"\x8e\x01\n" +
+	"\x0eServerTimeSync\x12$\n" +
+	"\rRealTimestamp\x18\x01 \x01(\x03R\rRealTimestamp\x12*\n" +
+	"\x10VirtualTimestamp\x18\x02 \x01(\x03R\x10VirtualTimestamp\x12*\n" +
+	"\x10UtcOffsetSeconds\x18\x03 \x01(\x05R\x10UtcOffsetSeconds\"^\n" +
 	"\bErrorRes\x12\x18\n" +
 	"\aCommand\x18\x01 \x01(\x05R\aCommand\x12\x1a\n" +
 	"\bResultId\x18\x02 \x01(\x05R\bResultId\x12\x1c\n" +
@@ -281,12 +346,13 @@ func file_client_base_proto_rawDescGZIP() []byte {
 	return file_client_base_proto_rawDescData
 }
 
-var file_client_base_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_client_base_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_client_base_proto_goTypes = []any{
 	(*HeartBeatReq)(nil),               // 0: gserver.HeartBeatReq
 	(*HeartBeatRes)(nil),               // 1: gserver.HeartBeatRes
-	(*ErrorRes)(nil),                   // 2: gserver.ErrorRes
-	(*GateRouteClientPacketError)(nil), // 3: gserver.GateRouteClientPacketError
+	(*ServerTimeSync)(nil),             // 2: gserver.ServerTimeSync
+	(*ErrorRes)(nil),                   // 3: gserver.ErrorRes
+	(*GateRouteClientPacketError)(nil), // 4: gserver.GateRouteClientPacketError
 }
 var file_client_base_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type
@@ -307,7 +373,7 @@ func file_client_base_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_client_base_proto_rawDesc), len(file_client_base_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   4,
+			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
