@@ -77,7 +77,7 @@ func SetGameTimeOffset(sec int64) error {
 		return err
 	}
 	if err := PublishChannel(ctx, gameTimeUpdateChannel, "update"); err != nil {
-		slog.Warn("SetGameTimeOffset publish notify failed, poll will converge", "error", err)
+		slog.Warn("SetGameTimeOffset publish notify failed", "error", err)
 	}
 	return nil
 }
