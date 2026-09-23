@@ -29,6 +29,12 @@ var (
 	_globalEntityPacketHandlerMgr = internal.NewPacketHandlerMgr()
 )
 
+// globalEntityTickMessage 定时器唤醒内部消息,由虚拟时钟偏移变更回调投递,在GlobalEntity协程内消费
+// TimerEntries的Timer按真实时钟等待:偏移变更(时间快进)不会让已注册任务提前到期,
+// 需要此tick触发Run收割虚拟时间已到期的任务并把Timer重置到虚拟时钟的下一个到期点,
+// 否则常驻定时任务(活动排期等)要等完真实剩余时长才被唤醒
+type globalEntityTickMessage struct{}
+
 // 演示全局类的非玩家实体
 // 这里演示的GlobalEntity,每个game进程一个实例
 type GlobalEntity struct {
@@ -82,6 +88,10 @@ func (this *GlobalEntity) RunRoutine() bool {
 		ProcessMessageFunc: func(routineEntity gentity.RoutineEntity, message any) {
 			if packet, ok := message.(*ProtoPacket); ok {
 				this.processMessage(packet)
+			} else if _, ok := message.(*globalEntityTickMessage); ok {
+				// 虚拟时钟偏移变更后的唤醒:立即收割虚拟时间已到期的定时任务并重置Timer,
+				// 使常驻定时任务追赶上快进后的虚拟时钟(见globalEntityTickMessage说明)
+				this.GetTimerEntries().Run()
 			} else {
 				slog.Error(fmt.Sprintf("GlobalEntity ProcessMessage invalid type: %T", message))
 			}

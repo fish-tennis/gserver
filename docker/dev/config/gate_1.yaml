@@ -13,3 +13,5 @@ Redis:
   UserName:
   Password:
   Cluster: false
+#是否测试环境(测试环境开启;生产环境必须为false或不配置,防止正式服作弊)
+IsTestEnv: true
