@@ -1,5 +1,7 @@
 #服务器进程唯一id
 ServerId: 202
+#运维监控HTTP服务(Prometheus /metrics + pprof /debug/pprof)
+MetricsAddr: 127.0.0.1:19202
 #social服务器,承载公会等跨玩家协程实体
 #监听其他服务器
 Server:

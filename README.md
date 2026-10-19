@@ -60,6 +60,8 @@
 
 - 全局类的非玩家实体的通用接口
 
+- 运维监控:Prometheus指标 + pprof在线性能分析
+
 ## 数据方案
 
 玩家数据落地使用mongodb,玩家上线时,从mongodb拉取玩家数据,玩家下线时,把玩家数据保存到mongodb
@@ -195,6 +197,42 @@ playerId, err := db.FindPlayerIdByAccount(accountId, req.GetRegionId())
 ## 协程
 
 每个玩家分配一个独立的逻辑协程,玩家在自己的逻辑协程中执行只涉及自身数据的代码,无需加锁
+
+## 运维监控
+
+每个服务器进程可通过配置`MetricsAddr`开启一个运维HTTP服务(建议只监听内网):
+
+```yaml
+#运维监控HTTP服务(Prometheus /metrics + pprof /debug/pprof)
+MetricsAddr: 127.0.0.1:19101
+```
+
+- `/metrics`:Prometheus指标,包含框架指标和go_*/process_*运行时指标
+- `/debug/pprof/`:pprof在线性能分析(heap/cpu/goroutine等)
+
+框架指标:
+
+| 指标 | 类型 | 说明 |
+|---|---|---|
+| online_players{server_type,server_id} | Gauge | 在线人数(Game:在线玩家数; Gate:已绑定的客户端连接数) |
+| packets_total | Counter | 处理的消息累计数,用rate()计算每秒消息数 |
+| goroutines | Gauge | 协程数量(含每个玩家的独立逻辑协程) |
+| db_worker_queue_len | Gauge | DB操作协程池的排队任务数,接近上限(8*64)说明DB层积压 |
+
+prometheus抓取示例:
+
+```yaml
+scrape_configs:
+  - job_name: gserver
+    static_configs:
+      - targets: ['192.168.1.100:19001','192.168.1.100:19011','192.168.1.100:19101']
+```
+
+在线抓取cpu热点(30秒采样):
+
+```shell
+go tool pprof http://127.0.0.1:19101/debug/pprof/profile?seconds=30
+```
 
 ## 运行
 

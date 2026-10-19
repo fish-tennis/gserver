@@ -3,6 +3,7 @@ package network
 import (
 	"encoding/json"
 	"github.com/fish-tennis/gnet"
+	"github.com/fish-tennis/gserver/metrics"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/reflect/protoregistry"
@@ -125,5 +126,9 @@ func RegisterPacketHandler(register gnet.PacketHandlerRegister, protoMessage pro
 		slog.Warn("RegisterPacketHandlerErr", "protoMessage", protoMessage)
 		return
 	}
-	register.Register(gnet.PacketCommand(uint16(cmd)), handler, protoMessage)
+	// 包装一层消息计数:所有经此注册的消息回调(gnet直发的handler路径)统一累加指标
+	register.Register(gnet.PacketCommand(uint16(cmd)), func(connection gnet.Connection, packet gnet.Packet) {
+		metrics.IncPacketReceived()
+		handler(connection, packet)
+	}, protoMessage)
 }

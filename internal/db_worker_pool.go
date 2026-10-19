@@ -92,6 +92,15 @@ func (p *DbWorkerPool) SubmitByName(name string, f func()) bool {
 	return p.Submit(int64(h.Sum64()), f)
 }
 
+// QueueLen 当前排队任务总数(所有worker队列长度之和,用于运维指标监控积压)
+func (p *DbWorkerPool) QueueLen() int {
+	n := 0
+	for _, ch := range p.workers {
+		n += len(ch)
+	}
+	return n
+}
+
 // Shutdown 关闭协程池,等待所有worker退出
 func (p *DbWorkerPool) Shutdown() {
 	p.closed.Store(true) // 先标记关闭,阻止新的Submit
@@ -142,4 +151,12 @@ func SubmitDbTaskByName(name string, f func()) bool {
 		return true
 	}
 	return dbWorkerPool.SubmitByName(name, f)
+}
+
+// DbWorkerPoolQueueLen 全局DB协程池的排队任务数(未初始化时返回0,用于运维指标)
+func DbWorkerPoolQueueLen() int {
+	if dbWorkerPool == nil {
+		return 0
+	}
+	return dbWorkerPool.QueueLen()
 }

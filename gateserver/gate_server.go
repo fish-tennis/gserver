@@ -49,6 +49,14 @@ func (s *GateServer) Init(ctx context.Context, configFile string) bool {
 	s.clients = make(map[int64]*network.ClientData)
 	s.initCache()
 	s.initNetwork()
+	// 每秒上报已绑定playerId的客户端连接数,进入运维指标(online_players)
+	// 并随ServerInfo心跳写入Redis,供集群监控/排障查看gate的连接规模
+	s.AddUpdateHook(func(ctx context.Context, updateCount int64) {
+		s.clientsMutex.RLock()
+		n := len(s.clients)
+		s.clientsMutex.RUnlock()
+		s.GetServerList().SetLocalOnlineCount(int32(n))
+	})
 	slog.Info("GateServer.Init")
 	return true
 }

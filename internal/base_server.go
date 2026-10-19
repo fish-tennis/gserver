@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -16,13 +17,14 @@ import (
 	"github.com/fish-tennis/gentity/util"
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
+	"github.com/fish-tennis/gserver/metrics"
 	"github.com/fish-tennis/gserver/network"
 	"github.com/fish-tennis/gserver/pb"
 	gserverutil "github.com/fish-tennis/gserver/util"
-	"google.golang.org/protobuf/proto"
-	"gopkg.in/yaml.v3"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 	"go.mongodb.org/mongo-driver/v2/mongo/writeconcern"
+	"google.golang.org/protobuf/proto"
+	"gopkg.in/yaml.v3"
 )
 
 type ListerConfig struct {
@@ -104,15 +106,18 @@ type BaseServerConfig struct {
 	// 是否开启测试命令(仅测试环境开启,防止正式服作弊)
 	// 是否测试环境
 	// 生产环境必须为false或不配置,防止正式服作弊)
-	IsTestEnv         bool         `yaml:"IsTestEnv"`
-	Client            ListerConfig `yaml:"Client"`
-	Gate              ListerConfig `yaml:"Gate"`
-	Server            ListerConfig `yaml:"Server"`
+	IsTestEnv bool         `yaml:"IsTestEnv"`
+	Client    ListerConfig `yaml:"Client"`
+	Gate      ListerConfig `yaml:"Gate"`
+	Server    ListerConfig `yaml:"Server"`
 	// WebSocket客户端监听(仅GateServer使用,其他服务器不处理)
 	WsClient     ListerConfig `yaml:"WsClient"`
 	Mongo        MongoConfig  `yaml:"Mongo"`
 	Redis        RedisConfig  `yaml:"Redis"`
 	AlertWebhook string       `yaml:"AlertWebhook"` // 接收告警信息的webhook地址
+	// 运维监控HTTP服务地址(Prometheus /metrics + pprof /debug/pprof/*)
+	// 空=不开启;建议只监听内网(如127.0.0.1:19001)
+	MetricsAddr string `yaml:"MetricsAddr"`
 }
 
 // 服务器运行状态
@@ -143,11 +148,13 @@ type BaseServer struct {
 	// 告警webhook地址
 	alertWebhook string
 	// 服务器运行状态
-	status     atomic.Int32
-	ctx        context.Context
-	ctxCancel  context.CancelFunc
-	wg         sync.WaitGroup
+	status      atomic.Int32
+	ctx         context.Context
+	ctxCancel   context.CancelFunc
+	wg          sync.WaitGroup
 	serverHooks []gentity.ApplicationHook
+	// 每秒更新回调(embedding无法重写OnUpdate,子类服务器通过AddUpdateHook参与每秒更新)
+	updateHooks []func(ctx context.Context, updateCount int64)
 }
 
 func NewBaseServer(ctx context.Context, serverType string, configFile string, cfgDir string) *BaseServer {
@@ -293,6 +300,11 @@ func (this *BaseServer) Init(ctx context.Context, configFile string) bool {
 		InitAlert(this.alertWebhook, this.GetId(), this.serverInfo.ServerType,
 			gserverutil.GetLocalIP(), workDir, BuildTime, BuildType, GitVersion)
 	}
+	// 初始化指标标签并按配置启动运维HTTP服务(Prometheus + pprof)
+	metrics.Init(this.serverInfo.ServerType, this.GetId())
+	if this.config.MetricsAddr != "" {
+		metrics.Start(this.config.MetricsAddr)
+	}
 	return true
 }
 
@@ -314,6 +326,19 @@ func (this *BaseServer) OnUpdate(ctx context.Context, updateCount int64) {
 	this.serverInfo.LastActiveTime = util.GetCurrentMS()
 	this.GetServerList().RegisterLocalServerInfo()
 	this.GetServerList().FindAndConnectServers(ctx)
+	// 每秒刷新运维指标(未开启MetricsAddr时只是无谓的原子写,开销可忽略)
+	metrics.SetOnlineCount(this.GetServerList().GetLocalOnlineCount())
+	metrics.SetGoroutines(runtime.NumGoroutine())
+	metrics.SetDbWorkerQueueLen(DbWorkerPoolQueueLen())
+	for _, hook := range this.updateHooks {
+		hook(ctx, updateCount)
+	}
+}
+
+// AddUpdateHook 注册每秒更新回调(在Init之后、Run之前调用)
+// embedding的方式无法让子类重写OnUpdate,子类服务器(如GateServer)通过本接口参与每秒更新
+func (this *BaseServer) AddUpdateHook(hook func(ctx context.Context, updateCount int64)) {
+	this.updateHooks = append(this.updateHooks, hook)
 }
 
 func (this *BaseServer) Exit() {
@@ -342,6 +367,8 @@ func (this *BaseServer) Exit() {
 	slog.Info("wait net goroutine close")
 	GetNetMgr().Shutdown(true)
 	slog.Info("all net goroutine closed")
+	// 运维HTTP服务关闭
+	metrics.Shutdown()
 	// 缓存关闭
 	if cache.GetRedis() != nil {
 		if closer, ok := cache.GetRedis().(io.Closer); ok {

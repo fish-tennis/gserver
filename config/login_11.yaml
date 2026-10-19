@@ -1,5 +1,7 @@
 #服务器进程唯一id
 ServerId: 11
+#运维监控HTTP服务(Prometheus /metrics + pprof /debug/pprof)
+MetricsAddr: 127.0.0.1:19011
 #监听客户端
 Client:
   Addr: :10002

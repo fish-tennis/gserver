@@ -343,6 +343,11 @@ func (this *ServerList) SetLocalOnlineCount(n int32) {
 	this.localOnlineCount.Store(n)
 }
 
+// GetLocalOnlineCount 获取本服上报的在线人数(每秒随心跳刷新,含运维指标)
+func (this *ServerList) GetLocalOnlineCount() int32 {
+	return this.localOnlineCount.Load()
+}
+
 // 服务注册:上传本地服务器的信息
 func (this *ServerList) RegisterLocalServerInfo() {
 	// 从原子变量读取最新的 Ping/热更时间/在线人数,避免与心跳回调/热更订阅/玩家协程的数据竞争
