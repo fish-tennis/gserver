@@ -11,6 +11,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"net"
 	"net/http"
 	"net/http/pprof"
 	"strconv"
@@ -61,9 +62,15 @@ func Init(serverType string, serverId int32) {
 }
 
 // Start 启动运维HTTP服务:/metrics + /debug/pprof/*
-func Start(addr string) {
+// 同步绑定端口并返回绑定结果:端口冲突等部署错误可被调用方即时感知(告警/日志),
+// 避免"配置了监控但实际未生效"的静默降级
+func Start(addr string) error {
 	if httpServer != nil {
-		return
+		return nil
+	}
+	ln, err := net.Listen("tcp", addr)
+	if err != nil {
+		return err
 	}
 	mux := http.NewServeMux()
 	mux.Handle("/metrics", promhttp.Handler())
@@ -76,11 +83,13 @@ func Start(addr string) {
 	httpServer = &http.Server{Addr: addr, Handler: mux}
 	go func() {
 		slog.Info("metrics server start", "addr", addr)
-		if err := httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		// NOTE: 不写 httpServer=nil——避免与 Shutdown(Exit协程)对该包变量构成数据竞争;
+		// 绑定失败已在上方同步返回,Serve 的意外退出仅记录日志,进程内无重试Start的调用方
+		if err := httpServer.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			slog.Error("metrics server error", "addr", addr, "err", err)
-			httpServer = nil
 		}
 	}()
+	return nil
 }
 
 // Shutdown 优雅关闭运维HTTP服务

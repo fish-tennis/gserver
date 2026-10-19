@@ -181,8 +181,6 @@ func (this *PacketHandlerMgr) Invoke(entity gentity.Entity, packet gnet.Packet, 
 	// 先找组件接口
 	handlerInfo := this.HandlerInfos[packet.Command()]
 	if handlerInfo != nil {
-		// 消息计数:自动注册的On*/Handle*回调(经实体协程派发)与network.RegisterPacketHandler(gnet直发路径)互补
-		metrics.IncPacketReceived()
 		if handlerInfo.ComponentName != "" {
 			component := entity.GetComponentByName(handlerInfo.ComponentName)
 			if component != nil {
@@ -196,6 +194,8 @@ func (this *PacketHandlerMgr) Invoke(entity gentity.Entity, packet gnet.Packet, 
 				if len(returnValues) > 0 && processReturnValues != nil && handlerInfo.ResCmd > 0 {
 					processReturnValues(handlerInfo, returnValues)
 				}
+				// 消息计数:实际执行了回调才计数(与network.RegisterPacketHandler的gnet直发路径互补)
+				metrics.IncPacketReceived()
 				return true
 			}
 		} else {
@@ -209,6 +209,8 @@ func (this *PacketHandlerMgr) Invoke(entity gentity.Entity, packet gnet.Packet, 
 			if len(returnValues) > 0 && processReturnValues != nil && handlerInfo.ResCmd > 0 {
 				processReturnValues(handlerInfo, returnValues)
 			}
+			// 消息计数:实际执行了回调才计数
+			metrics.IncPacketReceived()
 			return true
 		}
 	}

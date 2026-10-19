@@ -2,6 +2,7 @@ package metrics
 
 import (
 	"io"
+	"net"
 	"net/http"
 	"strings"
 	"testing"
@@ -27,7 +28,18 @@ func TestMetricsHttpServer(t *testing.T) {
 	Init("Test", 999)
 	SetOnlineCount(3)
 	IncPacketReceived()
-	Start(addr)
+	// 端口被占用时同步返回错误(调用方可即时告警,不再静默降级)
+	blocker, err := net.Listen("tcp", "127.0.0.1:19398")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer blocker.Close()
+	if err := Start("127.0.0.1:19398"); err == nil {
+		t.Fatal("expected error when port is in use")
+	}
+	if err := Start(addr); err != nil {
+		t.Fatal(err)
+	}
 	defer Shutdown()
 	waitServerReady(t, addr)
 

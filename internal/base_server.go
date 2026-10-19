@@ -301,9 +301,13 @@ func (this *BaseServer) Init(ctx context.Context, configFile string) bool {
 			gserverutil.GetLocalIP(), workDir, BuildTime, BuildType, GitVersion)
 	}
 	// 初始化指标标签并按配置启动运维HTTP服务(Prometheus + pprof)
+	// 启动失败(如端口被占用)不阻断业务,但告警+日志,避免"配置了监控但实际未生效"的静默降级
 	metrics.Init(this.serverInfo.ServerType, this.GetId())
 	if this.config.MetricsAddr != "" {
-		metrics.Start(this.config.MetricsAddr)
+		if err := metrics.Start(this.config.MetricsAddr); err != nil {
+			slog.Error("metrics server start error", "addr", this.config.MetricsAddr, "err", err)
+			SendAlert(fmt.Errorf("metrics server start error: addr=%v err=%w", this.config.MetricsAddr, err))
+		}
 	}
 	return true
 }
