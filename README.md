@@ -62,6 +62,10 @@
 
 - 运维监控:Prometheus指标 + pprof在线性能分析
 
+- 无缝重启:gate常驻+game滚动重启,重启期间客户端连接不断,隐式重连无感恢复
+
+- 维护预告:Redis Pub/Sub发布停机通知,game进程广播给在线玩家
+
 ## 数据方案
 
 玩家数据落地使用mongodb,玩家上线时,从mongodb拉取玩家数据,玩家下线时,把玩家数据保存到mongodb
@@ -233,6 +237,49 @@ scrape_configs:
 ```shell
 go tool pprof http://127.0.0.1:19101/debug/pprof/profile?seconds=30
 ```
+
+## 无缝重启
+
+gate常驻+game滚动重启:客户端TCP连接的宿主是gate,而gate几乎无状态、几乎不需要重启;真正频繁发版的是game。两层分离后,重启逻辑层不碰连接层:
+
+```
+1 停服预告: Redis发布维护通知 -> 所有game广播给在线玩家 -> 客户端倒计时UI
+2 滚动停机: LoginForbidden拒绝新登录 -> 玩家数据落盘(mongo+redis兜底) -> game进程退出(客户端连接保留在gate)
+3 无感恢复: 新版本game启动 -> gate自动重连 -> 客户端隐式重连(PlayerEntryGameReq) -> 从DB恢复数据 -> 继续游戏
+```
+
+框架支持:
+
+- game断连时gate保留客户端的GameServerId,game以相同ServerId重启后路由自动恢复
+- 进游/重连请求的目标game不可达时按场景决定是否fallback重新选服:
+  - 整体维护中:不迁移(迁移到存活game也会被game侧的维护检查拒绝),客户端拿到错误展示维护UI
+  - 心跳仍新鲜(网络抖动/重连中):不迁移,客户端稍后重试,恢复后原地复活(隐式重连)
+  - 心跳超时(进程已死亡:滚动重启/宕机/降配下线):gate自动重新选服(过滤禁止登录的),由新game从DB加载玩家数据,全程无需重新登录
+- 停服窗口内业务消息得到明确错误响应(非黑洞),客户端触发隐式重连
+
+滚动更新推荐操作(多game进程,发布前全量禁止登录,玩家/新登录只会流向已更新的服):
+
+```shell
+# 1.(可选)发布维护预告
+redis-cli PUBLISH maintenance_notice '{"ShutdownTimestamp":1730000000,"DurationSec":300,"Version":"1.2.0"}'
+# 2. 全量禁止登录(所有game收到后随心跳上报,登录服选服与gate兜底选服都会过滤)
+redis-cli PUBLISH forbidden_login '{"Forbidden":true}'
+# 3. 逐台重启game(同ServerId同配置):重启完成的服LoginForbidden自动恢复false,
+#    自动成为唯一可登录的新版候选——玩家最多被迁移1次,且只会迁到已更新的服
+# 4. 全部完成后无需任何解除操作;若中途放弃更新,手动解除:
+redis-cli PUBLISH forbidden_login '{"Forbidden":false}'
+```
+
+降配缩容操作(仅对目标服置位;切忌全量置位,否则目标服玩家fallback无候选、原服又永久下线,形成死锁):
+
+```shell
+# 1. 定向禁止目标服登录(仅105不再接收新玩家,其他服正常)
+redis-cli PUBLISH forbidden_login '{"Forbidden":true,"ServerIds":[105]}'
+# 2. 优雅停机目标服:其玩家fallback到其他存活服(心跳超时后由gate重新选服)
+# 3. 确认玩家迁移完成后下线该服务器
+```
+
+注意:大量玩家同时隐式重连会形成进游风暴(每次进游=一次DB读),客户端应做随机退避重试,服务端的DbWorkerPool满时会返回TryLater,客户端延迟重试即可
 
 ## 运行
 

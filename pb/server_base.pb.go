@@ -390,6 +390,68 @@ func (x *ServerHello) GetServerType() string {
 	return ""
 }
 
+// 服务器维护预告(无缝重启:gate常驻+game滚动重启)
+// game进程收到后广播给本进程所有在线玩家,客户端展示倒计时UI
+type ServerMaintenanceNotice struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	ShutdownTimestamp int64                  `protobuf:"varint,1,opt,name=ShutdownTimestamp,proto3" json:"ShutdownTimestamp,omitempty"` // 预计停机时间戳(秒)
+	DurationSec       int32                  `protobuf:"varint,2,opt,name=DurationSec,proto3" json:"DurationSec,omitempty"`             // 预计维护时长(秒)
+	Version           string                 `protobuf:"bytes,3,opt,name=Version,proto3" json:"Version,omitempty"`                      // 即将更新的版本说明(可选)
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *ServerMaintenanceNotice) Reset() {
+	*x = ServerMaintenanceNotice{}
+	mi := &file_server_base_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ServerMaintenanceNotice) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ServerMaintenanceNotice) ProtoMessage() {}
+
+func (x *ServerMaintenanceNotice) ProtoReflect() protoreflect.Message {
+	mi := &file_server_base_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ServerMaintenanceNotice.ProtoReflect.Descriptor instead.
+func (*ServerMaintenanceNotice) Descriptor() ([]byte, []int) {
+	return file_server_base_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *ServerMaintenanceNotice) GetShutdownTimestamp() int64 {
+	if x != nil {
+		return x.ShutdownTimestamp
+	}
+	return 0
+}
+
+func (x *ServerMaintenanceNotice) GetDurationSec() int32 {
+	if x != nil {
+		return x.DurationSec
+	}
+	return 0
+}
+
+func (x *ServerMaintenanceNotice) GetVersion() string {
+	if x != nil {
+		return x.Version
+	}
+	return ""
+}
+
 // 封禁记录,存储在MongoDB ban collection中
 type BanRecord struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -404,7 +466,7 @@ type BanRecord struct {
 
 func (x *BanRecord) Reset() {
 	*x = BanRecord{}
-	mi := &file_server_base_proto_msgTypes[5]
+	mi := &file_server_base_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -416,7 +478,7 @@ func (x *BanRecord) String() string {
 func (*BanRecord) ProtoMessage() {}
 
 func (x *BanRecord) ProtoReflect() protoreflect.Message {
-	mi := &file_server_base_proto_msgTypes[5]
+	mi := &file_server_base_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -429,7 +491,7 @@ func (x *BanRecord) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BanRecord.ProtoReflect.Descriptor instead.
 func (*BanRecord) Descriptor() ([]byte, []int) {
-	return file_server_base_proto_rawDescGZIP(), []int{5}
+	return file_server_base_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *BanRecord) GetTargetId() int64 {
@@ -509,7 +571,11 @@ const file_server_base_proto_rawDesc = "" +
 	"\bServerId\x18\x01 \x01(\x05R\bServerId\x12\x1e\n" +
 	"\n" +
 	"ServerType\x18\x02 \x01(\tR\n" +
-	"ServerType\"\x95\x01\n" +
+	"ServerType\"\x83\x01\n" +
+	"\x17ServerMaintenanceNotice\x12,\n" +
+	"\x11ShutdownTimestamp\x18\x01 \x01(\x03R\x11ShutdownTimestamp\x12 \n" +
+	"\vDurationSec\x18\x02 \x01(\x05R\vDurationSec\x12\x18\n" +
+	"\aVersion\x18\x03 \x01(\tR\aVersion\"\x95\x01\n" +
 	"\tBanRecord\x12\x1a\n" +
 	"\bTargetId\x18\x01 \x01(\x03R\bTargetId\x12\x1e\n" +
 	"\n" +
@@ -531,14 +597,15 @@ func file_server_base_proto_rawDescGZIP() []byte {
 	return file_server_base_proto_rawDescData
 }
 
-var file_server_base_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_server_base_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_server_base_proto_goTypes = []any{
-	(*ServerInfo)(nil),       // 0: gserver.ServerInfo
-	(*KickPlayerReq)(nil),    // 1: gserver.KickPlayerReq
-	(*KickPlayerRes)(nil),    // 2: gserver.KickPlayerRes
-	(*ClientDisconnect)(nil), // 3: gserver.ClientDisconnect
-	(*ServerHello)(nil),      // 4: gserver.ServerHello
-	(*BanRecord)(nil),        // 5: gserver.BanRecord
+	(*ServerInfo)(nil),              // 0: gserver.ServerInfo
+	(*KickPlayerReq)(nil),           // 1: gserver.KickPlayerReq
+	(*KickPlayerRes)(nil),           // 2: gserver.KickPlayerRes
+	(*ClientDisconnect)(nil),        // 3: gserver.ClientDisconnect
+	(*ServerHello)(nil),             // 4: gserver.ServerHello
+	(*ServerMaintenanceNotice)(nil), // 5: gserver.ServerMaintenanceNotice
+	(*BanRecord)(nil),               // 6: gserver.BanRecord
 }
 var file_server_base_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type
@@ -559,7 +626,7 @@ func file_server_base_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_server_base_proto_rawDesc), len(file_server_base_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   6,
+			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -81,6 +81,7 @@
     "RoutePlayerMessageReq": 17366,
     "ServerHello": 1966,
     "ServerInfo": 36377,
+    "ServerMaintenanceNotice": 25357,
     "ServerTimeSync": 51355,
     "ShutdownReq": 6845,
     "StartupReq": 673,

@@ -47,6 +47,14 @@ message ServerHello {
   string ServerType = 2; // 服务器类型
 }
 
+// 服务器维护预告(无缝重启:gate常驻+game滚动重启)
+// game进程收到后广播给本进程所有在线玩家,客户端展示倒计时UI
+message ServerMaintenanceNotice {
+  int64 ShutdownTimestamp = 1; // 预计停机时间戳(秒)
+  int32 DurationSec = 2;      // 预计维护时长(秒)
+  string Version = 3;         // 即将更新的版本说明(可选)
+}
+
 // 封禁记录,存储在MongoDB ban collection中
 message BanRecord {
   int64 TargetId = 1;   // 封禁目标id（accountId或playerId）

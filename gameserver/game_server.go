@@ -16,6 +16,7 @@ import (
 	. "github.com/fish-tennis/gserver/internal"
 	"github.com/fish-tennis/gserver/network"
 	"github.com/fish-tennis/gserver/pb"
+	"google.golang.org/protobuf/proto"
 )
 
 var (
@@ -84,6 +85,22 @@ func (this *GameServer) Init(ctx context.Context, configFile string) bool {
 			}
 			slog.Info("GameServer config reloaded")
 		}
+	})
+	// 订阅维护预告通知,收到后广播给本进程所有在线玩家(无缝重启:停服预告)
+	// 发布方为GM后台/运维脚本,见cache.PublishMaintenanceNotice
+	cache.SubscribeMaintenanceNotice(this.GetContext(), func(notice *pb.ServerMaintenanceNotice) {
+		slog.Info("maintenance notice received, broadcasting", "shutdownTimestamp", notice.GetShutdownTimestamp(),
+			"durationSec", notice.GetDurationSec(), "version", notice.GetVersion())
+		this.BroadcastMaintenanceNotice(notice)
+	})
+	// 订阅禁止登录指令,收到后置位并随心跳上报(无缝重启:滚动更新/降配)
+	// 滚动更新:全量置位(不带ServerIds),配合"进程重启后LoginForbidden自动恢复false"的特性:
+	// 重启完成的game自动恢复登录,成为唯一可登录的新版候选,玩家/新登录只会流向已更新的服
+	// 降配:仅对目标服置位(ServerIds定向),目标服停机后玩家fallback到其他存活服
+	// 注意:pubsub不持久化,game重启后收不到历史指令,LoginForbidden保持零值false,即"重启完成=恢复登录"
+	cache.SubscribeLoginForbidden(this.GetContext(), this.GetId(), func(forbidden bool) {
+		slog.Info("login forbidden command received", "forbidden", forbidden)
+		this.GetServerList().SetLocalLoginForbidden(forbidden)
 	})
 	// 预加载区服数据到内存缓存并订阅变更通知(订阅逻辑已收敛在InitRegionCache内部)
 	if err := InitRegionCache(this.GetContext()); err != nil {
@@ -378,6 +395,27 @@ func (this *GameServer) BroadcastServerTime() {
 		return true
 	})
 }
+
+// BroadcastMaintenanceNotice 向本进程所有在线玩家广播维护预告(无缝重启:停服预告)
+// 客户端收到后展示倒计时UI;每玩家独立副本,与BroadcastServerTime同模式
+func (this *GameServer) BroadcastMaintenanceNotice(notice *pb.ServerMaintenanceNotice) {
+	cmd := network.GetCommandByProto(new(pb.ServerMaintenanceNotice))
+	this.playerMap.Range(func(key, value interface{}) bool {
+		player, ok := value.(*game.Player)
+		if !ok {
+			return true
+		}
+		if !player.TryPushMessage(&game.PlayerDirectSendMessage{
+			Cmd:     PacketCommand(cmd),
+			Message: proto.Clone(notice).(*pb.ServerMaintenanceNotice),
+		}) {
+			// 广播不能因个别玩家(协程积压)中断;失败的玩家由客户端定期拉取兜底
+			slog.Error("BroadcastMaintenanceNotice player channel full", "playerId", key)
+		}
+		return true
+	})
+}
+
 // 添加一个在线玩家
 func (this *GameServer) AddPlayer(player IPlayer) {
 	this.playerWg.Add(1)

@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/fish-tennis/gentity"
+	gentityutil "github.com/fish-tennis/gentity/util"
 	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
 	. "github.com/fish-tennis/gserver/internal"
@@ -98,17 +99,11 @@ func (s *GateServer) initNetwork() {
 	// 连接其他服务器
 	s.registerServerPacket(s.GetServerList().GetServerConnectionHandler())
 	s.GetServerList().SetFetchAndConnectServerTypes(ServerType_Login, ServerType_Game)
-	// GameServer 断开时,清理受影响玩家的 GameServerId,防止消息路由到死连接形成消息黑洞
-	s.GetServerList().AddOnServerDisconnectHook(func(serverId int32) {
-		s.clientsMutex.Lock()
-		for _, cd := range s.clients {
-			if cd.GetGameServerId() == serverId {
-				cd.SetGameServerId(0)
-			}
-		}
-		s.clientsMutex.Unlock()
-		slog.Info("GameServer disconnected, cleared GameServerId for affected clients", "serverId", serverId)
-	})
+	// NOTE: GameServer 断开时不再清理受影响玩家的 GameServerId(无缝重启设计):
+	// gate 常驻 + game 滚动重启的场景下,game 以相同 ServerId 重启后,保留的 GameServerId
+	// 使客户端路由自动恢复(隐式重连无需重新登录);
+	// game 永久下线(缩容)的场景由进游/重连请求的重新选服兜底(见routeGameServerIdWithFallback)。
+	// 断连期间业务消息发往死连接会得到 GameServerNotReached 错误,客户端触发重连流程
 }
 
 // 注册客户端消息回调
@@ -223,6 +218,75 @@ func (s *GateServer) routeToLoginServer(connection Connection, packet Packet) {
 	slog.Debug("routeToLoginServer", "clientConn", connection.GetConnectionId(), "cmd", packet.Command(), "serverId", randomServer.GetServerId())
 }
 
+// pickGameServer 从可用的Game服务器列表中随机选一个(过滤禁止登录的)
+// 用于原game服不可达时(滚动重启中/已缩容下线)的进游/重连请求兜底
+func (s *GateServer) pickGameServer() int32 {
+	servers := s.GetServerList().GetServersByType(ServerType_Game)
+	if len(servers) == 0 {
+		return 0
+	}
+	candidates := make([]*pb.ServerInfo, 0, len(servers))
+	for _, server := range servers {
+		// 与登录服选服口径一致:退出中/维护中的服不再接收新玩家
+		if server.GetLoginForbidden() {
+			continue
+		}
+		if conn := s.GetServerList().GetServerConnection(server.GetServerId()); conn == nil || !conn.IsConnected() {
+			continue
+		}
+		candidates = append(candidates, server)
+	}
+	if len(candidates) == 0 {
+		return 0
+	}
+	return candidates[rand.Intn(len(candidates))].GetServerId()
+}
+
+// isServerAlive 目标服务器的心跳是否仍新鲜
+// 心跳走Redis(每秒上报),不受gate与目标服务器间连接断开的影响,可用来区分两类场景:
+//   - 连接断 + 心跳新鲜 = 网络抖动/重连中(进程还活着,玩家实体大概率还在原服)
+//   - 连接断 + 心跳超时 = 进程已死亡(滚动重启/宕机)
+func (s *GateServer) isServerAlive(serverId int32) bool {
+	info := s.GetServerList().GetServerInfo(serverId)
+	if info == nil {
+		// 不在服务器列表中:心跳已超时被剔除,或从未注册
+		return false
+	}
+	return gentityutil.GetCurrentMS()-info.GetLastActiveTime() <= int64(DefaultServerActiveTimeoutMs)
+}
+
+// shouldSkipFallback 是否应跳过fallback(不迁移,保持原目标,本次失败回错误):
+// 服务器整体维护中——迁移到存活game也会被game侧的维护检查拒绝,
+// 白跑一跳且"迁移"语义在维护场景下本就不该发生;客户端拿到错误直接展示维护UI
+func shouldSkipFallback() bool {
+	return cache.IsMaintenanceMode()
+}
+
+// routeGameServerIdWithFallback 解析目标game服id:
+//   - 连接可用:原路路由
+//   - 整体维护中且非白名单:不迁移(见shouldSkipFallback)
+//   - 连接不可达但心跳仍新鲜:网络抖动/重连中,不做迁移——返回原id让本次发送失败回错误,
+//     客户端稍后重试,gate每秒重连game,恢复后玩家在原服原地复活(隐式重连),避免不必要的跨服搬迁
+//   - 连接不可达且心跳超时:进程已死亡(滚动重启/宕机/降配下线),fallback到其他可用game服
+//     (pickGameServer已过滤禁止登录的,滚动更新场景下只会选中已重启完成的新版服)
+func (s *GateServer) routeGameServerIdWithFallback(clientData *network.ClientData) int32 {
+	gameServerId := clientData.GetGameServerId()
+	if conn := s.GetServerList().GetServerConnection(gameServerId); conn != nil && conn.IsConnected() {
+		return gameServerId
+	}
+	if shouldSkipFallback() || s.isServerAlive(gameServerId) {
+		return gameServerId
+	}
+	newServerId := s.pickGameServer()
+	if newServerId > 0 && newServerId != gameServerId {
+		slog.Info("GameServer dead(heartbeat timeout), fallback to another game server",
+			"oldGameServerId", gameServerId, "newGameServerId", newServerId, "connId", clientData.ConnId)
+		clientData.SetGameServerId(newServerId)
+		return newServerId
+	}
+	return gameServerId
+}
+
 // 登录期间,playerId还没确定,这时候GatePacket.PlayerId用来存储connId
 func (s *GateServer) routeToGameServerWithConnId(connection Connection, packet Packet) {
 	if s.checkRunning(connection, packet) {
@@ -250,7 +314,8 @@ func (s *GateServer) routeToGameServerWithConnId(connection Connection, packet P
 	gatePacket.SetPlayerId(int64(clientData.ConnId))
 	// 原样透传客户端携带的 rpcCallId
 	gatePacket.SetRpcCallId(packet.RpcCallId())
-	if !s.GetServerList().SendPacket(clientData.GetGameServerId(), gatePacket) {
+	// 目标game服不可达时重新选服(无缝重启:滚动重启期间兜底)
+	if !s.GetServerList().SendPacket(s.routeGameServerIdWithFallback(clientData), gatePacket) {
 		// GameServer 不可达时回错误响应,语义与 routeToGameServer 保持一致:
 		// 登录期请求(如 PlayerEntryGameReq)同样带 rpcCallId,不回包会让客户端卡到超时
 		s.sendRouteErrorRes(connection, packet.Command(), packet.RpcCallId(), pb.ErrorCode_ErrorCode_RouteClientPacketLoss, "GameServerNotReached")
@@ -302,6 +367,19 @@ func (s *GateServer) routeReconnectToGameServer(connection Connection, packet Pa
 	gatePacket.SetPlayerId(int64(connection.GetConnectionId()))
 	// 原样透传客户端携带的 rpcCallId,保证重连的请求-响应配对
 	gatePacket.SetRpcCallId(packet.RpcCallId())
+	// 目标game服不可达时的兜底(与routeGameServerIdWithFallback同策略):
+	// 整体维护中非白名单/心跳仍新鲜(网络抖动/重连中):不迁移,本次发送失败回错误,客户端重试待原地复活;
+	// 心跳超时=进程已死亡(滚动重启/宕机/降配下线),重新选服(只会选中已恢复登录的新版服),
+	// 由新game从DB加载玩家数据
+	if conn := s.GetServerList().GetServerConnection(targetGameServerId); conn == nil || !conn.IsConnected() {
+		if !shouldSkipFallback() && !s.isServerAlive(targetGameServerId) {
+			if newServerId := s.pickGameServer(); newServerId > 0 && newServerId != targetGameServerId {
+				slog.Info("reconnect target GameServer dead(heartbeat timeout), fallback",
+					"playerId", req.GetPlayerId(), "oldGameServerId", targetGameServerId, "newGameServerId", newServerId)
+				targetGameServerId = newServerId
+			}
+		}
+	}
 	if !s.GetServerList().SendPacket(targetGameServerId, gatePacket) {
 		s.sendRouteErrorRes(connection, packet.Command(), packet.RpcCallId(),
 			pb.ErrorCode_ErrorCode_RouteClientPacketLoss, "GameServerNotReached")
