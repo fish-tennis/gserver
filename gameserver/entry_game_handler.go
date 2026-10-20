@@ -1,9 +1,9 @@
 package gameserver
 
 import (
-	"unicode/utf8"
 	"log/slog"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/fish-tennis/gentity"
 	. "github.com/fish-tennis/gnet"
@@ -159,8 +159,20 @@ func processPlayerEntryGameReq(connection Connection, packet Packet, req *pb.Pla
 	if !cache.AddOnlineAccount(accountId, playerId, gentity.GetApplication().GetId()) {
 		// 该账号已经在另一个游戏服上登录了
 		_, gameServerId := cache.GetOnlinePlayer(playerId)
+		if gameServerId == 0 {
+			// onlineplayer记录无有效值时,从账号独占记录中取持有服务器
+			_, gameServerId = cache.GetOnlineAccount(accountId)
+		}
 		slog.Error("exist online account", "accountId", accountId, "playerId", playerId, "gameServerId", gameServerId)
 		if gameServerId > 0 {
+			if internal.GetServerList().GetServerInfo(gameServerId) == nil {
+				// 持有记录的服务器心跳超时已不在活跃列表:宕机残留(非优雅退出无法释放记录),
+				// 踢人指令发往死服必然失败,本服不处理残留(保持进游逻辑简单),
+				// 通知客户端重新走账号登录,由loginserver清理残留并重新分配game服
+				// (loginserver登录时检测目标服宕机则清理Redis缓存,见processLoginReq)
+				errorCode = pb.ErrorCode_ErrorCode_ReconnectNeedRelogin
+				return
+			}
 			// 异步通知目标游戏服踢掉玩家
 			// 不能用同步 Rpc:此处运行在 gate 连接的收包协程中,Rpc 会阻塞整个收包协程,
 			// 导致同一网关上所有其他玩家的消息投递被阻塞
@@ -173,17 +185,16 @@ func processPlayerEntryGameReq(connection Connection, packet Packet, req *pb.Pla
 			if !sendOk {
 				slog.Error("kick send failed", "accountId", accountId, "playerId", playerId, "gameServerId", gameServerId)
 			}
-		} else {
-			// onlineaccount 存在但 onlineplayer 无有效 gameServerId
-			// 不直接 RemoveOnlineAccount:无法区分是"残留数据"还是"另一个GS正在进游的中间态"
-			// 若为后者,直接删除会破坏账号独占性(SetNX),导致同账号在两个GS同时在线,数据覆盖
-			// 残留数据会由以下兜底机制清理:
-			//   1. LoginServer:登录时检测目标服宕机则清理(LS.onLoginReq)
-			//   2. onKickPlayer:收到踢人但player不在内存时清理残留(GS.onKickPlayer)
-			//   3. repairCache:GameServer启动时修复宕机残留(RS.ResetOnlinePlayer)
-			// 客户端收到 TryLater 重试即可,不会永久卡号
 		}
-		// 通知客户端稍后重新登录
+		// onlineaccount存在但onlineplayer无有效gameServerId时:
+		// 不直接 RemoveOnlineAccount:无法区分是"残留数据"还是"另一个GS正在进游的中间态"
+		// 若为后者,直接删除会破坏账号独占性(SetNX),导致同账号在两个GS同时在线,数据覆盖
+		// 残留数据会由以下兜底机制清理:
+		//   1. LoginServer:登录时检测目标服宕机则清理(LS.onLoginReq)
+		//   2. onKickPlayer:收到踢人但player不在内存时清理残留(GS.onKickPlayer)
+		//   3. repairCache:GameServer启动时修复宕机残留(RS.ResetOnlinePlayer)
+		//   4. 本处检测到死服残留时返回ReconnectNeedRelogin,客户端重走登录由loginserver清理
+		// 客户端收到 TryLater 重试即可,不会永久卡号
 		errorCode = pb.ErrorCode_ErrorCode_TryLater
 		return
 	}
