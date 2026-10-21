@@ -254,7 +254,9 @@ gate常驻+game滚动重启:客户端TCP连接的宿主是gate,而gate几乎无�
 - 进游/重连请求的目标game不可达时按场景决定是否fallback重新选服:
   - 整体维护中:不迁移(迁移到存活game也会被game侧的维护检查拒绝),客户端拿到错误展示维护UI
   - 心跳仍新鲜(网络抖动/重连中):不迁移,客户端稍后重试,恢复后原地复活(隐式重连)
-  - 心跳超时(进程已死亡:滚动重启/宕机/降配下线):gate自动重新选服(过滤禁止登录的),由新game从DB加载玩家数据,全程无需重新登录
+  - 心跳超时(进程已死亡:滚动重启/宕机/降配下线):gate自动重新选服,选服口径与登录服一致
+    (过滤禁止登录与满载的,按剩余容量加权随机,见internal.WeightedSelectGameServer):
+    - 优雅停机场景(滚动更新/降配,玩家下线时已清理在线记录):进游请求(PlayerEntryGameReq)由新game从DB加载玩家数据,全程无需重新登录
 - 停服窗口内业务消息得到明确错误响应(非黑洞),客户端触发隐式重连
 
 滚动更新推荐操作(多game进程,发布前全量禁止登录,玩家/新登录只会流向已更新的服):
@@ -297,7 +299,7 @@ gserver -d=true -cfgDir=/cfgdata -conf=/gate_1.yaml
 # 启动一个登录服
 gserver -d=true -cfgDir=/cfgdata -conf=/login_11.yaml
 #启动一个游戏服
-gserver -d=true -cfgDir=/cfgdata -conf=/gamer_101.yaml
+gserver -d=true -cfgDir=/cfgdata -conf=/game_101.yaml
 ```
 
 ## 测试客户端
