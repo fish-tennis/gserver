@@ -1,11 +1,9 @@
 package loginserver
 
 import (
-	"log/slog"
-	"math/rand"
 	"context"
-	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gentity"
+	. "github.com/fish-tennis/gnet"
 	"github.com/fish-tennis/gserver/cache"
 	"github.com/fish-tennis/gserver/db"
 	"github.com/fish-tennis/gserver/internal"
@@ -13,6 +11,7 @@ import (
 	"github.com/fish-tennis/gserver/pb"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
+	"log/slog"
 )
 
 // 客户端账号登录
@@ -130,68 +129,13 @@ func processLoginReq(connection Connection, packet Packet, req *pb.LoginReq) {
 }
 
 // 选择一个游戏服给登录成功的客户端
+// 加权选服逻辑(剩余容量加权+满载/禁止登录过滤)与gate的fallback共用,见internal.WeightedSelectGameServer
 func selectGameServer(account *pb.Account) *pb.ServerInfo {
 	gameServerInfos := _loginServer.GetServerList().GetServersByType(internal.ServerType_Game)
-	if len(gameServerInfos) > 0 {	
-		return WeightedSelectGameServer(gameServerInfos)
+	if len(gameServerInfos) > 0 {
+		return internal.WeightedSelectGameServer(gameServerInfos)
 	}
 	return nil
-}
-
-// WeightedSelectGameServer 按剩余容量(MaxOnline-OnlineCount)加权随机选一个游戏服
-//
-// 为什么用加权随机而不是别的策略:
-//   - 纯随机:样本小(开服洪峰)时分布不均,个别服被压垮而其他服空闲
-//   - 最小在线优先:心跳数据有秒级延迟,洪峰下并发请求会全部命中快照里"最轻"的同一台(惊群)
-//   - 加权随机:剩余容量越大被选中概率越高,兼顾均衡;随机性天然把并发请求分散开
-//
-// 满载(剩余容量<=0)与禁止登录(LoginForbidden=true,正在退出/灰度屏蔽)的服务器不参与抽签;
-// 全部不可用返回nil,调用方返回TryLater,客户端延迟重试——
-// 宁可让玩家等,也不把已满的服压垮、或把玩家送上正在退出的服(开服/停服场景的保护闸门)
-func WeightedSelectGameServer(servers []*pb.ServerInfo) *pb.ServerInfo {
-	totalRemaining := int64(0)
-	for _, serverInfo := range servers {
-		if serverInfo.GetLoginForbidden() {
-			continue
-		}
-		if remaining := ServerRemainingCapacity(serverInfo); remaining > 0 {
-			totalRemaining += remaining
-		}
-	}
-	if totalRemaining == 0 {
-		// 空列表、全部满载或全部禁止登录
-		return nil
-	}
-	lottery := rand.Int63n(totalRemaining)
-	for _, serverInfo := range servers {
-		if serverInfo.GetLoginForbidden() {
-			continue
-		}
-		remaining := ServerRemainingCapacity(serverInfo)
-		if remaining <= 0 {
-			continue
-		}
-		if lottery < remaining {
-			return serverInfo
-		}
-		lottery -= remaining
-	}
-	// 理论上不可达:totalRemaining>0时循环内必然命中,防御性返回避免潜在panic路径
-	return nil
-}
-
-// ServerRemainingCapacity 计算服务器剩余可分配容量,负数归零
-// MaxOnline<=0视为未配置,按默认容量计算(保证未配置的存量Game服不会被误判为满载)
-func ServerRemainingCapacity(serverInfo *pb.ServerInfo) int64 {
-	maxOnline := serverInfo.GetMaxOnline()
-	if maxOnline <= 0 {
-		maxOnline = internal.DefaultGameServerMaxOnline
-	}
-	remaining := int64(maxOnline) - int64(serverInfo.GetOnlineCount())
-	if remaining < 0 {
-		return 0
-	}
-	return remaining
 }
 
 // 查询账号在各区服的角色概要信息(两段式,全程无分片广播)
@@ -367,7 +311,7 @@ func processAccountReg(connection Connection, packet Packet, req *pb.AccountReg)
 		return
 	}
 	account := &pb.Account{
-		Id:  newAccountId,
+		Id:   newAccountId,
 		Name: req.GetAccountName(),
 		// 存储的是客户端加密后的值,非明文密码(加密由客户端负责)
 		Password: req.GetPassword(),
@@ -389,4 +333,3 @@ func processAccountReg(connection Connection, packet Packet, req *pb.AccountReg)
 	}
 	res.AccountId = account.Id
 }
-
