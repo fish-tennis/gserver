@@ -565,6 +565,10 @@ func (p *Player) initTimers() {
 			// 慢存档告警:间接反映MongoDB负载,便于运维感知
 			p.Log.Warn("saveDb slow", "cost", cost)
 		}
+		// 顺带续期登录session:存档周期(5分钟)短于session TTL(10分钟),玩家在线期间session永远新鲜,
+		// 滚动更新/宕机后的隐式重连(PlayerEntryGameReq复用LoginSession)不受10分钟过期限制;
+		// 离线后协程退出无人续期,session自然过期,安全语义不变(见cache.RenewLoginSession)
+		cache.RenewLoginSession(p.GetAccountId())
 		return PlayerSaveDbInterval
 	})
 }

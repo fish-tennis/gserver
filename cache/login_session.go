@@ -53,6 +53,18 @@ func generateRandomSession() string {
 	return hex.EncodeToString(buf)
 }
 
+// RenewLoginSession 续期登录session:重置TTL为LoginSessionExpireTime
+// 供在线玩家周期性调用(挂在与滚动存档同周期的玩家协程定时器,见game/player.go initTimers):
+// 只要玩家在线,session永远新鲜——滚动更新/宕机后的隐式重连(PlayerEntryGameReq复用LoginSession)
+// 不受10分钟过期限制;玩家离线后协程退出无人续期,session最多10分钟自然过期,
+// 离线安全语义不变(旧session不可再用于进游),key也不堆积。
+// EXPIRE语义:key不存在时无操作且不创建新key,不会为已过期账号凭空造出长效session
+func RenewLoginSession(accountId int64) {
+	if _, err := GetRedis().Expire(context.Background(), keyLoginSession(accountId), LoginSessionExpireTime).Result(); IsRedisError(err) {
+		slog.Error("RenewLoginSession error", "accountId", accountId, "error", err)
+	}
+}
+
 // VerifyLoginSession 验证登录session
 //
 // 返回 (验证是否通过, 账号名):
