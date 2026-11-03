@@ -27,22 +27,22 @@ var (
 
 	onlinePlayers = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "online_players",
-		Help: "当前在线人数(Game:在线玩家数; Gate:已绑定的客户端连接数; 其他类型:0)",
+		Help: "Current online players (Game: online player count; Gate: bound client connections; others: 0)",
 	}, []string{"server_type", "server_id"})
 
 	goroutines = prometheus.NewGauge(prometheus.GaugeOpts{
 		Name: "goroutines",
-		Help: "当前进程的协程数量(含每个玩家的独立逻辑协程)",
+		Help: "Current goroutine count of this process (including one goroutine per player)",
 	})
 
 	packetsReceived = prometheus.NewCounter(prometheus.CounterOpts{
 		Name: "packets_total",
-		Help: "处理的消息累计数(含客户端消息和服务器间消息),用rate()计算每秒消息数",
+		Help: "Total packets processed (client and inter-server messages); use rate() for per-second throughput",
 	})
 
 	dbWorkerQueueLen = prometheus.NewGauge(prometheus.GaugeOpts{
 		Name: "db_worker_queue_len",
-		Help: "DB操作协程池的排队任务数,接近上限(8个worker*64队列容量)说明DB层积压",
+		Help: "Queued tasks in the DB worker pool; near the cap (8 workers * 64 queue capacity) indicates DB backlog",
 	})
 
 	// 运维HTTP服务(nil=未启动)
